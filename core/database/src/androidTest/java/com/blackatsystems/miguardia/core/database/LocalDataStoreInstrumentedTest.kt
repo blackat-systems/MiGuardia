@@ -11,6 +11,7 @@ import com.blackatsystems.miguardia.core.domain.model.MedicalLeave
 import com.blackatsystems.miguardia.core.domain.model.Objective
 import com.blackatsystems.miguardia.core.domain.model.ScheduleCombination
 import com.blackatsystems.miguardia.core.domain.model.Shift
+import com.blackatsystems.miguardia.core.domain.model.ShiftBatchMutation
 import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
 import com.blackatsystems.miguardia.core.domain.repository.DuplicateObjectiveAbbreviationException
 import com.blackatsystems.miguardia.core.domain.repository.DuplicateScheduleCombinationException
@@ -248,6 +249,128 @@ class LocalDataStoreInstrumentedTest {
         assertTrue("Room debía rechazar una consulta en el hilo principal", thrown is IllegalStateException)
     }
 
+    @Test
+    fun recentlyUsedUsesCreationTimeLimitAndExcludesHiddenTemplates() = runBlocking {
+        store.objectives.create(objective())
+        val first = schedule(SCHEDULE_ID, LocalTime.of(6, 0), LocalTime.of(10, 0), 0xFF111111.toInt())
+        val second = schedule(SECOND_SCHEDULE_ID, LocalTime.of(10, 0), LocalTime.of(14, 0), 0xFF222222.toInt())
+        val hidden = schedule(THIRD_SCHEDULE_ID, LocalTime.of(14, 0), LocalTime.of(18, 0), 0xFF333333.toInt())
+        listOf(first, second, hidden).forEach { store.scheduleCombinations.create(it) }
+        store.shifts.insert(
+            shift(SHIFT_ID, LocalDate.of(2026, 9, 1), LocalTime.of(6, 0), LocalDate.of(2026, 9, 1), LocalTime.of(10, 0)).copy(
+                sourceObjectiveId = OBJECTIVE_ID,
+                sourceScheduleCombinationId = first.id,
+                createdAt = FIXED_INSTANT.plusSeconds(1),
+                updatedAt = FIXED_INSTANT.plusSeconds(1),
+            ),
+        )
+        store.shifts.insert(
+            shift(SECOND_SHIFT_ID, LocalDate.of(2026, 7, 1), LocalTime.of(10, 0), LocalDate.of(2026, 7, 1), LocalTime.of(14, 0)).copy(
+                sourceObjectiveId = OBJECTIVE_ID,
+                sourceScheduleCombinationId = second.id,
+                createdAt = FIXED_INSTANT.plusSeconds(3),
+                updatedAt = FIXED_INSTANT.plusSeconds(3),
+            ),
+        )
+        store.shifts.insert(
+            shift(THIRD_SHIFT_ID, LocalDate.of(2026, 8, 1), LocalTime.of(14, 0), LocalDate.of(2026, 8, 1), LocalTime.of(18, 0)).copy(
+                sourceObjectiveId = OBJECTIVE_ID,
+                sourceScheduleCombinationId = hidden.id,
+                createdAt = FIXED_INSTANT.plusSeconds(5),
+                updatedAt = FIXED_INSTANT.plusSeconds(5),
+            ),
+        )
+        store.scheduleCombinations.hide(hidden.id, FIXED_INSTANT.plusSeconds(6))
+
+        val recent = store.scheduleCombinations.observeRecentlyUsed(limit = 2).first()
+
+        assertEquals(listOf(second.id, first.id), recent.map { it.combination.id })
+        assertEquals(
+            listOf(FIXED_INSTANT.plusSeconds(3), FIXED_INSTANT.plusSeconds(1)),
+            recent.map { it.lastUsedAt },
+        )
+    }
+
+    @Test
+    fun batchInsertAndReplacementAreAtomicAndLimitedToChosenIds() = runBlocking {
+        val firstDate = LocalDate.of(2026, 8, 20)
+        val secondDate = firstDate.plusDays(1)
+        val untouchedDate = firstDate.plusDays(2)
+        val original = shift(SHIFT_ID, firstDate, LocalTime.of(8, 0), firstDate, LocalTime.of(16, 0))
+        val untouched = shift(SECOND_SHIFT_ID, untouchedDate, LocalTime.of(8, 0), untouchedDate, LocalTime.of(16, 0))
+        store.shifts.insert(original)
+        store.shifts.insert(untouched)
+        val replacements = listOf(
+            shift(THIRD_SHIFT_ID, firstDate, LocalTime.of(19, 0), secondDate, LocalTime.of(7, 0)),
+            shift(FOURTH_SHIFT_ID, secondDate, LocalTime.of(8, 0), secondDate, LocalTime.of(16, 0)),
+        )
+
+        store.shifts.applyBatch(
+            ShiftBatchMutation(
+                shiftIdsToDelete = setOf(original.id),
+                shiftsToInsert = replacements,
+            ),
+        )
+
+        val stored = store.shifts.observeStartingBetween(firstDate, untouchedDate).first()
+        assertEquals(setOf(untouched.id, THIRD_SHIFT_ID, FOURTH_SHIFT_ID), stored.mapTo(mutableSetOf()) { it.id })
+    }
+
+    @Test
+    fun batchFailureRollsBackPriorDeletion() = runBlocking {
+        val date = LocalDate.of(2026, 8, 25)
+        val toDelete = shift(SHIFT_ID, date, LocalTime.of(8, 0), date, LocalTime.of(16, 0))
+        val existing = shift(SECOND_SHIFT_ID, date.plusDays(1), LocalTime.of(8, 0), date.plusDays(1), LocalTime.of(16, 0))
+        store.shifts.insert(toDelete)
+        store.shifts.insert(existing)
+
+        assertSuspendThrows<InvalidLocalDataException> {
+            store.shifts.applyBatch(
+                ShiftBatchMutation(
+                    shiftIdsToDelete = setOf(toDelete.id),
+                    shiftsToInsert = listOf(
+                        shift(
+                            SECOND_SHIFT_ID,
+                            date.plusDays(2),
+                            LocalTime.of(8, 0),
+                            date.plusDays(2),
+                            LocalTime.of(16, 0),
+                        ),
+                    ),
+                ),
+            )
+        }
+
+        assertNotNull(store.shifts.getById(toDelete.id))
+        assertNotNull(store.shifts.getById(existing.id))
+    }
+
+    @Test
+    fun batchRejectsDuplicateAndConflictingIdsBeforeMutatingData() = runBlocking {
+        val date = LocalDate.of(2026, 8, 28)
+        val original = shift(SHIFT_ID, date, LocalTime.of(8, 0), date, LocalTime.of(16, 0))
+        val duplicate = shift(SECOND_SHIFT_ID, date.plusDays(1), LocalTime.of(8, 0), date.plusDays(1), LocalTime.of(16, 0))
+        store.shifts.insert(original)
+
+        assertSuspendThrows<InvalidLocalDataException> {
+            store.shifts.applyBatch(
+                ShiftBatchMutation(shiftsToInsert = listOf(duplicate, duplicate)),
+            )
+        }
+        assertNotNull(store.shifts.getById(original.id))
+        assertEquals(null, store.shifts.getById(duplicate.id))
+
+        assertSuspendThrows<InvalidLocalDataException> {
+            store.shifts.applyBatch(
+                ShiftBatchMutation(
+                    shiftIdsToDelete = setOf(original.id),
+                    shiftsToInsert = listOf(original.copy(updatedAt = FIXED_INSTANT.plusSeconds(1))),
+                ),
+            )
+        }
+        assertEquals(original, store.shifts.getById(original.id))
+    }
+
     private fun openStore() {
         database = Room.databaseBuilder(context, MiGuardiaDatabase::class.java, TEST_DATABASE).build()
         store = LocalDataStore(database)
@@ -335,6 +458,7 @@ class LocalDataStoreInstrumentedTest {
         val SHIFT_ID: UUID = UUID.fromString("00000000-0000-0000-0000-000000000021")
         val SECOND_SHIFT_ID: UUID = UUID.fromString("00000000-0000-0000-0000-000000000022")
         val THIRD_SHIFT_ID: UUID = UUID.fromString("00000000-0000-0000-0000-000000000023")
+        val FOURTH_SHIFT_ID: UUID = UUID.fromString("00000000-0000-0000-0000-000000000024")
         val MEDICAL_LEAVE_ID: UUID = UUID.fromString("00000000-0000-0000-0000-000000000031")
         val SECOND_MEDICAL_LEAVE_ID: UUID = UUID.fromString("00000000-0000-0000-0000-000000000032")
     }

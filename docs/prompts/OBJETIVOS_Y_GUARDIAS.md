@@ -1,6 +1,6 @@
 # Prompt maestro de dependencia — OBJETIVOS Y GUARDIAS, incremento 3
 
-> Estado: preparado por MAIN; pendiente de ejecución en una tarea separada autorizada por Joaquin
+> Estado: implementado por la dependencia; integrado y auditado por MAIN
 >
 > Proyecto: MiGuardia
 >
@@ -8,7 +8,7 @@
 >
 > Fecha: 2026-08-13
 >
-> Línea base requerida: commit `5f8d5e3` (`feat: integrate reactive monthly calendar`)
+> Línea base utilizada por la dependencia: commit `bf88bb6` (`docs: define objectives and shifts module`)
 
 ## 0. Rol y autoridad
 
@@ -499,3 +499,16 @@ Al finalizar, entregá en español claro:
 - `git status` y resumen del diff, sin commit ni push.
 
 MAIN revisará el diff, repetirá la batería integral y decidirá la integración. OBJETIVOS Y GUARDIAS no sustituye a MAIN ni puede redefinir el producto.
+
+## 13. Registro de integración por MAIN
+
+MAIN integró y auditó la entrega el 2026-08-13. Durante la revisión se corrigieron:
+
+- el retorno de formularios anidados de objetivo y horario hacia la carga de guardia, conservando el borrador y seleccionando el horario recién creado;
+- la salida de las advertencias para que “Volver y corregir” sea una acción real;
+- la política de edición sobre una fecha ocupada, limitada a conservar la otra guardia o cancelar;
+- el ingreso horario mediante selector Material 3 de 24 horas;
+- el respeto de las barras del sistema en las superficies de gestión;
+- pruebas de regresión de recreación de actividad, atomicidad preventiva, selector horario, advertencias e interfaz ocupada.
+
+La decisión arquitectónica resultante quedó registrada en `docs/adr/0004-objetivos-horarios-y-mutaciones-de-guardias.md`. Room continuó en versión 1 y su esquema permaneció idéntico.

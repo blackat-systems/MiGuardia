@@ -8,6 +8,7 @@ import com.blackatsystems.miguardia.core.database.mapping.toEntity
 import com.blackatsystems.miguardia.core.database.validation.validateUpdateTimestamp
 import com.blackatsystems.miguardia.core.database.validation.validated
 import com.blackatsystems.miguardia.core.domain.model.ScheduleCombination
+import com.blackatsystems.miguardia.core.domain.model.RecentScheduleCombination
 import com.blackatsystems.miguardia.core.domain.repository.DuplicateScheduleCombinationException
 import com.blackatsystems.miguardia.core.domain.repository.InvalidLocalDataException
 import com.blackatsystems.miguardia.core.domain.repository.ScheduleCombinationRepository
@@ -21,6 +22,21 @@ internal class RoomScheduleCombinationRepository(
 ) : ScheduleCombinationRepository {
     override fun observeByObjective(objectiveId: UUID): Flow<List<ScheduleCombination>> =
         dao.observeByObjective(objectiveId.toString()).map { rows -> rows.map { it.toDomain() } }
+
+    override fun observeRecentlyUsed(limit: Int): Flow<List<RecentScheduleCombination>> {
+        if (limit !in 1..5) {
+            throw InvalidLocalDataException("La cantidad de horarios recientes debe estar entre 1 y 5.")
+        }
+        return dao.observeRecentlyUsed(limit).map { rows ->
+            rows.map { row ->
+                RecentScheduleCombination(
+                    objective = row.objective.toDomain(),
+                    combination = row.combination.toDomain(),
+                    lastUsedAt = Instant.ofEpochMilli(row.lastUsedAtEpochMillis),
+                )
+            }
+        }
+    }
 
     override suspend fun getById(id: UUID): ScheduleCombination? = dao.getById(id.toString())?.toDomain()
 

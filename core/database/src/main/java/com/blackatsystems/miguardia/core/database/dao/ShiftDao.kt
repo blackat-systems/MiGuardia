@@ -26,9 +26,15 @@ internal interface ShiftDao {
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insert(entity: ShiftEntity)
 
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insertAll(entities: List<ShiftEntity>)
+
     @Update(onConflict = OnConflictStrategy.ABORT)
     suspend fun update(entity: ShiftEntity): Int
 
     @Query("DELETE FROM shifts WHERE id = :id")
     suspend fun delete(id: String): Int
+
+    @Query("DELETE FROM shifts WHERE id IN (:ids)")
+    suspend fun deleteByIds(ids: List<String>): Int
 }

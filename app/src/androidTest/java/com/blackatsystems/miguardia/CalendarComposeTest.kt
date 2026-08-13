@@ -13,10 +13,14 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.test.swipeRight
+import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.uiautomator.UiDevice
 import com.blackatsystems.miguardia.core.domain.AppDefaults
 import com.blackatsystems.miguardia.core.domain.calendar.projectCalendarMonth
 import com.blackatsystems.miguardia.core.domain.model.ExplicitDayStatus
@@ -27,6 +31,10 @@ import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
 import com.blackatsystems.miguardia.ui.MiGuardiaApp
 import com.blackatsystems.miguardia.ui.calendar.CalendarLoadState
 import com.blackatsystems.miguardia.ui.calendar.CalendarUiState
+import com.blackatsystems.miguardia.ui.management.ManagementActions
+import com.blackatsystems.miguardia.ui.management.ManagementSurface
+import com.blackatsystems.miguardia.ui.management.ManagementUiState
+import com.blackatsystems.miguardia.ui.management.ShiftDraft
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
@@ -34,26 +42,35 @@ import java.time.YearMonth
 import java.time.ZonedDateTime
 import java.util.UUID
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
+import org.junit.Before
 import org.junit.Test
 
 class CalendarComposeTest {
     @get:Rule
     val composeRule = createComposeRule()
 
+    @Before
+    fun wakeDevice() {
+        UiDevice.getInstance(InstrumentationRegistry.getInstrumentation()).wakeUp()
+    }
+
     @Test
     fun controlsAndHorizontalGesturesChangeMonthButShortDragDoesNot() {
         composeRule.setContent { CalendarHarness(contentState()) }
 
         composeRule.onNodeWithText("Agosto de 2026").assertExists()
-        composeRule.onNodeWithContentDescription("Mes anterior").performClick()
+        composeRule.onNodeWithContentDescription("Mes anterior").performSemanticsAction(SemanticsActions.OnClick)
         composeRule.onNodeWithText("Julio de 2026").assertExists()
-        composeRule.onNodeWithContentDescription("Mes siguiente").performClick()
+        composeRule.onNodeWithContentDescription("Mes siguiente").performSemanticsAction(SemanticsActions.OnClick)
         composeRule.onNodeWithText("Agosto de 2026").assertExists()
 
         composeRule.onNodeWithTag("month-grid").performTouchInput { swipeLeft() }
+        composeRule.waitUntil(3_000) { composeRule.onAllNodesWithText("Septiembre de 2026").fetchSemanticsNodes().isNotEmpty() }
         composeRule.onNodeWithText("Septiembre de 2026").assertExists()
         composeRule.onNodeWithTag("month-grid").performTouchInput { swipeRight() }
+        composeRule.waitUntil(3_000) { composeRule.onAllNodesWithText("Agosto de 2026").fetchSemanticsNodes().isNotEmpty() }
         composeRule.onNodeWithText("Agosto de 2026").assertExists()
 
         composeRule.onNodeWithTag("month-grid").performTouchInput {
@@ -63,8 +80,8 @@ class CalendarComposeTest {
         }
         composeRule.onNodeWithText("Agosto de 2026").assertExists()
 
-        composeRule.onNodeWithContentDescription("Mes anterior").performClick()
-        composeRule.onNodeWithText("Hoy").performClick()
+        composeRule.onNodeWithContentDescription("Mes anterior").performSemanticsAction(SemanticsActions.OnClick)
+        composeRule.onNodeWithText("Hoy").performSemanticsAction(SemanticsActions.OnClick)
         composeRule.onNodeWithText("Agosto de 2026").assertExists()
     }
 
@@ -87,7 +104,8 @@ class CalendarComposeTest {
             "Domingo 9 de agosto de 2026, sin definir",
         ).assertExists()
 
-        composeRule.onNodeWithContentDescription("guardia DOS", substring = true).performClick()
+        composeRule.onNodeWithContentDescription("guardia DOS", substring = true)
+            .performSemanticsAction(SemanticsActions.OnClick)
         composeRule.onNodeWithText("Objetivo dos (DOS)").assertExists()
         composeRule.onNodeWithText("Objetivo tres (TRE)").assertExists()
         composeRule.onAllNodesWithText("Completada").assertCountEquals(2)
@@ -115,8 +133,82 @@ class CalendarComposeTest {
 
         composeRule.onNodeWithText("Error ficticio recuperable").assertExists()
         composeRule.onNodeWithTag("month-grid").assertDoesNotExist()
-        composeRule.onNodeWithText("Reintentar").performClick()
+        composeRule.onNodeWithText("Reintentar").performSemanticsAction(SemanticsActions.OnClick)
         composeRule.runOnIdle { assertEquals(1, retries) }
+    }
+
+    @Test
+    fun addButtonOpensRealShiftFormForVisibleMonth() {
+        var managementState by mutableStateOf(ManagementUiState())
+        var requestedMonth: YearMonth? = null
+        composeRule.setContent {
+            MaterialTheme {
+                MiGuardiaApp(
+                    calendarState = contentState(),
+                    onPreviousMonth = {},
+                    onNextMonth = {},
+                    onToday = {},
+                    onSelectDate = {},
+                    onDismissDate = {},
+                    onRetry = {},
+                    managementState = managementState,
+                    managementActions = ManagementActions(
+                        openAddShift = { month, date ->
+                            requestedMonth = month
+                            managementState = managementState.copy(
+                                surface = ManagementSurface.SHIFT_FORM,
+                                shiftDraft = ShiftDraft(
+                                    month = month,
+                                    selectedDates = setOf(date ?: month.atDay(1)),
+                                ),
+                            )
+                        },
+                    ),
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Agregar").performScrollTo().performSemanticsAction(SemanticsActions.OnClick)
+        composeRule.onNodeWithText("Guardias").assertExists()
+        composeRule.onNodeWithText("Revisar y guardar").assertExists()
+        composeRule.runOnIdle { assertEquals(YearMonth.of(2026, 8), requestedMonth) }
+    }
+
+    @Test
+    fun shiftDetailExposesEditDuplicateAndConfirmedDelete() {
+        val state = contentState().copy(selectedDate = LocalDate.of(2026, 8, 3))
+        var edited: UUID? = null
+        var duplicated: UUID? = null
+        var deleted: UUID? = null
+        composeRule.setContent {
+            MaterialTheme {
+                MiGuardiaApp(
+                    calendarState = state,
+                    onPreviousMonth = {},
+                    onNextMonth = {},
+                    onToday = {},
+                    onSelectDate = {},
+                    onDismissDate = {},
+                    onRetry = {},
+                    managementActions = ManagementActions(
+                        openEditShift = { edited = it.id },
+                        openDuplicateShift = { duplicated = it.id },
+                        deleteShift = { deleted = it },
+                    ),
+                )
+            }
+        }
+
+        composeRule.onAllNodesWithText("Editar")[0].performSemanticsAction(SemanticsActions.OnClick)
+        composeRule.onAllNodesWithText("Duplicar")[0].performSemanticsAction(SemanticsActions.OnClick)
+        composeRule.runOnIdle {
+            assertTrue(edited != null)
+            assertTrue(duplicated != null)
+        }
+        composeRule.onAllNodesWithText("Eliminar")[0].performSemanticsAction(SemanticsActions.OnClick)
+        composeRule.onNodeWithText("Eliminar guardia").assertExists()
+        composeRule.onAllNodesWithText("Eliminar")[2].performSemanticsAction(SemanticsActions.OnClick)
+        composeRule.runOnIdle { assertTrue(deleted != null) }
     }
 
     @Composable

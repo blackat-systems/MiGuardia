@@ -19,7 +19,7 @@ class LocalDataStore internal constructor(
     val objectives: ObjectiveRepository = RoomObjectiveRepository(database)
     val scheduleCombinations: ScheduleCombinationRepository =
         RoomScheduleCombinationRepository(database.scheduleCombinationDao())
-    val shifts: ShiftRepository = RoomShiftRepository(database.shiftDao())
+    val shifts: ShiftRepository = RoomShiftRepository(database)
     val explicitDayStatuses: ExplicitDayStatusRepository =
         RoomExplicitDayStatusRepository(database.explicitDayStatusDao())
     val medicalLeaves: MedicalLeaveRepository =

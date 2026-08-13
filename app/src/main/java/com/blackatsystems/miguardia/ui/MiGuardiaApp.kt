@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -65,6 +66,11 @@ import com.blackatsystems.miguardia.core.domain.model.ExplicitDayStatusType
 import com.blackatsystems.miguardia.ui.calendar.CalendarLoadState
 import com.blackatsystems.miguardia.ui.calendar.CalendarUiState
 import com.blackatsystems.miguardia.ui.calendar.CalendarViewModel
+import com.blackatsystems.miguardia.ui.management.ManagementActions
+import com.blackatsystems.miguardia.ui.management.ManagementSurface
+import com.blackatsystems.miguardia.ui.management.ManagementSurfaceHost
+import com.blackatsystems.miguardia.ui.management.ManagementUiState
+import com.blackatsystems.miguardia.ui.management.ManagementViewModel
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.YearMonth
@@ -88,9 +94,11 @@ private enum class MainDestination(
 @Composable
 fun MiGuardiaApp(
     calendarViewModel: CalendarViewModel,
+    managementViewModel: ManagementViewModel,
     modifier: Modifier = Modifier,
 ) {
     val calendarState by calendarViewModel.uiState.collectAsStateWithLifecycle()
+    val managementState by managementViewModel.uiState.collectAsStateWithLifecycle()
     MiGuardiaApp(
         calendarState = calendarState,
         onPreviousMonth = calendarViewModel::showPreviousMonth,
@@ -99,6 +107,8 @@ fun MiGuardiaApp(
         onSelectDate = calendarViewModel::selectDate,
         onDismissDate = calendarViewModel::clearSelectedDate,
         onRetry = calendarViewModel::retry,
+        managementState = managementState,
+        managementActions = ManagementActions.from(managementViewModel),
         modifier = modifier,
     )
 }
@@ -114,6 +124,8 @@ fun MiGuardiaApp(
     onDismissDate: () -> Unit,
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
+    managementState: ManagementUiState = ManagementUiState(),
+    managementActions: ManagementActions = ManagementActions(),
 ) {
     var destination by rememberSaveable { androidx.compose.runtime.mutableStateOf(MainDestination.CALENDAR) }
 
@@ -155,6 +167,7 @@ fun MiGuardiaApp(
                 onToday = onToday,
                 onSelectDate = onSelectDate,
                 onRetry = onRetry,
+                onAddShift = { managementActions.openAddShift(calendarState.visibleMonth, null) },
             )
 
             MainDestination.SUMMARY -> PlaceholderScreen(
@@ -163,10 +176,9 @@ fun MiGuardiaApp(
                 contentPadding = innerPadding,
             )
 
-            MainDestination.SETTINGS -> PlaceholderScreen(
-                title = stringResource(R.string.settings),
-                body = stringResource(R.string.settings_intro),
+            MainDestination.SETTINGS -> SettingsScreen(
                 contentPadding = innerPadding,
+                onOpenObjectives = managementActions.openSettings,
             )
         }
     }
@@ -176,8 +188,30 @@ fun MiGuardiaApp(
     }
     if (selectedDay != null) {
         ModalBottomSheet(onDismissRequest = onDismissDate) {
-            DayDetailSheet(day = selectedDay)
+            DayDetailSheet(
+                day = selectedDay,
+                onAddShift = {
+                    onDismissDate()
+                    managementActions.openAddShift(calendarState.visibleMonth, selectedDay.date)
+                },
+                onEditShift = {
+                    onDismissDate()
+                    managementActions.openEditShift(it)
+                },
+                onDuplicateShift = {
+                    onDismissDate()
+                    managementActions.openDuplicateShift(it)
+                },
+                onDeleteShift = managementActions.deleteShift,
+            )
         }
+    }
+
+    if (managementState.surface != ManagementSurface.NONE) {
+        ManagementSurfaceHost(
+            state = managementState,
+            actions = managementActions,
+        )
     }
 }
 
@@ -190,6 +224,7 @@ private fun CalendarScreen(
     onToday: () -> Unit,
     onSelectDate: (LocalDate) -> Unit,
     onRetry: () -> Unit,
+    onAddShift: () -> Unit,
 ) {
     val today = state.referenceInstant.atZone(AppDefaults.zoneId()).toLocalDate()
     Column(
@@ -231,8 +266,7 @@ private fun CalendarScreen(
         }
 
         Button(
-            onClick = {},
-            enabled = false,
+            onClick = onAddShift,
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(stringResource(R.string.add))
@@ -518,7 +552,14 @@ private fun DayCell(
 }
 
 @Composable
-private fun DayDetailSheet(day: CalendarDay) {
+private fun DayDetailSheet(
+    day: CalendarDay,
+    onAddShift: () -> Unit,
+    onEditShift: (com.blackatsystems.miguardia.core.domain.model.Shift) -> Unit,
+    onDuplicateShift: (com.blackatsystems.miguardia.core.domain.model.Shift) -> Unit,
+    onDeleteShift: (java.util.UUID) -> Unit,
+) {
+    var pendingDeleteId by rememberSaveable { androidx.compose.runtime.mutableStateOf<String?>(null) }
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -538,7 +579,12 @@ private fun DayDetailSheet(day: CalendarDay) {
         }
         day.shifts.forEachIndexed { index, calendarShift ->
             if (index > 0) HorizontalDivider()
-            ShiftDetail(calendarShift)
+            ShiftDetail(
+                calendarShift = calendarShift,
+                onEdit = onEditShift,
+                onDuplicate = onDuplicateShift,
+                onDelete = { pendingDeleteId = it.toString() },
+            )
         }
         when (day.explicitStatus) {
             ExplicitDayStatusType.DAY_OFF -> Text(stringResource(R.string.day_off_explicit_detail))
@@ -548,11 +594,35 @@ private fun DayDetailSheet(day: CalendarDay) {
         if (day.hasMedicalLeave) {
             Text(stringResource(R.string.medical_leave_detail))
         }
+        Button(onClick = onAddShift, modifier = Modifier.fillMaxWidth()) {
+            Text("Agregar guardia")
+        }
+    }
+    pendingDeleteId?.let { id ->
+        AlertDialog(
+            onDismissRequest = { pendingDeleteId = null },
+            title = { Text("Eliminar guardia") },
+            text = { Text("Se eliminará solamente esta guardia. ¿Querés continuar?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    onDeleteShift(java.util.UUID.fromString(id))
+                    pendingDeleteId = null
+                }) { Text("Eliminar") }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingDeleteId = null }) { Text("Cancelar") }
+            },
+        )
     }
 }
 
 @Composable
-private fun ShiftDetail(calendarShift: CalendarShift) {
+private fun ShiftDetail(
+    calendarShift: CalendarShift,
+    onEdit: ((com.blackatsystems.miguardia.core.domain.model.Shift) -> Unit)? = null,
+    onDuplicate: ((com.blackatsystems.miguardia.core.domain.model.Shift) -> Unit)? = null,
+    onDelete: ((java.util.UUID) -> Unit)? = null,
+) {
     val shift = calendarShift.shift
     Row(verticalAlignment = Alignment.CenterVertically) {
         Box(
@@ -563,7 +633,7 @@ private fun ShiftDetail(calendarShift: CalendarShift) {
                 .background(Color(shift.colorArgbSnapshot)),
         )
         Spacer(modifier = Modifier.width(12.dp))
-        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(3.dp), modifier = Modifier.weight(1f)) {
             Text(
                 text = "${shift.objectiveNameSnapshot} (${shift.objectiveAbbreviationSnapshot})",
                 style = MaterialTheme.typography.titleMedium,
@@ -577,6 +647,33 @@ private fun ShiftDetail(calendarShift: CalendarShift) {
             shift.objectiveAddressSnapshot?.takeIf { it.isNotBlank() }?.let { address ->
                 Text(address)
             }
+            if (onEdit != null && onDuplicate != null && onDelete != null) {
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    TextButton(onClick = { onEdit(shift) }) { Text("Editar") }
+                    TextButton(onClick = { onDuplicate(shift) }) { Text("Duplicar") }
+                    TextButton(onClick = { onDelete(shift.id) }) { Text("Eliminar") }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SettingsScreen(
+    contentPadding: PaddingValues,
+    onOpenObjectives: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(contentPadding)
+            .padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Text("Configuración", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        Text(stringResource(R.string.settings_intro))
+        Button(onClick = onOpenObjectives, modifier = Modifier.fillMaxWidth()) {
+            Text("Objetivos y horarios")
         }
     }
 }

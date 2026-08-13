@@ -1,6 +1,7 @@
 package com.blackatsystems.miguardia.core.domain.repository
 
 import com.blackatsystems.miguardia.core.domain.model.Shift
+import com.blackatsystems.miguardia.core.domain.model.ShiftBatchMutation
 import java.time.LocalDate
 import java.util.UUID
 import kotlinx.coroutines.flow.Flow
@@ -15,4 +16,5 @@ interface ShiftRepository {
     suspend fun insert(shift: Shift)
     suspend fun update(shift: Shift)
     suspend fun delete(id: UUID)
+    suspend fun applyBatch(mutation: ShiftBatchMutation)
 }
