@@ -72,7 +72,7 @@ Módulos conceptuales previstos: datos locales; objetivos y guardias; calendario
 - Guardar instantáneas históricas de objetivo, abreviatura, horario, color y puesto en cada guardia; editar una plantilla no altera el pasado.
 - Diseñar migraciones de datos antes de cambiar esquemas persistentes. No usar migración destructiva en datos reales.
 - No añadir dependencias de producción sin justificar necesidad, mantenimiento, licencia, privacidad, tamaño y alternativa nativa.
-- No implementar remuneración monetaria hasta recibir y modelar las planillas salariales que Joaquin aporte.
+- Las escalas SUVICO de julio a diciembre de 2026 están en `escalas_salariales/` y fueron transcritas en `docs/PROMPT_MAESTRO_MAIN.md`. No implementar reglas monetarias que excedan lo demostrado allí; prorrateos, pérdida de presentismo, aplicabilidad de deducciones y otros vacíos requieren confirmación de Joaquin.
 
 ## 6. Calidad y definición de terminado
 

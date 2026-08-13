@@ -309,19 +309,87 @@ Regla mensual especial:
 
 Usar cálculos por intervalos, no aproximaciones por fecha o cadenas. Probar zona `America/Argentina/Cordoba` o la zona Android equivalente elegida y documentada, límites de mes/año y horario de verano aunque hoy no sea habitual.
 
-## 12. Remuneración estimada
+## 12. Remuneración estimada y escalas SUVICO incorporadas
 
-Todavía no se conocen reglas ni importes definitivos de hora normal, nocturna, extra y feriado. Joaquin aportará planillas vigentes de SUVICO/empresa por mes.
+Joaquin incorporó seis imágenes de escalas SUVICO para la categoría **Vigilador**, con vigencia mensual de julio a diciembre de 2026. Los originales están en `escalas_salariales/`. Son la fuente visual del siguiente registro y deben conservarse sin modificación.
 
-Hasta entonces:
+Correspondencia de fuentes:
 
-- implementar categorías de horas y un contrato extensible;
-- no inventar porcentajes ni dinero;
-- no codificar importes ficticios como oficiales;
-- permitir que en el futuro los valores tengan vigencia por mes y que los cambios no alteren meses históricos;
-- mostrar solo estimación bruta y un aviso claro: información orientativa, no recibo de sueldo ni liquidación oficial.
+- `WhatsApp Image 2026-08-13 at 10.07.56.jpeg`: julio;
+- `WhatsApp Image 2026-08-13 at 10.07.56 (1).jpeg`: agosto;
+- `WhatsApp Image 2026-08-13 at 10.07.57.jpeg`: septiembre;
+- `WhatsApp Image 2026-08-13 at 10.07.57 (1).jpeg`: octubre;
+- `WhatsApp Image 2026-08-13 at 10.07.57 (2).jpeg`: noviembre;
+- `WhatsApp Image 2026-08-13 at 10.07.57 (3).jpeg`: diciembre.
 
-Cuando lleguen planillas, analizar su fuente, vigencia, conceptos, solapamientos, redondeos y casos de prueba antes de implementar.
+Verificación efectuada el 13 de agosto de 2026:
+
+- los componentes y totales de las seis imágenes se reconciliaron matemáticamente;
+- una publicación cordobesa informa que el acuerdo SUVICO–sector empresario fue homologado y confirma los seis totales mensuales: `https://lmdiario.com.ar/contenido/522769/el-personal-de-vigilancia-logro-un-acuerdo-salarial-con-aumentos-progresivos-has`;
+- el sitio oficial `https://www.suvico.org.ar/` confirma que la actividad cordobesa se encuadra en el CCT 422/05 y ofrece una escala salarial, aunque al consultar todavía enlazaba el PDF de enero–junio de 2026;
+- hasta archivar el acta o anexo oficial julio–diciembre, registrar esta carga como “verificada contra imágenes y fuentes públicas”, no como “documento paritario oficial adjunto”.
+
+Las imágenes son calculadoras de ejemplo sin antigüedad, nocturnidad, horas extra ni feriados cargados. Los importes están expresados en pesos argentinos:
+
+| Mes 2026 | Básico | Presentismo | Suma no remunerativa | Viáticos art. 106 LCT | Sumas remunerativas | Haberes sin deducciones | Total haberes | Neto del ejemplo |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Julio | 1.001.300 | 180.000 | 20.000 | 505.500 | 1.181.300 | 525.500 | 1.706.800 | 1.459.327 |
+| Agosto | 1.020.300 | 180.000 | 30.000 | 514.500 | 1.200.300 | 544.500 | 1.744.800 | 1.492.737 |
+| Septiembre | 1.037.600 | 180.000 | 50.000 | 524.000 | 1.217.600 | 574.000 | 1.791.600 | 1.534.704 |
+| Octubre | 1.053.200 | 180.000 | 60.000 | 534.000 | 1.233.200 | 594.000 | 1.827.200 | 1.566.428 |
+| Noviembre | 1.069.000 | 180.000 | 70.000 | 545.000 | 1.249.000 | 615.000 | 1.864.000 | 1.599.310 |
+| Diciembre | 1.085.000 | 180.000 | 120.000 | 545.000 | 1.265.000 | 665.000 | 1.930.000 | 1.658.950 |
+
+Valores unitarios publicados, sin antigüedad:
+
+| Mes 2026 | Hora | Jornada 8 h | Extra 50 % | Extra 100 % | Feriado trabajado 8 h | Adicional nocturno por hora |
+|---|---:|---:|---:|---:|---:|---:|
+| Julio | 5.906,50 | 47.252,00 | 8.859,75 | 11.813,00 | 94.504,00 | 1.001,30 |
+| Agosto | 6.001,50 | 48.012,00 | 9.002,25 | 12.003,00 | 96.024,00 | 1.020,30 |
+| Septiembre | 6.088,00 | 48.704,00 | 9.132,00 | 12.176,00 | 97.408,00 | 1.037,60 |
+| Octubre | 6.166,00 | 49.328,00 | 9.249,00 | 12.332,00 | 98.656,00 | 1.053,20 |
+| Noviembre | 6.245,00 | 49.960,00 | 9.367,50 | 12.490,00 | 99.920,00 | 1.069,00 |
+| Diciembre | 6.325,00 | 50.600,00 | 9.487,50 | 12.650,00 | 101.200,00 | 1.085,00 |
+
+Fórmulas expresadas en las escalas:
+
+- valor de hora = sumas remunerativas / 200;
+- valor de jornada de 8 horas = sumas remunerativas / 25;
+- hora extra al 50 % = valor de hora × 1,5;
+- hora extra al 100 % = valor de hora × 2;
+- feriado trabajado de 8 horas = valor de jornada × 2;
+- adicional nocturno por cada hora entre 21:00 y 06:00 = (básico + antigüedad) × 0,1 %;
+- antigüedad se adiciona al básico como ítem separado según el artículo 10 del CCT 422/05.
+
+Porcentajes de antigüedad publicados:
+
+| Años | % | Años | % | Años | % | Años | % |
+|---:|---:|---:|---:|---:|---:|---:|---:|
+| 1 | 2,0 % | 6 | 11,5 % | 11 | 18,5 % | 16 | 23,5 % |
+| 2 | 4,0 % | 7 | 13,0 % | 12 | 19,5 % | 17 | 24,5 % |
+| 3 | 6,0 % | 8 | 14,5 % | 13 | 20,5 % | 18 | 25,5 % |
+| 4 | 8,0 % | 9 | 16,0 % | 14 | 21,5 % | 19 | 26,5 % |
+| 5 | 10,0 % | 10 | 17,5 % | 15 | 22,5 % | 20 | 27,5 % |
+
+A partir de 21 años, la imagen indica adicionar 1 punto porcentual por cada año siguiente.
+
+Distinción obligatoria:
+
+- **204 horas** sigue siendo el umbral de horas trabajadas que la empresa usa para que MiGuardia clasifique el excedente mensual como extra;
+- **200** es el divisor salarial publicado para obtener el valor monetario de una hora;
+- nunca sustituir uno por otro ni calcular el valor de hora dividiendo por 204.
+
+Las imágenes también muestran ejemplos de descuentos: Cuota Mutual MAVIC, jubilación, Ley 19.032, cuota sindical SUVICO y obra social. Esos importes permiten reconciliar el neto de cada ejemplo, pero no prueban que todas las deducciones correspondan a todo usuario ni definen situaciones personales. La decisión aprobada de producto continúa siendo mostrar primero una **estimación bruta**. No implementar un neto personal como si fuera oficial sin reglas adicionales confirmadas.
+
+Persistencia y vigencia:
+
+- modelar la escala como datos versionados por mes/año;
+- una escala nueva no modifica liquidaciones históricas;
+- conservar cada componente y fórmula de manera auditable, evitando un único total opaco;
+- registrar fuente, categoría, vigencia y estado de verificación;
+- mostrar aviso: información orientativa, no recibo de sueldo ni liquidación oficial.
+
+Reglas aún abiertas, que no deben inventarse: cómo prorratear sueldo básico, presentismo, suma no remunerativa y viáticos durante un mes parcial; cuándo se pierde presentismo; tratamiento exacto de ausencias y carpetas en dinero; qué deducciones personales aplicar; redondeos de una liquidación completa; y si la hora extra al 50 % o al 100 % corresponde a cada clase de excedente real.
 
 ## 13. Feriados manuales
 
@@ -528,7 +596,7 @@ No implementar en V1 sin nueva decisión de Joaquin:
 - feriados obtenidos automáticamente;
 - búsqueda global;
 - integración directa con Inforce o SUVICO;
-- cálculo monetario antes de recibir planillas válidas.
+- cálculo neto oficial, prorrateos o deducciones personales no confirmadas por las escalas disponibles.
 
 ## 25. Orden de construcción aprobado
 
@@ -546,7 +614,7 @@ Construir por etapas, manteniendo una app ejecutable:
 10. informes y copias de seguridad;
 11. bloqueo, privacidad, accesibilidad y pulido visual;
 12. pruebas integrales y preparación de publicación;
-13. remuneración cuando existan las planillas.
+13. remuneración versionada, una vez confirmadas las reglas abiertas de prorrateo y aplicabilidad.
 
 La primera versión utilizable debe alcanzar almacenamiento local, calendario, carga individual/múltiple, objetivos/horarios, fotos y horas básicas antes de sumar capas más complejas.
 
@@ -597,7 +665,10 @@ MAIN puede decidir detalles técnicos reversibles. Para una decisión de product
 
 Abiertos conocidos:
 
-- reglas e importes salariales exactos;
+- prorrateo mensual de básico, presentismo, sumas no remunerativas y viáticos;
+- pérdida de presentismo y tratamiento monetario de ausencias/carpetas;
+- selección entre recargo extra del 50 % y del 100 % según cada situación;
+- aplicabilidad de descuentos personales y cálculo neto;
 - identidad visual definitiva;
 - proveedor meteorológico;
 - `minSdk` y versiones técnicas;
@@ -618,7 +689,7 @@ En tu primer turno:
 6. esperá la autorización de Joaquin antes de crear la estructura Android si él inició MAIN solo para validar el traspaso;
 7. una vez autorizado, implementá, compilá y ejecutá en el S25 Ultra, explicando cada paso.
 
-No crees todos los chats ni todos los módulos al inicio. Avanzá por dependencias reales. No escribas código de pago estimado todavía. No uses datos reales del cronograma en pruebas; crear fixtures ficticios.
+No crees todos los chats ni todos los módulos al inicio. Avanzá por dependencias reales. Podés modelar las escalas versionadas después de que Joaquin valide esta transcripción, pero no implementes prorrateos, netos ni reglas salariales abiertas. No uses datos reales del cronograma en pruebas; crear fixtures ficticios.
 
 ## 29. Declaración final de autoridad
 
