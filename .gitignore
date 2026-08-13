@@ -1,6 +1,11 @@
 # Android Studio y Gradle
 .gradle/
+.android/
+.bootstrap/
+.kotlin/
+.local-signing/
 .idea/
+*.iml
 build/
 **/build/
 local.properties

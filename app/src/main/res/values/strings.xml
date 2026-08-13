@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">MiGuardia</string>
+    <string name="calendar">Calendario</string>
+    <string name="summary">Resumen</string>
+    <string name="settings">Configuración</string>
+    <string name="next_guard">Próxima guardia</string>
+    <string name="no_guard_loaded">Todavía no hay guardias cargadas.</string>
+    <string name="summary_empty">Las horas y categorías aparecerán cuando cargues tus guardias.</string>
+    <string name="settings_intro">Acá vas a configurar tus objetivos, avisos, privacidad y apariencia.</string>
+    <string name="previous_month">Mes anterior</string>
+    <string name="next_month">Mes siguiente</string>
+    <string name="today">Hoy</string>
+    <string name="add">Agregar</string>
+    <string name="monday_short">L</string>
+    <string name="monday">Lunes</string>
+    <string name="tuesday_short">M</string>
+    <string name="tuesday">Martes</string>
+    <string name="wednesday_short">X</string>
+    <string name="wednesday">Miércoles</string>
+    <string name="thursday_short">J</string>
+    <string name="thursday">Jueves</string>
+    <string name="friday_short">V</string>
+    <string name="friday">Viernes</string>
+    <string name="saturday_short">S</string>
+    <string name="saturday">Sábado</string>
+    <string name="sunday_short">D</string>
+    <string name="sunday">Domingo</string>
+    <string name="undefined_day_description">%1$d de %2$s, sin definir</string>
+    <string name="today_undefined_day_description">%1$d de %2$s, hoy, sin definir</string>
+</resources>
