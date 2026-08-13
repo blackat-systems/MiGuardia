@@ -1,0 +1,29 @@
+# Android Studio y Gradle
+.gradle/
+.idea/
+build/
+**/build/
+local.properties
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Archivos locales del sistema
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Credenciales y configuración privada
+.env
+.env.*
+*.jks
+*.keystore
+keystore.properties
+google-services.json
+
+# Informes y copias generados localmente
+outputs/
+backups/
+
+# Material de referencia con datos laborales reales
+Cronograma de ejemplo/
