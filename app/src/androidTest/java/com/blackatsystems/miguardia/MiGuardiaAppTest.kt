@@ -37,13 +37,37 @@ class MiGuardiaAppTest {
         val (context, device) = launchApp()
 
         device.tapText(context.getString(R.string.summary))
-        device.assertTextVisible(context.getString(R.string.summary_empty))
+        device.assertTextVisible(context.getString(R.string.summary_hours_title))
+        device.assertTextVisible(context.getString(R.string.summary_planned))
 
         device.tapText(context.getString(R.string.settings))
         device.assertTextVisible(context.getString(R.string.settings_intro))
 
         device.tapText(context.getString(R.string.calendar))
         device.assertTextVisible(context.getString(R.string.next_guard))
+    }
+
+    @Test
+    fun summaryMonthSurvivesActivityRecreation() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val context = instrumentation.targetContext
+        val device = UiDevice.getInstance(instrumentation)
+        val currentMonth = YearMonth.now(AppDefaults.zoneId())
+
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            assertTrue(
+                "MiGuardia no se hizo visible dentro del tiempo esperado.",
+                device.wait(Until.hasObject(By.pkg(APP_PACKAGE).depth(0)), WAIT_TIMEOUT_MILLIS),
+            )
+            device.tapText(context.getString(R.string.summary))
+            device.tapDescription(context.getString(R.string.summary_previous_month))
+            device.assertTextVisible(currentMonth.minusMonths(1).displayName())
+
+            scenario.recreate()
+
+            device.assertTextVisible(currentMonth.minusMonths(1).displayName())
+            device.assertTextVisible(context.getString(R.string.summary_hours_title))
+        }
     }
 
     @Test

@@ -7,6 +7,7 @@ import androidx.activity.viewModels
 import com.blackatsystems.miguardia.ui.MiGuardiaApp
 import com.blackatsystems.miguardia.ui.calendar.CalendarViewModel
 import com.blackatsystems.miguardia.ui.management.ManagementViewModel
+import com.blackatsystems.miguardia.ui.summary.SummaryViewModel
 import com.blackatsystems.miguardia.ui.theme.MiGuardiaTheme
 
 class MainActivity : ComponentActivity() {
@@ -30,6 +31,15 @@ class MainActivity : ComponentActivity() {
         )
     }
 
+    private val summaryViewModel: SummaryViewModel by viewModels {
+        val dataStore = (application as MiGuardiaApplication).localDataStore
+        SummaryViewModel.Factory(
+            shiftRepository = dataStore.shifts,
+            explicitDayStatusRepository = dataStore.explicitDayStatuses,
+            medicalLeaveRepository = dataStore.medicalLeaves,
+        )
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
@@ -37,6 +47,7 @@ class MainActivity : ComponentActivity() {
                 MiGuardiaApp(
                     calendarViewModel = calendarViewModel,
                     managementViewModel = managementViewModel,
+                    summaryViewModel = summaryViewModel,
                 )
             }
         }

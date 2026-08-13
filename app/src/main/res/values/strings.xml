@@ -6,7 +6,6 @@
     <string name="settings">Configuración</string>
     <string name="next_guard">Próxima guardia</string>
     <string name="next_guard_pending">El próximo evento se incorporará más adelante. Tus guardias del mes aparecen en el calendario.</string>
-    <string name="summary_empty">Las horas y categorías aparecerán cuando cargues tus guardias.</string>
     <string name="settings_intro">Acá vas a configurar tus objetivos, avisos, privacidad y apariencia.</string>
     <string name="previous_month">Mes anterior</string>
     <string name="next_month">Mes siguiente</string>
@@ -39,4 +38,26 @@
     <string name="saturday">Sábado</string>
     <string name="sunday_short">D</string>
     <string name="sunday">Domingo</string>
+    <string name="summary_loading">Calculando resumen…</string>
+    <string name="summary_error">No pudimos calcular el resumen de este mes.</string>
+    <string name="summary_no_shifts">Todavía no hay guardias cargadas en este mes. Usá Agregar en el Calendario para cargar la primera; mientras tanto, el resumen se muestra en cero.</string>
+    <string name="summary_previous_month">Mes anterior del resumen</string>
+    <string name="summary_next_month">Mes siguiente del resumen</string>
+    <string name="summary_hours_title">Horas del mes</string>
+    <string name="summary_planned">Planificadas</string>
+    <string name="summary_worked">Trabajadas</string>
+    <string name="summary_pending">Pendientes</string>
+    <string name="summary_overtime">Extra después de 204 h</string>
+    <string name="summary_special_hours_title">Clasificaciones de horas trabajadas</string>
+    <string name="summary_night">Nocturnas (21:00–06:00)</string>
+    <string name="summary_holiday">En feriado</string>
+    <string name="summary_classification_notice">Extra, nocturnas y feriado pueden superponerse. Son clasificaciones de horas trabajadas y no se suman nuevamente al total.</string>
+    <string name="summary_holiday_notice">Los feriados se calculan cuando el motor recibe sus fechas. Su editor local se incorporará en otro módulo; por ahora esta cifra permanece en cero en la aplicación.</string>
+    <string name="summary_events_title">Días y novedades</string>
+    <string name="summary_shifts">Guardias</string>
+    <string name="summary_days_off">Francos explícitos</string>
+    <string name="summary_medical">Carpeta médica</string>
+    <string name="summary_absences">Ausencias</string>
+    <string name="summary_cancellations">Cancelaciones</string>
+    <string name="summary_count_and_hours">%1$d · %2$s</string>
 </resources>

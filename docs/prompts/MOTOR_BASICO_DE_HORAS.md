@@ -298,7 +298,7 @@ Cubrir como mínimo:
 - reacción a cambios de repositorio;
 - estado de error y reintento;
 - etiquetas y semántica accesibles;
-- fuente al 200 % sin contenido inaccesible;
+- tipografía y distribución predeterminadas de MiGuardia, sin variantes por `font_scale`;
 - tema claro y oscuro;
 - retrato y paisaje;
 - ausencia de solapamiento con barra de estado y navegación.
@@ -313,7 +313,7 @@ Reutilizá fakes deterministas para Compose cuando sea suficiente. Verificá en 
 - No usar datos reales de Joaquin en fixtures, capturas o pruebas.
 - No persistir resultados derivados ni ejecutar consultas en el hilo principal.
 - No usar `fallbackToDestructiveMigration` ni `allowMainThreadQueries`.
-- Mantener tema claro/oscuro, lector de pantalla y fuente grande.
+- Mantener tema claro/oscuro, lector de pantalla y la tipografía predeterminada de MiGuardia.
 - Si una fuente falla, mostrar error recuperable sin borrar ni modificar datos.
 
 ## 12. Verificación obligatoria
@@ -332,8 +332,8 @@ Antes de declarar terminado:
 5. informá cantidades exactas de pruebas, fallos y avisos de lint;
 6. ejecutá `git diff --check`;
 7. revisá ausencia de secretos, permisos, dependencias y artefactos generados;
-8. verificá manualmente Resumen en el S25 Ultra con vacío y datos ficticios, tema claro/oscuro, fuente habitual y 200 %, retrato y paisaje;
-9. restaurá `font_scale = 1.15`, tema oscuro, rotación automática, retrato y resolución 1440×3120 si los modificaste.
+8. verificá manualmente Resumen en el S25 Ultra con vacío y datos ficticios, tema claro/oscuro, retrato y paisaje, sin modificar `font_scale`, zoom, tamaño de visualización ni densidad;
+9. restaurá tema oscuro, rotación automática, retrato y resolución 1440×3120 si los modificaste.
 
 No confundas compilación con pruebas ejecutadas. No declares terminado si una comprobación obligatoria no se ejecutó realmente.
 

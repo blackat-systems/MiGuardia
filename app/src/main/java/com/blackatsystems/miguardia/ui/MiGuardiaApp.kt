@@ -71,6 +71,9 @@ import com.blackatsystems.miguardia.ui.management.ManagementSurface
 import com.blackatsystems.miguardia.ui.management.ManagementSurfaceHost
 import com.blackatsystems.miguardia.ui.management.ManagementUiState
 import com.blackatsystems.miguardia.ui.management.ManagementViewModel
+import com.blackatsystems.miguardia.ui.summary.SummaryScreen
+import com.blackatsystems.miguardia.ui.summary.SummaryUiState
+import com.blackatsystems.miguardia.ui.summary.SummaryViewModel
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.YearMonth
@@ -95,10 +98,12 @@ private enum class MainDestination(
 fun MiGuardiaApp(
     calendarViewModel: CalendarViewModel,
     managementViewModel: ManagementViewModel,
+    summaryViewModel: SummaryViewModel,
     modifier: Modifier = Modifier,
 ) {
     val calendarState by calendarViewModel.uiState.collectAsStateWithLifecycle()
     val managementState by managementViewModel.uiState.collectAsStateWithLifecycle()
+    val summaryState by summaryViewModel.uiState.collectAsStateWithLifecycle()
     MiGuardiaApp(
         calendarState = calendarState,
         onPreviousMonth = calendarViewModel::showPreviousMonth,
@@ -107,6 +112,11 @@ fun MiGuardiaApp(
         onSelectDate = calendarViewModel::selectDate,
         onDismissDate = calendarViewModel::clearSelectedDate,
         onRetry = calendarViewModel::retry,
+        summaryState = summaryState,
+        onSummaryPreviousMonth = summaryViewModel::showPreviousMonth,
+        onSummaryNextMonth = summaryViewModel::showNextMonth,
+        onSummaryToday = summaryViewModel::showCurrentMonth,
+        onSummaryRetry = summaryViewModel::retry,
         managementState = managementState,
         managementActions = ManagementActions.from(managementViewModel),
         modifier = modifier,
@@ -126,6 +136,14 @@ fun MiGuardiaApp(
     modifier: Modifier = Modifier,
     managementState: ManagementUiState = ManagementUiState(),
     managementActions: ManagementActions = ManagementActions(),
+    summaryState: SummaryUiState = SummaryUiState(
+        visibleMonth = calendarState.visibleMonth,
+        referenceInstant = calendarState.referenceInstant,
+    ),
+    onSummaryPreviousMonth: () -> Unit = {},
+    onSummaryNextMonth: () -> Unit = {},
+    onSummaryToday: () -> Unit = {},
+    onSummaryRetry: () -> Unit = {},
 ) {
     var destination by rememberSaveable { androidx.compose.runtime.mutableStateOf(MainDestination.CALENDAR) }
 
@@ -170,10 +188,13 @@ fun MiGuardiaApp(
                 onAddShift = { managementActions.openAddShift(calendarState.visibleMonth, null) },
             )
 
-            MainDestination.SUMMARY -> PlaceholderScreen(
-                title = stringResource(R.string.summary),
-                body = stringResource(R.string.summary_empty),
+            MainDestination.SUMMARY -> SummaryScreen(
+                state = summaryState,
                 contentPadding = innerPadding,
+                onPreviousMonth = onSummaryPreviousMonth,
+                onNextMonth = onSummaryNextMonth,
+                onToday = onSummaryToday,
+                onRetry = onSummaryRetry,
             )
 
             MainDestination.SETTINGS -> SettingsScreen(
@@ -740,35 +761,4 @@ private fun YearMonth.displayName(): String {
     val monthName = month.getDisplayName(TextStyle.FULL, SpanishArgentina)
         .replaceFirstChar { it.titlecase(SpanishArgentina) }
     return "$monthName de $year"
-}
-
-@Composable
-private fun PlaceholderScreen(
-    title: String,
-    body: String,
-    contentPadding: PaddingValues,
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(contentPadding)
-            .padding(24.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Text(
-                text = body,
-                textAlign = TextAlign.Center,
-                style = MaterialTheme.typography.bodyLarge,
-            )
-        }
-    }
 }

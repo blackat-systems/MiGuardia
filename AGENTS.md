@@ -83,9 +83,13 @@ Un cambio no está terminado hasta que:
 - tiene pruebas nuevas o actualizadas para la conducta modificada;
 - se verificó en el dispositivo físico cuando afecta interfaz, permisos, notificaciones, widget, biometría, archivos o comportamiento del sistema;
 - contempla estados vacío, error, sin conexión y permisos denegados cuando corresponda;
-- respeta tema claro/oscuro, tamaño de fuente y lector de pantalla en la superficie modificada;
+- respeta tema claro/oscuro y lector de pantalla en la superficie modificada;
+- mantiene el tamaño tipográfico, la escala visual y la distribución predeterminados por MiGuardia; no adapta ni redistribuye la interfaz según `font_scale`;
+- usa la densidad estable del dispositivo como referencia y no la densidad configurada por zoom o tamaño de visualización; MiGuardia mantiene la misma escala y las mismas reglas de presentación independientemente de esos ajustes;
 - no expone datos privados en logs, notificaciones, widgets, informes o capturas;
 - la documentación refleja cualquier cambio de comportamiento o arquitectura.
+
+Las pruebas no deben modificar `font_scale`, zoom, tamaño de visualización ni densidad del dispositivo. No implementar variantes ni comportamientos especiales basados en esos valores.
 
 Priorizar pruebas de límites: medianoche, fin de mes/año, febrero bisiesto, cambio de mes, dos guardias excepcionales, descanso menor a 12 horas, umbral de 204 horas, tramo nocturno 21:00–06:00, feriado que corta una guardia nocturna, reprogramación de alertas, restauración parcial y datos históricos.
 

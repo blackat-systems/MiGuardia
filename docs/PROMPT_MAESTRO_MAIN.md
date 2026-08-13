@@ -577,7 +577,9 @@ Permitir guardar, compartir y regenerar. Comprobar legibilidad, saltos de págin
 - Nunca comunicar estado solo mediante color: conservar abreviatura, horario o símbolo.
 - Contraste automático de texto sobre colores elegidos.
 - Advertir colores demasiado similares, pero permitir continuar.
-- Respetar tamaño de fuente Android y redistribuir contenido.
+- MiGuardia mantiene su tamaño tipográfico, su escala visual y su distribución predeterminados; no adapta ni redistribuye la interfaz según `font_scale`.
+- MiGuardia usa la densidad estable del dispositivo como referencia y no la densidad configurada por zoom o tamaño de visualización. No implementar variantes ni comportamientos especiales basados en esos ajustes.
+- Las verificaciones no deben modificar `font_scale`, zoom, tamaño de visualización ni densidad del dispositivo.
 - En teléfonos pequeños priorizar abreviatura, horario y estado.
 - Descripciones completas para TalkBack/lector de pantalla.
 - Español en V1, pero textos estructurados para futura localización.
@@ -637,7 +639,7 @@ Cada módulo debe demostrar como mínimo:
 - persistencia tras cerrar/reabrir y reiniciar cuando corresponda;
 - conducta correcta sin internet;
 - permisos concedidos y denegados;
-- tema claro/oscuro y fuente grande;
+- tema claro/oscuro con la tipografía predeterminada de MiGuardia;
 - datos vacíos, inválidos y límites;
 - errores recuperables sin pérdida;
 - pruebas automatizadas de lógica;
