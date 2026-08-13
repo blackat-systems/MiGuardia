@@ -630,6 +630,8 @@ Construir por etapas, manteniendo una app ejecutable:
 12. pruebas integrales y preparación de publicación;
 13. remuneración versionada, una vez confirmadas las reglas abiertas de prorrateo y aplicabilidad.
 
+Decisión de secuencia del 13 de agosto de 2026: Joaquin autorizó implementar **novedades, feriados y notas** inmediatamente después del motor básico de horas. El módulo de fotos mensuales continúa pendiente y no queda cancelado; solamente se pospone en el orden de ejecución.
+
 La primera versión utilizable debe alcanzar almacenamiento local, calendario, carga individual/múltiple, objetivos/horarios, fotos y horas básicas antes de sumar capas más complejas.
 
 ## 26. Criterios transversales de aceptación
