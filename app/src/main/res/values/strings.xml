@@ -5,13 +5,26 @@
     <string name="summary">Resumen</string>
     <string name="settings">Configuración</string>
     <string name="next_guard">Próxima guardia</string>
-    <string name="no_guard_loaded">Todavía no hay guardias cargadas.</string>
+    <string name="next_guard_pending">El próximo evento se incorporará más adelante. Tus guardias del mes aparecen en el calendario.</string>
     <string name="summary_empty">Las horas y categorías aparecerán cuando cargues tus guardias.</string>
     <string name="settings_intro">Acá vas a configurar tus objetivos, avisos, privacidad y apariencia.</string>
     <string name="previous_month">Mes anterior</string>
     <string name="next_month">Mes siguiente</string>
     <string name="today">Hoy</string>
     <string name="add">Agregar</string>
+    <string name="calendar_loading">Cargando calendario…</string>
+    <string name="calendar_error">No pudimos cargar este mes.</string>
+    <string name="retry">Reintentar</string>
+    <string name="shift_upcoming">Próxima</string>
+    <string name="shift_in_progress">En curso</string>
+    <string name="shift_completed">Completada</string>
+    <string name="shift_cancelled">Cancelada</string>
+    <string name="shift_absent">Ausencia</string>
+    <string name="position_value">Puesto: %1$s</string>
+    <string name="undefined_implicit_detail">Este día está sin definir.</string>
+    <string name="undefined_explicit_detail">Día sin definir marcado explícitamente.</string>
+    <string name="day_off_explicit_detail">Franco marcado explícitamente.</string>
+    <string name="medical_leave_detail">Carpeta médica. La nota privada permanece oculta.</string>
     <string name="monday_short">L</string>
     <string name="monday">Lunes</string>
     <string name="tuesday_short">M</string>
@@ -26,6 +39,4 @@
     <string name="saturday">Sábado</string>
     <string name="sunday_short">D</string>
     <string name="sunday">Domingo</string>
-    <string name="undefined_day_description">%1$d de %2$s, sin definir</string>
-    <string name="today_undefined_day_description">%1$d de %2$s, hoy, sin definir</string>
 </resources>

@@ -237,6 +237,18 @@ El detalle muestra:
 
 Antes del inicio: cuenta regresiva y recordatorios activos, con acceso a ajustes de esa guardia. En curso: cuenta hasta el fin y acción Informar novedad. Después del fin: si no hubo novedad, marcar automáticamente como completada. El usuario puede corregir luego.
 
+### Confirmación automática de guardias históricas
+
+El usuario no debe confirmar manualmente cada guardia ya transcurrida. Mientras una guardia conserve el estado persistido normal `PLANNED`, su estado temporal se deriva de sus instantes reales y del reloj:
+
+- `UPCOMING` si el instante actual es anterior al inicio;
+- `IN_PROGRESS` desde el inicio inclusive y hasta el fin exclusivo;
+- `COMPLETED` desde el fin inclusive.
+
+Por lo tanto, si el usuario carga hoy una guardia cuyo horario ya terminó —sea de días anteriores del mes actual o de meses anteriores— la aplicación debe mostrarla y computarla inmediatamente como completada, sin pedir una confirmación adicional y sin guardar una marca `COMPLETED` redundante. Los estados persistidos explícitos `CANCELLED` y `ABSENT` prevalecen sobre esta derivación, y el usuario podrá corregir posteriormente una guardia retrocargada para declarar lo contrario.
+
+Una guardia nocturna iniciada el día anterior que todavía no alcanzó su instante real de fin continúa `IN_PROGRESS`; no se la completa solo por haber cambiado la fecha civil. El reloj y la zona deben poder inyectarse para que esta conducta sea determinista en pruebas.
+
 Notas: texto libre, privado por defecto, sin efecto automático en cálculos y excluido de informes salvo elección explícita.
 
 Conservar el plan original y, si hubo cambio formal, el dato real/final. Basta registrar última modificación; no se exige un historial forense completo de cada edición.
@@ -652,6 +664,7 @@ Casos críticos obligatorios:
 16. restaurar agosto no elimina septiembre;
 17. informe parcial correctamente fechado;
 18. clima no disponible no bloquea calendario ni avisos.
+19. guardia retrocargada cuyo fin ya pasó aparece automáticamente completada, salvo ausencia o cancelación explícita.
 
 ## 27. Política para decisiones todavía abiertas
 

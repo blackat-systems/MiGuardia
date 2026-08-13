@@ -3,6 +3,7 @@ package com.blackatsystems.miguardia
 import android.app.KeyguardManager
 import android.content.Context
 import android.content.Intent
+import androidx.test.core.app.ActivityScenario
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.UiDevice
@@ -59,6 +60,32 @@ class MiGuardiaAppTest {
         device.tapDescription(context.getString(R.string.previous_month))
         device.tapText(context.getString(R.string.today))
         device.assertTextVisible(currentMonth.displayName())
+    }
+
+    @Test
+    fun selectedMonthSurvivesActivityRecreation() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val context = instrumentation.targetContext
+        val keyguardManager = context.getSystemService(KeyguardManager::class.java)
+        assertFalse(
+            "El dispositivo debe estar desbloqueado para probar la interfaz.",
+            keyguardManager.isKeyguardLocked,
+        )
+        val device = UiDevice.getInstance(instrumentation)
+        val currentMonth = YearMonth.now(AppDefaults.zoneId())
+
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            assertTrue(
+                "MiGuardia no se hizo visible dentro del tiempo esperado.",
+                device.wait(Until.hasObject(By.pkg(APP_PACKAGE).depth(0)), WAIT_TIMEOUT_MILLIS),
+            )
+            device.tapDescription(context.getString(R.string.previous_month))
+            device.assertTextVisible(currentMonth.minusMonths(1).displayName())
+
+            scenario.recreate()
+
+            device.assertTextVisible(currentMonth.minusMonths(1).displayName())
+        }
     }
 
     private fun launchApp(): Pair<Context, UiDevice> {

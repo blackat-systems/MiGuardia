@@ -2,22 +2,30 @@ package com.blackatsystems.miguardia.ui
 
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
@@ -26,34 +34,47 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.blackatsystems.miguardia.R
 import com.blackatsystems.miguardia.core.domain.AppDefaults
+import com.blackatsystems.miguardia.core.domain.calendar.CalendarDay
+import com.blackatsystems.miguardia.core.domain.calendar.CalendarShift
+import com.blackatsystems.miguardia.core.domain.calendar.ShiftTemporalStatus
+import com.blackatsystems.miguardia.core.domain.model.ExplicitDayStatusType
+import com.blackatsystems.miguardia.ui.calendar.CalendarLoadState
+import com.blackatsystems.miguardia.ui.calendar.CalendarUiState
+import com.blackatsystems.miguardia.ui.calendar.CalendarViewModel
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.YearMonth
+import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
 
 private val SpanishArgentina = Locale.forLanguageTag("es-AR")
-
-private val YearMonthSaver = Saver<YearMonth, String>(
-    save = { month -> month.toString() },
-    restore = { value -> YearMonth.parse(value) },
-)
+private val FullDateFormatter = DateTimeFormatter.ofPattern("EEEE d 'de' MMMM 'de' yyyy", SpanishArgentina)
+private val ShiftTimeFormatter = DateTimeFormatter.ofPattern("HH:mm", SpanishArgentina)
 
 private enum class MainDestination(
     @param:StringRes val labelRes: Int,
@@ -64,19 +85,41 @@ private enum class MainDestination(
     SETTINGS(R.string.settings, "A"),
 }
 
+@Composable
+fun MiGuardiaApp(
+    calendarViewModel: CalendarViewModel,
+    modifier: Modifier = Modifier,
+) {
+    val calendarState by calendarViewModel.uiState.collectAsStateWithLifecycle()
+    MiGuardiaApp(
+        calendarState = calendarState,
+        onPreviousMonth = calendarViewModel::showPreviousMonth,
+        onNextMonth = calendarViewModel::showNextMonth,
+        onToday = calendarViewModel::showCurrentMonth,
+        onSelectDate = calendarViewModel::selectDate,
+        onDismissDate = calendarViewModel::clearSelectedDate,
+        onRetry = calendarViewModel::retry,
+        modifier = modifier,
+    )
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MiGuardiaApp(
+    calendarState: CalendarUiState,
+    onPreviousMonth: () -> Unit,
+    onNextMonth: () -> Unit,
+    onToday: () -> Unit,
+    onSelectDate: (LocalDate) -> Unit,
+    onDismissDate: () -> Unit,
+    onRetry: () -> Unit,
     modifier: Modifier = Modifier,
-    initialMonth: YearMonth = YearMonth.now(AppDefaults.zoneId()),
 ) {
-    var destination by rememberSaveable { mutableStateOf(MainDestination.CALENDAR) }
+    var destination by rememberSaveable { androidx.compose.runtime.mutableStateOf(MainDestination.CALENDAR) }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        topBar = {
-            TopAppBar(title = { Text(stringResource(R.string.app_name)) })
-        },
+        topBar = { TopAppBar(title = { Text(stringResource(R.string.app_name)) }) },
         bottomBar = {
             NavigationBar {
                 MainDestination.entries.forEach { item ->
@@ -105,8 +148,13 @@ fun MiGuardiaApp(
     ) { innerPadding ->
         when (destination) {
             MainDestination.CALENDAR -> CalendarScreen(
-                initialMonth = initialMonth,
+                state = calendarState,
                 contentPadding = innerPadding,
+                onPreviousMonth = onPreviousMonth,
+                onNextMonth = onNextMonth,
+                onToday = onToday,
+                onSelectDate = onSelectDate,
+                onRetry = onRetry,
             )
 
             MainDestination.SUMMARY -> PlaceholderScreen(
@@ -122,41 +170,65 @@ fun MiGuardiaApp(
             )
         }
     }
+
+    val selectedDay = calendarState.selectedDate?.let { selectedDate ->
+        calendarState.days.firstOrNull { it.date == selectedDate }
+    }
+    if (selectedDay != null) {
+        ModalBottomSheet(onDismissRequest = onDismissDate) {
+            DayDetailSheet(day = selectedDay)
+        }
+    }
 }
 
 @Composable
 private fun CalendarScreen(
-    initialMonth: YearMonth,
+    state: CalendarUiState,
     contentPadding: PaddingValues,
+    onPreviousMonth: () -> Unit,
+    onNextMonth: () -> Unit,
+    onToday: () -> Unit,
+    onSelectDate: (LocalDate) -> Unit,
+    onRetry: () -> Unit,
 ) {
-    var visibleMonth by rememberSaveable(stateSaver = YearMonthSaver) {
-        mutableStateOf(initialMonth)
-    }
-    val currentDate = LocalDate.now(AppDefaults.zoneId())
-
+    val today = state.referenceInstant.atZone(AppDefaults.zoneId()).toLocalDate()
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(contentPadding)
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp)
+            .padding(horizontal = 8.dp)
             .padding(bottom = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         NextGuardCard()
-
         MonthControls(
-            visibleMonth = visibleMonth,
-            onPrevious = { visibleMonth = visibleMonth.minusMonths(1) },
-            onNext = { visibleMonth = visibleMonth.plusMonths(1) },
-            onToday = { visibleMonth = YearMonth.from(currentDate) },
+            visibleMonth = state.visibleMonth,
+            onPrevious = onPreviousMonth,
+            onNext = onNextMonth,
+            onToday = onToday,
         )
 
-        WeekdayHeader()
-        MonthGrid(
-            month = visibleMonth,
-            today = currentDate,
-        )
+        when (state.loadState) {
+            CalendarLoadState.LOADING -> LoadingCalendar()
+            CalendarLoadState.ERROR -> ErrorCalendar(
+                message = state.errorMessage ?: stringResource(R.string.calendar_error),
+                onRetry = onRetry,
+            )
+            CalendarLoadState.CONTENT -> Unit
+        }
+
+        if (state.days.isNotEmpty()) {
+            WeekdayHeader()
+            MonthGrid(
+                month = state.visibleMonth,
+                days = state.days,
+                today = today,
+                onPreviousMonth = onPreviousMonth,
+                onNextMonth = onNextMonth,
+                onSelectDate = onSelectDate,
+            )
+        }
 
         Button(
             onClick = {},
@@ -181,9 +253,39 @@ private fun NextGuardCard() {
                 fontWeight = FontWeight.SemiBold,
             )
             Text(
-                text = stringResource(R.string.no_guard_loaded),
+                text = stringResource(R.string.next_guard_pending),
                 style = MaterialTheme.typography.bodyMedium,
             )
+        }
+    }
+}
+
+@Composable
+private fun LoadingCalendar() {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 24.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        CircularProgressIndicator(modifier = Modifier.width(28.dp))
+        Spacer(modifier = Modifier.width(12.dp))
+        Text(stringResource(R.string.calendar_loading))
+    }
+}
+
+@Composable
+private fun ErrorCalendar(message: String, onRetry: () -> Unit) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(message, style = MaterialTheme.typography.bodyLarge)
+            Button(onClick = onRetry) {
+                Text(stringResource(R.string.retry))
+            }
         }
     }
 }
@@ -197,7 +299,6 @@ private fun MonthControls(
 ) {
     val previousDescription = stringResource(R.string.previous_month)
     val nextDescription = stringResource(R.string.next_month)
-
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -213,7 +314,6 @@ private fun MonthControls(
                 style = MaterialTheme.typography.headlineMedium,
             )
         }
-
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 text = visibleMonth.displayName(),
@@ -224,7 +324,6 @@ private fun MonthControls(
                 Text(stringResource(R.string.today))
             }
         }
-
         IconButton(
             onClick = onNext,
             modifier = Modifier.semantics { contentDescription = nextDescription },
@@ -249,7 +348,6 @@ private fun WeekdayHeader() {
         R.string.saturday_short to R.string.saturday,
         R.string.sunday_short to R.string.sunday,
     )
-
     Row(modifier = Modifier.fillMaxWidth()) {
         labels.forEach { (shortLabel, fullLabel) ->
             val fullDayName = stringResource(fullLabel)
@@ -269,73 +367,282 @@ private fun WeekdayHeader() {
 @Composable
 private fun MonthGrid(
     month: YearMonth,
+    days: List<CalendarDay>,
     today: LocalDate,
+    onPreviousMonth: () -> Unit,
+    onNextMonth: () -> Unit,
+    onSelectDate: (LocalDate) -> Unit,
 ) {
-    val firstDay = month.atDay(1)
-    val offset = firstDay.dayOfWeek.value - 1
-    val cells = List(42) { index ->
+    val dayByDate = remember(days) { days.associateBy { it.date } }
+    val offset = month.atDay(1).dayOfWeek.value - 1
+    val cells = List<CalendarDay?>(42) { index ->
         val dayNumber = index - offset + 1
         dayNumber.takeIf { it in 1..month.lengthOfMonth() }
+            ?.let { dayByDate[month.atDay(it)] }
     }
-    val monthName = month.month.getDisplayName(TextStyle.FULL, SpanishArgentina)
+    var horizontalDrag by remember { mutableFloatStateOf(0f) }
 
     Column(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("month-grid")
+            .pointerInput(month) {
+                detectHorizontalDragGestures(
+                    onDragStart = { horizontalDrag = 0f },
+                    onHorizontalDrag = { change, dragAmount ->
+                        horizontalDrag += dragAmount
+                        change.consume()
+                    },
+                    onDragCancel = { horizontalDrag = 0f },
+                    onDragEnd = {
+                        val threshold = 64.dp.toPx()
+                        when {
+                            horizontalDrag <= -threshold -> onNextMonth()
+                            horizontalDrag >= threshold -> onPreviousMonth()
+                        }
+                        horizontalDrag = 0f
+                    },
+                )
+            },
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         cells.chunked(7).forEach { week ->
             Row(modifier = Modifier.fillMaxWidth()) {
-                week.forEach { dayNumber ->
-                    if (dayNumber == null) {
+                week.forEach { day ->
+                    if (day == null) {
                         Box(
                             modifier = Modifier
                                 .weight(1f)
-                                .heightIn(min = 52.dp),
+                                .heightIn(min = 88.dp),
                         )
                     } else {
-                        val date = month.atDay(dayNumber)
-                        val dayDescription = stringResource(
-                            if (date == today) {
-                                R.string.today_undefined_day_description
-                            } else {
-                                R.string.undefined_day_description
-                            },
-                            dayNumber,
-                            monthName,
+                        DayCell(
+                            day = day,
+                            isToday = day.date == today,
+                            onClick = { onSelectDate(day.date) },
+                            modifier = Modifier.weight(1f),
                         )
-                        val background = if (date == today) {
-                            MaterialTheme.colorScheme.primaryContainer
-                        } else {
-                            MaterialTheme.colorScheme.surfaceVariant
-                        }
-
-                        Column(
-                            modifier = Modifier
-                                .weight(1f)
-                                .padding(2.dp)
-                                .heightIn(min = 52.dp)
-                                .clip(MaterialTheme.shapes.small)
-                                .background(background)
-                                .clearAndSetSemantics { contentDescription = dayDescription }
-                                .padding(4.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.SpaceBetween,
-                        ) {
-                            Text(
-                                text = dayNumber.toString(),
-                                style = MaterialTheme.typography.labelMedium,
-                            )
-                            Text(
-                                text = "?",
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Bold,
-                            )
-                        }
                     }
                 }
             }
         }
     }
+}
+
+@Composable
+private fun DayCell(
+    day: CalendarDay,
+    isToday: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val description = day.accessibilityDescription(isToday)
+    val background = if (isToday) {
+        MaterialTheme.colorScheme.primaryContainer
+    } else {
+        MaterialTheme.colorScheme.surfaceVariant
+    }
+    Column(
+        modifier = modifier
+            .padding(2.dp)
+            .heightIn(min = 88.dp)
+            .clip(MaterialTheme.shapes.small)
+            .background(background)
+            .clearAndSetSemantics {
+                contentDescription = description
+                role = Role.Button
+                onClick(action = {
+                    onClick()
+                    true
+                })
+            }
+            .clickable(onClick = onClick)
+            .padding(4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        Text(
+            text = day.date.dayOfMonth.toString(),
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = if (isToday) FontWeight.Bold else FontWeight.Medium,
+        )
+        val firstShift = day.shifts.firstOrNull()
+        if (firstShift != null) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(4.dp)
+                    .clip(MaterialTheme.shapes.extraSmall)
+                    .background(Color(firstShift.shift.colorArgbSnapshot)),
+            )
+            Text(
+                text = "${firstShift.shift.objectiveAbbreviationSnapshot} · ${firstShift.temporalStatus.shortLabel()}",
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(
+                text = firstShift.shift.timeRange(),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.labelSmall,
+            )
+            if (day.shifts.size > 1) {
+                Text(
+                    text = "+${day.shifts.size - 1}",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+        }
+        val markers = buildList {
+            when (day.explicitStatus) {
+                ExplicitDayStatusType.DAY_OFF -> add("F")
+                ExplicitDayStatusType.UNDEFINED -> add("?")
+                null -> Unit
+            }
+            if (day.hasMedicalLeave) add("CM")
+            if (day.isImplicitlyUndefined) add("?")
+        }
+        if (markers.isNotEmpty()) {
+            Text(
+                text = markers.joinToString(" · "),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+    }
+}
+
+@Composable
+private fun DayDetailSheet(day: CalendarDay) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(max = 640.dp)
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 24.dp)
+            .padding(bottom = 32.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Text(
+            text = day.date.fullDisplayName(),
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+        )
+        if (day.shifts.isEmpty() && day.explicitStatus == null && !day.hasMedicalLeave) {
+            Text(stringResource(R.string.undefined_implicit_detail))
+        }
+        day.shifts.forEachIndexed { index, calendarShift ->
+            if (index > 0) HorizontalDivider()
+            ShiftDetail(calendarShift)
+        }
+        when (day.explicitStatus) {
+            ExplicitDayStatusType.DAY_OFF -> Text(stringResource(R.string.day_off_explicit_detail))
+            ExplicitDayStatusType.UNDEFINED -> Text(stringResource(R.string.undefined_explicit_detail))
+            null -> Unit
+        }
+        if (day.hasMedicalLeave) {
+            Text(stringResource(R.string.medical_leave_detail))
+        }
+    }
+}
+
+@Composable
+private fun ShiftDetail(calendarShift: CalendarShift) {
+    val shift = calendarShift.shift
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            modifier = Modifier
+                .width(6.dp)
+                .height(48.dp)
+                .clip(MaterialTheme.shapes.extraSmall)
+                .background(Color(shift.colorArgbSnapshot)),
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Text(
+                text = "${shift.objectiveNameSnapshot} (${shift.objectiveAbbreviationSnapshot})",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(shift.timeRange())
+            Text(calendarShift.temporalStatus.displayLabel(), fontWeight = FontWeight.Medium)
+            shift.position?.takeIf { it.isNotBlank() }?.let { position ->
+                Text(stringResource(R.string.position_value, position))
+            }
+            shift.objectiveAddressSnapshot?.takeIf { it.isNotBlank() }?.let { address ->
+                Text(address)
+            }
+        }
+    }
+}
+
+@Composable
+private fun ShiftTemporalStatus.displayLabel(): String = stringResource(
+    when (this) {
+        ShiftTemporalStatus.UPCOMING -> R.string.shift_upcoming
+        ShiftTemporalStatus.IN_PROGRESS -> R.string.shift_in_progress
+        ShiftTemporalStatus.COMPLETED -> R.string.shift_completed
+        ShiftTemporalStatus.CANCELLED -> R.string.shift_cancelled
+        ShiftTemporalStatus.ABSENT -> R.string.shift_absent
+    },
+)
+
+private fun ShiftTemporalStatus.shortLabel(): String = when (this) {
+    ShiftTemporalStatus.UPCOMING -> "Próx."
+    ShiftTemporalStatus.IN_PROGRESS -> "Ahora"
+    ShiftTemporalStatus.COMPLETED -> "Hecha"
+    ShiftTemporalStatus.CANCELLED -> "Cancel."
+    ShiftTemporalStatus.ABSENT -> "Aus."
+}
+
+private fun CalendarDay.accessibilityDescription(isToday: Boolean): String {
+    val parts = mutableListOf(date.fullDisplayName())
+    if (isToday) parts += "hoy"
+    shifts.forEach { calendarShift ->
+        parts += buildString {
+            append("guardia ")
+            append(calendarShift.shift.objectiveAbbreviationSnapshot)
+            append(" de ")
+            append(calendarShift.shift.startTimeSnapshot.format(ShiftTimeFormatter))
+            append(" a ")
+            append(calendarShift.shift.endTimeSnapshot.format(ShiftTimeFormatter))
+            append(", ")
+            append(calendarShift.temporalStatus.accessibilityLabel())
+        }
+    }
+    when (explicitStatus) {
+        ExplicitDayStatusType.DAY_OFF -> parts += "franco marcado explícitamente"
+        ExplicitDayStatusType.UNDEFINED -> parts += "día sin definir marcado explícitamente"
+        null -> Unit
+    }
+    if (hasMedicalLeave) parts += "carpeta médica"
+    if (isImplicitlyUndefined) parts += "sin definir"
+    return parts.joinToString(", ")
+}
+
+private fun ShiftTemporalStatus.accessibilityLabel(): String = when (this) {
+    ShiftTemporalStatus.UPCOMING -> "próxima"
+    ShiftTemporalStatus.IN_PROGRESS -> "en curso"
+    ShiftTemporalStatus.COMPLETED -> "completada"
+    ShiftTemporalStatus.CANCELLED -> "cancelada"
+    ShiftTemporalStatus.ABSENT -> "ausencia"
+}
+
+private fun com.blackatsystems.miguardia.core.domain.model.Shift.timeRange(): String =
+    "${startTimeSnapshot.format(ShiftTimeFormatter)}–${endTimeSnapshot.format(ShiftTimeFormatter)}"
+
+private fun LocalDate.fullDisplayName(): String = format(FullDateFormatter)
+    .replaceFirstChar { it.titlecase(SpanishArgentina) }
+
+private fun YearMonth.displayName(): String {
+    val monthName = month.getDisplayName(TextStyle.FULL, SpanishArgentina)
+        .replaceFirstChar { it.titlecase(SpanishArgentina) }
+    return "$monthName de $year"
 }
 
 @Composable
@@ -367,10 +674,4 @@ private fun PlaceholderScreen(
             )
         }
     }
-}
-
-private fun YearMonth.displayName(): String {
-    val monthName = month.getDisplayName(TextStyle.FULL, SpanishArgentina)
-        .replaceFirstChar { it.titlecase(SpanishArgentina) }
-    return "$monthName de $year"
 }
