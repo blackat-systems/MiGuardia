@@ -6,6 +6,8 @@ import com.blackatsystems.miguardia.core.domain.model.ExplicitDayStatusType
 import com.blackatsystems.miguardia.core.domain.model.MedicalLeave
 import com.blackatsystems.miguardia.core.domain.model.Shift
 import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
+import com.blackatsystems.miguardia.core.domain.model.Vacation
+import com.blackatsystems.miguardia.core.domain.vacation.vacationDatesInMonth
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
@@ -30,6 +32,7 @@ data class MonthlyHoursSummary(
     val absenceHours: Duration,
     val cancellationCount: Int,
     val cancellationHours: Duration,
+    val vacationDayCount: Int = 0,
 )
 
 fun calculateMonthlyHours(
@@ -39,6 +42,7 @@ fun calculateMonthlyHours(
     medicalLeaves: List<MedicalLeave>,
     referenceInstant: Instant,
     holidayDates: Set<LocalDate> = emptySet(),
+    vacations: List<Vacation> = emptyList(),
     monthlyThreshold: Duration = Duration.ofHours(AppDefaults.MONTHLY_HOURS_THRESHOLD.toLong()),
 ): MonthlyHoursSummary {
     require(!monthlyThreshold.isNegative) { "El umbral mensual no puede ser negativo" }
@@ -51,6 +55,7 @@ fun calculateMonthlyHours(
     }
 
     val medicalDates = medicalDatesInMonth(month, medicalLeaves)
+    val vacationDates = vacationDatesInMonth(month, vacations)
     var planned = Duration.ZERO
     var worked = Duration.ZERO
     var pending = Duration.ZERO
@@ -64,24 +69,28 @@ fun calculateMonthlyHours(
 
     monthShifts.forEach { shift ->
         val fullDuration = Duration.between(shift.startAt, shift.endAt)
-        planned = planned.plus(fullDuration)
-
         when {
             shift.status == ShiftStatus.ABSENT -> {
+                planned = planned.plus(fullDuration)
                 absenceCount += 1
                 absenceHours = absenceHours.plus(fullDuration)
             }
 
             shift.status == ShiftStatus.CANCELLED -> {
+                planned = planned.plus(fullDuration)
                 cancellationCount += 1
                 cancellationHours = cancellationHours.plus(fullDuration)
             }
 
+            shift.localStartDate in vacationDates -> Unit
+
             shift.localStartDate in medicalDates -> {
+                planned = planned.plus(fullDuration)
                 medicalHours = medicalHours.plus(fullDuration)
             }
 
             else -> {
+                planned = planned.plus(fullDuration)
                 val workedEnd = minOf(shift.endAt, referenceInstant)
                 if (workedEnd.isAfter(shift.startAt)) {
                     worked = worked.plus(Duration.between(shift.startAt, workedEnd))
@@ -148,6 +157,7 @@ fun calculateMonthlyHours(
         absenceHours = absenceHours,
         cancellationCount = cancellationCount,
         cancellationHours = cancellationHours,
+        vacationDayCount = vacationDates.size,
     )
 }
 

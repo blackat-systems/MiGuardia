@@ -28,6 +28,7 @@ import com.blackatsystems.miguardia.core.domain.model.ExplicitDayStatusType
 import com.blackatsystems.miguardia.core.domain.model.MedicalLeave
 import com.blackatsystems.miguardia.core.domain.model.Shift
 import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
+import com.blackatsystems.miguardia.core.domain.model.Vacation
 import com.blackatsystems.miguardia.ui.MiGuardiaApp
 import com.blackatsystems.miguardia.ui.calendar.CalendarLoadState
 import com.blackatsystems.miguardia.ui.calendar.CalendarUiState
@@ -170,6 +171,7 @@ class CalendarComposeTest {
         }
 
         composeRule.onNodeWithText("Agregar").performScrollTo().performSemanticsAction(SemanticsActions.OnClick)
+        composeRule.onNodeWithText("Guardia").performSemanticsAction(SemanticsActions.OnClick)
         composeRule.onNodeWithText("Guardias").assertExists()
         composeRule.onNodeWithText("Revisar y guardar").assertExists()
         composeRule.runOnIdle { assertEquals(YearMonth.of(2026, 8), requestedMonth) }
@@ -269,7 +271,26 @@ class CalendarComposeTest {
         return CalendarUiState(
             visibleMonth = month,
             referenceInstant = REFERENCE_NOW,
-            days = projectCalendarMonth(month, shifts, statuses, leaves, REFERENCE_NOW),
+            days = projectCalendarMonth(
+                month = month,
+                shifts = shifts,
+                explicitDayStatuses = statuses,
+                medicalLeaves = leaves,
+                now = REFERENCE_NOW,
+                vacations = if (month == YearMonth.of(2026, 8)) {
+                    listOf(
+                        Vacation(
+                            id = UUID.fromString("10000000-0000-0000-0000-000000000099"),
+                            startDate = LocalDate.of(2026, 8, 10),
+                            endDateInclusive = LocalDate.of(2026, 8, 11),
+                            createdAt = Instant.EPOCH,
+                            updatedAt = Instant.EPOCH,
+                        ),
+                    )
+                } else {
+                    emptyList()
+                },
+            ),
             loadState = CalendarLoadState.CONTENT,
         )
     }

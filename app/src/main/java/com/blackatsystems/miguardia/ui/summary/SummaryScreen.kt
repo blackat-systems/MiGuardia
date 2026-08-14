@@ -147,6 +147,7 @@ private fun SummaryContent(summary: MonthlyHoursSummary) {
     SummarySection(stringResource(R.string.summary_events_title)) {
         SummaryValue(R.string.summary_shifts, summary.shiftCount.toString())
         SummaryValue(R.string.summary_days_off, summary.dayOffCount.toString())
+        SummaryValue(R.string.summary_vacations, summary.vacationDayCount.toString())
         SummaryValue(
             R.string.summary_medical,
             stringResource(

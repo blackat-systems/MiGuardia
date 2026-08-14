@@ -53,6 +53,7 @@ class SummaryComposeTest {
             absenceHours = Duration.ofHours(8),
             cancellationCount = 1,
             cancellationHours = Duration.ofHours(8),
+            vacationDayCount = 5,
         )
         composeRule.setContent { Screen(state().copy(summary = summary)) }
 
@@ -61,6 +62,8 @@ class SummaryComposeTest {
         composeRule.onNodeWithContentDescription("Nocturnas (21:00–06:00), 72 h")
             .performScrollTo().assertExists()
         composeRule.onNodeWithContentDescription("Ausencias, 1 · 8 h")
+            .performScrollTo().assertExists()
+        composeRule.onNodeWithContentDescription("Días de vacaciones, 5")
             .performScrollTo().assertExists()
         composeRule.onNodeWithText(
             "Extra, nocturnas y feriado pueden superponerse. Son clasificaciones de horas trabajadas y no se suman nuevamente al total.",

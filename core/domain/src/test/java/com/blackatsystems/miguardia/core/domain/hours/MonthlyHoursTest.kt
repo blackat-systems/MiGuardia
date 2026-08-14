@@ -6,6 +6,7 @@ import com.blackatsystems.miguardia.core.domain.model.ExplicitDayStatusType
 import com.blackatsystems.miguardia.core.domain.model.MedicalLeave
 import com.blackatsystems.miguardia.core.domain.model.Shift
 import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
+import com.blackatsystems.miguardia.core.domain.model.Vacation
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
@@ -337,6 +338,95 @@ class MonthlyHoursTest {
         }
     }
 
+    @Test fun vacationDaysAreInclusiveUniqueAndClippedToMonth() {
+        val result = summary(
+            shifts = emptyList(),
+            now = at(13, 0),
+            vacations = listOf(
+                vacation(LocalDate.of(2026, 7, 30), LocalDate.of(2026, 8, 2)),
+                vacation(LocalDate.of(2026, 8, 2), LocalDate.of(2026, 8, 4)),
+            ),
+        )
+        assertEquals(4, result.vacationDayCount)
+    }
+
+    @Test fun plannedPastShiftInVacationIsExcludedFromEveryHourCategory() {
+        val date = LocalDate.of(2026, 8, 12)
+        val result = summary(
+            shifts = listOf(shift(12, 19, 7)),
+            now = at(14, 0),
+            holidays = setOf(date, date.plusDays(1)),
+            vacations = listOf(vacation(date, date)),
+        )
+        assertHours(0, result.planned)
+        assertHours(0, result.worked)
+        assertHours(0, result.pending)
+        assertHours(0, result.nightWorked)
+        assertHours(0, result.holidayWorked)
+        assertHours(0, result.overtime)
+        assertEquals(1, result.shiftCount)
+    }
+
+    @Test fun plannedCurrentAndFutureShiftsInVacationStayExcluded() {
+        val dates = listOf(LocalDate.of(2026, 8, 13), LocalDate.of(2026, 8, 20))
+        val result = summary(
+            shifts = listOf(shift(13, 8, 16), shift(20, 8, 16)),
+            now = at(13, 12),
+            vacations = dates.map { vacation(it, it) },
+        )
+        assertHours(0, result.planned)
+        assertHours(0, result.worked)
+        assertHours(0, result.pending)
+        assertEquals(2, result.shiftCount)
+    }
+
+    @Test fun absenceAndCancellationPrecedeVacation() {
+        val date = LocalDate.of(2026, 8, 12)
+        val result = summary(
+            shifts = listOf(
+                shift(12, 8, 16, ShiftStatus.ABSENT),
+                shift(12, 19, 7, ShiftStatus.CANCELLED),
+            ),
+            now = at(14, 0),
+            vacations = listOf(vacation(date, date)),
+        )
+        assertHours(20, result.planned)
+        assertHours(8, result.absenceHours)
+        assertHours(12, result.cancellationHours)
+        assertEquals(1, result.absenceCount)
+        assertEquals(1, result.cancellationCount)
+    }
+
+    @Test fun vacationExclusionPreservesAccountingInvariantForIncludedShifts() {
+        val vacationDate = LocalDate.of(2026, 8, 2)
+        val result = summary(
+            shifts = listOf(shift(1, 8, 16), shift(2, 8, 16), shift(20, 8, 16)),
+            now = at(13, 12),
+            vacations = listOf(vacation(vacationDate, vacationDate)),
+        )
+        assertHours(16, result.planned)
+        assertEquals(
+            result.planned,
+            result.worked + result.pending + result.absenceHours +
+                result.cancellationHours + result.medicalLeaveHours,
+        )
+    }
+
+    @Test fun leapFebruaryVacationCountsAllCivilDates() {
+        val leapMonth = YearMonth.of(2028, 2)
+        val result = calculateMonthlyHours(
+            month = leapMonth,
+            shifts = emptyList(),
+            explicitDayStatuses = emptyList(),
+            medicalLeaves = emptyList(),
+            referenceInstant = Instant.parse("2028-02-15T12:00:00Z"),
+            vacations = listOf(
+                vacation(LocalDate.of(2028, 1, 31), LocalDate.of(2028, 3, 1)),
+            ),
+        )
+        assertEquals(29, result.vacationDayCount)
+    }
+
     @Test fun invalidMedicalRangeIsRejected() {
         assertThrows(IllegalArgumentException::class.java) {
             summary(
@@ -366,6 +456,7 @@ class MonthlyHoursTest {
         statuses: List<ExplicitDayStatus> = emptyList(),
         leaves: List<MedicalLeave> = emptyList(),
         holidays: Set<LocalDate> = emptySet(),
+        vacations: List<Vacation> = emptyList(),
     ): MonthlyHoursSummary = calculateMonthlyHours(
         month = month,
         shifts = shifts,
@@ -373,6 +464,7 @@ class MonthlyHoursTest {
         medicalLeaves = leaves,
         referenceInstant = now,
         holidayDates = holidays,
+        vacations = vacations,
     )
 
     private fun shift(
@@ -424,6 +516,14 @@ class MonthlyHoursTest {
         startDate = start,
         endDateInclusive = end,
         privateNote = "Nota ficticia",
+        createdAt = Instant.EPOCH,
+        updatedAt = Instant.EPOCH,
+    )
+
+    private fun vacation(start: LocalDate, end: LocalDate) = Vacation(
+        id = UUID.nameUUIDFromBytes("vacation-$start-$end".toByteArray()),
+        startDate = start,
+        endDateInclusive = end,
         createdAt = Instant.EPOCH,
         updatedAt = Instant.EPOCH,
     )

@@ -12,6 +12,7 @@ import com.blackatsystems.miguardia.core.database.dao.ScheduleCombinationDao
 import com.blackatsystems.miguardia.core.database.dao.ShiftDao
 import com.blackatsystems.miguardia.core.database.dao.ShiftNoteDao
 import com.blackatsystems.miguardia.core.database.dao.ShiftNoveltyDao
+import com.blackatsystems.miguardia.core.database.dao.VacationDao
 import com.blackatsystems.miguardia.core.database.entity.ExplicitDayStatusEntity
 import com.blackatsystems.miguardia.core.database.entity.FormalShiftChangeEntity
 import com.blackatsystems.miguardia.core.database.entity.HolidayEntity
@@ -21,6 +22,7 @@ import com.blackatsystems.miguardia.core.database.entity.ScheduleCombinationEnti
 import com.blackatsystems.miguardia.core.database.entity.ShiftEntity
 import com.blackatsystems.miguardia.core.database.entity.ShiftNoteEntity
 import com.blackatsystems.miguardia.core.database.entity.ShiftNoveltyEntity
+import com.blackatsystems.miguardia.core.database.entity.VacationEntity
 
 @Database(
     entities = [
@@ -33,8 +35,9 @@ import com.blackatsystems.miguardia.core.database.entity.ShiftNoveltyEntity
         ShiftNoteEntity::class,
         ShiftNoveltyEntity::class,
         FormalShiftChangeEntity::class,
+        VacationEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 internal abstract class MiGuardiaDatabase : RoomDatabase() {
@@ -46,6 +49,7 @@ internal abstract class MiGuardiaDatabase : RoomDatabase() {
     internal abstract fun holidayDao(): HolidayDao
     internal abstract fun shiftNoteDao(): ShiftNoteDao
     internal abstract fun shiftNoveltyDao(): ShiftNoveltyDao
+    internal abstract fun vacationDao(): VacationDao
 
     companion object {
         const val DATABASE_NAME: String = "miguardia.db"
@@ -57,6 +61,6 @@ internal abstract class MiGuardiaDatabase : RoomDatabase() {
             context.applicationContext,
             MiGuardiaDatabase::class.java,
             databaseName,
-        ).addMigrations(MIGRATION_1_2).build()
+        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3).build()
     }
 }

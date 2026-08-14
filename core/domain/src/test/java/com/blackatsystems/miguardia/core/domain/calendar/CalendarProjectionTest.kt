@@ -6,6 +6,7 @@ import com.blackatsystems.miguardia.core.domain.model.ExplicitDayStatusType
 import com.blackatsystems.miguardia.core.domain.model.MedicalLeave
 import com.blackatsystems.miguardia.core.domain.model.Shift
 import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
+import com.blackatsystems.miguardia.core.domain.model.Vacation
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
@@ -210,6 +211,38 @@ class CalendarProjectionTest {
         assertEquals(ZoneId.of("America/Argentina/Cordoba"), shift.zoneId)
         assertEquals(Instant.parse("2026-08-13T22:00:00Z"), shift.startAt)
         assertEquals(Instant.parse("2026-08-14T10:00:00Z"), shift.endAt)
+    }
+
+    @Test
+    fun vacationCrossingMonthIsProjectedWithoutHidingImplicitUndefinedOrShift() {
+        val month = YearMonth.of(2026, 8)
+        val vacation = Vacation(
+            id = UUID.fromString("00000000-0000-0000-0000-000000000090"),
+            startDate = LocalDate.of(2026, 7, 31),
+            endDateInclusive = LocalDate.of(2026, 8, 2),
+            createdAt = Instant.EPOCH,
+            updatedAt = Instant.EPOCH,
+        )
+        val shift = shift(
+            id = UUID.fromString("00000000-0000-0000-0000-000000000091"),
+            localDate = month.atDay(2),
+            startTime = LocalTime.of(8, 0),
+            endTime = LocalTime.of(16, 0),
+        )
+        val days = projectCalendarMonth(
+            month = month,
+            shifts = listOf(shift),
+            explicitDayStatuses = emptyList(),
+            medicalLeaves = emptyList(),
+            now = Instant.EPOCH,
+            vacations = listOf(vacation),
+        )
+
+        assertEquals(vacation, days[0].vacation)
+        assertTrue(days[0].isImplicitlyUndefined)
+        assertEquals(vacation, days[1].vacation)
+        assertEquals(shift.id, days[1].shifts.single().shift.id)
+        assertEquals(null, days[2].vacation)
     }
 
     private fun shift(

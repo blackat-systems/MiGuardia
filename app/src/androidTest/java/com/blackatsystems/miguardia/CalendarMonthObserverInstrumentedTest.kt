@@ -7,6 +7,7 @@ import com.blackatsystems.miguardia.core.domain.model.ExplicitDayStatusType
 import com.blackatsystems.miguardia.core.domain.model.MedicalLeave
 import com.blackatsystems.miguardia.core.domain.model.Shift
 import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
+import com.blackatsystems.miguardia.core.domain.model.Vacation
 import com.blackatsystems.miguardia.ui.calendar.CalendarMonthObserver
 import java.time.Instant
 import java.time.LocalDate
@@ -24,7 +25,7 @@ import org.junit.Test
 
 class CalendarMonthObserverInstrumentedTest {
     @Test
-    fun combinesThreeRoomFlowsAndSwitchesInclusiveMonthLimits() = runBlocking {
+    fun combinesRoomFlowsAndSwitchesInclusiveMonthLimits() = runBlocking {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val databaseName = "calendar-observer-${UUID.randomUUID()}.db"
         val dataStore = LocalDataStore.create(context, databaseName)
@@ -58,6 +59,8 @@ class CalendarMonthObserverInstrumentedTest {
                 shiftRepository = dataStore.shifts,
                 explicitDayStatusRepository = dataStore.explicitDayStatuses,
                 medicalLeaveRepository = dataStore.medicalLeaves,
+                holidayRepository = dataStore.holidays,
+                vacationRepository = dataStore.vacations,
             )
             val august = observer.observe(YearMonth.of(2026, 8)).first()
             val september = observer.observe(YearMonth.of(2026, 9)).first()
@@ -65,21 +68,35 @@ class CalendarMonthObserverInstrumentedTest {
             assertEquals(listOf(augustShift.id), august.shifts.map { it.id })
             assertEquals(1, august.explicitStatuses.size)
             assertEquals(1, august.medicalLeaves.size)
+            assertTrue(august.vacations.isEmpty())
             assertEquals(listOf(septemberShift.id), september.shifts.map { it.id })
             assertTrue(september.explicitStatuses.isEmpty())
             assertEquals(1, september.medicalLeaves.size)
 
             val update = async {
                 withTimeout(5_000) {
-                    observer.observe(YearMonth.of(2026, 8)).first { it.shifts.size == 2 }
+                    observer.observe(YearMonth.of(2026, 8)).first {
+                        it.shifts.size == 2 && it.vacations.size == 1
+                    }
                 }
             }
             val secondAugustShift = shift(
                 id = UUID.fromString("20000000-0000-0000-0000-000000000004"),
                 date = LocalDate.of(2026, 8, 10),
             )
+            dataStore.vacations.insert(
+                Vacation(
+                    id = UUID.fromString("20000000-0000-0000-0000-000000000005"),
+                    startDate = LocalDate.of(2026, 8, 10),
+                    endDateInclusive = LocalDate.of(2026, 8, 12),
+                    createdAt = Instant.EPOCH,
+                    updatedAt = Instant.EPOCH,
+                ),
+            )
             dataStore.shifts.insert(secondAugustShift)
-            assertEquals(2, update.await().shifts.size)
+            val updated = update.await()
+            assertEquals(2, updated.shifts.size)
+            assertEquals(LocalDate.of(2026, 8, 10), updated.vacations.single().startDate)
         } finally {
             dataStore.close()
             context.deleteDatabase(databaseName)

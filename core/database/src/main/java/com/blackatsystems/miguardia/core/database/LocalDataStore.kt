@@ -9,6 +9,7 @@ import com.blackatsystems.miguardia.core.database.repository.RoomScheduleCombina
 import com.blackatsystems.miguardia.core.database.repository.RoomShiftRepository
 import com.blackatsystems.miguardia.core.database.repository.RoomShiftNoteRepository
 import com.blackatsystems.miguardia.core.database.repository.RoomShiftNoveltyRepository
+import com.blackatsystems.miguardia.core.database.repository.RoomVacationRepository
 import com.blackatsystems.miguardia.core.domain.repository.ExplicitDayStatusRepository
 import com.blackatsystems.miguardia.core.domain.repository.HolidayRepository
 import com.blackatsystems.miguardia.core.domain.repository.MedicalLeaveRepository
@@ -17,6 +18,7 @@ import com.blackatsystems.miguardia.core.domain.repository.ScheduleCombinationRe
 import com.blackatsystems.miguardia.core.domain.repository.ShiftRepository
 import com.blackatsystems.miguardia.core.domain.repository.ShiftNoteRepository
 import com.blackatsystems.miguardia.core.domain.repository.ShiftNoveltyRepository
+import com.blackatsystems.miguardia.core.domain.repository.VacationRepository
 import java.io.Closeable
 
 class LocalDataStore internal constructor(
@@ -29,10 +31,11 @@ class LocalDataStore internal constructor(
     val explicitDayStatuses: ExplicitDayStatusRepository =
         RoomExplicitDayStatusRepository(database.explicitDayStatusDao())
     val medicalLeaves: MedicalLeaveRepository =
-        RoomMedicalLeaveRepository(database.medicalLeaveDao())
+        RoomMedicalLeaveRepository(database)
     val holidays: HolidayRepository = RoomHolidayRepository(database)
     val shiftNotes: ShiftNoteRepository = RoomShiftNoteRepository(database.shiftNoteDao())
     val shiftNovelties: ShiftNoveltyRepository = RoomShiftNoveltyRepository(database)
+    val vacations: VacationRepository = RoomVacationRepository(database)
 
     override fun close() = database.close()
 

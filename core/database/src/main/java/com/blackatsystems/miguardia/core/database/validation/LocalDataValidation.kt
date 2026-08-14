@@ -4,7 +4,9 @@ import com.blackatsystems.miguardia.core.domain.model.MedicalLeave
 import com.blackatsystems.miguardia.core.domain.model.Objective
 import com.blackatsystems.miguardia.core.domain.model.ScheduleCombination
 import com.blackatsystems.miguardia.core.domain.model.Shift
+import com.blackatsystems.miguardia.core.domain.model.Vacation
 import com.blackatsystems.miguardia.core.domain.repository.InvalidLocalDataException
+import com.blackatsystems.miguardia.core.domain.repository.InvalidVacationRangeException
 import java.time.Instant
 import java.time.LocalDate
 import java.util.Locale
@@ -54,6 +56,14 @@ internal fun MedicalLeave.validated(): MedicalLeave {
     }
     validateTimestamps(createdAt, updatedAt)
     return copy(privateNote = privateNote.normalizedOptional())
+}
+
+internal fun Vacation.validated(): Vacation {
+    if (endDateInclusive.isBefore(startDate)) {
+        throw InvalidVacationRangeException()
+    }
+    validateTimestamps(createdAt, updatedAt)
+    return this
 }
 
 internal fun validateRange(startDateInclusive: LocalDate, endDateInclusive: LocalDate) {

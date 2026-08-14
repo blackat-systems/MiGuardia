@@ -63,6 +63,7 @@ import com.blackatsystems.miguardia.core.domain.calendar.CalendarDay
 import com.blackatsystems.miguardia.core.domain.calendar.CalendarShift
 import com.blackatsystems.miguardia.core.domain.calendar.ShiftTemporalStatus
 import com.blackatsystems.miguardia.core.domain.model.ExplicitDayStatusType
+import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
 import com.blackatsystems.miguardia.ui.calendar.CalendarLoadState
 import com.blackatsystems.miguardia.ui.calendar.CalendarUiState
 import com.blackatsystems.miguardia.ui.calendar.CalendarViewModel
@@ -79,6 +80,11 @@ import com.blackatsystems.miguardia.ui.exceptions.ExceptionsViewModel
 import com.blackatsystems.miguardia.ui.summary.SummaryScreen
 import com.blackatsystems.miguardia.ui.summary.SummaryUiState
 import com.blackatsystems.miguardia.ui.summary.SummaryViewModel
+import com.blackatsystems.miguardia.ui.vacation.VacationActions
+import com.blackatsystems.miguardia.ui.vacation.VacationSurface
+import com.blackatsystems.miguardia.ui.vacation.VacationSurfaceHost
+import com.blackatsystems.miguardia.ui.vacation.VacationUiState
+import com.blackatsystems.miguardia.ui.vacation.VacationViewModel
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.YearMonth
@@ -105,12 +111,14 @@ fun MiGuardiaApp(
     managementViewModel: ManagementViewModel,
     summaryViewModel: SummaryViewModel,
     exceptionsViewModel: ExceptionsViewModel,
+    vacationViewModel: VacationViewModel,
     modifier: Modifier = Modifier,
 ) {
     val calendarState by calendarViewModel.uiState.collectAsStateWithLifecycle()
     val managementState by managementViewModel.uiState.collectAsStateWithLifecycle()
     val summaryState by summaryViewModel.uiState.collectAsStateWithLifecycle()
     val exceptionsState by exceptionsViewModel.uiState.collectAsStateWithLifecycle()
+    val vacationState by vacationViewModel.uiState.collectAsStateWithLifecycle()
     MiGuardiaApp(
         calendarState = calendarState,
         onPreviousMonth = calendarViewModel::showPreviousMonth,
@@ -128,6 +136,8 @@ fun MiGuardiaApp(
         managementActions = ManagementActions.from(managementViewModel),
         exceptionsState = exceptionsState,
         exceptionsActions = ExceptionsActions.from(exceptionsViewModel),
+        vacationState = vacationState,
+        vacationActions = VacationActions.from(vacationViewModel),
         modifier = modifier,
     )
 }
@@ -155,8 +165,11 @@ fun MiGuardiaApp(
     onSummaryRetry: () -> Unit = {},
     exceptionsState: ExceptionsUiState = ExceptionsUiState(holidayMonth = calendarState.visibleMonth),
     exceptionsActions: ExceptionsActions = ExceptionsActions(),
+    vacationState: VacationUiState = VacationUiState(visibleMonth = calendarState.visibleMonth),
+    vacationActions: VacationActions = VacationActions(),
 ) {
     var destination by rememberSaveable { androidx.compose.runtime.mutableStateOf(MainDestination.CALENDAR) }
+    var showAddChoice by rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -196,7 +209,7 @@ fun MiGuardiaApp(
                 onToday = onToday,
                 onSelectDate = onSelectDate,
                 onRetry = onRetry,
-                onAddShift = { managementActions.openAddShift(calendarState.visibleMonth, null) },
+                onAddShift = { showAddChoice = true },
             )
 
             MainDestination.SUMMARY -> SummaryScreen(
@@ -212,6 +225,7 @@ fun MiGuardiaApp(
                 contentPadding = innerPadding,
                 onOpenObjectives = managementActions.openSettings,
                 onOpenHolidays = { exceptionsActions.openHolidays(calendarState.visibleMonth) },
+                onOpenVacations = { vacationActions.openList(calendarState.visibleMonth) },
             )
         }
     }
@@ -226,6 +240,10 @@ fun MiGuardiaApp(
                 onAddShift = {
                     onDismissDate()
                     managementActions.openAddShift(calendarState.visibleMonth, selectedDay.date)
+                },
+                onAddVacation = {
+                    onDismissDate()
+                    vacationActions.openCreate(calendarState.visibleMonth, selectedDay.date)
                 },
                 onEditShift = {
                     onDismissDate()
@@ -252,6 +270,32 @@ fun MiGuardiaApp(
     }
     if (exceptionsState.surface != ExceptionsSurface.NONE) {
         ExceptionsSurfaceHost(exceptionsState, exceptionsActions)
+    }
+    if (vacationState.surface != VacationSurface.NONE) {
+        VacationSurfaceHost(vacationState, vacationActions)
+    }
+    if (showAddChoice) {
+        AlertDialog(
+            onDismissRequest = { showAddChoice = false },
+            title = { Text("Agregar") },
+            text = { Text("Elegí qué querés registrar en el calendario.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showAddChoice = false
+                        managementActions.openAddShift(calendarState.visibleMonth, null)
+                    },
+                ) { Text("Guardia") }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showAddChoice = false
+                        vacationActions.openCreate(calendarState.visibleMonth, null)
+                    },
+                ) { Text("Vacaciones") }
+            },
+        )
     }
 }
 
@@ -541,7 +585,13 @@ private fun DayCell(
             fontWeight = if (isToday) FontWeight.Bold else FontWeight.Medium,
         )
         val firstShift = day.shifts.firstOrNull()
-        if (firstShift != null) {
+        if (day.vacation != null) {
+            Text(
+                text = "V",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold,
+            )
+        } else if (firstShift != null) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -580,7 +630,7 @@ private fun DayCell(
             if (day.holiday != null) add("Fer.")
             if (day.isImplicitlyUndefined) add("?")
         }
-        if (markers.isNotEmpty()) {
+        if (day.vacation == null && markers.isNotEmpty()) {
             Text(
                 text = markers.joinToString(" · "),
                 maxLines = 1,
@@ -596,6 +646,7 @@ private fun DayCell(
 private fun DayDetailSheet(
     day: CalendarDay,
     onAddShift: () -> Unit,
+    onAddVacation: () -> Unit,
     onEditShift: (com.blackatsystems.miguardia.core.domain.model.Shift) -> Unit,
     onDuplicateShift: (com.blackatsystems.miguardia.core.domain.model.Shift) -> Unit,
     onDeleteShift: (java.util.UUID) -> Unit,
@@ -623,6 +674,7 @@ private fun DayDetailSheet(
             if (index > 0) HorizontalDivider()
             ShiftDetail(
                 calendarShift = calendarShift,
+                excludedByVacation = day.vacation != null && calendarShift.shift.status == ShiftStatus.PLANNED,
                 onEdit = onEditShift,
                 onDuplicate = onDuplicateShift,
                 onDelete = { pendingDeleteId = it.toString() },
@@ -640,8 +692,17 @@ private fun DayDetailSheet(
         day.holiday?.let { holiday ->
             Text("Feriado: ${holiday.name ?: "sin nombre"}", fontWeight = FontWeight.SemiBold)
         }
+        day.vacation?.let { vacation ->
+            Text(
+                "Vacaciones: ${vacation.startDate.fullDisplayName()} – ${vacation.endDateInclusive.fullDisplayName()}",
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
         Button(onClick = onAddShift, modifier = Modifier.fillMaxWidth()) {
             Text("Agregar guardia")
+        }
+        Button(onClick = onAddVacation, modifier = Modifier.fillMaxWidth()) {
+            Text("Agregar vacaciones")
         }
     }
     pendingDeleteId?.let { id ->
@@ -665,6 +726,7 @@ private fun DayDetailSheet(
 @Composable
 private fun ShiftDetail(
     calendarShift: CalendarShift,
+    excludedByVacation: Boolean = false,
     onEdit: ((com.blackatsystems.miguardia.core.domain.model.Shift) -> Unit)? = null,
     onDuplicate: ((com.blackatsystems.miguardia.core.domain.model.Shift) -> Unit)? = null,
     onDelete: ((java.util.UUID) -> Unit)? = null,
@@ -706,6 +768,12 @@ private fun ShiftDetail(
                     Text("Informar novedad / notas")
                 }
             }
+            if (excludedByVacation) {
+                Text(
+                    "Esta guardia se conserva, pero no computa horas porque su fecha inicial está en vacaciones.",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
         }
     }
 }
@@ -715,6 +783,7 @@ private fun SettingsScreen(
     contentPadding: PaddingValues,
     onOpenObjectives: () -> Unit,
     onOpenHolidays: () -> Unit,
+    onOpenVacations: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -730,6 +799,9 @@ private fun SettingsScreen(
         }
         Button(onClick = onOpenHolidays, modifier = Modifier.fillMaxWidth()) {
             Text("Feriados")
+        }
+        Button(onClick = onOpenVacations, modifier = Modifier.fillMaxWidth()) {
+            Text("Vacaciones")
         }
     }
 }
@@ -775,6 +847,9 @@ private fun CalendarDay.accessibilityDescription(isToday: Boolean): String {
     }
     if (hasMedicalLeave) parts += "carpeta médica"
     holiday?.let { parts += "feriado ${it.name ?: "sin nombre"}" }
+    vacation?.let {
+        parts += "vacaciones desde ${it.startDate.fullDisplayName()} hasta ${it.endDateInclusive.fullDisplayName()} inclusive"
+    }
     if (isImplicitlyUndefined) parts += "sin definir"
     return parts.joinToString(", ")
 }

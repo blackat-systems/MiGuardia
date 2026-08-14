@@ -11,10 +11,12 @@ import com.blackatsystems.miguardia.core.domain.hours.calculateMonthlyHours
 import com.blackatsystems.miguardia.core.domain.model.MedicalLeave
 import com.blackatsystems.miguardia.core.domain.model.Shift
 import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
+import com.blackatsystems.miguardia.core.domain.model.Vacation
 import com.blackatsystems.miguardia.core.domain.repository.ExplicitDayStatusRepository
 import com.blackatsystems.miguardia.core.domain.repository.MedicalLeaveRepository
 import com.blackatsystems.miguardia.core.domain.repository.HolidayRepository
 import com.blackatsystems.miguardia.core.domain.repository.ShiftRepository
+import com.blackatsystems.miguardia.core.domain.repository.VacationRepository
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -35,6 +37,7 @@ class SummaryViewModel(
     explicitDayStatusRepository: ExplicitDayStatusRepository,
     medicalLeaveRepository: MedicalLeaveRepository,
     holidayRepository: HolidayRepository? = null,
+    vacationRepository: VacationRepository? = null,
     private val clock: Clock,
     private val savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
@@ -44,6 +47,7 @@ class SummaryViewModel(
         explicitDayStatusRepository,
         medicalLeaveRepository,
         holidayRepository,
+        vacationRepository,
     )
     private val initialMonth = savedStateHandle.get<String>(VISIBLE_MONTH_KEY)
         ?.let(YearMonth::parse)
@@ -109,6 +113,7 @@ class SummaryViewModel(
                 medicalLeaves = data.medicalLeaves,
                 referenceInstant = now,
                 holidayDates = data.holidays.mapTo(linkedSetOf()) { it.date },
+                vacations = data.vacations,
             ),
             loadState = SummaryLoadState.CONTENT,
         )
@@ -124,6 +129,7 @@ class SummaryViewModel(
                     zone = zone,
                     shifts = data.shifts,
                     medicalLeaves = data.medicalLeaves,
+                    vacations = data.vacations,
                 )
                 delay(Duration.between(now, nextBoundary).toMillis().coerceAtLeast(1L))
                 val refreshedNow = clock.instant()
@@ -138,6 +144,7 @@ class SummaryViewModel(
         private val explicitDayStatusRepository: ExplicitDayStatusRepository,
         private val medicalLeaveRepository: MedicalLeaveRepository,
         private val holidayRepository: HolidayRepository? = null,
+        private val vacationRepository: VacationRepository? = null,
         private val clock: Clock = Clock.system(AppDefaults.zoneId()),
     ) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
@@ -148,6 +155,7 @@ class SummaryViewModel(
                 explicitDayStatusRepository,
                 medicalLeaveRepository,
                 holidayRepository,
+                vacationRepository,
                 clock,
                 extras.createSavedStateHandle(),
             ) as T
@@ -164,10 +172,13 @@ internal fun nextSummaryUpdateInstant(
     zone: ZoneId,
     shifts: List<Shift>,
     medicalLeaves: List<MedicalLeave>,
+    vacations: List<Vacation> = emptyList(),
 ): Instant {
     val relevantShifts = shifts.filter {
         it.status == ShiftStatus.PLANNED && medicalLeaves.none { leave ->
             it.localStartDate >= leave.startDate && it.localStartDate <= leave.endDateInclusive
+        } && vacations.none { vacation ->
+            it.localStartDate >= vacation.startDate && it.localStartDate <= vacation.endDateInclusive
         }
     }
     val active = relevantShifts.any { now >= it.startAt && now < it.endAt }

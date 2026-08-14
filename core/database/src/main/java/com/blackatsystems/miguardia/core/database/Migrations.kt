@@ -16,3 +16,17 @@ internal val MIGRATION_1_2 = object : Migration(1, 2) {
         db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_formal_shift_changes_shiftId` ON `formal_shift_changes` (`shiftId`)")
     }
 }
+
+internal val MIGRATION_2_3 = object : Migration(2, 3) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            """CREATE TABLE IF NOT EXISTS `vacations` (`id` TEXT NOT NULL, `startDate` TEXT NOT NULL, `endDateInclusive` TEXT NOT NULL, `createdAtEpochMillis` INTEGER NOT NULL, `updatedAtEpochMillis` INTEGER NOT NULL, PRIMARY KEY(`id`))""",
+        )
+        db.execSQL(
+            "CREATE INDEX IF NOT EXISTS `index_vacations_startDate` ON `vacations` (`startDate`)",
+        )
+        db.execSQL(
+            "CREATE INDEX IF NOT EXISTS `index_vacations_endDateInclusive` ON `vacations` (`endDateInclusive`)",
+        )
+    }
+}

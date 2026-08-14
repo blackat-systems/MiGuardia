@@ -28,3 +28,12 @@ class MissingNoveltyDescriptionException :
     LocalDataException("La descripción es obligatoria para esta novedad.")
 
 class ConflictingLocalWriteException(message: String) : LocalDataException(message)
+
+class InvalidVacationRangeException :
+    LocalDataException("La fecha final de vacaciones no puede ser anterior a la inicial.")
+
+class OverlappingVacationException :
+    LocalDataException("Ese período se superpone con otras vacaciones existentes.")
+
+class VacationMedicalLeaveConflictException :
+    LocalDataException("Las vacaciones no pueden superponerse con una carpeta médica.")

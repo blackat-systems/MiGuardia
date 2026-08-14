@@ -10,6 +10,7 @@ import com.blackatsystems.miguardia.core.database.entity.ShiftEntity
 import com.blackatsystems.miguardia.core.database.entity.ShiftNoteEntity
 import com.blackatsystems.miguardia.core.database.entity.ShiftNoveltyEntity
 import com.blackatsystems.miguardia.core.database.entity.ShiftOperationalSnapshotEntity
+import com.blackatsystems.miguardia.core.database.entity.VacationEntity
 import com.blackatsystems.miguardia.core.domain.model.FormalShiftChange
 import com.blackatsystems.miguardia.core.domain.model.Holiday
 import com.blackatsystems.miguardia.core.domain.model.ExplicitDayStatus
@@ -23,6 +24,7 @@ import com.blackatsystems.miguardia.core.domain.model.ShiftNovelty
 import com.blackatsystems.miguardia.core.domain.model.ShiftNoveltyType
 import com.blackatsystems.miguardia.core.domain.model.ShiftOperationalSnapshot
 import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
+import com.blackatsystems.miguardia.core.domain.model.Vacation
 import com.blackatsystems.miguardia.core.domain.repository.InvalidLocalDataException
 import java.time.Instant
 import java.time.LocalDate
@@ -147,6 +149,24 @@ internal fun MedicalLeaveEntity.toDomain(): MedicalLeave = decodeEntity("carpeta
         startDate = LocalDate.parse(startDate),
         endDateInclusive = LocalDate.parse(endDateInclusive),
         privateNote = privateNote,
+        createdAt = Instant.ofEpochMilli(createdAtEpochMillis),
+        updatedAt = Instant.ofEpochMilli(updatedAtEpochMillis),
+    )
+}
+
+internal fun Vacation.toEntity() = VacationEntity(
+    id = id.toString(),
+    startDate = startDate.toString(),
+    endDateInclusive = endDateInclusive.toString(),
+    createdAtEpochMillis = createdAt.toEpochMilli(),
+    updatedAtEpochMillis = updatedAt.toEpochMilli(),
+)
+
+internal fun VacationEntity.toDomain(): Vacation = decodeEntity("vacaciones", id) {
+    Vacation(
+        id = UUID.fromString(id),
+        startDate = LocalDate.parse(startDate),
+        endDateInclusive = LocalDate.parse(endDateInclusive),
         createdAt = Instant.ofEpochMilli(createdAtEpochMillis),
         updatedAt = Instant.ofEpochMilli(updatedAtEpochMillis),
     )

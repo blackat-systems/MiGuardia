@@ -1,0 +1,18 @@
+package com.blackatsystems.miguardia.core.domain.repository
+
+import com.blackatsystems.miguardia.core.domain.model.Vacation
+import java.time.LocalDate
+import java.util.UUID
+import kotlinx.coroutines.flow.Flow
+
+interface VacationRepository {
+    fun observeOverlapping(
+        startDateInclusive: LocalDate,
+        endDateInclusive: LocalDate,
+    ): Flow<List<Vacation>>
+
+    suspend fun getById(id: UUID): Vacation?
+    suspend fun insert(vacation: Vacation)
+    suspend fun update(vacation: Vacation)
+    suspend fun delete(id: UUID)
+}

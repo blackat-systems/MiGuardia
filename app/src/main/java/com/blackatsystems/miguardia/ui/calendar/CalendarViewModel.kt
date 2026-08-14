@@ -13,6 +13,7 @@ import com.blackatsystems.miguardia.core.domain.repository.ExplicitDayStatusRepo
 import com.blackatsystems.miguardia.core.domain.repository.MedicalLeaveRepository
 import com.blackatsystems.miguardia.core.domain.repository.HolidayRepository
 import com.blackatsystems.miguardia.core.domain.repository.ShiftRepository
+import com.blackatsystems.miguardia.core.domain.repository.VacationRepository
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -32,6 +33,7 @@ class CalendarViewModel(
     private val explicitDayStatusRepository: ExplicitDayStatusRepository,
     private val medicalLeaveRepository: MedicalLeaveRepository,
     private val holidayRepository: HolidayRepository? = null,
+    private val vacationRepository: VacationRepository? = null,
     private val clock: Clock,
     private val savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
@@ -41,6 +43,7 @@ class CalendarViewModel(
         explicitDayStatusRepository = explicitDayStatusRepository,
         medicalLeaveRepository = medicalLeaveRepository,
         holidayRepository = holidayRepository,
+        vacationRepository = vacationRepository,
     )
     private val initialMonth = savedStateHandle.get<String>(VISIBLE_MONTH_KEY)
         ?.let(YearMonth::parse)
@@ -137,6 +140,7 @@ class CalendarViewModel(
                     medicalLeaves = data.medicalLeaves,
                     now = now,
                     holidays = data.holidays,
+                    vacations = data.vacations,
                 ),
                 loadState = CalendarLoadState.CONTENT,
                 errorMessage = null,
@@ -175,6 +179,7 @@ class CalendarViewModel(
         private val explicitDayStatusRepository: ExplicitDayStatusRepository,
         private val medicalLeaveRepository: MedicalLeaveRepository,
         private val holidayRepository: HolidayRepository? = null,
+        private val vacationRepository: VacationRepository? = null,
         private val clock: Clock = Clock.system(AppDefaults.zoneId()),
     ) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(
@@ -188,6 +193,7 @@ class CalendarViewModel(
                 explicitDayStatusRepository = explicitDayStatusRepository,
                 medicalLeaveRepository = medicalLeaveRepository,
                 holidayRepository = holidayRepository,
+                vacationRepository = vacationRepository,
                 clock = clock,
                 savedStateHandle = extras.createSavedStateHandle(),
             ) as T

@@ -3,6 +3,7 @@ package com.blackatsystems.miguardia.ui.summary
 import com.blackatsystems.miguardia.core.domain.model.MedicalLeave
 import com.blackatsystems.miguardia.core.domain.model.Shift
 import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
+import com.blackatsystems.miguardia.core.domain.model.Vacation
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
@@ -63,6 +64,25 @@ class SummaryTemporalBoundaryTest {
         )
         val midnight = LocalDate.of(2026, 8, 14).atStartOfDay(zone).toInstant()
         assertEquals(midnight, nextSummaryUpdateInstant(now, zone, listOf(absent, medical), listOf(leave)))
+    }
+
+    @Test fun activeShiftInsideVacationDoesNotCreateMinutePolling() {
+        val now = Instant.parse("2026-08-13T15:34:20Z")
+        val shift = shift(
+            start = Instant.parse("2026-08-13T15:00:00Z"),
+            end = Instant.parse("2026-08-13T20:00:00Z"),
+        )
+        val vacation = Vacation(
+            id = UUID.fromString("50000000-0000-0000-0000-000000000004"),
+            startDate = shift.localStartDate,
+            endDateInclusive = shift.localStartDate,
+            createdAt = Instant.EPOCH,
+            updatedAt = Instant.EPOCH,
+        )
+        assertEquals(
+            LocalDate.of(2026, 8, 14).atStartOfDay(zone).toInstant(),
+            nextSummaryUpdateInstant(now, zone, listOf(shift), emptyList(), listOf(vacation)),
+        )
     }
 
     private fun shift(start: Instant, end: Instant) = Shift(

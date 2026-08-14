@@ -9,6 +9,7 @@ import com.blackatsystems.miguardia.ui.calendar.CalendarViewModel
 import com.blackatsystems.miguardia.ui.management.ManagementViewModel
 import com.blackatsystems.miguardia.ui.exceptions.ExceptionsViewModel
 import com.blackatsystems.miguardia.ui.summary.SummaryViewModel
+import com.blackatsystems.miguardia.ui.vacation.VacationViewModel
 import com.blackatsystems.miguardia.ui.theme.MiGuardiaTheme
 
 class MainActivity : ComponentActivity() {
@@ -19,7 +20,13 @@ class MainActivity : ComponentActivity() {
             explicitDayStatusRepository = dataStore.explicitDayStatuses,
             medicalLeaveRepository = dataStore.medicalLeaves,
             holidayRepository = dataStore.holidays,
+            vacationRepository = dataStore.vacations,
         )
+    }
+
+    private val vacationViewModel: VacationViewModel by viewModels {
+        val dataStore = (application as MiGuardiaApplication).localDataStore
+        VacationViewModel.Factory(dataStore.vacations)
     }
 
     private val managementViewModel: ManagementViewModel by viewModels {
@@ -52,6 +59,7 @@ class MainActivity : ComponentActivity() {
             explicitDayStatusRepository = dataStore.explicitDayStatuses,
             medicalLeaveRepository = dataStore.medicalLeaves,
             holidayRepository = dataStore.holidays,
+            vacationRepository = dataStore.vacations,
         )
     }
 
@@ -64,6 +72,7 @@ class MainActivity : ComponentActivity() {
                     managementViewModel = managementViewModel,
                     summaryViewModel = summaryViewModel,
                     exceptionsViewModel = exceptionsViewModel,
+                    vacationViewModel = vacationViewModel,
                 )
             }
         }

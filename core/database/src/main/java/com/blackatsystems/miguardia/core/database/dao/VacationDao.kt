@@ -5,38 +5,44 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
-import com.blackatsystems.miguardia.core.database.entity.MedicalLeaveEntity
+import com.blackatsystems.miguardia.core.database.entity.VacationEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
-internal interface MedicalLeaveDao {
+internal interface VacationDao {
     @Query(
-        """SELECT * FROM medical_leaves
+        """SELECT * FROM vacations
             WHERE startDate <= :endDateInclusive AND endDateInclusive >= :startDateInclusive
             ORDER BY startDate, endDateInclusive, id""",
     )
-    fun observeIntersecting(
+    fun observeOverlapping(
         startDateInclusive: String,
         endDateInclusive: String,
-    ): Flow<List<MedicalLeaveEntity>>
+    ): Flow<List<VacationEntity>>
+
+    @Query("SELECT * FROM vacations WHERE id = :id LIMIT 1")
+    suspend fun getById(id: String): VacationEntity?
 
     @Query(
-        """SELECT * FROM medical_leaves
-            WHERE startDate <= :endDateInclusive AND endDateInclusive >= :startDateInclusive
+        """SELECT * FROM vacations
+            WHERE startDate <= :endDateInclusive
+              AND endDateInclusive >= :startDateInclusive
+              AND (:excludedId IS NULL OR id != :excludedId)
             ORDER BY startDate, endDateInclusive, id
             LIMIT 1""",
     )
-    suspend fun findFirstIntersecting(
+    suspend fun findFirstOverlapping(
         startDateInclusive: String,
         endDateInclusive: String,
-    ): MedicalLeaveEntity?
+        excludedId: String?,
+    ): VacationEntity?
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
-    suspend fun insert(entity: MedicalLeaveEntity)
+    suspend fun insert(entity: VacationEntity)
 
     @Update(onConflict = OnConflictStrategy.ABORT)
-    suspend fun update(entity: MedicalLeaveEntity): Int
+    suspend fun update(entity: VacationEntity): Int
 
-    @Query("DELETE FROM medical_leaves WHERE id = :id")
+    @Query("DELETE FROM vacations WHERE id = :id")
     suspend fun delete(id: String): Int
 }

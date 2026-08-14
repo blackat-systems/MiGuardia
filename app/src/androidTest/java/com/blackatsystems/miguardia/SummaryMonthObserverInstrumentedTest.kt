@@ -7,6 +7,7 @@ import com.blackatsystems.miguardia.core.domain.model.ExplicitDayStatusType
 import com.blackatsystems.miguardia.core.domain.model.MedicalLeave
 import com.blackatsystems.miguardia.core.domain.model.Shift
 import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
+import com.blackatsystems.miguardia.core.domain.model.Vacation
 import com.blackatsystems.miguardia.ui.summary.SummaryMonthObserver
 import java.time.Instant
 import java.time.LocalDate
@@ -32,12 +33,15 @@ class SummaryMonthObserverInstrumentedTest {
                 dataStore.shifts,
                 dataStore.explicitDayStatuses,
                 dataStore.medicalLeaves,
+                dataStore.holidays,
+                dataStore.vacations,
             )
             val month = YearMonth.of(2026, 8)
             val update = async {
                 withTimeout(5_000) {
                     observer.observe(month).first {
-                        it.shifts.size == 1 && it.explicitStatuses.size == 1 && it.medicalLeaves.size == 1
+                        it.shifts.size == 1 && it.explicitStatuses.size == 1 &&
+                            it.medicalLeaves.size == 1 && it.vacations.size == 1
                     }
                 }
             }
@@ -54,11 +58,21 @@ class SummaryMonthObserverInstrumentedTest {
                     updatedAt = Instant.EPOCH,
                 ),
             )
+            dataStore.vacations.insert(
+                Vacation(
+                    id = UUID.fromString("30000000-0000-0000-0000-000000000003"),
+                    startDate = month.atDay(10),
+                    endDateInclusive = month.atDay(12),
+                    createdAt = Instant.EPOCH,
+                    updatedAt = Instant.EPOCH,
+                ),
+            )
 
             val data = update.await()
             assertEquals(month.atDay(31), data.shifts.single().localStartDate)
             assertEquals(month.atDay(2), data.explicitStatuses.single().date)
             assertEquals(1, data.medicalLeaves.size)
+            assertEquals(month.atDay(10), data.vacations.single().startDate)
         } finally {
             dataStore.close()
             context.deleteDatabase(databaseName)

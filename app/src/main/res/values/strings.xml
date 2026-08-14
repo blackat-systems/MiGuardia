@@ -55,6 +55,7 @@
     <string name="summary_events_title">Días y novedades</string>
     <string name="summary_shifts">Guardias</string>
     <string name="summary_days_off">Francos explícitos</string>
+    <string name="summary_vacations">Días de vacaciones</string>
     <string name="summary_medical">Carpeta médica</string>
     <string name="summary_absences">Ausencias</string>
     <string name="summary_cancellations">Cancelaciones</string>
