@@ -3,6 +3,7 @@ package com.blackatsystems.miguardia.core.domain.calendar
 import com.blackatsystems.miguardia.core.domain.model.ExplicitDayStatus
 import com.blackatsystems.miguardia.core.domain.model.ExplicitDayStatusType
 import com.blackatsystems.miguardia.core.domain.model.MedicalLeave
+import com.blackatsystems.miguardia.core.domain.model.Holiday
 import com.blackatsystems.miguardia.core.domain.model.Shift
 import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
 import java.time.Instant
@@ -27,6 +28,7 @@ data class CalendarDay(
     val shifts: List<CalendarShift>,
     val explicitStatus: ExplicitDayStatusType?,
     val hasMedicalLeave: Boolean,
+    val holiday: Holiday? = null,
 ) {
     val isImplicitlyUndefined: Boolean
         get() = shifts.isEmpty() && explicitStatus == null && !hasMedicalLeave
@@ -48,6 +50,7 @@ fun projectCalendarMonth(
     explicitDayStatuses: List<ExplicitDayStatus>,
     medicalLeaves: List<MedicalLeave>,
     now: Instant,
+    holidays: List<Holiday> = emptyList(),
 ): List<CalendarDay> {
     val startDate = month.atDay(1)
     val endDate = month.atEndOfMonth()
@@ -63,6 +66,10 @@ fun projectCalendarMonth(
     val relevantMedicalLeaves = medicalLeaves.filter { leave ->
         leave.startDate <= endDate && leave.endDateInclusive >= startDate
     }
+    val holidaysByDate = holidays
+        .asSequence()
+        .filter { it.date in startDate..endDate }
+        .associateBy(Holiday::date)
 
     return (1..month.lengthOfMonth()).map { dayOfMonth ->
         val date = month.atDay(dayOfMonth)
@@ -78,6 +85,7 @@ fun projectCalendarMonth(
             hasMedicalLeave = relevantMedicalLeaves.any { leave ->
                 date >= leave.startDate && date <= leave.endDateInclusive
             },
+            holiday = holidaysByDate[date],
         )
     }
 }

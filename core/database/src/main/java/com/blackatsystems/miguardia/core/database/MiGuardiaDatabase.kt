@@ -5,15 +5,22 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import com.blackatsystems.miguardia.core.database.dao.ExplicitDayStatusDao
+import com.blackatsystems.miguardia.core.database.dao.HolidayDao
 import com.blackatsystems.miguardia.core.database.dao.MedicalLeaveDao
 import com.blackatsystems.miguardia.core.database.dao.ObjectiveDao
 import com.blackatsystems.miguardia.core.database.dao.ScheduleCombinationDao
 import com.blackatsystems.miguardia.core.database.dao.ShiftDao
+import com.blackatsystems.miguardia.core.database.dao.ShiftNoteDao
+import com.blackatsystems.miguardia.core.database.dao.ShiftNoveltyDao
 import com.blackatsystems.miguardia.core.database.entity.ExplicitDayStatusEntity
+import com.blackatsystems.miguardia.core.database.entity.FormalShiftChangeEntity
+import com.blackatsystems.miguardia.core.database.entity.HolidayEntity
 import com.blackatsystems.miguardia.core.database.entity.MedicalLeaveEntity
 import com.blackatsystems.miguardia.core.database.entity.ObjectiveEntity
 import com.blackatsystems.miguardia.core.database.entity.ScheduleCombinationEntity
 import com.blackatsystems.miguardia.core.database.entity.ShiftEntity
+import com.blackatsystems.miguardia.core.database.entity.ShiftNoteEntity
+import com.blackatsystems.miguardia.core.database.entity.ShiftNoveltyEntity
 
 @Database(
     entities = [
@@ -22,8 +29,12 @@ import com.blackatsystems.miguardia.core.database.entity.ShiftEntity
         ShiftEntity::class,
         ExplicitDayStatusEntity::class,
         MedicalLeaveEntity::class,
+        HolidayEntity::class,
+        ShiftNoteEntity::class,
+        ShiftNoveltyEntity::class,
+        FormalShiftChangeEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = true,
 )
 internal abstract class MiGuardiaDatabase : RoomDatabase() {
@@ -32,6 +43,9 @@ internal abstract class MiGuardiaDatabase : RoomDatabase() {
     internal abstract fun shiftDao(): ShiftDao
     internal abstract fun explicitDayStatusDao(): ExplicitDayStatusDao
     internal abstract fun medicalLeaveDao(): MedicalLeaveDao
+    internal abstract fun holidayDao(): HolidayDao
+    internal abstract fun shiftNoteDao(): ShiftNoteDao
+    internal abstract fun shiftNoveltyDao(): ShiftNoveltyDao
 
     companion object {
         const val DATABASE_NAME: String = "miguardia.db"
@@ -43,6 +57,6 @@ internal abstract class MiGuardiaDatabase : RoomDatabase() {
             context.applicationContext,
             MiGuardiaDatabase::class.java,
             databaseName,
-        ).build()
+        ).addMigrations(MIGRATION_1_2).build()
     }
 }

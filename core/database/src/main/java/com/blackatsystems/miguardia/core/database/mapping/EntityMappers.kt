@@ -1,16 +1,27 @@
 package com.blackatsystems.miguardia.core.database.mapping
 
 import com.blackatsystems.miguardia.core.database.entity.ExplicitDayStatusEntity
+import com.blackatsystems.miguardia.core.database.entity.FormalShiftChangeEntity
+import com.blackatsystems.miguardia.core.database.entity.HolidayEntity
 import com.blackatsystems.miguardia.core.database.entity.MedicalLeaveEntity
 import com.blackatsystems.miguardia.core.database.entity.ObjectiveEntity
 import com.blackatsystems.miguardia.core.database.entity.ScheduleCombinationEntity
 import com.blackatsystems.miguardia.core.database.entity.ShiftEntity
+import com.blackatsystems.miguardia.core.database.entity.ShiftNoteEntity
+import com.blackatsystems.miguardia.core.database.entity.ShiftNoveltyEntity
+import com.blackatsystems.miguardia.core.database.entity.ShiftOperationalSnapshotEntity
+import com.blackatsystems.miguardia.core.domain.model.FormalShiftChange
+import com.blackatsystems.miguardia.core.domain.model.Holiday
 import com.blackatsystems.miguardia.core.domain.model.ExplicitDayStatus
 import com.blackatsystems.miguardia.core.domain.model.ExplicitDayStatusType
 import com.blackatsystems.miguardia.core.domain.model.MedicalLeave
 import com.blackatsystems.miguardia.core.domain.model.Objective
 import com.blackatsystems.miguardia.core.domain.model.ScheduleCombination
 import com.blackatsystems.miguardia.core.domain.model.Shift
+import com.blackatsystems.miguardia.core.domain.model.ShiftNote
+import com.blackatsystems.miguardia.core.domain.model.ShiftNovelty
+import com.blackatsystems.miguardia.core.domain.model.ShiftNoveltyType
+import com.blackatsystems.miguardia.core.domain.model.ShiftOperationalSnapshot
 import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
 import com.blackatsystems.miguardia.core.domain.repository.InvalidLocalDataException
 import java.time.Instant
@@ -136,6 +147,124 @@ internal fun MedicalLeaveEntity.toDomain(): MedicalLeave = decodeEntity("carpeta
         startDate = LocalDate.parse(startDate),
         endDateInclusive = LocalDate.parse(endDateInclusive),
         privateNote = privateNote,
+        createdAt = Instant.ofEpochMilli(createdAtEpochMillis),
+        updatedAt = Instant.ofEpochMilli(updatedAtEpochMillis),
+    )
+}
+
+internal fun Holiday.toEntity() = HolidayEntity(
+    id = id.toString(),
+    localDate = date.toString(),
+    name = name,
+    createdAtEpochMillis = createdAt.toEpochMilli(),
+    updatedAtEpochMillis = updatedAt.toEpochMilli(),
+)
+
+internal fun HolidayEntity.toDomain(): Holiday = decodeEntity("feriado", id) {
+    Holiday(
+        id = UUID.fromString(id),
+        date = LocalDate.parse(localDate),
+        name = name,
+        createdAt = Instant.ofEpochMilli(createdAtEpochMillis),
+        updatedAt = Instant.ofEpochMilli(updatedAtEpochMillis),
+    )
+}
+
+internal fun ShiftNote.toEntity() = ShiftNoteEntity(
+    id = id.toString(),
+    shiftId = shiftId.toString(),
+    body = body,
+    createdAtEpochMillis = createdAt.toEpochMilli(),
+    updatedAtEpochMillis = updatedAt.toEpochMilli(),
+)
+
+internal fun ShiftNoteEntity.toDomain(): ShiftNote = decodeEntity("nota de guardia", id) {
+    ShiftNote(
+        id = UUID.fromString(id),
+        shiftId = UUID.fromString(shiftId),
+        body = body,
+        createdAt = Instant.ofEpochMilli(createdAtEpochMillis),
+        updatedAt = Instant.ofEpochMilli(updatedAtEpochMillis),
+    )
+}
+
+internal fun ShiftNovelty.toEntity() = ShiftNoveltyEntity(
+    id = id.toString(),
+    shiftId = shiftId.toString(),
+    type = type.name,
+    description = description,
+    relatedShiftId = relatedShiftId?.toString(),
+    createdAtEpochMillis = createdAt.toEpochMilli(),
+    updatedAtEpochMillis = updatedAt.toEpochMilli(),
+)
+
+internal fun ShiftNoveltyEntity.toDomain(): ShiftNovelty = decodeEntity("novedad", id) {
+    ShiftNovelty(
+        id = UUID.fromString(id),
+        shiftId = UUID.fromString(shiftId),
+        type = ShiftNoveltyType.valueOf(type),
+        description = description,
+        relatedShiftId = relatedShiftId?.let(UUID::fromString),
+        createdAt = Instant.ofEpochMilli(createdAtEpochMillis),
+        updatedAt = Instant.ofEpochMilli(updatedAtEpochMillis),
+    )
+}
+
+internal fun ShiftOperationalSnapshot.toEntity() = ShiftOperationalSnapshotEntity(
+    startEpochMillis = startAt.toEpochMilli(),
+    endEpochMillis = endAt.toEpochMilli(),
+    zoneId = zoneId.id,
+    localStartDate = localStartDate.toString(),
+    objectiveName = objectiveName,
+    objectiveAbbreviation = objectiveAbbreviation,
+    objectiveAddress = objectiveAddress,
+    startTime = startTime.toString(),
+    endTime = endTime.toString(),
+    colorArgb = colorArgb,
+    position = position,
+    status = status.name,
+    sourceObjectiveId = sourceObjectiveId?.toString(),
+    sourceScheduleCombinationId = sourceScheduleCombinationId?.toString(),
+)
+
+internal fun ShiftOperationalSnapshotEntity.toDomain(): ShiftOperationalSnapshot = ShiftOperationalSnapshot(
+    startAt = Instant.ofEpochMilli(startEpochMillis),
+    endAt = Instant.ofEpochMilli(endEpochMillis),
+    zoneId = ZoneId.of(zoneId),
+    localStartDate = LocalDate.parse(localStartDate),
+    objectiveName = objectiveName,
+    objectiveAbbreviation = objectiveAbbreviation,
+    objectiveAddress = objectiveAddress,
+    startTime = LocalTime.parse(startTime),
+    endTime = LocalTime.parse(endTime),
+    colorArgb = colorArgb,
+    position = position,
+    status = ShiftStatus.valueOf(status),
+    sourceObjectiveId = sourceObjectiveId?.let(UUID::fromString),
+    sourceScheduleCombinationId = sourceScheduleCombinationId?.let(UUID::fromString),
+)
+
+internal fun FormalShiftChange.toEntity() = FormalShiftChangeEntity(
+    id = id.toString(),
+    shiftId = shiftId.toString(),
+    scheduleChanged = scheduleChanged,
+    objectiveChanged = objectiveChanged,
+    description = description,
+    original = original.toEntity(),
+    final = final.toEntity(),
+    createdAtEpochMillis = createdAt.toEpochMilli(),
+    updatedAtEpochMillis = updatedAt.toEpochMilli(),
+)
+
+internal fun FormalShiftChangeEntity.toDomain(): FormalShiftChange = decodeEntity("cambio formal", id) {
+    FormalShiftChange(
+        id = UUID.fromString(id),
+        shiftId = UUID.fromString(shiftId),
+        scheduleChanged = scheduleChanged,
+        objectiveChanged = objectiveChanged,
+        description = description,
+        original = original.toDomain(),
+        final = final.toDomain(),
         createdAt = Instant.ofEpochMilli(createdAtEpochMillis),
         updatedAt = Instant.ofEpochMilli(updatedAtEpochMillis),
     )

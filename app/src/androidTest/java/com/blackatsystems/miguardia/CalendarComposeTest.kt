@@ -31,6 +31,7 @@ import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
 import com.blackatsystems.miguardia.ui.MiGuardiaApp
 import com.blackatsystems.miguardia.ui.calendar.CalendarLoadState
 import com.blackatsystems.miguardia.ui.calendar.CalendarUiState
+import com.blackatsystems.miguardia.ui.exceptions.ExceptionsActions
 import com.blackatsystems.miguardia.ui.management.ManagementActions
 import com.blackatsystems.miguardia.ui.management.ManagementSurface
 import com.blackatsystems.miguardia.ui.management.ManagementUiState
@@ -180,6 +181,8 @@ class CalendarComposeTest {
         var edited: UUID? = null
         var duplicated: UUID? = null
         var deleted: UUID? = null
+        var openedExceptions: UUID? = null
+        var dismissed = 0
         composeRule.setContent {
             MaterialTheme {
                 MiGuardiaApp(
@@ -188,12 +191,15 @@ class CalendarComposeTest {
                     onNextMonth = {},
                     onToday = {},
                     onSelectDate = {},
-                    onDismissDate = {},
+                    onDismissDate = { dismissed += 1 },
                     onRetry = {},
                     managementActions = ManagementActions(
                         openEditShift = { edited = it.id },
                         openDuplicateShift = { duplicated = it.id },
                         deleteShift = { deleted = it },
+                    ),
+                    exceptionsActions = ExceptionsActions(
+                        openShift = { openedExceptions = it.id },
                     ),
                 )
             }
@@ -204,6 +210,12 @@ class CalendarComposeTest {
         composeRule.runOnIdle {
             assertTrue(edited != null)
             assertTrue(duplicated != null)
+        }
+        composeRule.onAllNodesWithText("Informar novedad / notas")[0]
+            .performSemanticsAction(SemanticsActions.OnClick)
+        composeRule.runOnIdle {
+            assertTrue(openedExceptions != null)
+            assertTrue(dismissed >= 3)
         }
         composeRule.onAllNodesWithText("Eliminar")[0].performSemanticsAction(SemanticsActions.OnClick)
         composeRule.onNodeWithText("Eliminar guardia").assertExists()

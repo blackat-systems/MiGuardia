@@ -13,6 +13,7 @@ import com.blackatsystems.miguardia.core.domain.model.Shift
 import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
 import com.blackatsystems.miguardia.core.domain.repository.ExplicitDayStatusRepository
 import com.blackatsystems.miguardia.core.domain.repository.MedicalLeaveRepository
+import com.blackatsystems.miguardia.core.domain.repository.HolidayRepository
 import com.blackatsystems.miguardia.core.domain.repository.ShiftRepository
 import java.time.Clock
 import java.time.Duration
@@ -33,6 +34,7 @@ class SummaryViewModel(
     shiftRepository: ShiftRepository,
     explicitDayStatusRepository: ExplicitDayStatusRepository,
     medicalLeaveRepository: MedicalLeaveRepository,
+    holidayRepository: HolidayRepository? = null,
     private val clock: Clock,
     private val savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
@@ -41,6 +43,7 @@ class SummaryViewModel(
         shiftRepository,
         explicitDayStatusRepository,
         medicalLeaveRepository,
+        holidayRepository,
     )
     private val initialMonth = savedStateHandle.get<String>(VISIBLE_MONTH_KEY)
         ?.let(YearMonth::parse)
@@ -105,7 +108,7 @@ class SummaryViewModel(
                 explicitDayStatuses = data.explicitStatuses,
                 medicalLeaves = data.medicalLeaves,
                 referenceInstant = now,
-                holidayDates = emptySet(),
+                holidayDates = data.holidays.mapTo(linkedSetOf()) { it.date },
             ),
             loadState = SummaryLoadState.CONTENT,
         )
@@ -134,6 +137,7 @@ class SummaryViewModel(
         private val shiftRepository: ShiftRepository,
         private val explicitDayStatusRepository: ExplicitDayStatusRepository,
         private val medicalLeaveRepository: MedicalLeaveRepository,
+        private val holidayRepository: HolidayRepository? = null,
         private val clock: Clock = Clock.system(AppDefaults.zoneId()),
     ) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
@@ -143,6 +147,7 @@ class SummaryViewModel(
                 shiftRepository,
                 explicitDayStatusRepository,
                 medicalLeaveRepository,
+                holidayRepository,
                 clock,
                 extras.createSavedStateHandle(),
             ) as T

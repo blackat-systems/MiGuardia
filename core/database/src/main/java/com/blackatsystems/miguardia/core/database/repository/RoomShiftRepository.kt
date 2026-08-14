@@ -55,7 +55,10 @@ internal class RoomShiftRepository(
     }
 
     override suspend fun delete(id: UUID) {
-        dao.delete(id.toString())
+        database.withTransaction {
+            database.shiftNoveltyDao().deleteLinksToShift(id.toString())
+            dao.delete(id.toString())
+        }
     }
 
     override suspend fun applyBatch(mutation: ShiftBatchMutation) {
@@ -70,6 +73,9 @@ internal class RoomShiftRepository(
         try {
             database.withTransaction {
                 if (mutation.shiftIdsToDelete.isNotEmpty()) {
+                    mutation.shiftIdsToDelete.forEach { id ->
+                        database.shiftNoveltyDao().deleteLinksToShift(id.toString())
+                    }
                     dao.deleteByIds(mutation.shiftIdsToDelete.map(UUID::toString))
                 }
                 if (entities.isNotEmpty()) dao.insertAll(entities)

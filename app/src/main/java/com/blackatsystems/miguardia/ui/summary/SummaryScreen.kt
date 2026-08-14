@@ -143,10 +143,6 @@ private fun SummaryContent(summary: MonthlyHoursSummary) {
             stringResource(R.string.summary_classification_notice),
             style = MaterialTheme.typography.bodySmall,
         )
-        Text(
-            stringResource(R.string.summary_holiday_notice),
-            style = MaterialTheme.typography.bodySmall,
-        )
     }
     SummarySection(stringResource(R.string.summary_events_title)) {
         SummaryValue(R.string.summary_shifts, summary.shiftCount.toString())

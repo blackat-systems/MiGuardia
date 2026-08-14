@@ -18,3 +18,13 @@ class InvalidLocalDataException(
     message: String,
     cause: Throwable? = null,
 ) : LocalDataException(message, cause)
+
+class DuplicateHolidayDateException(cause: Throwable? = null) :
+    LocalDataException("Ya existe un feriado en esa fecha.", cause)
+
+class EmptyShiftNoteException : LocalDataException("La nota no puede estar vacía.")
+
+class MissingNoveltyDescriptionException :
+    LocalDataException("La descripción es obligatoria para esta novedad.")
+
+class ConflictingLocalWriteException(message: String) : LocalDataException(message)
