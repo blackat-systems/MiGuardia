@@ -170,12 +170,13 @@ Estados:
 - franco: gris y `F`;
 - sin definir: gris y `?`;
 - carpeta médica: gris y `CM`.
+- vacaciones: indicador `V`, correspondiente a un período manual de días corridos inclusivos.
 
 Un día vacío se considera visual y funcionalmente “sin definir”. No hace falta crear una fila persistente para cada día vacío si el modelo puede representarlo de modo inequívoco.
 
 Interacciones:
 
-- tocar un día vacío ofrece Agregar y luego Guardia, Franco, Día sin definir o Carpeta médica;
+- tocar un día vacío ofrece Agregar y luego Guardia, Franco, Día sin definir, Carpeta médica o Vacaciones;
 - tocar un día ocupado abre sus detalles;
 - mantener pulsado ofrece editar o limpiar/eliminar;
 - los detalles tienen menú de tres puntos: editar, eliminar, duplicar en otras fechas y selección múltiple;
@@ -280,6 +281,8 @@ Reglas precisas:
 
 Carpeta médica guarda fecha inicial, fecha final y nota opcional. No guardar certificado ni foto. Sus días no suman horas; el resumen informa duración/cantidad.
 
+Vacaciones se registra manualmente como un período inclusivo de días corridos, puede atravesar meses o años y se muestra con `V`. Puede coexistir sin borrar feriados, francos o días `?`, porque todos ellos pueden quedar comprendidos dentro del período. No puede superponerse con una carpeta médica: la interfaz debe explicar el conflicto y pedir que se corrija uno de los períodos. Una guardia `PLANNED` cuya `localStartDate` esté dentro de vacaciones se conserva como dato histórico, pero no suma horas planificadas, trabajadas, pendientes, extra, nocturnas ni feriadas. Una ausencia o cancelación explícita prevalece sobre vacaciones y mantiene su clasificación propia. El resumen cuenta fechas de vacaciones únicas recortadas al mes, sin convertirlas artificialmente en horas.
+
 ## 10. Fotos mensuales del cronograma
 
 El usuario puede asociar una o varias fotos del cronograma a un mes/año concreto y, si corresponde, identificarlas por objetivo. El botón superior permite consultarlas sin alternar con la galería mientras carga su calendario.
@@ -299,7 +302,8 @@ Valores y categorías:
 - horas nocturnas;
 - horas en feriado;
 - cantidad de guardias y francos;
-- días/horas correspondientes a carpeta médica, ausencia y cancelación.
+- días/horas correspondientes a carpeta médica, ausencia y cancelación;
+- días corridos de vacaciones, sin equivalencia automática en horas.
 
 Reglas:
 
@@ -310,6 +314,9 @@ Reglas:
 - un feriado ocupa el día civil 00:00–24:00 y puede tener nombre opcional;
 - horas nocturnas, feriado y extra son clasificaciones que pueden superponerse; no sumar categorías como si fueran horas distintas;
 - carpeta médica, ausencia y cancelación no suman horas trabajadas, pero aparecen separadas en el informe;
+- una guardia `PLANNED` cuya fecha local inicial esté dentro de vacaciones se excluye por completo de las horas planificadas y de todas sus clasificaciones; el período no altera ni elimina la guardia persistida;
+- `ABSENT` y `CANCELLED` prevalecen sobre vacaciones y conservan sus horas ausentes o canceladas dentro de la invariante existente;
+- las vacaciones se cuentan por la unión de fechas civiles únicas del mes, incluidas fechas sin guardia, feriados, francos y días `?`;
 - francos cuentan solo cuando fueron marcados explícitamente `F`.
 
 Regla mensual especial:
@@ -340,6 +347,15 @@ Verificación efectuada el 13 de agosto de 2026:
 - una publicación cordobesa informa que el acuerdo SUVICO–sector empresario fue homologado y confirma los seis totales mensuales: `https://lmdiario.com.ar/contenido/522769/el-personal-de-vigilancia-logro-un-acuerdo-salarial-con-aumentos-progresivos-has`;
 - el sitio oficial `https://www.suvico.org.ar/` confirma que la actividad cordobesa se encuadra en el CCT 422/05 y ofrece una escala salarial, aunque al consultar todavía enlazaba el PDF de enero–junio de 2026;
 - hasta archivar el acta o anexo oficial julio–diciembre, registrar esta carga como “verificada contra imágenes y fuentes públicas”, no como “documento paritario oficial adjunto”.
+
+Decisión documentada sobre vacaciones del 14 de agosto de 2026:
+
+- el artículo 155 de la Ley de Contrato de Trabajo establece que la retribución vacacional de una persona mensualizada se determina dividiendo por 25 la remuneración computable vigente al comenzar el período; también contempla remuneraciones accesorias y promedios para componentes variables;
+- acuerdos SUVICO–CAESI anteriores demuestran un adicional vacacional remunerativo por cada día gozado y un tope que debe leerse del acuerdo aplicable;
+- fuentes públicas de julio de 2026 confirman que el acuerdo del segundo semestre actualizó el adicional vacacional mensualmente, pero las seis imágenes locales no muestran sus valores y todavía no se archivó el acta o anexo oficial completo;
+- por lo tanto, el módulo de Vacaciones solo registra y clasifica días; no calcula dinero, no persiste importes y no inventa el adicional SUVICO 2026;
+- el futuro motor remunerativo deberá versionar por vigencia la remuneración computable, la fórmula `/25`, el adicional SUVICO por día, su eventual tope y su fuente verificable, evitando duplicar la remuneración mensual ordinaria;
+- referencias verificadas: `https://www.argentina.gob.ar/normativa/nacional/25552/actualizacion`, `https://www.suvico.org.ar/` y `https://lmdiario.com.ar/contenido/522769/el-personal-de-vigilancia-logro-un-acuerdo-salarial-con-aumentos-progresivos-has`.
 
 Las imágenes son calculadoras de ejemplo sin antigüedad, nocturnidad, horas extra ni feriados cargados. Los importes están expresados en pesos argentinos:
 
@@ -401,7 +417,7 @@ Persistencia y vigencia:
 - registrar fuente, categoría, vigencia y estado de verificación;
 - mostrar aviso: información orientativa, no recibo de sueldo ni liquidación oficial.
 
-Reglas aún abiertas, que no deben inventarse: cómo prorratear sueldo básico, presentismo, suma no remunerativa y viáticos durante un mes parcial; cuándo se pierde presentismo; tratamiento exacto de ausencias y carpetas en dinero; qué deducciones personales aplicar; redondeos de una liquidación completa; y si la hora extra al 50 % o al 100 % corresponde a cada clase de excedente real.
+Reglas aún abiertas, que no deben inventarse: cómo prorratear sueldo básico, presentismo, suma no remunerativa y viáticos durante un mes parcial; cuándo se pierde presentismo; tratamiento exacto de ausencias y carpetas en dinero; componentes exactos de la remuneración computable de vacaciones; valores y topes del adicional vacacional SUVICO julio–diciembre de 2026; modo de evitar la doble contabilización con el salario mensual; qué deducciones personales aplicar; redondeos de una liquidación completa; y si la hora extra al 50 % o al 100 % corresponde a cada clase de excedente real.
 
 ## 13. Feriados manuales
 
@@ -632,6 +648,8 @@ Construir por etapas, manteniendo una app ejecutable:
 
 Decisión de secuencia del 13 de agosto de 2026: Joaquin autorizó implementar **novedades, feriados y notas** inmediatamente después del motor básico de horas. El módulo de fotos mensuales continúa pendiente y no queda cancelado; solamente se pospone en el orden de ejecución.
 
+Decisión posterior del 14 de agosto de 2026: después de integrar novedades, feriados y notas, Joaquin autorizó implementar **Vacaciones** como incremento separado sobre Room v3. Este módulo registra y clasifica días, pero no implementa todavía remuneración vacacional.
+
 La primera versión utilizable debe alcanzar almacenamiento local, calendario, carga individual/múltiple, objetivos/horarios, fotos y horas básicas antes de sumar capas más complejas.
 
 ## 26. Criterios transversales de aceptación
@@ -669,6 +687,10 @@ Casos críticos obligatorios:
 17. informe parcial correctamente fechado;
 18. clima no disponible no bloquea calendario ni avisos.
 19. guardia retrocargada cuyo fin ya pasó aparece automáticamente completada, salvo ausencia o cancelación explícita.
+20. vacaciones que atraviesan fin de mes/año cuentan fechas únicas en cada mes;
+21. guardia `PLANNED` dentro de vacaciones queda fuera de todas las horas sin ser borrada ni modificada;
+22. ausencia o cancelación explícita dentro de vacaciones conserva su clasificación propia;
+23. feriado, `F` o `?` puede coexistir con `V`, mientras carpeta médica superpuesta se rechaza.
 
 ## 27. Política para decisiones todavía abiertas
 
@@ -684,6 +706,7 @@ Abiertos conocidos:
 
 - prorrateo mensual de básico, presentismo, sumas no remunerativas y viáticos;
 - pérdida de presentismo y tratamiento monetario de ausencias/carpetas;
+- componentes remunerativos, valores históricos, tope y contabilización exacta de vacaciones SUVICO;
 - selección entre recargo extra del 50 % y del 100 % según cada situación;
 - aplicabilidad de descuentos personales y cálculo neto;
 - identidad visual definitiva;
