@@ -91,11 +91,17 @@ class CalendarComposeTest {
     fun gridShowsEveryStateAndDayDetailKeepsMultipleShiftsAccessible() {
         composeRule.setContent { CalendarHarness(contentState()) }
 
-        composeRule.onNodeWithText("CMP · Hecha", useUnmergedTree = true).assertExists()
-        composeRule.onNodeWithText("CUR · Ahora", useUnmergedTree = true).assertExists()
-        composeRule.onNodeWithText("PRO · Próx.", useUnmergedTree = true).assertExists()
-        composeRule.onNodeWithText("CAN · Cancel.", useUnmergedTree = true).assertExists()
-        composeRule.onNodeWithText("AUS · Aus.", useUnmergedTree = true).assertExists()
+        composeRule.onNodeWithText("ABCDE", useUnmergedTree = true).assertExists()
+        composeRule.onNodeWithText("23:00–03:00", useUnmergedTree = true).assertExists()
+        composeRule.onNodeWithTag("completed-day-2026-08-02").assertExists()
+        composeRule.onNodeWithText("CUR", useUnmergedTree = true).assertExists()
+        composeRule.onNodeWithText("Ahora", useUnmergedTree = true).assertExists()
+        composeRule.onNodeWithText("PRO", useUnmergedTree = true).assertExists()
+        composeRule.onNodeWithText("Próx.", useUnmergedTree = true).assertExists()
+        composeRule.onNodeWithText("CAN", useUnmergedTree = true).assertExists()
+        composeRule.onNodeWithText("Cancel.", useUnmergedTree = true).assertExists()
+        composeRule.onNodeWithText("AUS", useUnmergedTree = true).assertExists()
+        composeRule.onNodeWithText("Aus.", useUnmergedTree = true).assertExists()
         composeRule.onNodeWithText("F", useUnmergedTree = true).assertExists()
         composeRule.onNodeWithText("CM", useUnmergedTree = true).assertExists()
         composeRule.onNodeWithContentDescription(
@@ -297,6 +303,7 @@ class CalendarComposeTest {
 
     private fun fixtureShifts(): List<Shift> = listOf(
         shift("CMP", "Objetivo completado", 1, 8, 16),
+        shift("ABCDE", "Objetivo de abreviatura máxima", 2, 23, 3),
         shift("DOS", "Objetivo dos", 3, 6, 10),
         shift("TRE", "Objetivo tres", 3, 12, 16),
         shift("CAN", "Objetivo cancelado", 4, 8, 16, ShiftStatus.CANCELLED),
@@ -317,7 +324,8 @@ class CalendarComposeTest {
         val startTime = LocalTime.of(startHour, 0)
         val endTime = LocalTime.of(endHour, 0)
         val start = ZonedDateTime.of(date, startTime, AppDefaults.zoneId())
-        val end = ZonedDateTime.of(date, endTime, AppDefaults.zoneId())
+        val endDate = if (endTime <= startTime) date.plusDays(1) else date
+        val end = ZonedDateTime.of(endDate, endTime, AppDefaults.zoneId())
         return Shift(
             id = UUID.nameUUIDFromBytes("$abbreviation-$day-$startHour".toByteArray()),
             startAt = start.toInstant(),

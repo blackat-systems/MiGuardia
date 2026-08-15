@@ -34,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.blackatsystems.miguardia.core.domain.model.Holiday
@@ -43,6 +44,7 @@ import com.blackatsystems.miguardia.core.domain.model.Shift
 import com.blackatsystems.miguardia.core.domain.model.ShiftNovelty
 import com.blackatsystems.miguardia.core.domain.model.ShiftNoveltyType
 import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
+import com.blackatsystems.miguardia.ui.components.TransientConfirmation
 import java.time.YearMonth
 import java.time.format.TextStyle
 import java.util.Locale
@@ -113,8 +115,9 @@ data class ExceptionsActions(
 @Composable
 fun ExceptionsSurfaceHost(state: ExceptionsUiState, actions: ExceptionsActions) {
     BackHandler(onBack = actions.close)
-    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-        Column(Modifier.fillMaxSize().safeDrawingPadding()) {
+    TransientConfirmation(state.infoMessage, actions.clearMessage) {
+        Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+            Column(Modifier.fillMaxSize().safeDrawingPadding()) {
             Row(
                 Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -134,11 +137,11 @@ fun ExceptionsSurfaceHost(state: ExceptionsUiState, actions: ExceptionsActions) 
                     Text("Reintentar")
                 }
             }
-            state.infoMessage?.let { Message(it, false, actions.clearMessage) }
             when (state.surface) {
                 ExceptionsSurface.NONE -> Unit
                 ExceptionsSurface.HOLIDAYS -> HolidayScreen(state, actions)
                 ExceptionsSurface.SHIFT -> ShiftExceptionsScreen(state, actions)
+                }
             }
         }
     }
@@ -244,6 +247,8 @@ private fun HolidayScreen(state: ExceptionsUiState, actions: ExceptionsActions) 
 private fun ShiftExceptionsScreen(state: ExceptionsUiState, actions: ExceptionsActions) {
     val shift = state.selectedShift ?: return
     var statusDescription by rememberSaveable { mutableStateOf("") }
+    var pendingStatus by rememberSaveable { mutableStateOf<ShiftStatus?>(null) }
+    var showStatusDescription by rememberSaveable { mutableStateOf(false) }
     var selectedFormalId by rememberSaveable { mutableStateOf<String?>(null) }
     var formalDescription by rememberSaveable { mutableStateOf("") }
     var selectedSecondId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -287,10 +292,18 @@ private fun ShiftExceptionsScreen(state: ExceptionsUiState, actions: ExceptionsA
                 fontWeight = FontWeight.Bold,
             )
             Text("Ausencia y cancelación llevan las horas trabajadas a cero. Volver a normal restaura el estado derivado del reloj.")
-            OutlinedTextField(statusDescription, { statusDescription = it }, label = { Text("Descripción opcional") }, modifier = Modifier.fillMaxWidth())
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                OutlinedButton(onClick = { actions.changeStatus(ShiftStatus.ABSENT, statusDescription) }) { Text("Ausencia") }
-                OutlinedButton(onClick = { actions.changeStatus(ShiftStatus.CANCELLED, statusDescription) }) { Text("Cancelar guardia") }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                OutlinedButton(
+                    onClick = { pendingStatus = ShiftStatus.ABSENT },
+                    modifier = Modifier.weight(1f),
+                ) { Text("Registrar ausencia") }
+                OutlinedButton(
+                    onClick = { pendingStatus = ShiftStatus.CANCELLED },
+                    modifier = Modifier.weight(1f),
+                ) { Text("Cancelar guardia") }
             }
             OutlinedButton(onClick = { actions.changeStatus(ShiftStatus.PLANNED, "") }, modifier = Modifier.fillMaxWidth()) { Text("Volver a normal") }
         }
@@ -390,6 +403,60 @@ private fun ShiftExceptionsScreen(state: ExceptionsUiState, actions: ExceptionsA
             text = { Text("Se verificará que la guardia no haya cambiado por otro flujo antes de restaurarla.") },
             confirmButton = { TextButton(onClick = { confirmRestore = false; actions.restoreOriginal() }) { Text("Restaurar") } },
             dismissButton = { TextButton(onClick = { confirmRestore = false }) { Text("Cancelar") } },
+        )
+    }
+    pendingStatus?.let { status ->
+        val isAbsence = status == ShiftStatus.ABSENT
+        AlertDialog(
+            onDismissRequest = {
+                pendingStatus = null
+                statusDescription = ""
+                showStatusDescription = false
+            },
+            title = { Text(if (isAbsence) "Registrar ausencia" else "Cancelar guardia") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        if (isAbsence) {
+                            "La guardia quedará marcada como ausencia y no sumará horas trabajadas."
+                        } else {
+                            "La guardia quedará cancelada y no sumará horas trabajadas."
+                        },
+                    )
+                    if (showStatusDescription) {
+                        OutlinedTextField(
+                            value = statusDescription,
+                            onValueChange = { statusDescription = it },
+                            label = { Text("Descripción opcional") },
+                            modifier = Modifier.fillMaxWidth().testTag("status-description-field"),
+                        )
+                    } else {
+                        OutlinedButton(
+                            onClick = { showStatusDescription = true },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) { Text("+ Agregar descripción opcional") }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        actions.changeStatus(status, statusDescription)
+                        pendingStatus = null
+                        statusDescription = ""
+                        showStatusDescription = false
+                    },
+                ) { Text("Confirmar") }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        pendingStatus = null
+                        statusDescription = ""
+                        showStatusDescription = false
+                    },
+                ) { Text("Volver") }
+            },
         )
     }
     if (state.planningWarnings.isNotEmpty() && state.pendingPlanning != null) {

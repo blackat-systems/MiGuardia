@@ -23,6 +23,9 @@ El calendario debe reaccionar a cambios persistidos, conservar el mes selecciona
 - La actualización temporal se programará para el próximo inicio, fin o medianoche relevante; no se realizará sondeo frecuente.
 - Una instancia de `LocalDataStore` propiedad de `MiGuardiaApplication` compondrá manualmente los repositorios. No se incorpora Hilt.
 - La tarjeta de próxima guardia permanecerá neutral hasta que exista el motor único de próximo evento; no inferirá resultados incompletos desde el mes visible.
+- La celda de una guardia reservará líneas separadas para abreviatura histórica completa, horario exacto completo y estado temporal. La franja del color histórico tendrá presencia visible suficiente para reconocer la combinación sin depender exclusivamente del color.
+- Una fecha sin prioridad visual de Vacaciones se presentará con fondo verde de completada solamente cuando tenga al menos una guardia y todas las guardias de esa fecha estén proyectadas como `COMPLETED`.
+- El zoom interno 150 % o 200 % ampliará realmente las celdas y habilitará desplazamiento horizontal cuando siete columnas ya no entren. Abreviatura histórica, horario completo y marcadores ajustarán su texto al mayor tamaño que quepa sin elipsis.
 
 ## Consecuencias
 

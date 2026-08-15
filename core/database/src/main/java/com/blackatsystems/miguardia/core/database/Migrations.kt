@@ -30,3 +30,11 @@ internal val MIGRATION_2_3 = object : Migration(2, 3) {
         )
     }
 }
+
+internal val MIGRATION_3_4 = object : Migration(3, 4) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("""CREATE TABLE IF NOT EXISTS `schedule_photos` (`id` TEXT NOT NULL, `month` TEXT NOT NULL, `objectiveId` TEXT, `objectiveNameSnapshot` TEXT, `objectiveAbbreviationSnapshot` TEXT, `storageKey` TEXT NOT NULL, `mimeType` TEXT NOT NULL, `byteSize` INTEGER NOT NULL, `pixelWidth` INTEGER NOT NULL, `pixelHeight` INTEGER NOT NULL, `createdAtEpochMillis` INTEGER NOT NULL, `updatedAtEpochMillis` INTEGER NOT NULL, PRIMARY KEY(`id`))""")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_schedule_photos_month` ON `schedule_photos` (`month`)")
+        db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_schedule_photos_storageKey` ON `schedule_photos` (`storageKey`)")
+    }
+}

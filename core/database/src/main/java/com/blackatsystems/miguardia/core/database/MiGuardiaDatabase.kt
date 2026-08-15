@@ -9,6 +9,7 @@ import com.blackatsystems.miguardia.core.database.dao.HolidayDao
 import com.blackatsystems.miguardia.core.database.dao.MedicalLeaveDao
 import com.blackatsystems.miguardia.core.database.dao.ObjectiveDao
 import com.blackatsystems.miguardia.core.database.dao.ScheduleCombinationDao
+import com.blackatsystems.miguardia.core.database.dao.SchedulePhotoDao
 import com.blackatsystems.miguardia.core.database.dao.ShiftDao
 import com.blackatsystems.miguardia.core.database.dao.ShiftNoteDao
 import com.blackatsystems.miguardia.core.database.dao.ShiftNoveltyDao
@@ -19,6 +20,7 @@ import com.blackatsystems.miguardia.core.database.entity.HolidayEntity
 import com.blackatsystems.miguardia.core.database.entity.MedicalLeaveEntity
 import com.blackatsystems.miguardia.core.database.entity.ObjectiveEntity
 import com.blackatsystems.miguardia.core.database.entity.ScheduleCombinationEntity
+import com.blackatsystems.miguardia.core.database.entity.SchedulePhotoEntity
 import com.blackatsystems.miguardia.core.database.entity.ShiftEntity
 import com.blackatsystems.miguardia.core.database.entity.ShiftNoteEntity
 import com.blackatsystems.miguardia.core.database.entity.ShiftNoveltyEntity
@@ -36,8 +38,9 @@ import com.blackatsystems.miguardia.core.database.entity.VacationEntity
         ShiftNoveltyEntity::class,
         FormalShiftChangeEntity::class,
         VacationEntity::class,
+        SchedulePhotoEntity::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = true,
 )
 internal abstract class MiGuardiaDatabase : RoomDatabase() {
@@ -50,6 +53,7 @@ internal abstract class MiGuardiaDatabase : RoomDatabase() {
     internal abstract fun shiftNoteDao(): ShiftNoteDao
     internal abstract fun shiftNoveltyDao(): ShiftNoveltyDao
     internal abstract fun vacationDao(): VacationDao
+    internal abstract fun schedulePhotoDao(): SchedulePhotoDao
 
     companion object {
         const val DATABASE_NAME: String = "miguardia.db"
@@ -61,6 +65,6 @@ internal abstract class MiGuardiaDatabase : RoomDatabase() {
             context.applicationContext,
             MiGuardiaDatabase::class.java,
             databaseName,
-        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3).build()
+        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4).build()
     }
 }

@@ -167,6 +167,8 @@ Diseño similar conceptualmente al calendario mensual de Samsung: celdas grandes
 Estados:
 
 - guardia: color de su combinación objetivo+horario, abreviatura del objetivo y horario exacto, por ejemplo `RAW 19:00–07:00`;
+- en cada celda con guardia, la abreviatura histórica debe mostrarse completa y el horario `HH:mm–HH:mm` debe permanecer visible completo, sin elipsis ni recortes; el estado temporal ocupa una línea separada y la franja del color histórico debe ser claramente perceptible;
+- una fecha se muestra con fondo verde de completada cuando contiene al menos una guardia, no está visualmente priorizada por Vacaciones y todas sus guardias se proyectan como `COMPLETED`; una fecha con guardias futuras, en curso, canceladas o ausentes no se considera completada;
 - franco: gris y `F`;
 - sin definir: gris y `?`;
 - carpeta médica: gris y `CM`.
@@ -209,13 +211,17 @@ Un objetivo guarda:
 
 Cada objetivo puede tener múltiples horarios. Cada combinación **objetivo + horario exacto** es independiente y tiene su propio color. El color no pertenece solo al objetivo ni solo al horario. Ejemplos del mismo objetivo: 10:00 a cierta hora y 12:00 a otra hora, cada uno con color propio.
 
+El color se elige desde una acción `Elegir color` que abre un selector RGB completo con controles de rojo, verde y azul, vista previa y una paleta inferior de colores comunes. No limitar al usuario únicamente a colores predeterminados.
+
 El “puesto” o etiqueta es opcional y pertenece a la carga correspondiente. En Rawson se rota entre puestos y puede omitirse; en Dino puede existir un puesto fijo.
 
 Al agregar guardia mostrar:
 
 1. hasta cinco combinaciones objetivo+horario utilizadas recientemente;
-2. opción de explorar objetivos y, dentro de cada uno, sus horarios;
+2. opción de explorar objetivos mediante una tarjeta o carpeta seleccionable por objetivo; al desplegarla se muestran solamente sus horarios activos y, debajo de ellos, la acción `+ Agregar horario` para ese objetivo;
 3. opción Agregar guardia nueva/crear combinación.
+
+La exploración no debe mezclar en una lista plana horarios de objetivos distintos ni repetir fuera de las carpetas un botón “Crear horario para...” por cada objetivo. Crear un objetivo incorpora inmediatamente su nueva carpeta seleccionable.
 
 Permitir editar, ocultar o eliminar plantillas con confirmaciones apropiadas. Cada guardia creada guarda una instantánea de nombre, abreviatura, horario, color, puesto y demás datos necesarios. Cambiar una plantilla solo afecta cargas futuras; el pasado queda como ocurrió.
 
@@ -272,6 +278,7 @@ Las novedades pueden corregirse posteriormente.
 Reglas precisas:
 
 - ausencia y cancelación son conceptos distintos, pero ambos suman cero horas trabajadas;
+- al elegir ausencia o cancelación, ofrecer antes de confirmar la acción `+ Agregar descripción opcional`; el texto queda privado y local en la novedad controladora;
 - si cambia formalmente objetivo u horario, conservar visible lo planificado y lo finalmente realizado;
 - una segunda guardia se registra como otra guardia trabajada; el resumen mensual determina qué horas superan 204;
 - el usuario puede anotar que salió antes/después o cubrió a alguien;
@@ -593,9 +600,12 @@ Permitir guardar, compartir y regenerar. Comprobar legibilidad, saltos de págin
 - Nunca comunicar estado solo mediante color: conservar abreviatura, horario o símbolo.
 - Contraste automático de texto sobre colores elegidos.
 - Advertir colores demasiado similares, pero permitir continuar.
-- MiGuardia mantiene su tamaño tipográfico, su escala visual y su distribución predeterminados; no adapta ni redistribuye la interfaz según `font_scale`.
-- MiGuardia usa la densidad estable del dispositivo como referencia y no la densidad configurada por zoom o tamaño de visualización. No implementar variantes ni comportamientos especiales basados en esos ajustes.
-- Las verificaciones no deben modificar `font_scale`, zoom, tamaño de visualización ni densidad del dispositivo.
+- MiGuardia mantiene su tamaño tipográfico, escala visual y distribución predeterminados en el ajuste interno 100 %; no adapta ni redistribuye la interfaz según `font_scale`.
+- Configuración ofrece zoom interno explícito de MiGuardia en 100 %, 150 % y 200 %. La elección se persiste localmente y escala la aplicación sin leer ni modificar el zoom, tamaño de visualización, fuente o densidad de Android.
+- MiGuardia usa la densidad estable del dispositivo como referencia y nunca activa automáticamente una variante a partir de ajustes del sistema.
+- Con zoom interno 150 % o 200 %, las superficies deben seguir siendo utilizables mediante desplazamiento. El calendario puede desplazarse horizontalmente para conservar celdas suficientemente anchas; abreviatura y horario deben permanecer completos y ajustar su texto al mayor tamaño que quepa.
+- Las verificaciones pueden recorrer el zoom interno de la aplicación, pero no deben consultar ni modificar `font_scale`, zoom, tamaño de visualización ni densidad del dispositivo.
+- Las confirmaciones de acciones completadas aparecen como avisos flotantes que no desplazan el contenido y desaparecen automáticamente alrededor de 2,5 segundos. Los errores persistentes conservan acción explícita de cierre o reintento.
 - En teléfonos pequeños priorizar abreviatura, horario y estado.
 - Descripciones completas para TalkBack/lector de pantalla.
 - Español en V1, pero textos estructurados para futura localización.

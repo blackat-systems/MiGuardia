@@ -7,6 +7,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextInput
@@ -123,6 +124,44 @@ class ManagementComposeTest {
     }
 
     @Test
+    fun scheduleColorPickerOffersFullRgbControlsAndCommonPalette() {
+        var state by mutableStateOf(
+            ManagementUiState(
+                surface = ManagementSurface.SCHEDULE_FORM,
+                scheduleDraft = ScheduleDraft(
+                    objectiveId = ACTIVE_OBJECTIVE.id,
+                    colorArgb = 0xFF1565C0.toInt(),
+                ),
+            ),
+        )
+        composeRule.setContent {
+            MaterialTheme {
+                ManagementSurfaceHost(
+                    state = state,
+                    actions = ManagementActions(
+                        updateSchedule = { transform ->
+                            state = state.copy(scheduleDraft = transform(state.scheduleDraft))
+                        },
+                    ),
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Elegir color").performSemanticsAction(SemanticsActions.OnClick)
+        composeRule.onNodeWithText("Colores comunes").assertExists()
+        composeRule.onNodeWithContentDescription("Rojo RGB").assertExists()
+        composeRule.onNodeWithContentDescription("Verde RGB").assertExists()
+        composeRule.onNodeWithContentDescription("Azul RGB").assertExists()
+        composeRule.onNodeWithContentDescription("Color común C62828")
+            .performSemanticsAction(SemanticsActions.OnClick)
+        composeRule.onNodeWithText("Usar color").performSemanticsAction(SemanticsActions.OnClick)
+
+        composeRule.runOnIdle {
+            assertEquals(0xFFC62828.toInt(), state.scheduleDraft.colorArgb)
+        }
+    }
+
+    @Test
     fun scheduleUsesA24HourTimeSelector() {
         composeRule.setContent {
             MaterialTheme {
@@ -174,6 +213,53 @@ class ManagementComposeTest {
         composeRule.onNodeWithText("Confirmar guardias").assertExists()
         composeRule.onNodeWithText("Guardar").performSemanticsAction(SemanticsActions.OnClick)
         composeRule.runOnIdle { assertEquals(null to false, requested) }
+    }
+
+    @Test
+    fun shiftFormGroupsSchedulesInsideSelectableObjectiveFolders() {
+        var chosen: UUID? = null
+        var scheduleObjective: UUID? = null
+        composeRule.setContent {
+            MaterialTheme {
+                ManagementSurfaceHost(
+                    state = ManagementUiState(
+                        surface = ManagementSurface.SHIFT_FORM,
+                        objectives = listOf(ACTIVE_OBJECTIVE, SECOND_OBJECTIVE),
+                        scheduleOptions = listOf(ScheduleOption(ACTIVE_OBJECTIVE, SCHEDULE)),
+                        shiftDraft = ShiftDraft(
+                            month = YearMonth.of(2026, 8),
+                            selectedDates = setOf(LocalDate.of(2026, 8, 14)),
+                        ),
+                    ),
+                    actions = ManagementActions(
+                        chooseCombination = { chosen = it },
+                        openSchedule = { objectiveId, _ -> scheduleObjective = objectiveId },
+                    ),
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Objetivo activo (ACT)").assertExists()
+        composeRule.onNodeWithText("Segundo objetivo (SEG)").assertExists()
+        composeRule.onNodeWithText("19:00–07:00").assertDoesNotExist()
+        composeRule.onNodeWithText("Crear horario para ACT").assertDoesNotExist()
+
+        composeRule.onNodeWithText("Objetivo activo (ACT)")
+            .performSemanticsAction(SemanticsActions.OnClick)
+        composeRule.onNodeWithText("19:00–07:00").assertExists()
+            .performSemanticsAction(SemanticsActions.OnClick)
+        composeRule.onNodeWithText("+ Agregar horario")
+            .performSemanticsAction(SemanticsActions.OnClick)
+
+        composeRule.runOnIdle {
+            assertEquals(SCHEDULE.id, chosen)
+            assertEquals(ACTIVE_OBJECTIVE.id, scheduleObjective)
+        }
+
+        composeRule.onNodeWithText("Segundo objetivo (SEG)")
+            .performSemanticsAction(SemanticsActions.OnClick)
+        composeRule.onNodeWithText("19:00–07:00").assertDoesNotExist()
+        composeRule.onNodeWithText("Todavía no hay horarios para este objetivo.").assertExists()
     }
 
     @Test
@@ -293,6 +379,11 @@ class ManagementComposeTest {
             fullName = "Objetivo oculto",
             abbreviation = "OCU",
             isActive = false,
+        )
+        private val SECOND_OBJECTIVE = ACTIVE_OBJECTIVE.copy(
+            id = UUID.fromString("20000000-0000-0000-0000-000000000003"),
+            fullName = "Segundo objetivo",
+            abbreviation = "SEG",
         )
         private val SCHEDULE = ScheduleCombination(
             id = UUID.fromString("30000000-0000-0000-0000-000000000001"),

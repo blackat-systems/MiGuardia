@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
@@ -117,6 +118,38 @@ class ExceptionsComposeTest {
 
         composeRule.onNodeWithText("Confirmar segunda guardia").assertExists()
         composeRule.onNodeWithText("2026-08-13: ya habrá más de una guardia", substring = true).assertExists()
+    }
+
+    @Test fun absenceAndCancellationOfferAnOptionalDescriptionBeforeConfirming() {
+        var changedStatus: ShiftStatus? = null
+        var savedDescription: String? = null
+        composeRule.setContent {
+            MaterialTheme {
+                ExceptionsSurfaceHost(
+                    ExceptionsUiState(
+                        surface = ExceptionsSurface.SHIFT,
+                        holidayMonth = YearMonth.of(2026, 8),
+                        selectedShift = SHIFT,
+                    ),
+                    ExceptionsActions(
+                        changeStatus = { status, description ->
+                            changedStatus = status
+                            savedDescription = description
+                        },
+                    ),
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Registrar ausencia").performScrollTo().performClick()
+        composeRule.onNodeWithText("+ Agregar descripción opcional").performClick()
+        composeRule.onNodeWithTag("status-description-field").performTextInput("Motivo ficticio")
+        composeRule.onNodeWithText("Confirmar").performClick()
+
+        composeRule.runOnIdle {
+            assertEquals(ShiftStatus.ABSENT, changedStatus)
+            assertEquals("Motivo ficticio", savedDescription)
+        }
     }
 
     private companion object {

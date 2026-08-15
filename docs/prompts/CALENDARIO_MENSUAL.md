@@ -154,7 +154,8 @@ La acción Agregar debe continuar visible pero claramente no operativa hasta el 
 
 - Mostrá el número de día con jerarquía clara.
 - Para una guardia, mostrá una franja o indicador pequeño con `colorArgbSnapshot`, más abreviatura y horario exacto tomados de la instantánea histórica.
-- La forma visual objetivo es equivalente a `RAW 19:00–07:00`; en espacios estrechos o con fuente grande se puede priorizar abreviatura y estado, conservando el horario completo en el detalle y la semántica.
+- La forma visual objetivo es equivalente a `RAW 19:00–07:00`. Por decisión posterior de Joaquin, la celda debe mostrar siempre la abreviatura histórica completa y el horario exacto completo, sin elipsis: ambos ocupan líneas propias y el estado temporal se muestra por separado.
+- La franja de `colorArgbSnapshot` debe ser claramente perceptible. Una fecha sin prioridad visual de Vacaciones usa fondo verde de completada únicamente cuando contiene guardias y todas ellas están proyectadas como `COMPLETED`.
 - Para cancelación o ausencia, mostrá además una palabra o abreviatura comprensible; no lo comuniques solo cambiando color u opacidad.
 - Para guardia completada, próxima o en curso, la descripción accesible debe nombrar el estado.
 - El día actual debe distinguirse visualmente y anunciarse como “hoy”.

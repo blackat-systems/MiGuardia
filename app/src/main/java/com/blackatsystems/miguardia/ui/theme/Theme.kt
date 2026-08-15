@@ -28,11 +28,12 @@ private val DarkColors = darkColorScheme(
 @Composable
 fun MiGuardiaTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
+    appZoom: AppZoom = AppZoom.STANDARD,
     content: @Composable () -> Unit,
 ) {
     CompositionLocalProvider(
         LocalDensity provides Density(
-            density = DEFAULT_DISPLAY_DENSITY,
+            density = DEFAULT_DISPLAY_DENSITY * appZoom.scale,
             fontScale = DEFAULT_FONT_SCALE,
         ),
     ) {

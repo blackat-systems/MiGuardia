@@ -15,6 +15,7 @@ MiGuardia necesita feriados locales reactivos, notas privadas por guardia y corr
 - Los feriados son únicos por fecha civil y los lotes resuelven conflictos mediante reemplazo o conservación dentro de una transacción.
 - Notas y novedades dependen de la guardia mediante claves foráneas. Las notas y descripciones permanecen privadas y no alimentan calendario ni Resumen.
 - Ausencia y cancelación se escriben junto con el estado de la guardia. Volver a `PLANNED` elimina la novedad controladora y recupera la proyección temporal por reloj.
+- Antes de confirmar ausencia o cancelación, la interfaz ofrece `+ Agregar descripción opcional`; el texto se guarda en la novedad controladora existente, sin migración adicional y sin exposición en Calendario.
 - Los cambios formales conservan una instantánea estructurada original y otra final. Correcciones posteriores no reemplazan el original y la restauración usa comparación optimista para evitar sobrescribir un cambio concurrente.
 - Una segunda guardia es una `Shift` independiente enlazada mediante una novedad y ambas piezas se crean o eliminan atómicamente.
 - Calendario observa feriados del mes. Resumen observa además el día posterior al fin para clasificar correctamente guardias nocturnas atribuidas al mes inicial.

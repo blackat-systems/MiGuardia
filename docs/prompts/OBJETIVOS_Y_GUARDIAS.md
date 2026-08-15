@@ -117,7 +117,7 @@ Reglas temporales:
 - una pareja exacta inicio+fin no puede repetirse dentro del mismo objetivo;
 - dos horarios diferentes del mismo objetivo pueden y deben conservar colores independientes.
 
-Proporcioná una paleta local suficiente y accesible, sin biblioteca externa. El usuario elige el color. Si el color queda demasiado parecido al de otra combinación visible, advertí y permití continuar. El texto nunca puede depender de ese color para ser entendible y debe conservar contraste adecuado.
+Proporcioná un selector RGB completo, con vista previa y controles de rojo, verde y azul. Debajo incluí una paleta local de colores comunes para selección rápida, sin biblioteca externa. La paleta no limita la gama. Si el color queda demasiado parecido al de otra combinación visible, advertí y permití continuar. El texto nunca puede depender de ese color para ser entendible y debe conservar contraste adecuado.
 
 Ocultar una combinación la excluye de nuevas cargas y de recientes, pero no modifica guardias históricas. Eliminar requiere confirmación y tampoco modifica guardias existentes.
 
@@ -129,8 +129,8 @@ Al abrir Agregar desde Calendario:
 2. preseleccioná la fecha tocada cuando el flujo nazca desde una celda;
 3. para varios días, limitá la selección a un único `YearMonth` por operación;
 4. mostrale primero hasta cinco combinaciones activas utilizadas recientemente;
-5. ofrecé Explorar objetivos y luego sus horarios activos;
-6. ofrecé Crear objetivo o Crear horario cuando haga falta;
+5. ofrecé Explorar objetivos mediante una carpeta desplegable por objetivo; dentro de cada carpeta mostrá sus horarios activos y, debajo, `+ Agregar horario`;
+6. ofrecé Crear objetivo como acción general; no mezcles todos los horarios en una lista plana ni repitas botones “Crear horario para...” fuera de las carpetas;
 7. solicitá puesto opcional para esta carga;
 8. mostrale una vista previa con fechas, objetivo, horario, cruce de medianoche y cantidad de guardias;
 9. validá conflictos y advertencias;

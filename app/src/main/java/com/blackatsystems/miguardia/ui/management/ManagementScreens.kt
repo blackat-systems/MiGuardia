@@ -30,6 +30,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -37,8 +38,10 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimeInput
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -54,6 +57,7 @@ import com.blackatsystems.miguardia.core.domain.model.ScheduleCombination
 import com.blackatsystems.miguardia.core.domain.model.Shift
 import com.blackatsystems.miguardia.core.domain.shift.OccupiedDatePolicy
 import com.blackatsystems.miguardia.core.domain.shift.areColorsTooSimilar
+import com.blackatsystems.miguardia.ui.components.TransientConfirmation
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.YearMonth
@@ -138,8 +142,9 @@ fun ManagementSurfaceHost(
     }
     BackHandler(onBack = requestClose)
 
-    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-        Column(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
+    TransientConfirmation(state.infoMessage, actions.clearMessage) {
+        Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+            Column(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -150,13 +155,13 @@ fun ManagementSurfaceHost(
             }
             HorizontalDivider()
             state.errorMessage?.let { MessageCard(it, isError = true, actions.clearMessage) }
-            state.infoMessage?.let { MessageCard(it, isError = false, actions.clearMessage) }
             when (state.surface) {
                 ManagementSurface.NONE -> Unit
                 ManagementSurface.SETTINGS -> SettingsManagementContent(state, actions)
                 ManagementSurface.OBJECTIVE_FORM -> ObjectiveForm(state, actions)
                 ManagementSurface.SCHEDULE_FORM -> ScheduleForm(state, actions)
                 ManagementSurface.SHIFT_FORM -> ShiftForm(state, actions)
+                }
             }
         }
     }
@@ -342,6 +347,7 @@ private fun ScheduleForm(state: ManagementUiState, actions: ManagementActions) {
     var confirmSimilarColor by rememberSaveable { mutableStateOf(false) }
     var selectingStartTime by rememberSaveable { mutableStateOf(false) }
     var selectingEndTime by rememberSaveable { mutableStateOf(false) }
+    var choosingColor by rememberSaveable { mutableStateOf(false) }
     val similar = state.scheduleOptions.any {
         it.objective.id == draft.objectiveId && it.combination.id != draft.editingId &&
             areColorsTooSimilar(it.combination.colorArgb, draft.colorArgb)
@@ -360,19 +366,20 @@ private fun ScheduleForm(state: ManagementUiState, actions: ManagementActions) {
             modifier = Modifier.fillMaxWidth(),
         ) { Text("Fin: ${draft.endTime}") }
         Text("Si la hora final es anterior o igual, termina al día siguiente. Horas iguales representan 24 horas.")
-        Text("Color", fontWeight = FontWeight.Bold)
-        ManagementViewModel.COLOR_PALETTE.chunked(4).forEach { row ->
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                row.forEach { argb ->
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .semantics { contentDescription = "Elegir color ${argb.toUInt().toString(16)}" }
-                            .background(Color(argb), CircleShape)
-                            .then(if (argb == draft.colorArgb) Modifier.border(4.dp, MaterialTheme.colorScheme.onSurface, CircleShape) else Modifier)
-                            .clickable { actions.updateSchedule { it.copy(colorArgb = argb) } },
-                    )
-                }
+        Text("Color del horario", fontWeight = FontWeight.Bold)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                Modifier
+                    .size(48.dp)
+                    .background(Color(draft.colorArgb), CircleShape)
+                    .border(2.dp, MaterialTheme.colorScheme.onSurface, CircleShape),
+            )
+            OutlinedButton(onClick = { choosingColor = true }, modifier = Modifier.weight(1f)) {
+                Text("Elegir color")
             }
         }
         SaveButton(state.isSaving, "Guardar horario") {
@@ -388,6 +395,16 @@ private fun ScheduleForm(state: ManagementUiState, actions: ManagementActions) {
                 TextButton(onClick = { confirmSimilarColor = false; actions.saveSchedule() }) { Text("Usar color") }
             },
             dismissButton = { TextButton(onClick = { confirmSimilarColor = false }) { Text("Elegir otro") } },
+        )
+    }
+    if (choosingColor) {
+        RgbColorPickerDialog(
+            initialColor = draft.colorArgb,
+            onDismiss = { choosingColor = false },
+            onConfirm = { selected ->
+                actions.updateSchedule { it.copy(colorArgb = selected) }
+                choosingColor = false
+            },
         )
     }
     if (selectingStartTime) {
@@ -413,6 +430,93 @@ private fun ScheduleForm(state: ManagementUiState, actions: ManagementActions) {
         )
     }
 }
+
+@Composable
+private fun RgbColorPickerDialog(
+    initialColor: Int,
+    onDismiss: () -> Unit,
+    onConfirm: (Int) -> Unit,
+) {
+    var selectedColor by rememberSaveable(initialColor) { mutableIntStateOf(initialColor) }
+    val red = selectedColor ushr 16 and 0xFF
+    val green = selectedColor ushr 8 and 0xFF
+    val blue = selectedColor and 0xFF
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Elegir color") },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(64.dp)
+                        .background(Color(selectedColor), MaterialTheme.shapes.medium)
+                        .semantics { contentDescription = "Vista previa del color" },
+                )
+                Text(
+                    "RGB ($red, $green, $blue) · #${selectedColor.toUInt().toString(16).takeLast(6).uppercase()}",
+                    fontWeight = FontWeight.SemiBold,
+                )
+                RgbSlider("Rojo", red) { value -> selectedColor = rgb(value, green, blue) }
+                RgbSlider("Verde", green) { value -> selectedColor = rgb(red, value, blue) }
+                RgbSlider("Azul", blue) { value -> selectedColor = rgb(red, green, value) }
+                Text("Colores comunes", fontWeight = FontWeight.Bold)
+                ManagementViewModel.COLOR_PALETTE.chunked(4).forEach { row ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                    ) {
+                        row.forEach { argb ->
+                            Box(
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .semantics {
+                                        contentDescription = "Color común ${argb.toUInt().toString(16).takeLast(6).uppercase()}"
+                                    }
+                                    .background(Color(argb), CircleShape)
+                                    .then(
+                                        if (argb == selectedColor) {
+                                            Modifier.border(4.dp, MaterialTheme.colorScheme.onSurface, CircleShape)
+                                        } else {
+                                            Modifier
+                                        },
+                                    )
+                                    .clickable { selectedColor = argb },
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(selectedColor) }) { Text("Usar color") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancelar") }
+        },
+    )
+}
+
+@Composable
+private fun RgbSlider(label: String, value: Int, onValueChange: (Int) -> Unit) {
+    Column {
+        Text("$label: $value")
+        Slider(
+            value = value.toFloat(),
+            onValueChange = { onValueChange(it.toInt().coerceIn(0, 255)) },
+            valueRange = 0f..255f,
+            steps = 254,
+            modifier = Modifier.semantics { contentDescription = "$label RGB" },
+        )
+    }
+}
+
+private fun rgb(red: Int, green: Int, blue: Int): Int =
+    0xFF000000.toInt() or (red shl 16) or (green shl 8) or blue
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -448,6 +552,22 @@ private fun ShiftForm(state: ManagementUiState, actions: ManagementActions) {
     val draft = state.shiftDraft ?: return
     var finalConfirmation by rememberSaveable { mutableStateOf(false) }
     val activeOptions = state.scheduleOptions.filter { it.objective.isActive && it.combination.isActive }
+    val activeObjectives = state.objectives.filter(Objective::isActive)
+    val selectedObjectiveId = activeOptions
+        .firstOrNull { it.combination.id == draft.combinationId }
+        ?.objective
+        ?.id
+    var expandedObjectiveId by rememberSaveable(draft.month, draft.editingShift?.id) {
+        mutableStateOf(selectedObjectiveId?.toString())
+    }
+    LaunchedEffect(selectedObjectiveId, activeObjectives) {
+        when {
+            selectedObjectiveId != null -> expandedObjectiveId = selectedObjectiveId.toString()
+            expandedObjectiveId == null && activeObjectives.size == 1 -> {
+                expandedObjectiveId = activeObjectives.single().id.toString()
+            }
+        }
+    }
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -473,24 +593,30 @@ private fun ShiftForm(state: ManagementUiState, actions: ManagementActions) {
                 )
             }
             Text("Explorar objetivos y horarios", fontWeight = FontWeight.Bold)
-            activeOptions.forEach { option ->
-                CombinationChoice(
-                    label = "${option.objective.fullName} (${option.objective.abbreviation}) · ${option.combination.startTime}–${option.combination.endTime}",
-                    selected = draft.combinationId == option.combination.id,
-                    color = option.combination.colorArgb,
-                    onClick = { actions.chooseCombination(option.combination.id) },
+            if (activeObjectives.isEmpty()) {
+                Text("Todavía no hay objetivos. Creá el primero para agregar sus horarios.")
+            }
+            activeObjectives.forEach { objective ->
+                ObjectiveScheduleFolder(
+                    objective = objective,
+                    schedules = activeOptions.filter { it.objective.id == objective.id },
+                    selectedCombinationId = draft.combinationId,
+                    expanded = expandedObjectiveId == objective.id.toString(),
+                    onToggle = {
+                        expandedObjectiveId = if (expandedObjectiveId == objective.id.toString()) {
+                            null
+                        } else {
+                            objective.id.toString()
+                        }
+                    },
+                    onChoose = actions.chooseCombination,
+                    onAddSchedule = { actions.openSchedule(objective.id, null) },
                 )
             }
             OutlinedButton(
                 onClick = { actions.openObjective(null) },
                 modifier = Modifier.fillMaxWidth(),
             ) { Text("Crear objetivo") }
-            state.objectives.filter(Objective::isActive).forEach { objective ->
-                OutlinedButton(
-                    onClick = { actions.openSchedule(objective.id, null) },
-                    modifier = Modifier.fillMaxWidth(),
-                ) { Text("Crear horario para ${objective.abbreviation}") }
-            }
         } else {
             Text("Se copiará ${draft.duplicateSource.objectiveAbbreviationSnapshot} · ${draft.duplicateSource.startTimeSnapshot}–${draft.duplicateSource.endTimeSnapshot}.")
         }
@@ -527,6 +653,78 @@ private fun ShiftForm(state: ManagementUiState, actions: ManagementActions) {
             onConfirm = actions.confirmWarnings,
             onDismiss = actions.dismissWarnings,
         )
+    }
+}
+
+@Composable
+private fun ObjectiveScheduleFolder(
+    objective: Objective,
+    schedules: List<ScheduleOption>,
+    selectedCombinationId: UUID?,
+    expanded: Boolean,
+    onToggle: () -> Unit,
+    onChoose: (UUID) -> Unit,
+    onAddSchedule: () -> Unit,
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onToggle)
+                    .semantics {
+                        contentDescription = if (expanded) {
+                            "Cerrar horarios de ${objective.abbreviation}"
+                        } else {
+                            "Abrir horarios de ${objective.abbreviation}"
+                        }
+                    }
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Text(if (expanded) "▾" else "▸", fontWeight = FontWeight.Bold)
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        "${objective.fullName} (${objective.abbreviation})",
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Text(
+                        if (schedules.size == 1) "1 horario" else "${schedules.size} horarios",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            }
+            if (expanded) {
+                HorizontalDivider()
+                Column(
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    if (schedules.isEmpty()) {
+                        Text(
+                            "Todavía no hay horarios para este objetivo.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        )
+                    }
+                    schedules.forEach { option ->
+                        CombinationChoice(
+                            label = "${option.combination.startTime}–${option.combination.endTime}",
+                            selected = selectedCombinationId == option.combination.id,
+                            color = option.combination.colorArgb,
+                            onClick = { onChoose(option.combination.id) },
+                        )
+                    }
+                    TextButton(
+                        onClick = onAddSchedule,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text("+ Agregar horario")
+                    }
+                }
+            }
+        }
     }
 }
 

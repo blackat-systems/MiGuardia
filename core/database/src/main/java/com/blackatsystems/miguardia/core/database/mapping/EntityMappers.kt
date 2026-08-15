@@ -6,6 +6,7 @@ import com.blackatsystems.miguardia.core.database.entity.HolidayEntity
 import com.blackatsystems.miguardia.core.database.entity.MedicalLeaveEntity
 import com.blackatsystems.miguardia.core.database.entity.ObjectiveEntity
 import com.blackatsystems.miguardia.core.database.entity.ScheduleCombinationEntity
+import com.blackatsystems.miguardia.core.database.entity.SchedulePhotoEntity
 import com.blackatsystems.miguardia.core.database.entity.ShiftEntity
 import com.blackatsystems.miguardia.core.database.entity.ShiftNoteEntity
 import com.blackatsystems.miguardia.core.database.entity.ShiftNoveltyEntity
@@ -18,6 +19,7 @@ import com.blackatsystems.miguardia.core.domain.model.ExplicitDayStatusType
 import com.blackatsystems.miguardia.core.domain.model.MedicalLeave
 import com.blackatsystems.miguardia.core.domain.model.Objective
 import com.blackatsystems.miguardia.core.domain.model.ScheduleCombination
+import com.blackatsystems.miguardia.core.domain.model.SchedulePhoto
 import com.blackatsystems.miguardia.core.domain.model.Shift
 import com.blackatsystems.miguardia.core.domain.model.ShiftNote
 import com.blackatsystems.miguardia.core.domain.model.ShiftNovelty
@@ -29,6 +31,7 @@ import com.blackatsystems.miguardia.core.domain.repository.InvalidLocalDataExcep
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
+import java.time.YearMonth
 import java.time.ZoneId
 import java.util.UUID
 
@@ -167,6 +170,28 @@ internal fun VacationEntity.toDomain(): Vacation = decodeEntity("vacaciones", id
         id = UUID.fromString(id),
         startDate = LocalDate.parse(startDate),
         endDateInclusive = LocalDate.parse(endDateInclusive),
+        createdAt = Instant.ofEpochMilli(createdAtEpochMillis),
+        updatedAt = Instant.ofEpochMilli(updatedAtEpochMillis),
+    )
+}
+
+internal fun SchedulePhoto.toEntity() = SchedulePhotoEntity(
+    id = id.toString(), month = month.toString(), objectiveId = objectiveId?.toString(),
+    objectiveNameSnapshot = objectiveNameSnapshot,
+    objectiveAbbreviationSnapshot = objectiveAbbreviationSnapshot,
+    storageKey = storageKey, mimeType = mimeType, byteSize = byteSize,
+    pixelWidth = pixelWidth, pixelHeight = pixelHeight,
+    createdAtEpochMillis = createdAt.toEpochMilli(), updatedAtEpochMillis = updatedAt.toEpochMilli(),
+)
+
+internal fun SchedulePhotoEntity.toDomain(): SchedulePhoto = decodeEntity("foto de cronograma", id) {
+    SchedulePhoto(
+        id = UUID.fromString(id), month = YearMonth.parse(month),
+        objectiveId = objectiveId?.let(UUID::fromString),
+        objectiveNameSnapshot = objectiveNameSnapshot,
+        objectiveAbbreviationSnapshot = objectiveAbbreviationSnapshot,
+        storageKey = storageKey, mimeType = mimeType, byteSize = byteSize,
+        pixelWidth = pixelWidth, pixelHeight = pixelHeight,
         createdAt = Instant.ofEpochMilli(createdAtEpochMillis),
         updatedAt = Instant.ofEpochMilli(updatedAtEpochMillis),
     )

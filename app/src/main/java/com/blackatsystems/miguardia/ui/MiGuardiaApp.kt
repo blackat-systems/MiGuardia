@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -16,12 +17,15 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
@@ -36,6 +40,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -43,6 +48,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -56,6 +62,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.TextUnit
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.blackatsystems.miguardia.R
 import com.blackatsystems.miguardia.core.domain.AppDefaults
@@ -72,6 +80,11 @@ import com.blackatsystems.miguardia.ui.management.ManagementSurface
 import com.blackatsystems.miguardia.ui.management.ManagementSurfaceHost
 import com.blackatsystems.miguardia.ui.management.ManagementUiState
 import com.blackatsystems.miguardia.ui.management.ManagementViewModel
+import com.blackatsystems.miguardia.ui.photos.PhotosActions
+import com.blackatsystems.miguardia.ui.photos.PhotosSurface
+import com.blackatsystems.miguardia.ui.photos.PhotosSurfaceHost
+import com.blackatsystems.miguardia.ui.photos.PhotosUiState
+import com.blackatsystems.miguardia.ui.photos.PhotosViewModel
 import com.blackatsystems.miguardia.ui.exceptions.ExceptionsActions
 import com.blackatsystems.miguardia.ui.exceptions.ExceptionsSurface
 import com.blackatsystems.miguardia.ui.exceptions.ExceptionsSurfaceHost
@@ -85,6 +98,7 @@ import com.blackatsystems.miguardia.ui.vacation.VacationSurface
 import com.blackatsystems.miguardia.ui.vacation.VacationSurfaceHost
 import com.blackatsystems.miguardia.ui.vacation.VacationUiState
 import com.blackatsystems.miguardia.ui.vacation.VacationViewModel
+import com.blackatsystems.miguardia.ui.theme.AppZoom
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.YearMonth
@@ -95,6 +109,8 @@ import java.util.Locale
 private val SpanishArgentina = Locale.forLanguageTag("es-AR")
 private val FullDateFormatter = DateTimeFormatter.ofPattern("EEEE d 'de' MMMM 'de' yyyy", SpanishArgentina)
 private val ShiftTimeFormatter = DateTimeFormatter.ofPattern("HH:mm", SpanishArgentina)
+private val CompletedDayLight = Color(0xFFC8E6C9)
+private val CompletedDayDark = Color(0xFF1B5E20)
 
 private enum class MainDestination(
     @param:StringRes val labelRes: Int,
@@ -112,13 +128,17 @@ fun MiGuardiaApp(
     summaryViewModel: SummaryViewModel,
     exceptionsViewModel: ExceptionsViewModel,
     vacationViewModel: VacationViewModel,
+    photosViewModel: PhotosViewModel,
     modifier: Modifier = Modifier,
+    appZoom: AppZoom = AppZoom.STANDARD,
+    onAppZoomChange: (AppZoom) -> Unit = {},
 ) {
     val calendarState by calendarViewModel.uiState.collectAsStateWithLifecycle()
     val managementState by managementViewModel.uiState.collectAsStateWithLifecycle()
     val summaryState by summaryViewModel.uiState.collectAsStateWithLifecycle()
     val exceptionsState by exceptionsViewModel.uiState.collectAsStateWithLifecycle()
     val vacationState by vacationViewModel.uiState.collectAsStateWithLifecycle()
+    val photosState by photosViewModel.uiState.collectAsStateWithLifecycle()
     MiGuardiaApp(
         calendarState = calendarState,
         onPreviousMonth = calendarViewModel::showPreviousMonth,
@@ -138,6 +158,11 @@ fun MiGuardiaApp(
         exceptionsActions = ExceptionsActions.from(exceptionsViewModel),
         vacationState = vacationState,
         vacationActions = VacationActions.from(vacationViewModel),
+        photosState = photosState,
+        photosActions = PhotosActions.from(photosViewModel),
+        photosViewModel = photosViewModel,
+        appZoom = appZoom,
+        onAppZoomChange = onAppZoomChange,
         modifier = modifier,
     )
 }
@@ -167,6 +192,11 @@ fun MiGuardiaApp(
     exceptionsActions: ExceptionsActions = ExceptionsActions(),
     vacationState: VacationUiState = VacationUiState(visibleMonth = calendarState.visibleMonth),
     vacationActions: VacationActions = VacationActions(),
+    photosState: PhotosUiState = PhotosUiState(month = calendarState.visibleMonth),
+    photosActions: PhotosActions = PhotosActions(),
+    photosViewModel: PhotosViewModel? = null,
+    appZoom: AppZoom = AppZoom.STANDARD,
+    onAppZoomChange: (AppZoom) -> Unit = {},
 ) {
     var destination by rememberSaveable { androidx.compose.runtime.mutableStateOf(MainDestination.CALENDAR) }
     var showAddChoice by rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
@@ -210,6 +240,8 @@ fun MiGuardiaApp(
                 onSelectDate = onSelectDate,
                 onRetry = onRetry,
                 onAddShift = { showAddChoice = true },
+                onOpenPhotos = { photosActions.open(calendarState.visibleMonth) },
+                appZoom = appZoom,
             )
 
             MainDestination.SUMMARY -> SummaryScreen(
@@ -226,6 +258,8 @@ fun MiGuardiaApp(
                 onOpenObjectives = managementActions.openSettings,
                 onOpenHolidays = { exceptionsActions.openHolidays(calendarState.visibleMonth) },
                 onOpenVacations = { vacationActions.openList(calendarState.visibleMonth) },
+                appZoom = appZoom,
+                onAppZoomChange = onAppZoomChange,
             )
         }
     }
@@ -274,6 +308,9 @@ fun MiGuardiaApp(
     if (vacationState.surface != VacationSurface.NONE) {
         VacationSurfaceHost(vacationState, vacationActions)
     }
+    if (photosState.surface != PhotosSurface.NONE && photosViewModel != null) {
+        PhotosSurfaceHost(photosState, photosActions, photosViewModel.fileStore)
+    }
     if (showAddChoice) {
         AlertDialog(
             onDismissRequest = { showAddChoice = false },
@@ -309,6 +346,8 @@ private fun CalendarScreen(
     onSelectDate: (LocalDate) -> Unit,
     onRetry: () -> Unit,
     onAddShift: () -> Unit,
+    onOpenPhotos: () -> Unit,
+    appZoom: AppZoom,
 ) {
     val today = state.referenceInstant.atZone(AppDefaults.zoneId()).toLocalDate()
     Column(
@@ -326,6 +365,7 @@ private fun CalendarScreen(
             onPrevious = onPreviousMonth,
             onNext = onNextMonth,
             onToday = onToday,
+            onPhotos = onOpenPhotos,
         )
 
         when (state.loadState) {
@@ -338,14 +378,14 @@ private fun CalendarScreen(
         }
 
         if (state.days.isNotEmpty()) {
-            WeekdayHeader()
-            MonthGrid(
+            CalendarGridViewport(
                 month = state.visibleMonth,
                 days = state.days,
                 today = today,
                 onPreviousMonth = onPreviousMonth,
                 onNextMonth = onNextMonth,
                 onSelectDate = onSelectDate,
+                appZoom = appZoom,
             )
         }
 
@@ -354,6 +394,48 @@ private fun CalendarScreen(
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(stringResource(R.string.add))
+        }
+    }
+}
+
+@Composable
+private fun CalendarGridViewport(
+    month: YearMonth,
+    days: List<CalendarDay>,
+    today: LocalDate,
+    onPreviousMonth: () -> Unit,
+    onNextMonth: () -> Unit,
+    onSelectDate: (LocalDate) -> Unit,
+    appZoom: AppZoom,
+) {
+    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+        val isEnlarged = appZoom != AppZoom.STANDARD
+        val gridWidth = if (isEnlarged) maxOf(maxWidth, 378.dp) else maxWidth
+        val scrolling = if (isEnlarged) {
+            Modifier.horizontalScroll(rememberScrollState())
+        } else {
+            Modifier
+        }
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .then(scrolling),
+        ) {
+            Column(
+                modifier = Modifier.width(gridWidth),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                WeekdayHeader()
+                MonthGrid(
+                    month = month,
+                    days = days,
+                    today = today,
+                    onPreviousMonth = onPreviousMonth,
+                    onNextMonth = onNextMonth,
+                    onSelectDate = onSelectDate,
+                    enableMonthSwipe = !isEnlarged,
+                )
+            }
         }
     }
 }
@@ -414,7 +496,9 @@ private fun MonthControls(
     onPrevious: () -> Unit,
     onNext: () -> Unit,
     onToday: () -> Unit,
+    onPhotos: () -> Unit,
 ) {
+    var menuExpanded by remember { mutableStateOf(false) }
     val previousDescription = stringResource(R.string.previous_month)
     val nextDescription = stringResource(R.string.next_month)
     Row(
@@ -438,8 +522,9 @@ private fun MonthControls(
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.SemiBold,
             )
-            TextButton(onClick = onToday) {
-                Text(stringResource(R.string.today))
+            Row {
+                TextButton(onClick = onToday) { Text(stringResource(R.string.today)) }
+                TextButton(onClick = onPhotos, modifier = Modifier.semantics { contentDescription = "Fotos del cronograma del mes" }) { Text("Fotos") }
             }
         }
         IconButton(
@@ -451,6 +536,24 @@ private fun MonthControls(
                 modifier = Modifier.clearAndSetSemantics {},
                 style = MaterialTheme.typography.headlineMedium,
             )
+        }
+        Box {
+            IconButton(
+                onClick = { menuExpanded = true },
+                modifier = Modifier.semantics { contentDescription = "Menú del mes" },
+            ) { Text("⋮") }
+            DropdownMenu(
+                expanded = menuExpanded,
+                onDismissRequest = { menuExpanded = false },
+            ) {
+                DropdownMenuItem(
+                    text = { Text("Fotos del cronograma") },
+                    onClick = {
+                        menuExpanded = false
+                        onPhotos()
+                    },
+                )
+            }
         }
     }
 }
@@ -490,6 +593,7 @@ private fun MonthGrid(
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit,
     onSelectDate: (LocalDate) -> Unit,
+    enableMonthSwipe: Boolean,
 ) {
     val dayByDate = remember(days) { days.associateBy { it.date } }
     val offset = month.atDay(1).dayOfWeek.value - 1
@@ -500,11 +604,8 @@ private fun MonthGrid(
     }
     var horizontalDrag by remember { mutableFloatStateOf(0f) }
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .testTag("month-grid")
-            .pointerInput(month) {
+    val swipeModifier = if (enableMonthSwipe) {
+        Modifier.pointerInput(month) {
                 detectHorizontalDragGestures(
                     onDragStart = { horizontalDrag = 0f },
                     onHorizontalDrag = { change, dragAmount ->
@@ -521,7 +622,16 @@ private fun MonthGrid(
                         horizontalDrag = 0f
                     },
                 )
-            },
+            }
+    } else {
+        Modifier
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("month-grid")
+            .then(swipeModifier),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         cells.chunked(7).forEach { week ->
@@ -531,7 +641,7 @@ private fun MonthGrid(
                         Box(
                             modifier = Modifier
                                 .weight(1f)
-                                .heightIn(min = 88.dp),
+                                .heightIn(min = 100.dp),
                         )
                     } else {
                         DayCell(
@@ -555,17 +665,22 @@ private fun DayCell(
     modifier: Modifier = Modifier,
 ) {
     val description = day.accessibilityDescription(isToday)
-    val background = if (isToday) {
-        MaterialTheme.colorScheme.primaryContainer
-    } else {
-        MaterialTheme.colorScheme.surfaceVariant
+    val isCompletedDay = day.vacation == null &&
+        day.shifts.isNotEmpty() &&
+        day.shifts.all { it.temporalStatus == ShiftTemporalStatus.COMPLETED }
+    val background = when {
+        isCompletedDay && MaterialTheme.colorScheme.background.luminance() < 0.5f -> CompletedDayDark
+        isCompletedDay -> CompletedDayLight
+        isToday -> MaterialTheme.colorScheme.primaryContainer
+        else -> MaterialTheme.colorScheme.surfaceVariant
     }
     Column(
         modifier = modifier
-            .padding(2.dp)
-            .heightIn(min = 88.dp)
+            .padding(horizontal = 1.dp, vertical = 2.dp)
+            .heightIn(min = 100.dp)
             .clip(MaterialTheme.shapes.small)
             .background(background)
+            .testTag(if (isCompletedDay) "completed-day-${day.date}" else "day-${day.date}")
             .clearAndSetSemantics {
                 contentDescription = description
                 role = Role.Button
@@ -575,7 +690,7 @@ private fun DayCell(
                 })
             }
             .clickable(onClick = onClick)
-            .padding(4.dp),
+            .padding(horizontal = 2.dp, vertical = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
@@ -595,22 +710,27 @@ private fun DayCell(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(4.dp)
+                    .height(6.dp)
                     .clip(MaterialTheme.shapes.extraSmall)
                     .background(Color(firstShift.shift.colorArgbSnapshot)),
             )
-            Text(
-                text = "${firstShift.shift.objectiveAbbreviationSnapshot} · ${firstShift.temporalStatus.shortLabel()}",
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                style = MaterialTheme.typography.labelSmall,
+            AutoSizeSingleLineText(
+                text = firstShift.shift.objectiveAbbreviationSnapshot,
+                maximum = 12.sp,
+                minimum = 8.sp,
                 fontWeight = FontWeight.Bold,
             )
-            Text(
+            AutoSizeSingleLineText(
                 text = firstShift.shift.timeRange(),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                style = MaterialTheme.typography.labelSmall,
+                maximum = 10.sp,
+                minimum = 6.sp,
+                letterSpacing = (-0.4).sp,
+            )
+            AutoSizeSingleLineText(
+                text = firstShift.temporalStatus.shortLabel(),
+                maximum = 9.sp,
+                minimum = 6.sp,
+                fontWeight = FontWeight.SemiBold,
             )
             if (day.shifts.size > 1) {
                 Text(
@@ -631,14 +751,44 @@ private fun DayCell(
             if (day.isImplicitlyUndefined) add("?")
         }
         if (day.vacation == null && markers.isNotEmpty()) {
-            Text(
+            AutoSizeSingleLineText(
                 text = markers.joinToString(" · "),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                style = MaterialTheme.typography.bodyMedium,
+                maximum = 12.sp,
+                minimum = 7.sp,
                 fontWeight = FontWeight.Bold,
             )
         }
+    }
+}
+
+@Composable
+private fun AutoSizeSingleLineText(
+    text: String,
+    maximum: TextUnit,
+    minimum: TextUnit,
+    fontWeight: FontWeight? = null,
+    letterSpacing: TextUnit = 0.sp,
+) {
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        var currentSize by remember(text, maxWidth, maximum, minimum) {
+            mutableStateOf(maximum)
+        }
+        Text(
+            text = text,
+            modifier = Modifier.fillMaxWidth(),
+            maxLines = 1,
+            softWrap = false,
+            overflow = TextOverflow.Clip,
+            fontSize = currentSize,
+            fontWeight = fontWeight,
+            letterSpacing = letterSpacing,
+            textAlign = TextAlign.Center,
+            onTextLayout = { result ->
+                if (result.didOverflowWidth && currentSize.value > minimum.value) {
+                    currentSize = (currentSize.value - 0.5f).coerceAtLeast(minimum.value).sp
+                }
+            },
+        )
     }
 }
 
@@ -784,11 +934,14 @@ private fun SettingsScreen(
     onOpenObjectives: () -> Unit,
     onOpenHolidays: () -> Unit,
     onOpenVacations: () -> Unit,
+    appZoom: AppZoom,
+    onAppZoomChange: (AppZoom) -> Unit,
 ) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(contentPadding)
+            .verticalScroll(rememberScrollState())
             .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
@@ -802,6 +955,22 @@ private fun SettingsScreen(
         }
         Button(onClick = onOpenVacations, modifier = Modifier.fillMaxWidth()) {
             Text("Vacaciones")
+        }
+        Text("Zoom de MiGuardia", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Text("Aumenta toda la aplicación sin modificar el zoom, la fuente ni la densidad de Android.")
+        AppZoom.entries.forEach { option ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onAppZoomChange(option) },
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                androidx.compose.material3.RadioButton(
+                    selected = appZoom == option,
+                    onClick = { onAppZoomChange(option) },
+                )
+                Text(option.label)
+            }
         }
     }
 }

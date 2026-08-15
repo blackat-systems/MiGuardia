@@ -6,6 +6,7 @@ import com.blackatsystems.miguardia.core.database.repository.RoomHolidayReposito
 import com.blackatsystems.miguardia.core.database.repository.RoomMedicalLeaveRepository
 import com.blackatsystems.miguardia.core.database.repository.RoomObjectiveRepository
 import com.blackatsystems.miguardia.core.database.repository.RoomScheduleCombinationRepository
+import com.blackatsystems.miguardia.core.database.repository.RoomSchedulePhotoRepository
 import com.blackatsystems.miguardia.core.database.repository.RoomShiftRepository
 import com.blackatsystems.miguardia.core.database.repository.RoomShiftNoteRepository
 import com.blackatsystems.miguardia.core.database.repository.RoomShiftNoveltyRepository
@@ -15,6 +16,7 @@ import com.blackatsystems.miguardia.core.domain.repository.HolidayRepository
 import com.blackatsystems.miguardia.core.domain.repository.MedicalLeaveRepository
 import com.blackatsystems.miguardia.core.domain.repository.ObjectiveRepository
 import com.blackatsystems.miguardia.core.domain.repository.ScheduleCombinationRepository
+import com.blackatsystems.miguardia.core.domain.repository.SchedulePhotoRepository
 import com.blackatsystems.miguardia.core.domain.repository.ShiftRepository
 import com.blackatsystems.miguardia.core.domain.repository.ShiftNoteRepository
 import com.blackatsystems.miguardia.core.domain.repository.ShiftNoveltyRepository
@@ -36,6 +38,7 @@ class LocalDataStore internal constructor(
     val shiftNotes: ShiftNoteRepository = RoomShiftNoteRepository(database.shiftNoteDao())
     val shiftNovelties: ShiftNoveltyRepository = RoomShiftNoveltyRepository(database)
     val vacations: VacationRepository = RoomVacationRepository(database)
+    val schedulePhotos: SchedulePhotoRepository = RoomSchedulePhotoRepository(database.schedulePhotoDao())
 
     override fun close() = database.close()
 

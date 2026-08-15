@@ -36,6 +36,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.blackatsystems.miguardia.core.domain.model.Vacation
+import com.blackatsystems.miguardia.ui.components.TransientConfirmation
 import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
@@ -91,11 +92,12 @@ fun VacationSurfaceHost(
     actions: VacationActions,
 ) {
     BackHandler(onBack = actions.requestBack)
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background,
-    ) {
-        Column(Modifier.fillMaxSize().safeDrawingPadding()) {
+    TransientConfirmation(state.infoMessage, actions.clearMessage) {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background,
+        ) {
+            Column(Modifier.fillMaxSize().safeDrawingPadding()) {
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -116,11 +118,11 @@ fun VacationSurfaceHost(
             }
             HorizontalDivider()
             state.errorMessage?.let { MessageCard(it, true, actions.clearMessage) }
-            state.infoMessage?.let { MessageCard(it, false, actions.clearMessage) }
             when (state.surface) {
                 VacationSurface.NONE -> Unit
                 VacationSurface.LIST -> VacationList(state, actions)
                 VacationSurface.EDITOR -> VacationEditor(state, actions)
+                }
             }
         }
     }

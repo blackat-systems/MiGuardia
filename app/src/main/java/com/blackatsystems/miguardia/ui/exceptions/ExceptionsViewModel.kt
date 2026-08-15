@@ -228,7 +228,10 @@ class ExceptionsViewModel(
         }
     }
 
-    fun deleteNote(id: UUID) = launchWrite { notes.delete(id) }
+    fun deleteNote(id: UUID) = launchWrite {
+        notes.delete(id)
+        _uiState.update { it.copy(infoMessage = "Nota eliminada.") }
+    }
 
     fun updateNoveltyDraft(transform: (NoveltyDraft) -> NoveltyDraft) =
         _uiState.update { it.copy(noveltyDraft = transform(it.noveltyDraft), errorMessage = null) }
@@ -259,6 +262,7 @@ class ExceptionsViewModel(
 
     fun deleteInformativeNovelty(id: UUID) = launchWrite {
         novelties.applyMutation(ShiftNoveltyMutation.DeleteInformative(id))
+        _uiState.update { it.copy(infoMessage = "Novedad eliminada.") }
     }
 
     fun changeStatus(status: ShiftStatus, description: String = "") {

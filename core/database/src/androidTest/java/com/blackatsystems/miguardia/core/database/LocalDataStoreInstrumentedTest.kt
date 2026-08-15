@@ -232,7 +232,7 @@ class LocalDataStoreInstrumentedTest {
         openStore()
 
         assertNotNull(store.objectives.getById(OBJECTIVE_ID))
-        assertEquals(3, database.openHelper.readableDatabase.version)
+        assertEquals(4, database.openHelper.readableDatabase.version)
     }
 
     @Test
