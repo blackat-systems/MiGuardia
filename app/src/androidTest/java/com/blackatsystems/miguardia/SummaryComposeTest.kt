@@ -61,8 +61,11 @@ class SummaryComposeTest {
         composeRule.onNodeWithContentDescription("Extra después de 204 h, 6 h 30 min").assertExists()
         composeRule.onNodeWithContentDescription("Nocturnas (21:00–06:00), 72 h")
             .performScrollTo().assertExists()
-        composeRule.onNodeWithContentDescription("Ausencias, 1 · 8 h")
+        composeRule.onNodeWithContentDescription("Carpeta médica, 1 día")
             .performScrollTo().assertExists()
+        composeRule.onNodeWithContentDescription("Ausencias, 8 horas")
+            .performScrollTo().assertExists()
+        composeRule.onNodeWithText("Cancelaciones").assertDoesNotExist()
         composeRule.onNodeWithContentDescription("Días de vacaciones, 5")
             .performScrollTo().assertExists()
         composeRule.onNodeWithText(

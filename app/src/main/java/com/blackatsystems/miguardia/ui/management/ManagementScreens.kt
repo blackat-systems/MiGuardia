@@ -3,7 +3,10 @@ package com.blackatsystems.miguardia.ui.management
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,7 +33,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -41,14 +43,18 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
@@ -58,6 +64,14 @@ import com.blackatsystems.miguardia.core.domain.model.Shift
 import com.blackatsystems.miguardia.core.domain.shift.OccupiedDatePolicy
 import com.blackatsystems.miguardia.core.domain.shift.areColorsTooSimilar
 import com.blackatsystems.miguardia.ui.components.TransientConfirmation
+import com.blackatsystems.miguardia.ui.components.DestructiveAction
+import com.blackatsystems.miguardia.ui.components.EmptyState
+import com.blackatsystems.miguardia.ui.components.PersistentMessage
+import com.blackatsystems.miguardia.ui.components.PrimaryAction
+import com.blackatsystems.miguardia.ui.components.ScreenHeading
+import com.blackatsystems.miguardia.ui.components.SectionCard
+import com.blackatsystems.miguardia.ui.components.SelectableMonthCalendar
+import com.blackatsystems.miguardia.ui.components.SurfaceHeader
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.YearMonth
@@ -145,14 +159,11 @@ fun ManagementSurfaceHost(
     TransientConfirmation(state.infoMessage, actions.clearMessage) {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             Column(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text(surfaceTitle(state.surface), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                TextButton(onClick = requestClose) { Text(if (formOpen) "Volver" else "Cerrar") }
-            }
+            SurfaceHeader(
+                title = surfaceTitle(state.surface),
+                navigationLabel = if (formOpen) "Volver" else "Cerrar",
+                onNavigation = requestClose,
+            )
             HorizontalDivider()
             state.errorMessage?.let { MessageCard(it, isError = true, actions.clearMessage) }
             when (state.surface) {
@@ -181,20 +192,11 @@ fun ManagementSurfaceHost(
 
 @Composable
 private fun MessageCard(message: String, isError: Boolean, onDismiss: () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                message,
-                modifier = Modifier.weight(1f),
-                color = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
-            )
-            TextButton(onClick = onDismiss) { Text("Cerrar") }
-        }
-    }
+    PersistentMessage(
+        message = message,
+        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+        onDismiss = onDismiss,
+    )
 }
 
 @Composable
@@ -204,29 +206,41 @@ private fun SettingsManagementContent(state: ManagementUiState, actions: Managem
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text("Administrá las plantillas para futuras guardias. El historial no cambia.")
-        Button(onClick = { actions.openObjective(null) }, modifier = Modifier.fillMaxWidth()) {
-            Text("Crear objetivo")
-        }
+        ScreenHeading(
+            title = "Plantillas de guardia",
+            supportingText = "Administrá objetivos y horarios futuros. Las guardias históricas no cambian.",
+        )
+        PrimaryAction(label = "Crear objetivo", onClick = { actions.openObjective(null) })
         Row(verticalAlignment = Alignment.CenterVertically) {
             Switch(checked = state.showHidden, onCheckedChange = actions.showHidden)
             Text("Mostrar ocultos", modifier = Modifier.padding(start = 8.dp))
         }
         val visible = state.objectives.filter { it.isActive || state.showHidden }
-        if (visible.isEmpty()) Text("Todavía no hay objetivos.")
+        if (visible.isEmpty()) {
+            EmptyState(
+                title = "Sin objetivos",
+                message = "Creá un objetivo y después agregale uno o más horarios.",
+            )
+        }
         visible.forEach { objective ->
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("${objective.fullName} (${objective.abbreviation})", fontWeight = FontWeight.Bold)
                     if (!objective.isActive) Text("Oculto", color = MaterialTheme.colorScheme.secondary)
                     objective.address?.takeIf(String::isNotBlank)?.let { Text(it) }
-                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
                         TextButton(onClick = { actions.openObjective(objective) }) { Text("Editar") }
                         if (objective.isActive) {
                             TextButton(onClick = { pendingAction = "hide-objective:${objective.id}" }) { Text("Ocultar") }
                         }
-                        TextButton(onClick = { pendingAction = "delete-objective:${objective.id}" }) { Text("Eliminar") }
                     }
+                    DestructiveAction(
+                        label = "Eliminar",
+                        onClick = { pendingAction = "delete-objective:${objective.id}" },
+                    )
                     val schedules = state.scheduleOptions.filter {
                         it.objective.id == objective.id && (it.combination.isActive || state.showHidden)
                     }
@@ -287,16 +301,23 @@ private fun ScheduleRow(
     onHide: () -> Unit,
     onDelete: () -> Unit,
 ) {
-    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(18.dp).background(Color(schedule.colorArgb), CircleShape))
-        Column(modifier = Modifier.weight(1f).padding(horizontal = 8.dp)) {
-            Text("${schedule.startTime}–${schedule.endTime}", fontWeight = FontWeight.SemiBold)
-            if (schedule.endTime <= schedule.startTime) Text("Termina al día siguiente", style = MaterialTheme.typography.bodySmall)
-            if (!schedule.isActive) Text("Oculto", style = MaterialTheme.typography.bodySmall)
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(18.dp).background(Color(schedule.colorArgb), CircleShape))
+            Column(modifier = Modifier.weight(1f).padding(horizontal = 8.dp)) {
+                Text("${schedule.startTime}–${schedule.endTime}", fontWeight = FontWeight.SemiBold)
+                if (schedule.endTime <= schedule.startTime) Text("Termina al día siguiente", style = MaterialTheme.typography.bodySmall)
+                if (!schedule.isActive) Text("Oculto", style = MaterialTheme.typography.bodySmall)
+            }
         }
-        TextButton(onClick = onEdit) { Text("Editar") }
-        if (schedule.isActive) TextButton(onClick = onHide) { Text("Ocultar") }
-        TextButton(onClick = onDelete) { Text("Eliminar") }
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            TextButton(onClick = onEdit) { Text("Editar") }
+            if (schedule.isActive) TextButton(onClick = onHide) { Text("Ocultar") }
+            DestructiveAction(label = "Eliminar", onClick = onDelete)
+        }
     }
 }
 
@@ -437,57 +458,137 @@ private fun RgbColorPickerDialog(
     onDismiss: () -> Unit,
     onConfirm: (Int) -> Unit,
 ) {
-    var selectedColor by rememberSaveable(initialColor) { mutableIntStateOf(initialColor) }
+    val initialHsv = FloatArray(3).also { android.graphics.Color.colorToHSV(initialColor, it) }
+    var hue by rememberSaveable(initialColor) { mutableStateOf(initialHsv[0]) }
+    var saturation by rememberSaveable(initialColor) { mutableStateOf(initialHsv[1]) }
+    var brightness by rememberSaveable(initialColor) { mutableStateOf(initialHsv[2]) }
+    val selectedColor = android.graphics.Color.HSVToColor(floatArrayOf(hue, saturation, brightness))
+    val hueColor = Color(android.graphics.Color.HSVToColor(floatArrayOf(hue, 1f, 1f)))
     val red = selectedColor ushr 16 and 0xFF
     val green = selectedColor ushr 8 and 0xFF
     val blue = selectedColor and 0xFF
+    val selectedComposeColor = Color(selectedColor)
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Elegir color") },
+        title = { Text("Selector de color") },
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Box(
-                    Modifier
+                Text("Saturación y luminosidad", fontWeight = FontWeight.SemiBold)
+                Canvas(
+                    modifier = Modifier
                         .fillMaxWidth()
-                        .height(64.dp)
-                        .background(Color(selectedColor), MaterialTheme.shapes.medium)
-                        .semantics { contentDescription = "Vista previa del color" },
-                )
-                Text(
-                    "RGB ($red, $green, $blue) · #${selectedColor.toUInt().toString(16).takeLast(6).uppercase()}",
-                    fontWeight = FontWeight.SemiBold,
-                )
-                RgbSlider("Rojo", red) { value -> selectedColor = rgb(value, green, blue) }
-                RgbSlider("Verde", green) { value -> selectedColor = rgb(red, value, blue) }
-                RgbSlider("Azul", blue) { value -> selectedColor = rgb(red, green, value) }
-                Text("Colores comunes", fontWeight = FontWeight.Bold)
-                ManagementViewModel.COLOR_PALETTE.chunked(4).forEach { row ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                    ) {
-                        row.forEach { argb ->
-                            Box(
-                                modifier = Modifier
-                                    .size(44.dp)
-                                    .semantics {
-                                        contentDescription = "Color común ${argb.toUInt().toString(16).takeLast(6).uppercase()}"
-                                    }
-                                    .background(Color(argb), CircleShape)
-                                    .then(
-                                        if (argb == selectedColor) {
-                                            Modifier.border(4.dp, MaterialTheme.colorScheme.onSurface, CircleShape)
-                                        } else {
-                                            Modifier
-                                        },
-                                    )
-                                    .clickable { selectedColor = argb },
-                            )
+                        .height(180.dp)
+                        .testTag("color-saturation-brightness")
+                        .semantics {
+                            contentDescription = "Área de saturación y luminosidad"
+                            stateDescription =
+                                "Saturación ${(saturation * 100).toInt()} %, luminosidad ${(brightness * 100).toInt()} %"
                         }
+                        .pointerInput(hue) {
+                            awaitEachGesture {
+                                val down = awaitFirstDown(requireUnconsumed = false)
+                                fun updateColor(position: Offset) {
+                                    saturation = (position.x / size.width).coerceIn(0f, 1f)
+                                    brightness = (1f - position.y / size.height).coerceIn(0f, 1f)
+                                }
+                                updateColor(down.position)
+                                down.consume()
+                                do {
+                                    val event = awaitPointerEvent()
+                                    event.changes.forEach { change ->
+                                        if (change.pressed) updateColor(change.position)
+                                        change.consume()
+                                    }
+                                } while (event.changes.any { it.pressed })
+                            }
+                        },
+                ) {
+                    drawRect(
+                        brush = Brush.horizontalGradient(listOf(Color.White, hueColor)),
+                    )
+                    drawRect(
+                        brush = Brush.verticalGradient(listOf(Color.Transparent, Color.Black)),
+                    )
+                    val markerCenter = Offset(
+                        x = (saturation * size.width).coerceIn(10.dp.toPx(), size.width - 10.dp.toPx()),
+                        y = ((1f - brightness) * size.height).coerceIn(10.dp.toPx(), size.height - 10.dp.toPx()),
+                    )
+                    drawCircle(Color.Black, radius = 10.dp.toPx(), center = markerCenter)
+                    drawCircle(Color.White, radius = 8.dp.toPx(), center = markerCenter)
+                    drawCircle(selectedComposeColor, radius = 5.dp.toPx(), center = markerCenter)
+                }
+
+                Text("Tono", fontWeight = FontWeight.SemiBold)
+                Canvas(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(36.dp)
+                        .testTag("color-hue")
+                        .semantics {
+                            contentDescription = "Barra arcoíris de tono"
+                            stateDescription = "Tono ${hue.toInt()} grados"
+                        }
+                        .pointerInput(Unit) {
+                            awaitEachGesture {
+                                val down = awaitFirstDown(requireUnconsumed = false)
+                                fun updateHue(position: Offset) {
+                                    hue = ((position.x / size.width).coerceIn(0f, 1f) * 360f)
+                                        .coerceAtMost(359.999f)
+                                }
+                                updateHue(down.position)
+                                down.consume()
+                                do {
+                                    val event = awaitPointerEvent()
+                                    event.changes.forEach { change ->
+                                        if (change.pressed) updateHue(change.position)
+                                        change.consume()
+                                    }
+                                } while (event.changes.any { it.pressed })
+                            }
+                        },
+                ) {
+                    drawRect(
+                        brush = Brush.horizontalGradient(
+                            listOf(
+                                Color.Red,
+                                Color.Yellow,
+                                Color.Green,
+                                Color.Cyan,
+                                Color.Blue,
+                                Color.Magenta,
+                                Color.Red,
+                            ),
+                        ),
+                    )
+                    val markerRadius = 10.dp.toPx()
+                    val markerCenter = Offset(
+                        x = (hue / 360f * size.width).coerceIn(markerRadius, size.width - markerRadius),
+                        y = size.height / 2f,
+                    )
+                    drawCircle(Color.Black, radius = markerRadius, center = markerCenter)
+                    drawCircle(Color.White, radius = 8.dp.toPx(), center = markerCenter)
+                    drawCircle(hueColor, radius = 5.dp.toPx(), center = markerCenter)
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(
+                        Modifier
+                            .size(56.dp)
+                            .background(selectedComposeColor, MaterialTheme.shapes.medium)
+                            .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.medium)
+                            .semantics { contentDescription = "Vista previa del color" },
+                    )
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text("RGB: $red, $green, $blue", fontWeight = FontWeight.SemiBold)
+                        Text("HEX: #${selectedColor.toUInt().toString(16).takeLast(6).uppercase()}")
                     }
                 }
             }
@@ -500,23 +601,6 @@ private fun RgbColorPickerDialog(
         },
     )
 }
-
-@Composable
-private fun RgbSlider(label: String, value: Int, onValueChange: (Int) -> Unit) {
-    Column {
-        Text("$label: $value")
-        Slider(
-            value = value.toFloat(),
-            onValueChange = { onValueChange(it.toInt().coerceIn(0, 255)) },
-            valueRange = 0f..255f,
-            steps = 254,
-            modifier = Modifier.semantics { contentDescription = "$label RGB" },
-        )
-    }
-}
-
-private fun rgb(red: Int, green: Int, blue: Int): Int =
-    0xFF000000.toInt() or (red shl 16) or (green shl 8) or blue
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -579,7 +663,13 @@ private fun ShiftForm(state: ManagementUiState, actions: ManagementActions) {
             }
         }
         Text(monthLabel(draft.month), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        MonthDateSelector(draft.month, draft.selectedDates, actions.toggleShiftDate)
+        SelectableMonthCalendar(
+            month = draft.month,
+            selectedDates = draft.selectedDates,
+            onToggleDate = actions.toggleShiftDate,
+            monthLabel = monthLabel(draft.month),
+            testTag = "shift-date-selector",
+        )
 
         if (draft.duplicateSource == null) {
             Text("Usados recientemente", fontWeight = FontWeight.Bold)
@@ -593,6 +683,10 @@ private fun ShiftForm(state: ManagementUiState, actions: ManagementActions) {
                 )
             }
             Text("Explorar objetivos y horarios", fontWeight = FontWeight.Bold)
+            OutlinedButton(
+                onClick = { actions.openObjective(null) },
+                modifier = Modifier.fillMaxWidth(),
+            ) { Text("Crear objetivo") }
             if (activeObjectives.isEmpty()) {
                 Text("Todavía no hay objetivos. Creá el primero para agregar sus horarios.")
             }
@@ -613,10 +707,6 @@ private fun ShiftForm(state: ManagementUiState, actions: ManagementActions) {
                     onAddSchedule = { actions.openSchedule(objective.id, null) },
                 )
             }
-            OutlinedButton(
-                onClick = { actions.openObjective(null) },
-                modifier = Modifier.fillMaxWidth(),
-            ) { Text("Crear objetivo") }
         } else {
             Text("Se copiará ${draft.duplicateSource.objectiveAbbreviationSnapshot} · ${draft.duplicateSource.startTimeSnapshot}–${draft.duplicateSource.endTimeSnapshot}.")
         }
@@ -729,35 +819,6 @@ private fun ObjectiveScheduleFolder(
 }
 
 @Composable
-private fun MonthDateSelector(month: YearMonth, selected: Set<LocalDate>, onToggle: (LocalDate) -> Unit) {
-    val leading = month.atDay(1).dayOfWeek.value - 1
-    val cells = List(leading) { null } + (1..month.lengthOfMonth()).map(month::atDay)
-    Text("L  M  X  J  V  S  D", style = MaterialTheme.typography.labelLarge)
-    cells.chunked(7).forEach { week ->
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            week.forEach { date ->
-                if (date == null) {
-                    Spacer(Modifier.size(42.dp))
-                } else {
-                    Box(
-                        modifier = Modifier
-                            .size(42.dp)
-                            .background(
-                                if (date in selected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
-                                CircleShape,
-                            )
-                            .clickable { onToggle(date) }
-                            .semantics { contentDescription = "${date.dayOfMonth} ${monthLabel(month)}, ${if (date in selected) "seleccionado" else "sin seleccionar"}" },
-                        contentAlignment = Alignment.Center,
-                    ) { Text(date.dayOfMonth.toString()) }
-                }
-            }
-            repeat(7 - week.size) { Spacer(Modifier.size(42.dp)) }
-        }
-    }
-}
-
-@Composable
 private fun CombinationChoice(label: String, selected: Boolean, color: Int, onClick: () -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 4.dp),
@@ -773,20 +834,41 @@ private fun CombinationChoice(label: String, selected: Boolean, color: Int, onCl
 private fun ShiftPreview(state: ManagementUiState) {
     val draft = state.shiftDraft ?: return
     val option = state.scheduleOptions.firstOrNull { it.combination.id == draft.combinationId }
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text("Vista previa", fontWeight = FontWeight.Bold)
-            Text("${draft.selectedDates.size} fecha(s): ${draft.selectedDates.sorted().joinToString { it.dayOfMonth.toString() }}")
-            if (draft.duplicateSource != null) {
-                Text("${draft.duplicateSource.objectiveNameSnapshot} · ${draft.duplicateSource.startTimeSnapshot}–${draft.duplicateSource.endTimeSnapshot}")
-            } else if (option != null) {
-                Text("${option.objective.fullName} · ${option.combination.startTime}–${option.combination.endTime}")
-                if (option.combination.endTime <= option.combination.startTime) Text("Termina al día siguiente")
-            } else {
-                Text("Elegí un objetivo y horario.")
+    val selectedDates = draft.selectedDates.sorted()
+    val dateSummary = when (selectedDates.size) {
+        0 -> "Ninguna fecha seleccionada"
+        1 -> "1 fecha seleccionada: ${selectedDates.single().dayOfMonth}"
+        else -> "${selectedDates.size} fechas seleccionadas: ${selectedDates.joinToString { it.dayOfMonth.toString() }}"
+    }
+    val previewColor = draft.duplicateSource?.colorArgbSnapshot ?: option?.combination?.colorArgb
+    SectionCard(
+        title = "Vista previa",
+        supportingText = "Así se verá la guardia antes de confirmar.",
+    ) {
+        Text(dateSummary, fontWeight = FontWeight.SemiBold)
+        if (draft.duplicateSource != null) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                previewColor?.let { Box(Modifier.size(16.dp).background(Color(it), CircleShape)) }
+                Text(
+                    "${draft.duplicateSource.objectiveNameSnapshot} · ${draft.duplicateSource.startTimeSnapshot}–${draft.duplicateSource.endTimeSnapshot}",
+                    modifier = Modifier.padding(start = 8.dp),
+                )
             }
-            draft.position.takeIf(String::isNotBlank)?.let { Text("Puesto: $it") }
+        } else if (option != null) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                previewColor?.let { Box(Modifier.size(16.dp).background(Color(it), CircleShape)) }
+                Column(Modifier.padding(start = 8.dp)) {
+                    Text(option.objective.fullName, fontWeight = FontWeight.Bold)
+                    Text("${option.combination.startTime}–${option.combination.endTime}")
+                }
+            }
+            if (option.combination.endTime <= option.combination.startTime) {
+                Text("Termina al día siguiente", style = MaterialTheme.typography.bodySmall)
+            }
+        } else {
+            Text("Elegí un objetivo y horario para completar la vista previa.")
         }
+        draft.position.takeIf(String::isNotBlank)?.let { Text("Puesto: $it") }
     }
 }
 
@@ -866,13 +948,7 @@ private fun ModeButton(label: String, selected: Boolean, onClick: () -> Unit) {
 
 @Composable
 private fun SaveButton(saving: Boolean, label: String, onClick: () -> Unit) {
-    Button(onClick = onClick, enabled = !saving, modifier = Modifier.fillMaxWidth()) {
-        if (saving) {
-            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-            Spacer(Modifier.size(8.dp))
-        }
-        Text(label)
-    }
+    PrimaryAction(label = label, onClick = onClick, enabled = !saving, working = saving)
 }
 
 private fun surfaceTitle(surface: ManagementSurface): String = when (surface) {

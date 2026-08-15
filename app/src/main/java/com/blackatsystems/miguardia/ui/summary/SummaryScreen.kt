@@ -13,6 +13,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
@@ -31,6 +32,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.blackatsystems.miguardia.R
 import com.blackatsystems.miguardia.core.domain.hours.MonthlyHoursSummary
+import com.blackatsystems.miguardia.ui.components.EmptyState
+import com.blackatsystems.miguardia.ui.components.PersistentMessage
+import com.blackatsystems.miguardia.ui.components.SectionCard
 import java.time.Duration
 import java.time.YearMonth
 import java.time.format.TextStyle
@@ -77,23 +81,37 @@ private fun SummaryMonthControls(
 ) {
     val previous = stringResource(R.string.summary_previous_month)
     val next = stringResource(R.string.summary_next_month)
-    Row(
+    Card(
         modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
     ) {
-        IconButton(
-            onClick = onPrevious,
-            modifier = Modifier.semantics { contentDescription = previous },
-        ) { Text("‹", modifier = Modifier.clearAndSetSemantics {}, style = MaterialTheme.typography.headlineMedium) }
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(month.displayName(), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+        Column(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                IconButton(
+                    onClick = onPrevious,
+                    modifier = Modifier.semantics { contentDescription = previous },
+                ) { Text("‹", modifier = Modifier.clearAndSetSemantics {}, style = MaterialTheme.typography.headlineMedium) }
+                Text(
+                    month.displayName(),
+                    modifier = Modifier.weight(1f),
+                    textAlign = TextAlign.Center,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                )
+                IconButton(
+                    onClick = onNext,
+                    modifier = Modifier.semantics { contentDescription = next },
+                ) { Text("›", modifier = Modifier.clearAndSetSemantics {}, style = MaterialTheme.typography.headlineMedium) }
+            }
             TextButton(onClick = onToday) { Text(stringResource(R.string.today)) }
         }
-        IconButton(
-            onClick = onNext,
-            modifier = Modifier.semantics { contentDescription = next },
-        ) { Text("›", modifier = Modifier.clearAndSetSemantics {}, style = MaterialTheme.typography.headlineMedium) }
     }
 }
 
@@ -112,22 +130,15 @@ private fun SummaryLoading() {
 
 @Composable
 private fun SummaryError(message: String, onRetry: () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(message)
-            Button(onClick = onRetry) { Text(stringResource(R.string.retry)) }
-        }
-    }
+    PersistentMessage(message = message, onRetry = onRetry)
 }
 
 @Composable
 private fun SummaryContent(summary: MonthlyHoursSummary) {
     if (summary.shiftCount == 0) {
-        Text(
-            text = stringResource(R.string.summary_no_shifts),
-            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-            textAlign = TextAlign.Center,
-            style = MaterialTheme.typography.bodyLarge,
+        EmptyState(
+            title = "Mes sin guardias",
+            message = stringResource(R.string.summary_no_shifts),
         )
     }
     SummarySection(stringResource(R.string.summary_hours_title)) {
@@ -150,32 +161,18 @@ private fun SummaryContent(summary: MonthlyHoursSummary) {
         SummaryValue(R.string.summary_vacations, summary.vacationDayCount.toString())
         SummaryValue(
             R.string.summary_medical,
-            stringResource(
-                R.string.summary_count_and_hours,
-                summary.medicalLeaveDayCount,
-                summary.medicalLeaveHours.asHoursAndMinutes(),
-            ),
+            summary.medicalLeaveDayCount.asDayCount(),
         )
         SummaryValue(
             R.string.summary_absences,
-            stringResource(R.string.summary_count_and_hours, summary.absenceCount, summary.absenceHours.asHoursAndMinutes()),
-        )
-        SummaryValue(
-            R.string.summary_cancellations,
-            stringResource(R.string.summary_count_and_hours, summary.cancellationCount, summary.cancellationHours.asHoursAndMinutes()),
+            summary.absenceHours.asReadableHours(),
         )
     }
 }
 
 @Composable
 private fun SummarySection(title: String, content: @Composable () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            HorizontalDivider()
-            content()
-        }
-    }
+    SectionCard(title = title, content = content)
 }
 
 @Composable
@@ -200,6 +197,20 @@ private fun Duration.asHoursAndMinutes(): String {
     val hours = totalMinutes / 60
     val minutes = totalMinutes % 60
     return if (minutes == 0L) "${hours} h" else "${hours} h ${minutes} min"
+}
+
+private fun Int.asDayCount(): String = if (this == 1) "1 día" else "$this días"
+
+private fun Duration.asReadableHours(): String {
+    val totalMinutes = toMinutes()
+    val hours = totalMinutes / 60
+    val minutes = totalMinutes % 60
+    val hoursText = if (hours == 1L) "1 hora" else "$hours horas"
+    return when {
+        hours == 0L && minutes != 0L -> "$minutes min"
+        minutes == 0L -> hoursText
+        else -> "$hoursText $minutes min"
+    }
 }
 
 private fun YearMonth.displayName(): String {

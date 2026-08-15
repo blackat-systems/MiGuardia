@@ -7,6 +7,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import com.blackatsystems.miguardia.ui.MiGuardiaApp
 import com.blackatsystems.miguardia.ui.calendar.CalendarLoadState
 import com.blackatsystems.miguardia.ui.calendar.CalendarUiState
@@ -45,7 +46,7 @@ class AppearanceComposeTest {
 
         composeRule.onNodeWithText("Configuración").performClick()
         composeRule.onNodeWithText("Zoom de MiGuardia").assertExists()
-        composeRule.onNodeWithText("150 %").performClick()
+        composeRule.onNodeWithText("150 %").performScrollTo().performClick()
 
         composeRule.runOnIdle { assertEquals(AppZoom.LARGE, zoom) }
     }

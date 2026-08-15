@@ -82,7 +82,7 @@ class MiGuardiaAppTest {
         device.assertTextVisible(currentMonth.displayName())
 
         device.tapDescription(context.getString(R.string.previous_month))
-        device.tapText(context.getString(R.string.today))
+        device.tapText("Ir a hoy")
         device.assertTextVisible(currentMonth.displayName())
     }
 

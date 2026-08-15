@@ -37,6 +37,7 @@ import com.blackatsystems.miguardia.ui.management.ManagementActions
 import com.blackatsystems.miguardia.ui.management.ManagementSurface
 import com.blackatsystems.miguardia.ui.management.ManagementUiState
 import com.blackatsystems.miguardia.ui.management.ShiftDraft
+import com.blackatsystems.miguardia.ui.management.ShiftEntryMode
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
@@ -83,7 +84,7 @@ class CalendarComposeTest {
         composeRule.onNodeWithText("Agosto de 2026").assertExists()
 
         composeRule.onNodeWithContentDescription("Mes anterior").performSemanticsAction(SemanticsActions.OnClick)
-        composeRule.onNodeWithText("Hoy").performSemanticsAction(SemanticsActions.OnClick)
+        composeRule.onNodeWithText("Ir a hoy").performSemanticsAction(SemanticsActions.OnClick)
         composeRule.onNodeWithText("Agosto de 2026").assertExists()
     }
 
@@ -104,6 +105,9 @@ class CalendarComposeTest {
         composeRule.onNodeWithText("Aus.", useUnmergedTree = true).assertExists()
         composeRule.onNodeWithText("F", useUnmergedTree = true).assertExists()
         composeRule.onNodeWithText("CM", useUnmergedTree = true).assertExists()
+        composeRule.onNodeWithText("3L", useUnmergedTree = true).assertExists()
+        composeRule.onNodeWithText("4M", useUnmergedTree = true).assertExists()
+        composeRule.onNodeWithText("5X", useUnmergedTree = true).assertExists()
         composeRule.onNodeWithContentDescription(
             "día sin definir marcado explícitamente",
             substring = true,
@@ -177,10 +181,55 @@ class CalendarComposeTest {
         }
 
         composeRule.onNodeWithText("Agregar").performScrollTo().performSemanticsAction(SemanticsActions.OnClick)
-        composeRule.onNodeWithText("Guardia").performSemanticsAction(SemanticsActions.OnClick)
+        composeRule.onNodeWithText("Agregar guardia").performSemanticsAction(SemanticsActions.OnClick)
         composeRule.onNodeWithText("Guardias").assertExists()
         composeRule.onNodeWithText("Revisar y guardar").assertExists()
         composeRule.runOnIdle { assertEquals(YearMonth.of(2026, 8), requestedMonth) }
+    }
+
+    @Test
+    fun addChoiceOffersGuardOrRangeWithoutVacationOrRedundantMonthMenu() {
+        var managementState by mutableStateOf(ManagementUiState())
+        var requestedMode: ShiftEntryMode? = null
+        composeRule.setContent {
+            MaterialTheme {
+                MiGuardiaApp(
+                    calendarState = contentState(),
+                    onPreviousMonth = {},
+                    onNextMonth = {},
+                    onToday = {},
+                    onSelectDate = {},
+                    onDismissDate = {},
+                    onRetry = {},
+                    managementState = managementState,
+                    managementActions = ManagementActions(
+                        openAddShift = { month, date ->
+                            managementState = managementState.copy(
+                                surface = ManagementSurface.SHIFT_FORM,
+                                shiftDraft = ShiftDraft(
+                                    month = month,
+                                    selectedDates = setOf(date ?: month.atDay(1)),
+                                ),
+                            )
+                        },
+                        updateShiftMode = { mode ->
+                            requestedMode = mode
+                            managementState = managementState.copy(
+                                shiftDraft = managementState.shiftDraft?.copy(mode = mode),
+                            )
+                        },
+                    ),
+                )
+            }
+        }
+
+        composeRule.onNodeWithContentDescription("Fotos del cronograma del mes").assertExists()
+        composeRule.onNodeWithContentDescription("Menú del mes").assertDoesNotExist()
+        composeRule.onNodeWithText("Agregar").performScrollTo().performSemanticsAction(SemanticsActions.OnClick)
+        composeRule.onNodeWithText("Agregar guardia").assertExists()
+        composeRule.onNodeWithText("Agregar rangos").performSemanticsAction(SemanticsActions.OnClick)
+        composeRule.onNodeWithText("Agregar vacaciones").assertDoesNotExist()
+        composeRule.runOnIdle { assertEquals(ShiftEntryMode.MULTIPLE, requestedMode) }
     }
 
     @Test
@@ -225,6 +274,8 @@ class CalendarComposeTest {
             assertTrue(openedExceptions != null)
             assertTrue(dismissed >= 3)
         }
+        composeRule.onNodeWithText("Agregar rangos").performScrollTo().assertExists()
+        composeRule.onNodeWithText("Agregar vacaciones").assertDoesNotExist()
         composeRule.onAllNodesWithText("Eliminar")[0].performSemanticsAction(SemanticsActions.OnClick)
         composeRule.onNodeWithText("Eliminar guardia").assertExists()
         composeRule.onAllNodesWithText("Eliminar")[2].performSemanticsAction(SemanticsActions.OnClick)

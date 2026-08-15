@@ -1,9 +1,11 @@
 package com.blackatsystems.miguardia
 
 import android.graphics.Bitmap
+import android.content.ContextWrapper
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -23,6 +25,7 @@ import com.blackatsystems.miguardia.core.domain.model.Objective
 import com.blackatsystems.miguardia.core.domain.model.SchedulePhoto
 import java.time.Instant
 import java.time.YearMonth
+import java.io.File
 import java.util.UUID
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -109,8 +112,12 @@ class PhotosComposeTest {
     }
 
     @Test fun viewerAcceptsPinchAndPanGestures() {
-        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val baseContext = ApplicationProvider.getApplicationContext<android.content.Context>()
         val photoId = UUID.fromString("10000000-0000-0000-0000-000000000003")
+        val isolatedFilesDir = File(baseContext.cacheDir, "photos-compose-$photoId")
+        val context = object : ContextWrapper(baseContext) {
+            override fun getFilesDir(): File = isolatedFilesDir
+        }
         val fileStore = SchedulePhotoFileStore(context)
         val photoFile = fileStore.file("$photoId.png")
         photoFile.parentFile?.mkdirs()
@@ -123,34 +130,43 @@ class PhotosComposeTest {
         val photo = SchedulePhoto(photoId, YearMonth.of(2026, 8), null, null, null,
             photoFile.name, "image/png", photoFile.length(), 64, 64, Instant.EPOCH, Instant.EPOCH)
 
-        compose.setContent {
-            MiGuardiaTheme {
-                PhotosSurfaceHost(
-                    PhotosUiState(
-                        surface = PhotosSurface.VIEWER,
-                        month = YearMonth.of(2026, 8),
-                        photos = listOf(photo),
-                        selectedId = photoId,
-                        isLoading = false,
-                    ),
-                    PhotosActions(),
-                    fileStore,
-                )
+        try {
+            compose.setContent {
+                MiGuardiaTheme {
+                    PhotosSurfaceHost(
+                        PhotosUiState(
+                            surface = PhotosSurface.VIEWER,
+                            month = YearMonth.of(2026, 8),
+                            photos = listOf(photo),
+                            selectedId = photoId,
+                            isLoading = false,
+                        ),
+                        PhotosActions(),
+                        fileStore,
+                    )
+                }
             }
+
+            compose.waitUntil(timeoutMillis = 5_000L) {
+                compose.onAllNodesWithContentDescription(
+                    "Foto del cronograma",
+                    useUnmergedTree = true,
+                ).fetchSemanticsNodes().size == 1
+            }
+            compose.onNodeWithContentDescription("Foto del cronograma", useUnmergedTree = true).performTouchInput {
+                pinch(
+                    start0 = center + Offset(-40f, 0f),
+                    end0 = center + Offset(-120f, 0f),
+                    start1 = center + Offset(40f, 0f),
+                    end1 = center + Offset(120f, 0f),
+                )
+                swipe(center, center + Offset(60f, 40f), durationMillis = 300L)
+            }
+            compose.onNodeWithContentDescription("Foto del cronograma", useUnmergedTree = true).assertIsDisplayed()
+        } finally {
+            isolatedFilesDir.deleteRecursively()
         }
 
-        compose.onNodeWithContentDescription("Foto del cronograma").performTouchInput {
-            pinch(
-                start0 = center + Offset(-40f, 0f),
-                end0 = center + Offset(-120f, 0f),
-                start1 = center + Offset(40f, 0f),
-                end1 = center + Offset(120f, 0f),
-            )
-            swipe(center, center + Offset(60f, 40f), durationMillis = 300L)
-        }
-        compose.onNodeWithContentDescription("Foto del cronograma").assertIsDisplayed()
-
-        photoFile.delete()
     }
 
     @Test fun viewerDoesNotSubstituteAnotherPhotoWhenSelectionIsMissing() {

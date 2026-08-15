@@ -41,7 +41,7 @@ import org.junit.Test
 class VacationComposeTest {
     @get:Rule val composeRule = createComposeRule()
 
-    @Test fun calendarAddFlowOffersVacationsForVisibleMonth() {
+    @Test fun settingsOffersVacationsForVisibleMonth() {
         var requestedMonth: YearMonth? = null
         composeRule.setContent {
             MaterialTheme {
@@ -54,13 +54,13 @@ class VacationComposeTest {
                     onDismissDate = {},
                     onRetry = {},
                     vacationActions = VacationActions(
-                        openCreate = { month, _ -> requestedMonth = month },
+                        openList = { month -> requestedMonth = month },
                     ),
                 )
             }
         }
 
-        composeRule.onNodeWithText("Agregar").performScrollTo().performClick()
+        composeRule.onNodeWithText("Configuración").performClick()
         composeRule.onNodeWithText("Vacaciones").performClick()
         composeRule.runOnIdle { assertEquals(YearMonth.of(2026, 8), requestedMonth) }
     }

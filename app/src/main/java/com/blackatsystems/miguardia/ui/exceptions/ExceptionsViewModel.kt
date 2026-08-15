@@ -35,6 +35,7 @@ import com.blackatsystems.miguardia.ui.management.UuidProvider
 import java.time.Clock
 import java.time.LocalDate
 import java.time.YearMonth
+import java.time.format.DateTimeFormatter
 import java.util.UUID
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
@@ -160,8 +161,8 @@ class ExceptionsViewModel(
 
     fun saveHolidays(policy: HolidayConflictPolicy? = null) {
         val draft = _uiState.value.holidayDraft
-        val dates = parseDates(draft.datesText) ?: return showError("Ingresá fechas válidas con formato AAAA-MM-DD, separadas por coma.")
-        if (dates.isEmpty()) return showError("Ingresá al menos una fecha.")
+        val dates = parseDates(draft.datesText) ?: return showError("No pudimos leer las fechas elegidas. Volvé a seleccionarlas.")
+        if (dates.isEmpty()) return showError("Elegí al menos una fecha en el calendario.")
         if (draft.editingId != null && dates.size != 1) {
             return showError("La edición de un feriado admite una sola fecha.")
         }
@@ -489,16 +490,19 @@ class ExceptionsViewModel(
 
     private fun warningText(warning: ShiftPlanningWarning): String = when (warning) {
         is ShiftPlanningWarning.SameDate ->
-            "${warning.first.localStartDate}: ya habrá más de una guardia (${warning.first.timeRange()} y ${warning.second.timeRange()})."
+            "${warning.first.localStartDate.numericDisplayName()}: ya habrá más de una guardia (${warning.first.timeRange()} y ${warning.second.timeRange()})."
         is ShiftPlanningWarning.Overlap ->
-            "Las guardias del ${warning.first.localStartDate} ${warning.first.timeRange()} y del ${warning.second.localStartDate} ${warning.second.timeRange()} se superponen."
+            "Las guardias del ${warning.first.localStartDate.numericDisplayName()} ${warning.first.timeRange()} y del ${warning.second.localStartDate.numericDisplayName()} ${warning.second.timeRange()} se superponen."
         is ShiftPlanningWarning.ShortRest -> {
             val totalMinutes = warning.actualRest.toMinutes().coerceAtLeast(0)
-            "Entre ${warning.first.localStartDate} ${warning.first.timeRange()} y ${warning.second.localStartDate} ${warning.second.timeRange()} hay ${totalMinutes / 60} h ${totalMinutes % 60} min de descanso."
+            "Entre ${warning.first.localStartDate.numericDisplayName()} ${warning.first.timeRange()} y ${warning.second.localStartDate.numericDisplayName()} ${warning.second.timeRange()} hay ${totalMinutes / 60} h ${totalMinutes % 60} min de descanso."
         }
     }
 
     private fun Shift.timeRange(): String = "$startTimeSnapshot–$endTimeSnapshot"
+
+    private fun LocalDate.numericDisplayName(): String =
+        format(DateTimeFormatter.ofPattern("dd/MM/uuuu"))
 
     class Factory(
         private val holidays: HolidayRepository,

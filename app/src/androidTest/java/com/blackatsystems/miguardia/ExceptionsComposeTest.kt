@@ -4,6 +4,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
@@ -32,7 +33,7 @@ import org.junit.Test
 class ExceptionsComposeTest {
     @get:Rule val composeRule = createComposeRule()
 
-    @Test fun holidaysShowEmptyContentExistingRowAndManualBatchForm() {
+    @Test fun holidaysUseCalendarSelectionForOneOrSeveralDates() {
         var input = ""
         var edited: Holiday? = null
         val holiday = Holiday(UUID(0, 1), LocalDate.of(2026, 8, 17), "Feriado ficticio", NOW, NOW)
@@ -60,11 +61,13 @@ class ExceptionsComposeTest {
                 )
             }
         }
-        composeRule.onNodeWithText("Fecha o fechas").performTextInput("2026-08-17, 2026-08-18")
+        composeRule.onNodeWithContentDescription("17 Agosto de 2026, sin seleccionar").performClick()
+        composeRule.onNodeWithContentDescription("18 Agosto de 2026, sin seleccionar").performClick()
+        composeRule.onNodeWithText("2 fechas seleccionadas.").assertExists()
         composeRule.onNodeWithText("Feriado ficticio").assertExists()
         composeRule.onNodeWithText("Editar").performScrollTo().performClick()
         composeRule.runOnIdle {
-            assertEquals("2026-08-17, 2026-08-18", input)
+            assertEquals("2026-08-17,2026-08-18", input)
             assertEquals(holiday, edited)
         }
     }

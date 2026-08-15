@@ -117,7 +117,7 @@ Reglas temporales:
 - una pareja exacta inicio+fin no puede repetirse dentro del mismo objetivo;
 - dos horarios diferentes del mismo objetivo pueden y deben conservar colores independientes.
 
-Proporcioná un selector RGB completo, con vista previa y controles de rojo, verde y azul. Debajo incluí una paleta local de colores comunes para selección rápida, sin biblioteca externa. La paleta no limita la gama. Si el color queda demasiado parecido al de otra combinación visible, advertí y permití continuar. El texto nunca puede depender de ese color para ser entendible y debe conservar contraste adecuado.
+Proporcioná un selector visual completo, sin biblioteca externa: campo bidimensional de saturación y luminosidad, barra arcoíris de tono, vista previa y lectura precisa RGB/HEX. No lo sustituyas por tres controles separados ni limites la gama a colores predeterminados. Si el color queda demasiado parecido al de otra combinación visible, advertí y permití continuar. El texto nunca puede depender de ese color para ser entendible y debe conservar contraste adecuado.
 
 Ocultar una combinación la excluye de nuevas cargas y de recientes, pero no modifica guardias históricas. Eliminar requiere confirmación y tampoco modifica guardias existentes.
 

@@ -21,7 +21,7 @@ El calendario ya proyecta como completada una guardia `PLANNED` cuyo final pasó
 - Las guardias históricas nuevas se persistirán como `PLANNED`; el calendario seguirá proyectándolas como `COMPLETED` a partir del reloj, sin agregar ese valor a `ShiftStatus`.
 - El estado de formularios vivirá en `ManagementViewModel`, que sobrevive a la recreación normal de la actividad. Los formularios anidados volverán a la carga de guardia sin perder su borrador.
 - En la carga de guardias, cada objetivo activo se presentará como una carpeta desplegable. Sus horarios activos y la acción `+ Agregar horario` vivirán dentro de esa carpeta; no existirá una lista plana mezclada ni una fila separada de botones por objetivo.
-- El color de cada combinación se elegirá mediante un selector RGB completo con vista previa y paleta rápida de colores comunes; la paleta no limitará la gama disponible.
+- El color de cada combinación se elegirá mediante un selector visual completo con campo de saturación/luminosidad, barra arcoíris de tono, vista previa y lectura RGB/HEX; no se limitará la gama disponible.
 - Las confirmaciones satisfactorias de esta superficie se presentarán como avisos flotantes de 2,5 segundos, sin ocupar espacio estable del formulario.
 - Las superficies de gestión respetarán los insets de dibujo seguro para no invadir las barras de estado o navegación.
 

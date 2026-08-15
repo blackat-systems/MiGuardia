@@ -95,7 +95,7 @@ Estas conductas no se negocian en este módulo:
 - La exploración se organiza por carpeta o tarjeta seleccionable de objetivo.
 - Al desplegar un objetivo aparecen sus horarios activos y, al final, `+ Agregar horario`.
 - No volver a una lista plana que mezcle objetivos.
-- El selector de color ofrece RGB completo, vista previa y paleta de colores comunes.
+- El selector de color ofrece un campo visual de saturación y luminosidad, barra arcoíris de tono, vista previa y lectura RGB/HEX.
 - Cada combinación objetivo + horario conserva su propio color.
 - Las cargas, advertencias, reemplazos, segundas guardias e instantáneas históricas mantienen sus reglas actuales.
 
@@ -172,7 +172,7 @@ Actualizar o agregar pruebas Compose para toda conducta visual modificada:
 - contenido esencial visible y completo;
 - navegación y acción principal;
 - carpetas de objetivos y horarios;
-- selector RGB;
+- selector visual de color con campo de saturación/luminosidad, barra de tono y lectura RGB/HEX;
 - aviso temporal y error persistente;
 - diálogo de ausencia/cancelación con descripción opcional;
 - zoom interno 100 %, 150 % y 200 %;

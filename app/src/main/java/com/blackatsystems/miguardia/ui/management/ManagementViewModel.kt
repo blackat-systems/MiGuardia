@@ -221,7 +221,7 @@ class ManagementViewModel(
                     objectiveId = objectiveId,
                     startTime = combination?.startTime?.toString() ?: "19:00",
                     endTime = combination?.endTime?.toString() ?: "07:00",
-                    colorArgb = combination?.colorArgb ?: COLOR_PALETTE.first(),
+                    colorArgb = combination?.colorArgb ?: DEFAULT_SCHEDULE_COLOR,
                 ),
                 errorMessage = null,
             )
@@ -438,14 +438,17 @@ class ManagementViewModel(
                     explicit.forEach { status ->
                         add(
                             if (status.type == ExplicitDayStatusType.DAY_OFF) {
-                                "${status.date}: ya tiene un franco explícito. No se modificará."
+                                "${status.date.numericDisplayName()}: ya tiene un franco explícito. No se modificará."
                             } else {
-                                "${status.date}: ya está marcada sin definir. No se modificará."
+                                "${status.date.numericDisplayName()}: ya está marcada sin definir. No se modificará."
                             },
                         )
                     }
                     medical.forEach { leave ->
-                        add("Existe una carpeta médica entre ${leave.startDate} y ${leave.endDateInclusive}. No se modificará.")
+                        add(
+                            "Existe una carpeta médica entre ${leave.startDate.numericDisplayName()} y " +
+                                "${leave.endDateInclusive.numericDisplayName()}. No se modificará.",
+                        )
                     }
                 }
                 val warningTexts = plan.warnings.map(::warningText) + coexistence
@@ -533,13 +536,13 @@ class ManagementViewModel(
 
     private fun warningText(warning: ShiftPlanningWarning): String = when (warning) {
         is ShiftPlanningWarning.SameDate ->
-            "${warning.first.localStartDate}: ya habrá más de una guardia (${warning.first.timeRange()} y ${warning.second.timeRange()})."
+            "${warning.first.localStartDate.numericDisplayName()}: ya habrá más de una guardia (${warning.first.timeRange()} y ${warning.second.timeRange()})."
         is ShiftPlanningWarning.Overlap ->
-            "Las guardias del ${warning.first.localStartDate} ${warning.first.timeRange()} y del ${warning.second.localStartDate} ${warning.second.timeRange()} se superponen."
+            "Las guardias del ${warning.first.localStartDate.numericDisplayName()} ${warning.first.timeRange()} y del ${warning.second.localStartDate.numericDisplayName()} ${warning.second.timeRange()} se superponen."
         is ShiftPlanningWarning.ShortRest -> {
             val hours = warning.actualRest.toMinutes().coerceAtLeast(0) / 60
             val minutes = warning.actualRest.toMinutes().coerceAtLeast(0) % 60
-            "Entre ${warning.first.localStartDate} ${warning.first.timeRange()} y ${warning.second.localStartDate} ${warning.second.timeRange()} hay ${hours} h ${minutes} min de descanso."
+            "Entre ${warning.first.localStartDate.numericDisplayName()} ${warning.first.timeRange()} y ${warning.second.localStartDate.numericDisplayName()} ${warning.second.timeRange()} hay ${hours} h ${minutes} min de descanso."
         }
     }
 
@@ -553,6 +556,8 @@ class ManagementViewModel(
 
     private fun Shift.timeRange(): String =
         "${startTimeSnapshot.format(TIME_FORMATTER)}–${endTimeSnapshot.format(TIME_FORMATTER)}"
+
+    private fun LocalDate.numericDisplayName(): String = format(DATE_FORMATTER)
 
     private fun setSurface(surface: ManagementSurface) {
         _uiState.update { it.copy(surface = surface, errorMessage = null) }
@@ -594,17 +599,9 @@ class ManagementViewModel(
     }
 
     companion object {
-        val COLOR_PALETTE: List<Int> = listOf(
-            0xFF1565C0.toInt(),
-            0xFF2E7D32.toInt(),
-            0xFFC62828.toInt(),
-            0xFF6A1B9A.toInt(),
-            0xFFEF6C00.toInt(),
-            0xFF00695C.toInt(),
-            0xFF4E342E.toInt(),
-            0xFF455A64.toInt(),
-        )
+        private val DEFAULT_SCHEDULE_COLOR = 0xFF1565C0.toInt()
         private const val SURFACE_KEY = "management.surface"
         private val TIME_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+        private val DATE_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/uuuu")
     }
 }

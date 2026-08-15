@@ -37,6 +37,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.blackatsystems.miguardia.core.domain.model.Vacation
 import com.blackatsystems.miguardia.ui.components.TransientConfirmation
+import com.blackatsystems.miguardia.ui.components.DestructiveAction
+import com.blackatsystems.miguardia.ui.components.EmptyState
+import com.blackatsystems.miguardia.ui.components.MonthNavigator
+import com.blackatsystems.miguardia.ui.components.PersistentMessage
+import com.blackatsystems.miguardia.ui.components.PrimaryAction
+import com.blackatsystems.miguardia.ui.components.ScreenHeading
+import com.blackatsystems.miguardia.ui.components.SurfaceHeader
 import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
@@ -98,26 +105,24 @@ fun VacationSurfaceHost(
             color = MaterialTheme.colorScheme.background,
         ) {
             Column(Modifier.fillMaxSize().safeDrawingPadding()) {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = if (state.surface == VacationSurface.EDITOR) {
-                        if (state.draft.editingId == null) "Agregar vacaciones" else "Editar vacaciones"
-                    } else {
-                        "Vacaciones"
-                    },
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                )
-                TextButton(onClick = actions.requestBack) {
-                    Text(if (state.surface == VacationSurface.EDITOR) "Volver" else "Cerrar")
-                }
-            }
+            SurfaceHeader(
+                title = if (state.surface == VacationSurface.EDITOR) {
+                    if (state.draft.editingId == null) "Agregar vacaciones" else "Editar vacaciones"
+                } else {
+                    "Vacaciones"
+                },
+                navigationLabel = if (state.surface == VacationSurface.EDITOR) "Volver" else "Cerrar",
+                onNavigation = actions.requestBack,
+            )
             HorizontalDivider()
-            state.errorMessage?.let { MessageCard(it, true, actions.clearMessage) }
+            state.errorMessage?.let {
+                PersistentMessage(
+                    message = it,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                    onDismiss = actions.clearMessage,
+                    onRetry = actions.retry.takeIf { state.surface == VacationSurface.LIST },
+                )
+            }
             when (state.surface) {
                 VacationSurface.NONE -> Unit
                 VacationSurface.LIST -> VacationList(state, actions)
@@ -162,36 +167,22 @@ private fun VacationList(state: VacationUiState, actions: VacationActions) {
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            TextButton(
-                onClick = actions.previousMonth,
-                modifier = Modifier.semantics { contentDescription = "Mes anterior de vacaciones" },
-            ) { Text("‹") }
-            Text(
-                text = state.visibleMonth.displayName(),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-            )
-            TextButton(
-                onClick = actions.nextMonth,
-                modifier = Modifier.semantics { contentDescription = "Mes siguiente de vacaciones" },
-            ) { Text("›") }
-        }
+        MonthNavigator(
+            monthLabel = state.visibleMonth.displayName(),
+            previousDescription = "Mes anterior de vacaciones",
+            nextDescription = "Mes siguiente de vacaciones",
+            onPrevious = actions.previousMonth,
+            onNext = actions.nextMonth,
+        )
         Text("Los días se cuentan de forma corrida e inclusiva.")
         Text(
             "Una guardia normal dentro del período se conserva, pero no computa horas. " +
                 "Ausencias y cancelaciones explícitas mantienen su clasificación.",
         )
-        Button(
+        PrimaryAction(
+            label = "Agregar vacaciones",
             onClick = { actions.openCreate(state.visibleMonth, null) },
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Text("Agregar vacaciones")
-        }
+        )
         when {
             state.isLoading -> Row(
                 modifier = Modifier.fillMaxWidth().padding(24.dp),
@@ -202,8 +193,11 @@ private fun VacationList(state: VacationUiState, actions: VacationActions) {
                 Text("Cargando vacaciones…", Modifier.padding(start = 12.dp))
             }
 
-            state.errorMessage != null -> Button(onClick = actions.retry) { Text("Reintentar") }
-            state.vacations.isEmpty() -> Text("No hay vacaciones que intersecten este mes.")
+            state.errorMessage != null -> Unit
+            state.vacations.isEmpty() -> EmptyState(
+                title = "Sin vacaciones",
+                message = "No hay vacaciones que intersecten este mes.",
+            )
             else -> state.vacations.forEach { vacation ->
                 VacationCard(vacation, actions)
             }
@@ -238,12 +232,13 @@ private fun VacationCard(vacation: Vacation, actions: VacationActions) {
                         contentDescription = "Editar vacaciones desde ${vacation.startDate.displayName()}"
                     },
                 ) { Text("Editar") }
-                TextButton(
+                DestructiveAction(
+                    label = "Eliminar",
                     onClick = { actions.requestDelete(vacation.id) },
                     modifier = Modifier.semantics {
                         contentDescription = "Eliminar vacaciones desde ${vacation.startDate.displayName()}"
                     },
-                ) { Text("Eliminar") }
+                )
             }
         }
     }
@@ -255,7 +250,10 @@ private fun VacationEditor(state: VacationUiState, actions: VacationActions) {
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Text("Elegí el primer y el último día. Ambos se incluyen en el período.")
+        ScreenHeading(
+            title = "Período inclusivo",
+            supportingText = "Elegí el primer y el último día. Ambos se incluyen en el período.",
+        )
         VacationDateField(
             label = "Fecha inicial",
             date = state.draft.startDate,
@@ -283,13 +281,12 @@ private fun VacationEditor(state: VacationUiState, actions: VacationActions) {
             "Las vacaciones no pueden superponerse con otro período ni con una carpeta médica.",
             style = MaterialTheme.typography.bodySmall,
         )
-        Button(
+        PrimaryAction(
+            label = "Guardar vacaciones",
             onClick = actions.save,
             enabled = preview != null && !state.isSaving,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Text(if (state.isSaving) "Guardando…" else "Guardar vacaciones")
-        }
+            working = state.isSaving,
+        )
     }
 }
 

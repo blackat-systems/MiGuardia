@@ -5,12 +5,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.click
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.UiDevice
@@ -124,7 +127,7 @@ class ManagementComposeTest {
     }
 
     @Test
-    fun scheduleColorPickerOffersFullRgbControlsAndCommonPalette() {
+    fun scheduleColorPickerOffersVisualFieldHueAndRgbReadout() {
         var state by mutableStateOf(
             ManagementUiState(
                 surface = ManagementSurface.SCHEDULE_FORM,
@@ -148,16 +151,17 @@ class ManagementComposeTest {
         }
 
         composeRule.onNodeWithText("Elegir color").performSemanticsAction(SemanticsActions.OnClick)
-        composeRule.onNodeWithText("Colores comunes").assertExists()
-        composeRule.onNodeWithContentDescription("Rojo RGB").assertExists()
-        composeRule.onNodeWithContentDescription("Verde RGB").assertExists()
-        composeRule.onNodeWithContentDescription("Azul RGB").assertExists()
-        composeRule.onNodeWithContentDescription("Color común C62828")
-            .performSemanticsAction(SemanticsActions.OnClick)
+        composeRule.onNodeWithText("Selector de color").assertExists()
+        composeRule.onNodeWithContentDescription("Área de saturación y luminosidad").assertExists()
+        composeRule.onNodeWithContentDescription("Barra arcoíris de tono").assertExists()
+        composeRule.onNodeWithTag("color-saturation-brightness").performTouchInput { click() }
+        composeRule.onNodeWithText("RGB:", substring = true).assertExists()
+        composeRule.onNodeWithText("HEX:", substring = true).assertExists()
         composeRule.onNodeWithText("Usar color").performSemanticsAction(SemanticsActions.OnClick)
 
         composeRule.runOnIdle {
-            assertEquals(0xFFC62828.toInt(), state.scheduleDraft.colorArgb)
+            assertTrue(state.scheduleDraft.colorArgb != 0xFF1565C0.toInt())
+            assertEquals(0xFF, state.scheduleDraft.colorArgb ushr 24)
         }
     }
 
@@ -207,7 +211,7 @@ class ManagementComposeTest {
             }
         }
 
-        composeRule.onNodeWithText("2 fecha(s): 2, 9").assertExists()
+        composeRule.onNodeWithText("2 fechas seleccionadas: 2, 9").assertExists()
         composeRule.onNodeWithText("Termina al día siguiente").assertExists()
         composeRule.onNodeWithText("Revisar y guardar").performScrollTo().performSemanticsAction(SemanticsActions.OnClick)
         composeRule.onNodeWithText("Confirmar guardias").assertExists()

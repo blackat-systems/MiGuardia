@@ -58,6 +58,4 @@
     <string name="summary_vacations">Días de vacaciones</string>
     <string name="summary_medical">Carpeta médica</string>
     <string name="summary_absences">Ausencias</string>
-    <string name="summary_cancellations">Cancelaciones</string>
-    <string name="summary_count_and_hours">%1$d · %2$s</string>
 </resources>

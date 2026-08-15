@@ -211,7 +211,7 @@ Un objetivo guarda:
 
 Cada objetivo puede tener múltiples horarios. Cada combinación **objetivo + horario exacto** es independiente y tiene su propio color. El color no pertenece solo al objetivo ni solo al horario. Ejemplos del mismo objetivo: 10:00 a cierta hora y 12:00 a otra hora, cada uno con color propio.
 
-El color se elige desde una acción `Elegir color` que abre un selector RGB completo con controles de rojo, verde y azul, vista previa y una paleta inferior de colores comunes. No limitar al usuario únicamente a colores predeterminados.
+El color se elige desde una acción `Elegir color` que abre un selector visual completo: área bidimensional de saturación y luminosidad, barra arcoíris de tono, vista previa y lectura RGB/HEX. No limitar al usuario a colores predeterminados ni sustituir este selector por tres controles separados.
 
 El “puesto” o etiqueta es opcional y pertenece a la carga correspondiente. En Rawson se rota entre puestos y puede omitirse; en Dino puede existir un puesto fijo.
 

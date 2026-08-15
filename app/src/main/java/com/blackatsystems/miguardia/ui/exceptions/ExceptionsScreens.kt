@@ -45,7 +45,17 @@ import com.blackatsystems.miguardia.core.domain.model.ShiftNovelty
 import com.blackatsystems.miguardia.core.domain.model.ShiftNoveltyType
 import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
 import com.blackatsystems.miguardia.ui.components.TransientConfirmation
+import com.blackatsystems.miguardia.ui.components.DestructiveAction
+import com.blackatsystems.miguardia.ui.components.EmptyState
+import com.blackatsystems.miguardia.ui.components.MonthNavigator
+import com.blackatsystems.miguardia.ui.components.PersistentMessage
+import com.blackatsystems.miguardia.ui.components.PrimaryAction
+import com.blackatsystems.miguardia.ui.components.SectionCard
+import com.blackatsystems.miguardia.ui.components.SelectableMonthCalendar
+import com.blackatsystems.miguardia.ui.components.SurfaceHeader
+import java.time.LocalDate
 import java.time.YearMonth
+import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
 import java.util.UUID
@@ -118,24 +128,19 @@ fun ExceptionsSurfaceHost(state: ExceptionsUiState, actions: ExceptionsActions) 
     TransientConfirmation(state.infoMessage, actions.clearMessage) {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             Column(Modifier.fillMaxSize().safeDrawingPadding()) {
-            Row(
-                Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    if (state.surface == ExceptionsSurface.HOLIDAYS) "Feriados" else "Notas y novedades",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                )
-                TextButton(onClick = actions.close) { Text("Cerrar") }
-            }
+            SurfaceHeader(
+                title = if (state.surface == ExceptionsSurface.HOLIDAYS) "Feriados" else "Notas y novedades",
+                navigationLabel = "Cerrar",
+                onNavigation = actions.close,
+            )
             HorizontalDivider()
-            state.errorMessage?.let { Message(it, true, actions.clearMessage) }
-            if (state.errorMessage != null) {
-                Button(onClick = actions.retry, modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
-                    Text("Reintentar")
-                }
+            state.errorMessage?.let {
+                PersistentMessage(
+                    message = it,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                    onDismiss = actions.clearMessage,
+                    onRetry = actions.retry,
+                )
             }
             when (state.surface) {
                 ExceptionsSurface.NONE -> Unit
@@ -149,18 +154,14 @@ fun ExceptionsSurfaceHost(state: ExceptionsUiState, actions: ExceptionsActions) 
 
 @Composable
 private fun Message(text: String, error: Boolean, dismiss: () -> Unit) {
-    Card(Modifier.fillMaxWidth().padding(8.dp)) {
-        Row(Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(text, Modifier.weight(1f), color = if (error) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
-            TextButton(onClick = dismiss) { Text("Cerrar") }
-        }
-    }
+    PersistentMessage(message = text, modifier = Modifier.padding(8.dp), onDismiss = dismiss)
 }
 
 @Composable
 private fun HolidayScreen(state: ExceptionsUiState, actions: ExceptionsActions) {
     var pendingDelete by rememberSaveable { mutableStateOf<String?>(null) }
     var confirmDiscard by rememberSaveable { mutableStateOf(false) }
+    val selectedDates = state.holidayDraft.datesText.toSelectedDates()
     val hasUnsavedChanges = state.holidayDraft.editingId != null ||
         state.holidayDraft.datesText.isNotBlank() || state.holidayDraft.name.isNotBlank()
     BackHandler {
@@ -170,40 +171,79 @@ private fun HolidayScreen(state: ExceptionsUiState, actions: ExceptionsActions) 
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = actions.previousHolidayMonth) { Text("‹") }
-            Text(state.holidayMonth.label(), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            TextButton(onClick = actions.nextHolidayMonth) { Text("›") }
-        }
-        Text("Carga manual. Para varias fechas usá AAAA-MM-DD separadas por coma.")
-        OutlinedTextField(
-            value = state.holidayDraft.datesText,
-            onValueChange = { value -> actions.updateHolidayDraft { it.copy(datesText = value) } },
-            label = { Text("Fecha o fechas") },
-            modifier = Modifier.fillMaxWidth(),
+        MonthNavigator(
+            monthLabel = state.holidayMonth.label(),
+            previousDescription = "Mes anterior de feriados",
+            nextDescription = "Mes siguiente de feriados",
+            onPrevious = actions.previousHolidayMonth,
+            onNext = actions.nextHolidayMonth,
         )
+        SectionCard(
+            title = if (state.holidayDraft.editingId == null) "Elegí los feriados" else "Cambiá la fecha",
+            supportingText = if (state.holidayDraft.editingId == null) {
+                "Tocá una o varias fechas del calendario."
+            } else {
+                "Al editar, solo puede quedar una fecha seleccionada."
+            },
+        ) {
+            SelectableMonthCalendar(
+                month = state.holidayMonth,
+                selectedDates = selectedDates,
+                onToggleDate = { date ->
+                    val updatedDates = if (state.holidayDraft.editingId != null) {
+                        if (date in selectedDates) emptySet() else setOf(date)
+                    } else if (date in selectedDates) {
+                        selectedDates - date
+                    } else {
+                        selectedDates + date
+                    }
+                    actions.updateHolidayDraft {
+                        it.copy(datesText = updatedDates.sorted().joinToString(","))
+                    }
+                },
+                monthLabel = state.holidayMonth.label(),
+                testTag = "holiday-date-selector",
+            )
+            Text(
+                text = when (selectedDates.size) {
+                    0 -> "Todavía no elegiste ninguna fecha."
+                    1 -> "1 fecha seleccionada."
+                    else -> "${selectedDates.size} fechas seleccionadas."
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
         OutlinedTextField(
             value = state.holidayDraft.name,
             onValueChange = { value -> actions.updateHolidayDraft { it.copy(name = value) } },
             label = { Text("Nombre opcional") },
+            supportingText = { Text("Por ejemplo: Día de la Bandera") },
             modifier = Modifier.fillMaxWidth(),
         )
-        Button(onClick = { actions.saveHolidays(null) }, enabled = !state.isSaving, modifier = Modifier.fillMaxWidth()) {
-            if (state.isSaving) CircularProgressIndicator()
-            Text(if (state.holidayDraft.editingId == null) "Guardar feriado(s)" else "Guardar cambios")
-        }
+        PrimaryAction(
+            label = if (state.holidayDraft.editingId == null) "Guardar feriado(s)" else "Guardar cambios",
+            onClick = { actions.saveHolidays(null) },
+            enabled = !state.isSaving,
+            working = state.isSaving,
+        )
         Text("Feriados del mes", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         if (state.isLoading) CircularProgressIndicator()
-        if (!state.isLoading && state.holidays.isEmpty()) Text("No hay feriados cargados en este mes.")
+        if (!state.isLoading && state.holidays.isEmpty()) {
+            EmptyState(
+                title = "Sin feriados",
+                message = "No hay feriados manuales cargados en este mes.",
+            )
+        }
         state.holidays.forEach { holiday ->
             Card(Modifier.fillMaxWidth()) {
                 Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text(holiday.date.toString(), fontWeight = FontWeight.Bold)
+                        Text(holiday.date.holidayDisplayName(), fontWeight = FontWeight.Bold)
                         Text(holiday.name ?: "Feriado")
                     }
                     TextButton(onClick = { actions.editHoliday(holiday) }) { Text("Editar") }
-                    TextButton(onClick = { pendingDelete = holiday.id.toString() }) { Text("Eliminar") }
+                    DestructiveAction(label = "Eliminar", onClick = { pendingDelete = holiday.id.toString() })
                 }
             }
         }
@@ -213,7 +253,12 @@ private fun HolidayScreen(state: ExceptionsUiState, actions: ExceptionsActions) 
         AlertDialog(
             onDismissRequest = actions.cancelHolidayConflict,
             title = { Text("Fechas con feriado") },
-            text = { Text("Ya existen: ${state.holidayDraft.conflictDates.joinToString()}. Podés reemplazarlas o conservarlas y crear solo las nuevas.") },
+            text = {
+                Text(
+                    "Ya existen: ${state.holidayDraft.conflictDates.sorted().joinToString { it.numericDisplayName() }}. " +
+                        "Podés reemplazarlas o conservarlas y crear solo las nuevas.",
+                )
+            },
             confirmButton = { TextButton(onClick = { actions.saveHolidays(HolidayConflictPolicy.REPLACE) }) { Text("Reemplazar") } },
             dismissButton = {
                 Column {
@@ -292,17 +337,17 @@ private fun ShiftExceptionsScreen(state: ExceptionsUiState, actions: ExceptionsA
                 fontWeight = FontWeight.Bold,
             )
             Text("Ausencia y cancelación llevan las horas trabajadas a cero. Volver a normal restaura el estado derivado del reloj.")
-            Row(
+            Column(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 OutlinedButton(
                     onClick = { pendingStatus = ShiftStatus.ABSENT },
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.fillMaxWidth(),
                 ) { Text("Registrar ausencia") }
                 OutlinedButton(
                     onClick = { pendingStatus = ShiftStatus.CANCELLED },
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.fillMaxWidth(),
                 ) { Text("Cancelar guardia") }
             }
             OutlinedButton(onClick = { actions.changeStatus(ShiftStatus.PLANNED, "") }, modifier = Modifier.fillMaxWidth()) { Text("Volver a normal") }
@@ -536,24 +581,20 @@ private fun ConfirmDeleteDialog(
 
 @Composable
 private fun Section(title: String, content: @Composable () -> Unit) {
-    Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            HorizontalDivider()
-            content()
-        }
-    }
+    SectionCard(title = title, content = content)
 }
 
 @Composable
 private fun PrivateRow(text: String, edit: () -> Unit, delete: () -> Unit, showEdit: Boolean = true) {
-    Row(
+    Column(
         Modifier.fillMaxWidth().semantics { contentDescription = "Elemento privado de la guardia" },
-        verticalAlignment = Alignment.CenterVertically,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Text(text, Modifier.weight(1f))
-        if (showEdit) TextButton(onClick = edit) { Text("Editar") }
-        TextButton(onClick = delete) { Text("Eliminar") }
+        Text(text)
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            if (showEdit) TextButton(onClick = edit) { Text("Editar") }
+            DestructiveAction(label = "Eliminar", onClick = delete)
+        }
     }
 }
 
@@ -571,3 +612,19 @@ private fun YearMonth.label(): String {
     val monthName = month.getDisplayName(TextStyle.FULL, locale).replaceFirstChar { it.titlecase(locale) }
     return "$monthName de $year"
 }
+
+private fun String.toSelectedDates(): Set<LocalDate> =
+    split(',', ';', '\n')
+        .map(String::trim)
+        .filter(String::isNotEmpty)
+        .mapNotNull { runCatching { LocalDate.parse(it) }.getOrNull() }
+        .toCollection(linkedSetOf())
+
+private fun LocalDate.holidayDisplayName(): String {
+    val locale = Locale.forLanguageTag("es-AR")
+    return format(DateTimeFormatter.ofPattern("EEEE d 'de' MMMM", locale))
+        .replaceFirstChar { it.titlecase(locale) }
+}
+
+private fun LocalDate.numericDisplayName(): String =
+    format(DateTimeFormatter.ofPattern("dd/MM/uuuu"))

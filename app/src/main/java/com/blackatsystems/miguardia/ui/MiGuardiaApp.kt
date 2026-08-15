@@ -2,6 +2,7 @@ package com.blackatsystems.miguardia.ui
 
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -23,9 +24,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
@@ -33,10 +34,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -75,7 +76,13 @@ import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
 import com.blackatsystems.miguardia.ui.calendar.CalendarLoadState
 import com.blackatsystems.miguardia.ui.calendar.CalendarUiState
 import com.blackatsystems.miguardia.ui.calendar.CalendarViewModel
+import com.blackatsystems.miguardia.ui.components.DestructiveAction
+import com.blackatsystems.miguardia.ui.components.NavigationCard
+import com.blackatsystems.miguardia.ui.components.PersistentMessage
+import com.blackatsystems.miguardia.ui.components.ScreenHeading
+import com.blackatsystems.miguardia.ui.components.SectionCard
 import com.blackatsystems.miguardia.ui.management.ManagementActions
+import com.blackatsystems.miguardia.ui.management.ShiftEntryMode
 import com.blackatsystems.miguardia.ui.management.ManagementSurface
 import com.blackatsystems.miguardia.ui.management.ManagementSurfaceHost
 import com.blackatsystems.miguardia.ui.management.ManagementUiState
@@ -101,6 +108,7 @@ import com.blackatsystems.miguardia.ui.vacation.VacationViewModel
 import com.blackatsystems.miguardia.ui.theme.AppZoom
 import java.time.LocalDate
 import java.time.LocalTime
+import java.time.DayOfWeek
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
@@ -116,9 +124,9 @@ private enum class MainDestination(
     @param:StringRes val labelRes: Int,
     val glyph: String,
 ) {
-    CALENDAR(R.string.calendar, "C"),
-    SUMMARY(R.string.summary, "R"),
-    SETTINGS(R.string.settings, "A"),
+    CALENDAR(R.string.calendar, "▦"),
+    SUMMARY(R.string.summary, "≡"),
+    SETTINGS(R.string.settings, "⚙"),
 }
 
 @Composable
@@ -203,12 +211,28 @@ fun MiGuardiaApp(
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        topBar = { TopAppBar(title = { Text(stringResource(R.string.app_name)) }) },
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = {
+                    Text(
+                        stringResource(R.string.app_name),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                    )
+                },
+            )
+        },
         bottomBar = {
             NavigationBar {
                 MainDestination.entries.forEach { item ->
                     val label = stringResource(item.labelRes)
+                    val showLabel = appZoom == AppZoom.STANDARD
                     NavigationBarItem(
+                        modifier = if (showLabel) {
+                            Modifier
+                        } else {
+                            Modifier.semantics { contentDescription = label }
+                        },
                         selected = destination == item,
                         onClick = { destination = item },
                         icon = {
@@ -218,13 +242,18 @@ fun MiGuardiaApp(
                                 fontWeight = FontWeight.Bold,
                             )
                         },
-                        label = {
-                            Text(
-                                text = label,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
+                        label = if (showLabel) {
+                            {
+                                Text(
+                                    text = label,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                        } else {
+                            null
                         },
+                        alwaysShowLabel = showLabel,
                     )
                 }
             }
@@ -275,9 +304,10 @@ fun MiGuardiaApp(
                     onDismissDate()
                     managementActions.openAddShift(calendarState.visibleMonth, selectedDay.date)
                 },
-                onAddVacation = {
+                onAddRange = {
                     onDismissDate()
-                    vacationActions.openCreate(calendarState.visibleMonth, selectedDay.date)
+                    managementActions.openAddShift(calendarState.visibleMonth, selectedDay.date)
+                    managementActions.updateShiftMode(ShiftEntryMode.MULTIPLE)
                 },
                 onEditShift = {
                     onDismissDate()
@@ -315,22 +345,33 @@ fun MiGuardiaApp(
         AlertDialog(
             onDismissRequest = { showAddChoice = false },
             title = { Text("Agregar") },
-            text = { Text("Elegí qué querés registrar en el calendario.") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showAddChoice = false
-                        managementActions.openAddShift(calendarState.visibleMonth, null)
-                    },
-                ) { Text("Guardia") }
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Elegí si querés cargar una guardia o un rango de fechas.")
+                    Button(
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = {
+                            showAddChoice = false
+                            managementActions.openAddShift(calendarState.visibleMonth, null)
+                        },
+                    ) { Text("Agregar guardia") }
+                    OutlinedButton(
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = {
+                            showAddChoice = false
+                            managementActions.openAddShift(calendarState.visibleMonth, null)
+                            managementActions.updateShiftMode(ShiftEntryMode.MULTIPLE)
+                        },
+                    ) { Text("Agregar rangos") }
+                }
             },
+            confirmButton = {},
             dismissButton = {
                 TextButton(
                     onClick = {
                         showAddChoice = false
-                        vacationActions.openCreate(calendarState.visibleMonth, null)
                     },
-                ) { Text("Vacaciones") }
+                ) { Text("Cancelar") }
             },
         )
     }
@@ -355,7 +396,7 @@ private fun CalendarScreen(
             .fillMaxSize()
             .padding(contentPadding)
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 8.dp)
+            .padding(horizontal = 16.dp)
             .padding(bottom = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -366,6 +407,7 @@ private fun CalendarScreen(
             onNext = onNextMonth,
             onToday = onToday,
             onPhotos = onOpenPhotos,
+            appZoom = appZoom,
         )
 
         when (state.loadState) {
@@ -442,9 +484,15 @@ private fun CalendarGridViewport(
 
 @Composable
 private fun NextGuardCard() {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+        ),
+    ) {
         Column(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             Text(
@@ -477,17 +525,7 @@ private fun LoadingCalendar() {
 
 @Composable
 private fun ErrorCalendar(message: String, onRetry: () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Text(message, style = MaterialTheme.typography.bodyLarge)
-            Button(onClick = onRetry) {
-                Text(stringResource(R.string.retry))
-            }
-        }
-    }
+    PersistentMessage(message = message, onRetry = onRetry)
 }
 
 @Composable
@@ -497,62 +535,71 @@ private fun MonthControls(
     onNext: () -> Unit,
     onToday: () -> Unit,
     onPhotos: () -> Unit,
+    appZoom: AppZoom,
 ) {
-    var menuExpanded by remember { mutableStateOf(false) }
     val previousDescription = stringResource(R.string.previous_month)
     val nextDescription = stringResource(R.string.next_month)
-    Row(
+    Card(
         modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
     ) {
-        IconButton(
-            onClick = onPrevious,
-            modifier = Modifier.semantics { contentDescription = previousDescription },
+        Column(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            Text(
-                text = "‹",
-                modifier = Modifier.clearAndSetSemantics {},
-                style = MaterialTheme.typography.headlineMedium,
-            )
-        }
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = visibleMonth.displayName(),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Row {
-                TextButton(onClick = onToday) { Text(stringResource(R.string.today)) }
-                TextButton(onClick = onPhotos, modifier = Modifier.semantics { contentDescription = "Fotos del cronograma del mes" }) { Text("Fotos") }
-            }
-        }
-        IconButton(
-            onClick = onNext,
-            modifier = Modifier.semantics { contentDescription = nextDescription },
-        ) {
-            Text(
-                text = "›",
-                modifier = Modifier.clearAndSetSemantics {},
-                style = MaterialTheme.typography.headlineMedium,
-            )
-        }
-        Box {
-            IconButton(
-                onClick = { menuExpanded = true },
-                modifier = Modifier.semantics { contentDescription = "Menú del mes" },
-            ) { Text("⋮") }
-            DropdownMenu(
-                expanded = menuExpanded,
-                onDismissRequest = { menuExpanded = false },
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                DropdownMenuItem(
-                    text = { Text("Fotos del cronograma") },
-                    onClick = {
-                        menuExpanded = false
-                        onPhotos()
-                    },
+                IconButton(
+                    onClick = onPrevious,
+                    modifier = Modifier.semantics { contentDescription = previousDescription },
+                ) {
+                    Text("‹", Modifier.clearAndSetSemantics {}, style = MaterialTheme.typography.headlineMedium)
+                }
+                Text(
+                    text = visibleMonth.displayName(),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.weight(1f),
                 )
+                IconButton(
+                    onClick = onNext,
+                    modifier = Modifier.semantics { contentDescription = nextDescription },
+                ) {
+                    Text("›", Modifier.clearAndSetSemantics {}, style = MaterialTheme.typography.headlineMedium)
+                }
+            }
+            if (appZoom == AppZoom.STANDARD) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    OutlinedButton(onClick = onToday, modifier = Modifier.weight(1f)) {
+                        Text("Ir a hoy")
+                    }
+                    Button(
+                        onClick = onPhotos,
+                        modifier = Modifier
+                            .weight(1f)
+                            .semantics { contentDescription = "Fotos del cronograma del mes" },
+                    ) { Text("Fotos del mes") }
+                }
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = onToday, modifier = Modifier.fillMaxWidth()) {
+                        Text("Ir a hoy")
+                    }
+                    Button(
+                        onClick = onPhotos,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .semantics { contentDescription = "Fotos del cronograma del mes" },
+                    ) { Text("Fotos del mes") }
+                }
             }
         }
     }
@@ -680,6 +727,13 @@ private fun DayCell(
             .heightIn(min = 100.dp)
             .clip(MaterialTheme.shapes.small)
             .background(background)
+            .then(
+                if (isToday) {
+                    Modifier.border(2.dp, MaterialTheme.colorScheme.primary, MaterialTheme.shapes.small)
+                } else {
+                    Modifier
+                },
+            )
             .testTag(if (isCompletedDay) "completed-day-${day.date}" else "day-${day.date}")
             .clearAndSetSemantics {
                 contentDescription = description
@@ -695,7 +749,7 @@ private fun DayCell(
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         Text(
-            text = day.date.dayOfMonth.toString(),
+            text = "${day.date.dayOfMonth}${day.date.dayOfWeek.calendarInitial()}",
             style = MaterialTheme.typography.labelMedium,
             fontWeight = if (isToday) FontWeight.Bold else FontWeight.Medium,
         )
@@ -796,7 +850,7 @@ private fun AutoSizeSingleLineText(
 private fun DayDetailSheet(
     day: CalendarDay,
     onAddShift: () -> Unit,
-    onAddVacation: () -> Unit,
+    onAddRange: () -> Unit,
     onEditShift: (com.blackatsystems.miguardia.core.domain.model.Shift) -> Unit,
     onDuplicateShift: (com.blackatsystems.miguardia.core.domain.model.Shift) -> Unit,
     onDeleteShift: (java.util.UUID) -> Unit,
@@ -851,8 +905,8 @@ private fun DayDetailSheet(
         Button(onClick = onAddShift, modifier = Modifier.fillMaxWidth()) {
             Text("Agregar guardia")
         }
-        Button(onClick = onAddVacation, modifier = Modifier.fillMaxWidth()) {
-            Text("Agregar vacaciones")
+        OutlinedButton(onClick = onAddRange, modifier = Modifier.fillMaxWidth()) {
+            Text("Agregar rangos")
         }
     }
     pendingDeleteId?.let { id ->
@@ -906,17 +960,24 @@ private fun ShiftDetail(
             shift.objectiveAddressSnapshot?.takeIf { it.isNotBlank() }?.let { address ->
                 Text(address)
             }
-            if (onEdit != null && onDuplicate != null && onDelete != null) {
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    TextButton(onClick = { onEdit(shift) }) { Text("Editar") }
-                    TextButton(onClick = { onDuplicate(shift) }) { Text("Duplicar") }
-                    TextButton(onClick = { onDelete(shift.id) }) { Text("Eliminar") }
-                }
-            }
             if (onOpenExceptions != null) {
                 Button(onClick = { onOpenExceptions(shift) }, modifier = Modifier.fillMaxWidth()) {
                     Text("Informar novedad / notas")
                 }
+            }
+            if (onEdit != null && onDuplicate != null && onDelete != null) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    OutlinedButton(onClick = { onEdit(shift) }, modifier = Modifier.weight(1f)) {
+                        Text("Editar")
+                    }
+                    OutlinedButton(onClick = { onDuplicate(shift) }, modifier = Modifier.weight(1f)) {
+                        Text("Duplicar")
+                    }
+                }
+                DestructiveAction(label = "Eliminar", onClick = { onDelete(shift.id) })
             }
             if (excludedByVacation) {
                 Text(
@@ -945,34 +1006,54 @@ private fun SettingsScreen(
             .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Text("Configuración", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-        Text(stringResource(R.string.settings_intro))
-        Button(onClick = onOpenObjectives, modifier = Modifier.fillMaxWidth()) {
-            Text("Objetivos y horarios")
-        }
-        Button(onClick = onOpenHolidays, modifier = Modifier.fillMaxWidth()) {
-            Text("Feriados")
-        }
-        Button(onClick = onOpenVacations, modifier = Modifier.fillMaxWidth()) {
-            Text("Vacaciones")
-        }
-        Text("Zoom de MiGuardia", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        Text("Aumenta toda la aplicación sin modificar el zoom, la fuente ni la densidad de Android.")
-        AppZoom.entries.forEach { option ->
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onAppZoomChange(option) },
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                androidx.compose.material3.RadioButton(
-                    selected = appZoom == option,
-                    onClick = { onAppZoomChange(option) },
-                )
-                Text(option.label)
+        ScreenHeading("Configuración", supportingText = stringResource(R.string.settings_intro))
+        NavigationCard(
+            title = "Objetivos y horarios",
+            description = "Plantillas, colores y horarios para nuevas guardias.",
+            onClick = onOpenObjectives,
+        )
+        NavigationCard(
+            title = "Feriados",
+            description = "Elegí fechas en un calendario y agregá un nombre opcional.",
+            onClick = onOpenHolidays,
+        )
+        NavigationCard(
+            title = "Vacaciones",
+            description = "Períodos inclusivos y su efecto en el calendario.",
+            onClick = onOpenVacations,
+        )
+        SectionCard(
+            title = "Zoom de MiGuardia",
+            supportingText = "Aumenta toda la aplicación sin modificar ajustes de Android.",
+        ) {
+            AppZoom.entries.forEach { option ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(MaterialTheme.shapes.small)
+                        .clickable { onAppZoomChange(option) }
+                        .padding(vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    androidx.compose.material3.RadioButton(
+                        selected = appZoom == option,
+                        onClick = { onAppZoomChange(option) },
+                    )
+                    Text(option.label, fontWeight = if (appZoom == option) FontWeight.Bold else FontWeight.Normal)
+                }
             }
         }
     }
+}
+
+private fun DayOfWeek.calendarInitial(): String = when (this) {
+    DayOfWeek.MONDAY -> "L"
+    DayOfWeek.TUESDAY -> "M"
+    DayOfWeek.WEDNESDAY -> "X"
+    DayOfWeek.THURSDAY -> "J"
+    DayOfWeek.FRIDAY -> "V"
+    DayOfWeek.SATURDAY -> "S"
+    DayOfWeek.SUNDAY -> "D"
 }
 
 @Composable
