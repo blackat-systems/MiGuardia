@@ -4,8 +4,7 @@
     <string name="calendar">Calendario</string>
     <string name="summary">Resumen</string>
     <string name="settings">Configuración</string>
-    <string name="next_guard">Próxima guardia</string>
-    <string name="next_guard_pending">El próximo evento se incorporará más adelante. Tus guardias del mes aparecen en el calendario.</string>
+    <string name="next_guard">Próximo evento</string>
     <string name="settings_intro">Acá vas a configurar tus objetivos, avisos, privacidad y apariencia.</string>
     <string name="previous_month">Mes anterior</string>
     <string name="next_month">Mes siguiente</string>

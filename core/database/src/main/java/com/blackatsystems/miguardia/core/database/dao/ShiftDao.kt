@@ -20,6 +20,13 @@ internal interface ShiftDao {
         endDateInclusive: String,
     ): Flow<List<ShiftEntity>>
 
+    @Query(
+        """SELECT * FROM shifts
+            WHERE endEpochMillis > :instantEpochMillisExclusive
+            ORDER BY startEpochMillis, endEpochMillis, id""",
+    )
+    fun observeEndingAfter(instantEpochMillisExclusive: Long): Flow<List<ShiftEntity>>
+
     @Query("SELECT * FROM shifts WHERE id = :id")
     suspend fun getById(id: String): ShiftEntity?
 

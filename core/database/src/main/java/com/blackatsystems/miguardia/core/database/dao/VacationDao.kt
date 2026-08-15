@@ -20,6 +20,13 @@ internal interface VacationDao {
         endDateInclusive: String,
     ): Flow<List<VacationEntity>>
 
+    @Query(
+        """SELECT * FROM vacations
+            WHERE endDateInclusive >= :dateInclusive
+            ORDER BY startDate, endDateInclusive, id""",
+    )
+    fun observeEndingOnOrAfter(dateInclusive: String): Flow<List<VacationEntity>>
+
     @Query("SELECT * FROM vacations WHERE id = :id LIMIT 1")
     suspend fun getById(id: String): VacationEntity?
 

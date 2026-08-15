@@ -19,6 +19,13 @@ internal interface ExplicitDayStatusDao {
         endDateInclusive: String,
     ): Flow<List<ExplicitDayStatusEntity>>
 
+    @Query(
+        """SELECT * FROM explicit_day_statuses
+            WHERE localDate >= :startDateInclusive
+            ORDER BY localDate""",
+    )
+    fun observeFrom(startDateInclusive: String): Flow<List<ExplicitDayStatusEntity>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun set(entity: ExplicitDayStatusEntity)
 

@@ -107,6 +107,9 @@ class VacationViewModelInstrumentedTest {
             endDateInclusive: LocalDate,
         ): Flow<List<Vacation>> = flowOf(emptyList())
 
+        override fun observeEndingOnOrAfter(dateInclusive: LocalDate): Flow<List<Vacation>> =
+            flowOf(emptyList())
+
         override suspend fun getById(id: UUID): Vacation? = null
         override suspend fun insert(vacation: Vacation) = Unit
         override suspend fun update(vacation: Vacation) = Unit
@@ -122,6 +125,8 @@ class VacationViewModelInstrumentedTest {
             startDateInclusive: LocalDate,
             endDateInclusive: LocalDate,
         ): Flow<List<Vacation>> = observed
+
+        override fun observeEndingOnOrAfter(dateInclusive: LocalDate): Flow<List<Vacation>> = observed
 
         override suspend fun getById(id: UUID): Vacation? = observed.value.firstOrNull { it.id == id }
 

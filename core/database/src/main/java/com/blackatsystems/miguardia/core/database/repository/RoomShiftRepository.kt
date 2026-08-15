@@ -13,6 +13,7 @@ import com.blackatsystems.miguardia.core.domain.model.ShiftBatchMutation
 import com.blackatsystems.miguardia.core.domain.repository.InvalidLocalDataException
 import com.blackatsystems.miguardia.core.domain.repository.ShiftRepository
 import java.time.LocalDate
+import java.time.Instant
 import java.util.UUID
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -31,6 +32,10 @@ internal class RoomShiftRepository(
             endDateInclusive.toString(),
         ).map { rows -> rows.map { it.toDomain() } }
     }
+
+    override fun observeEndingAfter(instantExclusive: Instant): Flow<List<Shift>> =
+        dao.observeEndingAfter(instantExclusive.toEpochMilli())
+            .map { rows -> rows.map { it.toDomain() } }
 
     override suspend fun getById(id: UUID): Shift? = dao.getById(id.toString())?.toDomain()
 

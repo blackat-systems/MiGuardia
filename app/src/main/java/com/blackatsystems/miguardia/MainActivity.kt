@@ -12,6 +12,7 @@ import androidx.core.content.edit
 import com.blackatsystems.miguardia.ui.MiGuardiaApp
 import com.blackatsystems.miguardia.ui.calendar.CalendarViewModel
 import com.blackatsystems.miguardia.ui.management.ManagementViewModel
+import com.blackatsystems.miguardia.ui.nextevent.NextEventViewModel
 import com.blackatsystems.miguardia.ui.photos.PhotosViewModel
 import com.blackatsystems.miguardia.ui.photos.SchedulePhotoFileStore
 import com.blackatsystems.miguardia.ui.exceptions.ExceptionsViewModel
@@ -21,6 +22,14 @@ import com.blackatsystems.miguardia.ui.theme.MiGuardiaTheme
 import com.blackatsystems.miguardia.ui.theme.AppZoom
 
 class MainActivity : ComponentActivity() {
+    private val nextEventViewModel: NextEventViewModel by viewModels {
+        val dataStore = (application as MiGuardiaApplication).localDataStore
+        NextEventViewModel.Factory(
+            shifts = dataStore.shifts,
+            explicitDayStatuses = dataStore.explicitDayStatuses,
+            vacations = dataStore.vacations,
+        )
+    }
     private val photosViewModel: PhotosViewModel by viewModels {
         val dataStore = (application as MiGuardiaApplication).localDataStore
         PhotosViewModel.Factory(dataStore.schedulePhotos, dataStore.objectives, SchedulePhotoFileStore(applicationContext))
@@ -91,6 +100,7 @@ class MainActivity : ComponentActivity() {
             MiGuardiaTheme(appZoom = appZoom) {
                 MiGuardiaApp(
                     calendarViewModel = calendarViewModel,
+                    nextEventViewModel = nextEventViewModel,
                     managementViewModel = managementViewModel,
                     summaryViewModel = summaryViewModel,
                     exceptionsViewModel = exceptionsViewModel,

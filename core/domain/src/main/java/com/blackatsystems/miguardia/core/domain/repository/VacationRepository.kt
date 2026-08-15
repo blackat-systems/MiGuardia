@@ -11,6 +11,8 @@ interface VacationRepository {
         endDateInclusive: LocalDate,
     ): Flow<List<Vacation>>
 
+    fun observeEndingOnOrAfter(dateInclusive: LocalDate): Flow<List<Vacation>>
+
     suspend fun getById(id: UUID): Vacation?
     suspend fun insert(vacation: Vacation)
     suspend fun update(vacation: Vacation)

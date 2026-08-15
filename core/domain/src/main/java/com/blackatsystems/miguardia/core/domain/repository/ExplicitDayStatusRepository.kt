@@ -11,6 +11,8 @@ interface ExplicitDayStatusRepository {
         endDateInclusive: LocalDate,
     ): Flow<List<ExplicitDayStatus>>
 
+    fun observeFrom(startDateInclusive: LocalDate): Flow<List<ExplicitDayStatus>>
+
     suspend fun set(date: LocalDate, type: ExplicitDayStatusType)
     suspend fun clear(date: LocalDate)
 }

@@ -33,6 +33,10 @@ internal class RoomVacationRepository(
             .map { rows -> rows.map { it.toDomain() } }
     }
 
+    override fun observeEndingOnOrAfter(dateInclusive: LocalDate): Flow<List<Vacation>> =
+        dao.observeEndingOnOrAfter(dateInclusive.toString())
+            .map { rows -> rows.map { it.toDomain() } }
+
     override suspend fun getById(id: UUID): Vacation? = dao.getById(id.toString())?.toDomain()
 
     override suspend fun insert(vacation: Vacation) {

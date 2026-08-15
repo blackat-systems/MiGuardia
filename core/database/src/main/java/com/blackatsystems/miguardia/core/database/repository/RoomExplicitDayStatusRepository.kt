@@ -23,6 +23,10 @@ internal class RoomExplicitDayStatusRepository(
             .map { rows -> rows.map { it.toDomain() } }
     }
 
+    override fun observeFrom(startDateInclusive: LocalDate): Flow<List<ExplicitDayStatus>> =
+        dao.observeFrom(startDateInclusive.toString())
+            .map { rows -> rows.map { it.toDomain() } }
+
     override suspend fun set(date: LocalDate, type: ExplicitDayStatusType) {
         dao.set(ExplicitDayStatus(date, type).toEntity())
     }

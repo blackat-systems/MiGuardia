@@ -87,6 +87,9 @@ import com.blackatsystems.miguardia.ui.management.ManagementSurface
 import com.blackatsystems.miguardia.ui.management.ManagementSurfaceHost
 import com.blackatsystems.miguardia.ui.management.ManagementUiState
 import com.blackatsystems.miguardia.ui.management.ManagementViewModel
+import com.blackatsystems.miguardia.ui.nextevent.NextEventCard
+import com.blackatsystems.miguardia.ui.nextevent.NextEventUiState
+import com.blackatsystems.miguardia.ui.nextevent.NextEventViewModel
 import com.blackatsystems.miguardia.ui.photos.PhotosActions
 import com.blackatsystems.miguardia.ui.photos.PhotosSurface
 import com.blackatsystems.miguardia.ui.photos.PhotosSurfaceHost
@@ -132,6 +135,7 @@ private enum class MainDestination(
 @Composable
 fun MiGuardiaApp(
     calendarViewModel: CalendarViewModel,
+    nextEventViewModel: NextEventViewModel,
     managementViewModel: ManagementViewModel,
     summaryViewModel: SummaryViewModel,
     exceptionsViewModel: ExceptionsViewModel,
@@ -142,6 +146,7 @@ fun MiGuardiaApp(
     onAppZoomChange: (AppZoom) -> Unit = {},
 ) {
     val calendarState by calendarViewModel.uiState.collectAsStateWithLifecycle()
+    val nextEventState by nextEventViewModel.uiState.collectAsStateWithLifecycle()
     val managementState by managementViewModel.uiState.collectAsStateWithLifecycle()
     val summaryState by summaryViewModel.uiState.collectAsStateWithLifecycle()
     val exceptionsState by exceptionsViewModel.uiState.collectAsStateWithLifecycle()
@@ -149,6 +154,8 @@ fun MiGuardiaApp(
     val photosState by photosViewModel.uiState.collectAsStateWithLifecycle()
     MiGuardiaApp(
         calendarState = calendarState,
+        nextEventState = nextEventState,
+        onNextEventRetry = nextEventViewModel::retry,
         onPreviousMonth = calendarViewModel::showPreviousMonth,
         onNextMonth = calendarViewModel::showNextMonth,
         onToday = calendarViewModel::showCurrentMonth,
@@ -186,6 +193,8 @@ fun MiGuardiaApp(
     onDismissDate: () -> Unit,
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
+    nextEventState: NextEventUiState = NextEventUiState(),
+    onNextEventRetry: () -> Unit = {},
     managementState: ManagementUiState = ManagementUiState(),
     managementActions: ManagementActions = ManagementActions(),
     summaryState: SummaryUiState = SummaryUiState(
@@ -262,12 +271,14 @@ fun MiGuardiaApp(
         when (destination) {
             MainDestination.CALENDAR -> CalendarScreen(
                 state = calendarState,
+                nextEventState = nextEventState,
                 contentPadding = innerPadding,
                 onPreviousMonth = onPreviousMonth,
                 onNextMonth = onNextMonth,
                 onToday = onToday,
                 onSelectDate = onSelectDate,
                 onRetry = onRetry,
+                onNextEventRetry = onNextEventRetry,
                 onAddShift = { showAddChoice = true },
                 onOpenPhotos = { photosActions.open(calendarState.visibleMonth) },
                 appZoom = appZoom,
@@ -380,12 +391,14 @@ fun MiGuardiaApp(
 @Composable
 private fun CalendarScreen(
     state: CalendarUiState,
+    nextEventState: NextEventUiState,
     contentPadding: PaddingValues,
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit,
     onToday: () -> Unit,
     onSelectDate: (LocalDate) -> Unit,
     onRetry: () -> Unit,
+    onNextEventRetry: () -> Unit,
     onAddShift: () -> Unit,
     onOpenPhotos: () -> Unit,
     appZoom: AppZoom,
@@ -400,7 +413,7 @@ private fun CalendarScreen(
             .padding(bottom = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        NextGuardCard()
+        NextEventCard(state = nextEventState, onRetry = onNextEventRetry)
         MonthControls(
             visibleMonth = state.visibleMonth,
             onPrevious = onPreviousMonth,
@@ -478,32 +491,6 @@ private fun CalendarGridViewport(
                     enableMonthSwipe = !isEnlarged,
                 )
             }
-        }
-    }
-}
-
-@Composable
-private fun NextGuardCard() {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer,
-            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-        ),
-    ) {
-        Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            Text(
-                text = stringResource(R.string.next_guard),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Text(
-                text = stringResource(R.string.next_guard_pending),
-                style = MaterialTheme.typography.bodyMedium,
-            )
         }
     }
 }
