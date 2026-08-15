@@ -648,7 +648,7 @@ Construir por etapas, manteniendo una app ejecutable:
 4. motor básico de horas;
 5. fotos mensuales;
 6. novedades, feriados y notas;
-7. notificaciones y motor de próximo evento;
+7. motor de próximo evento y, después, notificaciones;
 8. clima;
 9. widgets;
 10. informes y copias de seguridad;
@@ -659,6 +659,8 @@ Construir por etapas, manteniendo una app ejecutable:
 Decisión de secuencia del 13 de agosto de 2026: Joaquin autorizó implementar **novedades, feriados y notas** inmediatamente después del motor básico de horas. El módulo de fotos mensuales continúa pendiente y no queda cancelado; solamente se pospone en el orden de ejecución.
 
 Decisión posterior del 14 de agosto de 2026: después de integrar novedades, feriados y notas, Joaquin autorizó implementar **Vacaciones** como incremento separado sobre Room v3. Este módulo registra y clasifica días, pero no implementa todavía remuneración vacacional.
+
+Decisión posterior del 15 de agosto de 2026: después de integrar fotos, accesibilidad y pulido visual, Joaquin autorizó implementar primero el **Motor de próximo evento** como dependencia separada. Debe ser la única fuente reutilizable para la aplicación, las futuras notificaciones y los futuros widgets; las notificaciones no forman parte de ese primer incremento.
 
 La primera versión utilizable debe alcanzar almacenamiento local, calendario, carga individual/múltiple, objetivos/horarios, fotos y horas básicas antes de sumar capas más complejas.
 
