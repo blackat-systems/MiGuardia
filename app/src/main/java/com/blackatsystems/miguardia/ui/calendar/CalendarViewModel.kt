@@ -76,6 +76,12 @@ class CalendarViewModel(
         }
     }
 
+    fun openDate(date: LocalDate) {
+        val month = YearMonth.from(date)
+        if (month != _uiState.value.visibleMonth) setVisibleMonth(month)
+        _uiState.update { it.copy(selectedDate = date) }
+    }
+
     fun clearSelectedDate() {
         _uiState.update { it.copy(selectedDate = null) }
     }

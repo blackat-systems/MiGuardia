@@ -1,18 +1,27 @@
 package com.blackatsystems.miguardia
 
 import android.os.Bundle
+import android.content.Intent
+import android.content.ActivityNotFoundException
+import android.net.Uri
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.core.content.edit
+import androidx.core.net.toUri
+import androidx.lifecycle.lifecycleScope
 import com.blackatsystems.miguardia.ui.MiGuardiaApp
 import com.blackatsystems.miguardia.ui.calendar.CalendarViewModel
 import com.blackatsystems.miguardia.ui.management.ManagementViewModel
 import com.blackatsystems.miguardia.ui.nextevent.NextEventViewModel
+import com.blackatsystems.miguardia.ui.notifications.NotificationViewModel
+import com.blackatsystems.miguardia.notifications.NotificationSystemAccess
 import com.blackatsystems.miguardia.ui.photos.PhotosViewModel
 import com.blackatsystems.miguardia.ui.photos.SchedulePhotoFileStore
 import com.blackatsystems.miguardia.ui.exceptions.ExceptionsViewModel
@@ -20,8 +29,20 @@ import com.blackatsystems.miguardia.ui.summary.SummaryViewModel
 import com.blackatsystems.miguardia.ui.vacation.VacationViewModel
 import com.blackatsystems.miguardia.ui.theme.MiGuardiaTheme
 import com.blackatsystems.miguardia.ui.theme.AppZoom
+import kotlinx.coroutines.launch
+import java.util.UUID
 
 class MainActivity : ComponentActivity() {
+    private var calendarNavigationRequest by mutableIntStateOf(0)
+
+    private val notificationViewModel: NotificationViewModel by viewModels {
+        val application = application as MiGuardiaApplication
+        NotificationViewModel.Factory(
+            preferencesStore = application.notificationPreferences,
+            configs = application.localDataStore.shiftNotificationConfigs,
+            systemAccess = NotificationSystemAccess(application),
+        )
+    }
     private val nextEventViewModel: NextEventViewModel by viewModels {
         val dataStore = (application as MiGuardiaApplication).localDataStore
         NextEventViewModel.Factory(
@@ -106,6 +127,8 @@ class MainActivity : ComponentActivity() {
                     exceptionsViewModel = exceptionsViewModel,
                     vacationViewModel = vacationViewModel,
                     photosViewModel = photosViewModel,
+                    notificationViewModel = notificationViewModel,
+                    calendarNavigationRequest = calendarNavigationRequest,
                     appZoom = appZoom,
                     onAppZoomChange = { selected ->
                         appZoom = selected
@@ -114,10 +137,70 @@ class MainActivity : ComponentActivity() {
                 )
             }
         }
+        handleNotificationIntent(intent)
     }
 
-    private companion object {
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleNotificationIntent(intent)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        notificationViewModel.refreshSystemAccess()
+        (application as MiGuardiaApplication).notificationRuntime.reconcile()
+    }
+
+    private fun handleNotificationIntent(source: Intent?) {
+        val action = source?.action ?: return
+        if (action !in NotificationActions) return
+        val shiftId = source.getStringExtra(EXTRA_SHIFT_ID)
+            ?.let { runCatching { UUID.fromString(it) }.getOrNull() }
+            ?: return
+        lifecycleScope.launch {
+            val shift = (application as MiGuardiaApplication).localDataStore.shifts.getById(shiftId)
+            if (shift == null) {
+                Toast.makeText(this@MainActivity, "La guardia ya no está disponible.", Toast.LENGTH_LONG).show()
+                return@launch
+            }
+            when (action) {
+                ACTION_VIEW_SHIFT -> {
+                    calendarViewModel.openDate(shift.localStartDate)
+                    calendarNavigationRequest++
+                }
+                ACTION_REPORT_NOVELTY -> exceptionsViewModel.openShift(shift)
+                ACTION_DIRECTIONS -> {
+                    val address = shift.objectiveAddressSnapshot?.takeIf(String::isNotBlank)
+                    val opened = address?.let {
+                        try {
+                            startActivity(Intent(Intent.ACTION_VIEW, "geo:0,0?q=${Uri.encode(it)}".toUri()))
+                            true
+                        } catch (_: ActivityNotFoundException) {
+                            false
+                        }
+                    } == true
+                    if (!opened) {
+                        calendarViewModel.openDate(shift.localStartDate)
+                        calendarNavigationRequest++
+                        Toast.makeText(
+                            this@MainActivity,
+                            if (address == null) "Esta guardia no tiene una dirección guardada." else "No hay una aplicación compatible para abrir la dirección.",
+                            Toast.LENGTH_LONG,
+                        ).show()
+                    }
+                }
+            }
+        }
+    }
+
+    companion object {
+        const val ACTION_VIEW_SHIFT = "com.blackatsystems.miguardia.action.VIEW_SHIFT"
+        const val ACTION_DIRECTIONS = "com.blackatsystems.miguardia.action.DIRECTIONS"
+        const val ACTION_REPORT_NOVELTY = "com.blackatsystems.miguardia.action.REPORT_NOVELTY"
+        const val EXTRA_SHIFT_ID = "shift_id"
         const val DISPLAY_PREFERENCES = "miguardia_display_preferences"
         const val APP_ZOOM_PERCENT = "app_zoom_percent"
+        private val NotificationActions = setOf(ACTION_VIEW_SHIFT, ACTION_DIRECTIONS, ACTION_REPORT_NOVELTY)
     }
 }

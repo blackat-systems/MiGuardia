@@ -13,6 +13,7 @@ import com.blackatsystems.miguardia.core.database.dao.SchedulePhotoDao
 import com.blackatsystems.miguardia.core.database.dao.ShiftDao
 import com.blackatsystems.miguardia.core.database.dao.ShiftNoteDao
 import com.blackatsystems.miguardia.core.database.dao.ShiftNoveltyDao
+import com.blackatsystems.miguardia.core.database.dao.ShiftNotificationConfigDao
 import com.blackatsystems.miguardia.core.database.dao.VacationDao
 import com.blackatsystems.miguardia.core.database.entity.ExplicitDayStatusEntity
 import com.blackatsystems.miguardia.core.database.entity.FormalShiftChangeEntity
@@ -24,6 +25,8 @@ import com.blackatsystems.miguardia.core.database.entity.SchedulePhotoEntity
 import com.blackatsystems.miguardia.core.database.entity.ShiftEntity
 import com.blackatsystems.miguardia.core.database.entity.ShiftNoteEntity
 import com.blackatsystems.miguardia.core.database.entity.ShiftNoveltyEntity
+import com.blackatsystems.miguardia.core.database.entity.ShiftNotificationConfigEntity
+import com.blackatsystems.miguardia.core.database.entity.ShiftNotificationReminderEntity
 import com.blackatsystems.miguardia.core.database.entity.VacationEntity
 
 @Database(
@@ -39,8 +42,10 @@ import com.blackatsystems.miguardia.core.database.entity.VacationEntity
         FormalShiftChangeEntity::class,
         VacationEntity::class,
         SchedulePhotoEntity::class,
+        ShiftNotificationConfigEntity::class,
+        ShiftNotificationReminderEntity::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = true,
 )
 internal abstract class MiGuardiaDatabase : RoomDatabase() {
@@ -54,6 +59,7 @@ internal abstract class MiGuardiaDatabase : RoomDatabase() {
     internal abstract fun shiftNoveltyDao(): ShiftNoveltyDao
     internal abstract fun vacationDao(): VacationDao
     internal abstract fun schedulePhotoDao(): SchedulePhotoDao
+    internal abstract fun shiftNotificationConfigDao(): ShiftNotificationConfigDao
 
     companion object {
         const val DATABASE_NAME: String = "miguardia.db"
@@ -65,6 +71,6 @@ internal abstract class MiGuardiaDatabase : RoomDatabase() {
             context.applicationContext,
             MiGuardiaDatabase::class.java,
             databaseName,
-        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4).build()
+        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5).build()
     }
 }

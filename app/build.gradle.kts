@@ -33,6 +33,11 @@ android {
                 "proguard-rules.pro",
             )
         }
+        create("qa") {
+            initWith(getByName("debug"))
+            applicationIdSuffix = ".qa"
+            matchingFallbacks += listOf("debug")
+        }
     }
 
     buildFeatures {
@@ -45,6 +50,12 @@ android {
     }
 }
 
+androidComponents {
+    beforeVariants(selector().withBuildType("qa")) { variantBuilder ->
+        variantBuilder.enableAndroidTest = true
+    }
+}
+
 dependencies {
     implementation(project(":core:domain"))
     implementation(project(":core:database"))
@@ -54,6 +65,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.datastore.preferences)
 
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
@@ -62,6 +74,7 @@ dependencies {
 
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+    add("qaImplementation", libs.androidx.compose.ui.test.manifest)
     testImplementation(libs.junit4)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.test.ext.junit)

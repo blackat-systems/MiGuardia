@@ -26,11 +26,18 @@ data class NextEventResult(
     val remaining: Duration,
 )
 
-private val ShiftOrder = compareBy<Shift>(
+val NextEventShiftOrder: Comparator<Shift> = compareBy<Shift>(
     Shift::startAt,
     Shift::endAt,
     { it.id.toString() },
 )
+
+fun Shift.isEligibleUpcomingWork(
+    now: Instant,
+    vacations: List<Vacation>,
+): Boolean = status == ShiftStatus.PLANNED &&
+    endAt > now &&
+    vacations.none { vacation -> localStartDate in vacation.startDate..vacation.endDateInclusive }
 
 /**
  * Builds the reusable next-event projection without reading a clock or mutating persisted data.
@@ -45,12 +52,8 @@ fun projectNextEvent(
     val today = now.atZone(zoneId).toLocalDate()
     val candidateShifts = shifts
         .asSequence()
-        .filter { shift ->
-            shift.status == ShiftStatus.PLANNED &&
-                shift.endAt > now &&
-                vacations.none { vacation -> shift.localStartDate in vacation.dateRange() }
-        }
-        .sortedWith(ShiftOrder)
+        .filter { shift -> shift.isEligibleUpcomingWork(now, vacations) }
+        .sortedWith(NextEventShiftOrder)
         .toList()
     val ongoing = candidateShifts.filter { shift -> shift.startAt <= now }
     val nextStart = candidateShifts
@@ -94,7 +97,5 @@ fun projectNextEvent(
         remaining = remaining,
     )
 }
-
-private fun Vacation.dateRange(): ClosedRange<LocalDate> = startDate..endDateInclusive
 
 private fun Duration.coerceNonNegative(): Duration = if (isNegative) Duration.ZERO else this

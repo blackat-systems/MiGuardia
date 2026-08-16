@@ -38,3 +38,14 @@ internal val MIGRATION_3_4 = object : Migration(3, 4) {
         db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_schedule_photos_storageKey` ON `schedule_photos` (`storageKey`)")
     }
 }
+
+internal val MIGRATION_4_5 = object : Migration(4, 5) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            """CREATE TABLE IF NOT EXISTS `shift_notification_configs` (`shiftId` TEXT NOT NULL, PRIMARY KEY(`shiftId`), FOREIGN KEY(`shiftId`) REFERENCES `shifts`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )""",
+        )
+        db.execSQL(
+            """CREATE TABLE IF NOT EXISTS `shift_notification_reminders` (`shiftId` TEXT NOT NULL, `leadMinutes` INTEGER NOT NULL, PRIMARY KEY(`shiftId`, `leadMinutes`), FOREIGN KEY(`shiftId`) REFERENCES `shift_notification_configs`(`shiftId`) ON UPDATE NO ACTION ON DELETE CASCADE )""",
+        )
+    }
+}

@@ -39,6 +39,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -90,6 +91,11 @@ import com.blackatsystems.miguardia.ui.management.ManagementViewModel
 import com.blackatsystems.miguardia.ui.nextevent.NextEventCard
 import com.blackatsystems.miguardia.ui.nextevent.NextEventUiState
 import com.blackatsystems.miguardia.ui.nextevent.NextEventViewModel
+import com.blackatsystems.miguardia.ui.notifications.NotificationActions
+import com.blackatsystems.miguardia.ui.notifications.NotificationSurface
+import com.blackatsystems.miguardia.ui.notifications.NotificationSurfaceHost
+import com.blackatsystems.miguardia.ui.notifications.NotificationUiState
+import com.blackatsystems.miguardia.ui.notifications.NotificationViewModel
 import com.blackatsystems.miguardia.ui.photos.PhotosActions
 import com.blackatsystems.miguardia.ui.photos.PhotosSurface
 import com.blackatsystems.miguardia.ui.photos.PhotosSurfaceHost
@@ -141,7 +147,9 @@ fun MiGuardiaApp(
     exceptionsViewModel: ExceptionsViewModel,
     vacationViewModel: VacationViewModel,
     photosViewModel: PhotosViewModel,
+    notificationViewModel: NotificationViewModel,
     modifier: Modifier = Modifier,
+    calendarNavigationRequest: Int = 0,
     appZoom: AppZoom = AppZoom.STANDARD,
     onAppZoomChange: (AppZoom) -> Unit = {},
 ) {
@@ -152,6 +160,7 @@ fun MiGuardiaApp(
     val exceptionsState by exceptionsViewModel.uiState.collectAsStateWithLifecycle()
     val vacationState by vacationViewModel.uiState.collectAsStateWithLifecycle()
     val photosState by photosViewModel.uiState.collectAsStateWithLifecycle()
+    val notificationState by notificationViewModel.uiState.collectAsStateWithLifecycle()
     MiGuardiaApp(
         calendarState = calendarState,
         nextEventState = nextEventState,
@@ -176,6 +185,9 @@ fun MiGuardiaApp(
         photosState = photosState,
         photosActions = PhotosActions.from(photosViewModel),
         photosViewModel = photosViewModel,
+        notificationState = notificationState,
+        notificationActions = NotificationActions.from(notificationViewModel),
+        calendarNavigationRequest = calendarNavigationRequest,
         appZoom = appZoom,
         onAppZoomChange = onAppZoomChange,
         modifier = modifier,
@@ -212,11 +224,17 @@ fun MiGuardiaApp(
     photosState: PhotosUiState = PhotosUiState(month = calendarState.visibleMonth),
     photosActions: PhotosActions = PhotosActions(),
     photosViewModel: PhotosViewModel? = null,
+    notificationState: NotificationUiState = NotificationUiState(),
+    notificationActions: NotificationActions = NotificationActions(),
+    calendarNavigationRequest: Int = 0,
     appZoom: AppZoom = AppZoom.STANDARD,
     onAppZoomChange: (AppZoom) -> Unit = {},
 ) {
     var destination by rememberSaveable { androidx.compose.runtime.mutableStateOf(MainDestination.CALENDAR) }
     var showAddChoice by rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
+    LaunchedEffect(calendarNavigationRequest) {
+        if (calendarNavigationRequest > 0) destination = MainDestination.CALENDAR
+    }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -298,6 +316,7 @@ fun MiGuardiaApp(
                 onOpenObjectives = managementActions.openSettings,
                 onOpenHolidays = { exceptionsActions.openHolidays(calendarState.visibleMonth) },
                 onOpenVacations = { vacationActions.openList(calendarState.visibleMonth) },
+                onOpenNotifications = notificationActions.openGlobal,
                 appZoom = appZoom,
                 onAppZoomChange = onAppZoomChange,
             )
@@ -333,6 +352,7 @@ fun MiGuardiaApp(
                     onDismissDate()
                     exceptionsActions.openShift(it)
                 },
+                onOpenNotifications = notificationActions.openShift,
             )
         }
     }
@@ -351,6 +371,9 @@ fun MiGuardiaApp(
     }
     if (photosState.surface != PhotosSurface.NONE && photosViewModel != null) {
         PhotosSurfaceHost(photosState, photosActions, photosViewModel.fileStore)
+    }
+    if (notificationState.surface != NotificationSurface.NONE) {
+        NotificationSurfaceHost(notificationState, notificationActions)
     }
     if (showAddChoice) {
         AlertDialog(
@@ -842,6 +865,7 @@ private fun DayDetailSheet(
     onDuplicateShift: (com.blackatsystems.miguardia.core.domain.model.Shift) -> Unit,
     onDeleteShift: (java.util.UUID) -> Unit,
     onOpenExceptions: (com.blackatsystems.miguardia.core.domain.model.Shift) -> Unit,
+    onOpenNotifications: (com.blackatsystems.miguardia.core.domain.model.Shift) -> Unit,
 ) {
     var pendingDeleteId by rememberSaveable { androidx.compose.runtime.mutableStateOf<String?>(null) }
     Column(
@@ -870,6 +894,7 @@ private fun DayDetailSheet(
                 onDuplicate = onDuplicateShift,
                 onDelete = { pendingDeleteId = it.toString() },
                 onOpenExceptions = onOpenExceptions,
+                onOpenNotifications = onOpenNotifications,
             )
         }
         when (day.explicitStatus) {
@@ -922,6 +947,7 @@ private fun ShiftDetail(
     onDuplicate: ((com.blackatsystems.miguardia.core.domain.model.Shift) -> Unit)? = null,
     onDelete: ((java.util.UUID) -> Unit)? = null,
     onOpenExceptions: ((com.blackatsystems.miguardia.core.domain.model.Shift) -> Unit)? = null,
+    onOpenNotifications: ((com.blackatsystems.miguardia.core.domain.model.Shift) -> Unit)? = null,
 ) {
     val shift = calendarShift.shift
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -951,6 +977,12 @@ private fun ShiftDetail(
                 Button(onClick = { onOpenExceptions(shift) }, modifier = Modifier.fillMaxWidth()) {
                     Text("Informar novedad / notas")
                 }
+            }
+            if (onOpenNotifications != null) {
+                OutlinedButton(
+                    onClick = { onOpenNotifications(shift) },
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text("Avisos") }
             }
             if (onEdit != null && onDuplicate != null && onDelete != null) {
                 Row(
@@ -982,6 +1014,7 @@ private fun SettingsScreen(
     onOpenObjectives: () -> Unit,
     onOpenHolidays: () -> Unit,
     onOpenVacations: () -> Unit,
+    onOpenNotifications: () -> Unit,
     appZoom: AppZoom,
     onAppZoomChange: (AppZoom) -> Unit,
 ) {
@@ -1008,6 +1041,11 @@ private fun SettingsScreen(
             title = "Vacaciones",
             description = "Períodos inclusivos y su efecto en el calendario.",
             onClick = onOpenVacations,
+        )
+        NavigationCard(
+            title = "Notificaciones",
+            description = "Recordatorios, permisos, privacidad y sonido.",
+            onClick = onOpenNotifications,
         )
         SectionCard(
             title = "Zoom de MiGuardia",

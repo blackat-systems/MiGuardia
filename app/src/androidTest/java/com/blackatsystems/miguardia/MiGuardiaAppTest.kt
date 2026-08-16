@@ -57,7 +57,7 @@ class MiGuardiaAppTest {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             assertTrue(
                 "MiGuardia no se hizo visible dentro del tiempo esperado.",
-                device.wait(Until.hasObject(By.pkg(APP_PACKAGE).depth(0)), WAIT_TIMEOUT_MILLIS),
+                device.wait(Until.hasObject(By.pkg(context.packageName).depth(0)), WAIT_TIMEOUT_MILLIS),
             )
             device.tapText(context.getString(R.string.summary))
             device.tapDescription(context.getString(R.string.summary_previous_month))
@@ -101,7 +101,7 @@ class MiGuardiaAppTest {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             assertTrue(
                 "MiGuardia no se hizo visible dentro del tiempo esperado.",
-                device.wait(Until.hasObject(By.pkg(APP_PACKAGE).depth(0)), WAIT_TIMEOUT_MILLIS),
+                device.wait(Until.hasObject(By.pkg(context.packageName).depth(0)), WAIT_TIMEOUT_MILLIS),
             )
             device.tapDescription(context.getString(R.string.previous_month))
             device.assertTextVisible(currentMonth.minusMonths(1).displayName())
@@ -121,14 +121,14 @@ class MiGuardiaAppTest {
             keyguardManager.isKeyguardLocked,
         )
 
-        val launchIntent = checkNotNull(context.packageManager.getLaunchIntentForPackage(APP_PACKAGE))
+        val launchIntent = checkNotNull(context.packageManager.getLaunchIntentForPackage(context.packageName))
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
         context.startActivity(launchIntent)
 
         val device = UiDevice.getInstance(instrumentation)
         assertTrue(
             "MiGuardia no se hizo visible dentro del tiempo esperado.",
-            device.wait(Until.hasObject(By.pkg(APP_PACKAGE).depth(0)), WAIT_TIMEOUT_MILLIS),
+            device.wait(Until.hasObject(By.pkg(context.packageName).depth(0)), WAIT_TIMEOUT_MILLIS),
         )
         return context to device
     }
@@ -161,7 +161,6 @@ class MiGuardiaAppTest {
     }
 
     private companion object {
-        const val APP_PACKAGE = "com.blackatsystems.miguardia"
         const val WAIT_TIMEOUT_MILLIS = 5_000L
     }
 }
