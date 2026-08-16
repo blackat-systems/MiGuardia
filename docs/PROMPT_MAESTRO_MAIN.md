@@ -136,7 +136,6 @@ Calendario, barra superior:
 - gesto horizontal para cambiar mes;
 - botón Hoy;
 - botón de fotos del cronograma del mes;
-- menú de tres puntos del mes;
 - acción visible Agregar.
 
 Menú del mes:
@@ -153,7 +152,7 @@ Resumen:
 - selector de mes;
 - tarjetas de horas y categorías;
 - recuentos de eventos;
-- futura estimación bruta;
+- estimación bruta SUVICO al final, con antigüedad persistida;
 - acción Generar informe.
 
 Configuración agrupa: perfil y valores predeterminados; objetivos y horarios; notificaciones; widgets; clima; feriados; remuneración; privacidad y bloqueo; copias de seguridad; apariencia; ayuda.
@@ -178,18 +177,21 @@ Un día vacío se considera visual y funcionalmente “sin definir”. No hace f
 
 Interacciones:
 
-- tocar un día vacío ofrece Agregar y luego Guardia, Franco, Día sin definir, Carpeta médica o Vacaciones;
+- la acción inferior `Agregar` ofrece únicamente `Agregar guardia` y `Agregar francos`; la carga de guardia ya permite una o varias fechas;
 - tocar un día ocupado abre sus detalles;
 - mantener pulsado ofrece editar o limpiar/eliminar;
-- los detalles tienen menú de tres puntos: editar, eliminar, duplicar en otras fechas y selección múltiple;
+- cada guardia del detalle muestra como acciones principales únicamente `Informar novedad / notas`, `Editar` y `Eliminar`; eliminar exige confirmación;
+- la configuración particular de avisos vive dentro de `Editar`, no como acción principal del detalle;
+- una guardia futura elegible muestra un resumen meteorológico de todo su horario y permite abrir el detalle hora por hora;
 - las eliminaciones masivas piden confirmación;
 - puede existir deshacer breve al limpiar un día o una guardia.
 
-Agregar permite elegir “un solo día” o “varios días”. La selección múltiple trabaja sobre un mes por operación. Si hay fechas ocupadas, mostrar cuáles y ofrecer:
+Agregar guardia permite elegir “un solo día” o “varios días”. La selección múltiple trabaja sobre un mes por operación. Si una única fecha está ocupada, ofrecer en este orden `Reemplazar`, `Agregar segunda guardia` y `Cancelar`. Si hay varias fechas ocupadas, mostrar cuáles y ofrecer:
 
 1. reemplazar/sobrescribir las seleccionadas;
-2. conservar las ocupadas y aplicar solo en vacías;
-3. cancelar.
+2. agregar sólo en días libres;
+3. agregar una segunda guardia en las ocupadas;
+4. cancelar.
 
 La copia de un mes o conjunto reemplaza únicamente las fechas objetivo seleccionadas/incluidas; nunca borra por accidente datos de otro mes. La copia entre meses es opcional y debe mostrar vista previa y confirmación.
 
@@ -296,7 +298,7 @@ El usuario puede asociar una o varias fotos del cronograma a un mes/año concret
 
 Funciones: visualizar, desplazarse y hacer zoom. No recortar, no OCR, no leer automáticamente, no importar Excel. Las imágenes se mantienen locales, se conservan con una referencia segura y no se suben al repositorio ni a servicios externos.
 
-Eliminar o reemplazar fotos requiere intención clara. Las copias de seguridad pueden incluirlas si el usuario elige esa modalidad.
+Tocar la tarjeta o la imagen abre el visor; no existe un botón redundante `Abrir foto`. Eliminar o reemplazar una foto requiere intención clara y se hace individualmente desde `Acciones`; no se ofrece borrado masivo del mes para evitar toques accidentales. Las copias de seguridad pueden incluirlas si el usuario elige esa modalidad.
 
 ## 11. Motor de horas
 
@@ -426,6 +428,17 @@ Persistencia y vigencia:
 
 Reglas aún abiertas, que no deben inventarse: cómo prorratear sueldo básico, presentismo, suma no remunerativa y viáticos durante un mes parcial; cuándo se pierde presentismo; tratamiento exacto de ausencias y carpetas en dinero; componentes exactos de la remuneración computable de vacaciones; valores y topes del adicional vacacional SUVICO julio–diciembre de 2026; modo de evitar la doble contabilización con el salario mensual; qué deducciones personales aplicar; redondeos de una liquidación completa; y si la hora extra al 50 % o al 100 % corresponde a cada clase de excedente real.
 
+Primera estimación implementada el 16 de agosto de 2026:
+
+- aparece al final de `Resumen` y usa exclusivamente las escalas de Vigilador julio–diciembre de 2026 transcritas desde las seis imágenes locales;
+- permite guardar localmente la antigüedad en años, entre 0 y 60, y aplica la tabla publicada; después de 20 años suma un punto porcentual por año;
+- proyecta horas elegibles ya trabajadas y pendientes para nocturnidad, feriados y excedente sobre 204 horas;
+- mantiene como supuesto explícito el básico, presentismo, suma no remunerativa y viáticos del mes completo;
+- cuando hay excedente muestra un rango entre valorar todas esas horas al 50 % y valorarlas al 100 %, porque todavía no existe una regla probada para asignar cada hora;
+- no calcula neto, descuentos personales, prorrateos, pérdida de presentismo ni dinero por vacaciones, ausencias o carpetas;
+- fuera de julio–diciembre de 2026 informa que no hay escala y no extrapola importes;
+- no cambia Room: la antigüedad vive en un DataStore exclusivo y el cálculo puro vive en dominio.
+
 ## 13. Feriados manuales
 
 Permitir alta individual y múltiple de fechas, edición y eliminación. Cada feriado pertenece a fecha y año, con nombre opcional. Mostrar indicador pequeño en el calendario sin sustituir Guardia, Franco, `?` o `CM`. Cualquier cambio recalcula resúmenes e informes afectados.
@@ -438,7 +451,7 @@ Flujo:
 
 1. primera aparición: sonido y vibración predeterminados del sistema, o sonido personalizado configurado;
 2. deja una notificación con cuenta regresiva hasta la entrada;
-3. el usuario define si es descartable o persistente;
+3. por defecto permanece fija hasta finalizar la guardia; el usuario puede volverla descartable;
 4. al llegar la entrada cambia a “Guardia en curso” y cuenta hasta la salida;
 5. al llegar la salida se elimina automáticamente, salvo reglas necesarias del sistema ya explicadas al usuario.
 
@@ -459,6 +472,8 @@ Privacidad en pantalla bloqueada elegida por el usuario:
 3. ningún contenido sensible.
 
 Editar/eliminar una guardia reprograma o cancela avisos. Reinicio del teléfono, cambio de hora/zona, permiso de notificaciones, restricciones de batería y exact alarms deben tratarse explícitamente. Guardias excepcionales separadas reciben sus propios avisos.
+
+La experiencia visible es siempre una notificación común, nunca una alarma tipo despertador, pantalla completa o sonido en bucle. Internamente Android puede usar una alarma temporal única para publicar puntualmente cada frontera. El cronómetro es el nativo de la notificación y no requiere polling, un servicio en primer plano ni despertares por minuto.
 
 ## 15. Motor de próximo evento
 
@@ -502,7 +517,7 @@ Privacidad por widget:
 
 Ubicación meteorológica fija para V1: **Córdoba Capital, Argentina**. No solicitar ubicación del teléfono. La dirección de un objetivo no modifica el clima.
 
-Cobertura: toda la duración de la guardia, incluso si cruza medianoche. Resumen para la guardia completa en notificación y widget ampliado. Pronóstico hora por hora solo cuando el usuario entra explícitamente al apartado Clima desde los detalles del día.
+Cobertura: toda la duración de la guardia, incluso si cruza medianoche. El detalle del día muestra un mini resumen para el horario completo de cada guardia futura elegible; al tocarlo se abre el pronóstico hora por hora. El mismo resumen puede aparecer en una notificación completa y en el futuro widget ampliado.
 
 Detalle horario:
 
@@ -654,7 +669,7 @@ Construir por etapas, manteniendo una app ejecutable:
 10. informes y copias de seguridad;
 11. bloqueo, privacidad, accesibilidad y pulido visual;
 12. pruebas integrales y preparación de publicación;
-13. remuneración versionada, una vez confirmadas las reglas abiertas de prorrateo y aplicabilidad.
+13. ampliar la remuneración versionada sólo cuando se confirmen las reglas abiertas de prorrateo y aplicabilidad.
 
 Decisión de secuencia del 13 de agosto de 2026: Joaquin autorizó implementar **novedades, feriados y notas** inmediatamente después del motor básico de horas. El módulo de fotos mensuales continúa pendiente y no queda cancelado; solamente se pospone en el orden de ejecución.
 
@@ -663,6 +678,8 @@ Decisión posterior del 14 de agosto de 2026: después de integrar novedades, fe
 Decisión posterior del 15 de agosto de 2026: después de integrar fotos, accesibilidad y pulido visual, Joaquin autorizó implementar primero el **Motor de próximo evento** como dependencia separada. Debe ser la única fuente reutilizable para la aplicación, las futuras notificaciones y los futuros widgets; las notificaciones no forman parte de ese primer incremento.
 
 Decisión posterior del 16 de agosto de 2026: después de integrar y publicar Notificaciones sobre Room v5, Joa autorizó **Clima** como la siguiente dependencia separada. V1 conserva Córdoba Capital como ubicación fija, no solicita ubicación del teléfono, usa caché privada y debe degradar sin bloquear Calendario ni notificaciones. El proveedor queda detrás de una interfaz reemplazable; cualquier uso comercial debe respetar términos vigentes y no puede asumir que un endpoint gratuito lo autoriza.
+
+Decisión posterior del 16 de agosto de 2026: Joa autorizó un incremento conjunto de UX y remuneración. Se simplifican Agregar, Fotos, conflictos y detalle de guardia; se aclara que los avisos visibles son notificaciones comunes con cronómetro nativo; y se incorpora al final de Resumen una primera estimación bruta SUVICO con antigüedad. Las reglas salariales todavía abiertas permanecen fuera de alcance y no pueden inferirse del estimador.
 
 La primera versión utilizable debe alcanzar almacenamiento local, calendario, carga individual/múltiple, objetivos/horarios, fotos y horas básicas antes de sumar capas más complejas.
 

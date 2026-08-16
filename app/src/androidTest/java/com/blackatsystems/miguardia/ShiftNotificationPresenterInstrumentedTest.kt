@@ -56,15 +56,15 @@ class ShiftNotificationPresenterInstrumentedTest {
         presenter.show(shift, NOW, NotificationPreferences(enabled = true))
 
         val posted = notificationForTag(shift.id)
-        assertEquals("Próxima guardia", posted.extras.getString(Notification.EXTRA_TITLE))
-        assertTrue(posted.extras.getString(Notification.EXTRA_TEXT).orEmpty().contains("Objetivo ficticio (QA) · 19:00–07:00 · Puesto: Acceso"))
+        assertEquals("Entrás a las 19:00", posted.extras.getString(Notification.EXTRA_TITLE))
+        assertTrue(posted.extras.getString(Notification.EXTRA_TEXT).orEmpty().contains("Objetivo ficticio (QA) · Horario 19:00–07:00 · Puesto: Acceso"))
         assertEquals(3, posted.actions.size)
         assertEquals(listOf("Ver detalles", "Cómo llegar", "Informar novedad"), posted.actions.map { it.title.toString() })
         assertEquals(3, posted.actions.map { it.actionIntent }.toSet().size)
         assertTrue(posted.actions.all { it.isAuthenticationRequired })
         assertTrue(posted.deleteIntent != null)
         assertEquals(ShiftNotificationPresenter.GROUP_KEY, posted.group)
-        assertFalse(posted.flags and Notification.FLAG_ONGOING_EVENT != 0)
+        assertTrue(posted.flags and Notification.FLAG_ONGOING_EVENT != 0)
 
         presenter.show(shift, NOW.plusSeconds(60), NotificationPreferences(enabled = true))
         assertEquals(1, manager.activeNotifications.count { it.tag == shift.id.toString() })

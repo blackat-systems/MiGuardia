@@ -7,6 +7,7 @@ import com.blackatsystems.miguardia.core.domain.nextevent.isEligibleUpcomingWork
 import com.blackatsystems.miguardia.core.domain.repository.ShiftRepository
 import com.blackatsystems.miguardia.core.domain.repository.VacationRepository
 import com.blackatsystems.miguardia.core.domain.weather.WeatherFailureKind
+import com.blackatsystems.miguardia.core.domain.weather.WeatherCoverage
 import com.blackatsystems.miguardia.core.domain.weather.WeatherFreshness
 import com.blackatsystems.miguardia.core.domain.weather.WeatherRefreshResult
 import com.blackatsystems.miguardia.core.domain.weather.WeatherUnitSystem
@@ -31,6 +32,7 @@ class WeatherViewModel(
     private val _uiState = MutableStateFlow(WeatherUiState())
     val uiState: StateFlow<WeatherUiState> = _uiState
     private var loadJob: Job? = null
+    private var briefJob: Job? = null
     private var selectedShiftId: UUID? = null
 
     init {
@@ -39,7 +41,10 @@ class WeatherViewModel(
                 .catch { showError("No pudimos leer la configuración de Clima.") }
                 .collect { preferences ->
                     val wasEnabled = _uiState.value.preferences.enabled
-                    if (!preferences.enabled) runtime.cancelRefresh()
+                    if (!preferences.enabled) {
+                        runtime.cancelRefresh()
+                        clearBriefs()
+                    }
                     _uiState.update { it.copy(preferences = preferences, isLoading = false) }
                     if (preferences.enabled && !wasEnabled) refresh(force = false)
                 }
@@ -86,7 +91,65 @@ class WeatherViewModel(
     fun close() {
         loadJob?.cancel()
         selectedShiftId = null
-        _uiState.update { WeatherUiState(preferences = it.preferences, isLoading = false) }
+        _uiState.update {
+            WeatherUiState(
+                preferences = it.preferences,
+                shiftBriefs = it.shiftBriefs,
+                loadingBriefIds = it.loadingBriefIds,
+                isLoading = false,
+            )
+        }
+    }
+
+    fun loadBriefs(shiftIds: Set<UUID>) {
+        briefJob?.cancel()
+        if (shiftIds.isEmpty() || !_uiState.value.preferences.enabled) {
+            clearBriefs()
+            return
+        }
+        _uiState.update {
+            it.copy(
+                shiftBriefs = it.shiftBriefs.filterKeys(shiftIds::contains),
+                loadingBriefIds = shiftIds,
+            )
+        }
+        briefJob = viewModelScope.launch {
+            try {
+                val forecast = when (val refresh = runtime.refreshIfEnabled(force = false)) {
+                    is WeatherRefreshResult.Success -> refresh.forecast
+                    is WeatherRefreshResult.Failure -> refresh.cachedForecast ?: runtime.repository.latest()
+                    null -> runtime.repository.latest()
+                }
+                if (forecast == null) {
+                    _uiState.update { it.copy(shiftBriefs = emptyMap(), loadingBriefIds = emptySet()) }
+                    return@launch
+                }
+                val freshness = weatherFreshness(forecast.fetchedAt, runtime.clock.instant())
+                val briefs = buildMap {
+                    shiftIds.forEach { shiftId ->
+                        val shift = shifts.getById(shiftId) ?: return@forEach
+                        val applicableVacations = vacations
+                            .observeOverlapping(shift.localStartDate, shift.localStartDate)
+                            .first()
+                        if (!shift.isEligibleUpcomingWork(runtime.clock.instant(), applicableVacations)) return@forEach
+                        val summary = summarizeShiftWeather(shift.startAt, shift.endAt, forecast)
+                        if (summary.coverage != WeatherCoverage.NONE) {
+                            put(shiftId, ShiftWeatherBrief(summary, freshness))
+                        }
+                    }
+                }
+                _uiState.update { it.copy(shiftBriefs = briefs, loadingBriefIds = emptySet()) }
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Exception) {
+                _uiState.update { it.copy(loadingBriefIds = emptySet()) }
+            }
+        }
+    }
+
+    fun clearBriefs() {
+        briefJob?.cancel()
+        _uiState.update { it.copy(shiftBriefs = emptyMap(), loadingBriefIds = emptySet()) }
     }
 
     fun enableAfterExplanation() = launchPreferenceWrite {

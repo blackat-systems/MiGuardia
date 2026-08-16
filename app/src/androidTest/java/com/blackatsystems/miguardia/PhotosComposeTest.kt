@@ -41,11 +41,30 @@ class PhotosComposeTest {
         compose.onNodeWithText("Todavía no hay fotos del cronograma para este mes.").assertIsDisplayed()
     }
 
-    @Test fun deleteAllConfirmationIsExplicit() {
+    @Test fun listHasNoBulkDeleteOrRedundantOpenButton() {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
-        compose.setContent { MiGuardiaTheme { PhotosSurfaceHost(PhotosUiState(surface=PhotosSurface.LIST, month=YearMonth.of(2026,8), isLoading=false, confirmDeleteAll=true), PhotosActions(), SchedulePhotoFileStore(context)) } }
-        compose.onNodeWithText("Eliminar todas las fotos").assertIsDisplayed()
-        compose.onNodeWithText("Cancelar").assertIsDisplayed()
+        val photoId = UUID.fromString("10000000-0000-0000-0000-000000000010")
+        val photo = SchedulePhoto(photoId, YearMonth.of(2026, 8), null, null, null,
+            "$photoId.jpg", "image/jpeg", 10, 2, 3, Instant.EPOCH, Instant.EPOCH)
+        var opened: UUID? = null
+        compose.setContent {
+            MiGuardiaTheme {
+                PhotosSurfaceHost(
+                    PhotosUiState(
+                        surface = PhotosSurface.LIST,
+                        month = YearMonth.of(2026, 8),
+                        photos = listOf(photo),
+                        isLoading = false,
+                    ),
+                    PhotosActions(view = { opened = it }),
+                    SchedulePhotoFileStore(context),
+                )
+            }
+        }
+        compose.onNodeWithText("Eliminar todas las fotos del mes").assertDoesNotExist()
+        compose.onNodeWithText("Abrir foto").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Foto 1 de 1").performClick()
+        compose.runOnIdle { assertEquals(photoId, opened) }
     }
 
     @Test fun emptyListIsUsableInLandscapeAndLightTheme() {

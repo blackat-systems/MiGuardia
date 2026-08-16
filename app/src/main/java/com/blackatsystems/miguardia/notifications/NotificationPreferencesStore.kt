@@ -32,7 +32,7 @@ data class NotificationPreferences(
     val enabled: Boolean = false,
     val preciseTiming: Boolean = false,
     val globalReminderLeadMinutes: List<Long> = listOf(DEFAULT_REMINDER_MINUTES),
-    val persistentWhileActive: Boolean = false,
+    val persistentWhileActive: Boolean = true,
     val privacy: NotificationPrivacy = NotificationPrivacy.COMPLETE,
     val soundUri: Uri? = null,
 ) {
@@ -138,7 +138,7 @@ class NotificationPreferencesStore private constructor(
             enabled = values[Enabled] ?: false,
             preciseTiming = values[PreciseTiming] ?: false,
             globalReminderLeadMinutes = reminderMinutes,
-            persistentWhileActive = values[Persistent] ?: false,
+            persistentWhileActive = values[Persistent] ?: true,
             privacy = values[Privacy]
                 ?.let { runCatching { NotificationPrivacy.valueOf(it) }.getOrNull() }
                 ?: NotificationPrivacy.COMPLETE,

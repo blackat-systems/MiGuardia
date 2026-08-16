@@ -24,6 +24,9 @@ El calendario ya proyecta como completada una guardia `PLANNED` cuyo final pasó
 - El color de cada combinación se elegirá mediante un selector visual completo con campo de saturación/luminosidad, barra arcoíris de tono, vista previa y lectura RGB/HEX; no se limitará la gama disponible.
 - Las confirmaciones satisfactorias de esta superficie se presentarán como avisos flotantes de 2,5 segundos, sin ocupar espacio estable del formulario.
 - Las superficies de gestión respetarán los insets de dibujo seguro para no invadir las barras de estado o navegación.
+- La acción inferior `Agregar` separa dos intenciones: `Agregar guardia` y `Agregar francos`. La primera ya conserva sus modos de una o varias fechas; la segunda persiste `F` explícitos sin borrar guardias ni otros datos coincidentes.
+- Ante una única fecha ocupada, el diálogo ordena `Reemplazar`, `Agregar segunda guardia` y `Cancelar`. Para lotes se conserva además `Agregar sólo en días libres`, porque evita una mutación parcial ambigua.
+- El detalle de una guardia deja como acciones principales solamente novedad/notas, edición y eliminación confirmada. La excepción de avisos por guardia sigue existiendo dentro del formulario de edición.
 
 ## Consecuencias
 

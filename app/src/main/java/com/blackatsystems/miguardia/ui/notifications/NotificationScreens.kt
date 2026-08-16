@@ -180,8 +180,8 @@ private fun GlobalSettings(
 ) {
     ToggleRow("Habilitar avisos de guardia", state.preferences.enabled, actions.setEnabled)
     SectionCard(
-        title = "Permisos",
-        supportingText = "Android conserva el control final de avisos y alarmas.",
+        title = "Permisos y puntualidad",
+        supportingText = "MiGuardia muestra notificaciones comunes. Android llama “Alarmas y recordatorios” al acceso opcional que permite publicarlas exactamente a horario.",
     ) {
         PermissionRow(
             "Notificaciones",
@@ -189,13 +189,13 @@ private fun GlobalSettings(
             if (state.systemAccess.notificationPermissionGranted) openAppSettings else requestPermission,
         )
         PermissionRow(
-            "Alarmas exactas",
+            "Puntualidad exacta",
             state.systemAccess.exactAlarmAccessGranted,
             requestExactAccess,
         )
-        ToggleRow("Usar avisos precisos", state.preferences.preciseTiming, actions.setPreciseTiming)
+        ToggleRow("Publicar exactamente a horario", state.preferences.preciseTiming, actions.setPreciseTiming)
         if (state.preferences.preciseTiming && !state.systemAccess.exactAlarmAccessGranted) {
-            Text("Sin este acceso, Android puede demorar el aviso. MiGuardia usa una alarma aproximada.")
+            Text("Sin este acceso, Android puede demorar la notificación. Nunca suena ni se presenta como un despertador.")
         }
     }
     ReminderEditor(
@@ -204,7 +204,8 @@ private fun GlobalSettings(
         onChange = actions.setGlobalReminders,
     )
     SectionCard("Comportamiento") {
-        ToggleRow("Mantener mientras la guardia esté vigente", state.preferences.persistentWhileActive, actions.setPersistent)
+        ToggleRow("Mantener fija hasta finalizar la guardia", state.preferences.persistentWhileActive, actions.setPersistent)
+        Text("El cronómetro lo actualiza Android; MiGuardia no despierta la aplicación cada minuto y el impacto de batería es mínimo.")
         Text("Privacidad en pantalla bloqueada", style = MaterialTheme.typography.titleSmall)
         NotificationPrivacy.entries.forEach { privacy ->
             ChoiceRow(privacyLabel(privacy), state.preferences.privacy == privacy) { actions.setPrivacy(privacy) }

@@ -29,15 +29,22 @@ import com.blackatsystems.miguardia.core.domain.model.MedicalLeave
 import com.blackatsystems.miguardia.core.domain.model.Shift
 import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
 import com.blackatsystems.miguardia.core.domain.model.Vacation
+import com.blackatsystems.miguardia.core.domain.weather.ShiftWeatherSummary
+import com.blackatsystems.miguardia.core.domain.weather.WeatherCondition
+import com.blackatsystems.miguardia.core.domain.weather.WeatherCoverage
+import com.blackatsystems.miguardia.core.domain.weather.WeatherFreshness
 import com.blackatsystems.miguardia.ui.MiGuardiaApp
 import com.blackatsystems.miguardia.ui.calendar.CalendarLoadState
 import com.blackatsystems.miguardia.ui.calendar.CalendarUiState
 import com.blackatsystems.miguardia.ui.exceptions.ExceptionsActions
 import com.blackatsystems.miguardia.ui.management.ManagementActions
+import com.blackatsystems.miguardia.ui.management.DayOffDraft
 import com.blackatsystems.miguardia.ui.management.ManagementSurface
 import com.blackatsystems.miguardia.ui.management.ManagementUiState
 import com.blackatsystems.miguardia.ui.management.ShiftDraft
-import com.blackatsystems.miguardia.ui.management.ShiftEntryMode
+import com.blackatsystems.miguardia.ui.weather.ShiftWeatherBrief
+import com.blackatsystems.miguardia.ui.weather.WeatherUiState
+import com.blackatsystems.miguardia.weather.WeatherPreferences
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
@@ -188,9 +195,9 @@ class CalendarComposeTest {
     }
 
     @Test
-    fun addChoiceOffersGuardOrRangeWithoutVacationOrRedundantMonthMenu() {
+    fun addChoiceOffersGuardOrDayOffWithoutVacationOrRedundantMonthMenu() {
         var managementState by mutableStateOf(ManagementUiState())
-        var requestedMode: ShiftEntryMode? = null
+        var requestedDayOffMonth: YearMonth? = null
         composeRule.setContent {
             MaterialTheme {
                 MiGuardiaApp(
@@ -212,10 +219,11 @@ class CalendarComposeTest {
                                 ),
                             )
                         },
-                        updateShiftMode = { mode ->
-                            requestedMode = mode
+                        openDayOffs = { month, date ->
+                            requestedDayOffMonth = month
                             managementState = managementState.copy(
-                                shiftDraft = managementState.shiftDraft?.copy(mode = mode),
+                                surface = ManagementSurface.DAY_OFF_FORM,
+                                dayOffDraft = DayOffDraft(month, setOfNotNull(date)),
                             )
                         },
                     ),
@@ -227,16 +235,16 @@ class CalendarComposeTest {
         composeRule.onNodeWithContentDescription("Menú del mes").assertDoesNotExist()
         composeRule.onNodeWithText("Agregar").performScrollTo().performSemanticsAction(SemanticsActions.OnClick)
         composeRule.onNodeWithText("Agregar guardia").assertExists()
-        composeRule.onNodeWithText("Agregar rangos").performSemanticsAction(SemanticsActions.OnClick)
+        composeRule.onNodeWithText("Agregar francos").performSemanticsAction(SemanticsActions.OnClick)
         composeRule.onNodeWithText("Agregar vacaciones").assertDoesNotExist()
-        composeRule.runOnIdle { assertEquals(ShiftEntryMode.MULTIPLE, requestedMode) }
+        composeRule.onNodeWithText("Francos").assertExists()
+        composeRule.runOnIdle { assertEquals(YearMonth.of(2026, 8), requestedDayOffMonth) }
     }
 
     @Test
-    fun shiftDetailExposesEditDuplicateAndConfirmedDelete() {
+    fun shiftDetailExposesOnlyNoveltyEditAndConfirmedDelete() {
         val state = contentState().copy(selectedDate = LocalDate.of(2026, 8, 3))
         var edited: UUID? = null
-        var duplicated: UUID? = null
         var deleted: UUID? = null
         var openedExceptions: UUID? = null
         var dismissed = 0
@@ -252,7 +260,6 @@ class CalendarComposeTest {
                     onRetry = {},
                     managementActions = ManagementActions(
                         openEditShift = { edited = it.id },
-                        openDuplicateShift = { duplicated = it.id },
                         deleteShift = { deleted = it },
                     ),
                     exceptionsActions = ExceptionsActions(
@@ -263,23 +270,69 @@ class CalendarComposeTest {
         }
 
         composeRule.onAllNodesWithText("Editar")[0].performSemanticsAction(SemanticsActions.OnClick)
-        composeRule.onAllNodesWithText("Duplicar")[0].performSemanticsAction(SemanticsActions.OnClick)
         composeRule.runOnIdle {
             assertTrue(edited != null)
-            assertTrue(duplicated != null)
         }
+        composeRule.onNodeWithText("Duplicar").assertDoesNotExist()
+        composeRule.onNodeWithText("Avisos").assertDoesNotExist()
         composeRule.onAllNodesWithText("Informar novedad / notas")[0]
             .performSemanticsAction(SemanticsActions.OnClick)
         composeRule.runOnIdle {
             assertTrue(openedExceptions != null)
-            assertTrue(dismissed >= 3)
+            assertTrue(dismissed >= 2)
         }
-        composeRule.onNodeWithText("Agregar rangos").performScrollTo().assertExists()
+        composeRule.onNodeWithText("Agregar francos").performScrollTo().assertExists()
         composeRule.onNodeWithText("Agregar vacaciones").assertDoesNotExist()
         composeRule.onAllNodesWithText("Eliminar")[0].performSemanticsAction(SemanticsActions.OnClick)
         composeRule.onNodeWithText("Eliminar guardia").assertExists()
         composeRule.onAllNodesWithText("Eliminar")[2].performSemanticsAction(SemanticsActions.OnClick)
         composeRule.runOnIdle { assertTrue(deleted != null) }
+    }
+
+    @Test
+    fun upcomingShiftDetailShowsWeatherBriefForItsFullSchedule() {
+        val selectedDate = LocalDate.of(2026, 8, 14)
+        val state = contentState().copy(selectedDate = selectedDate)
+        val shift = requireNotNull(state.days.first { it.date == selectedDate }.shifts.single().shift)
+        val summary = ShiftWeatherSummary(
+            shiftStart = shift.startAt,
+            shiftEndExclusive = shift.endAt,
+            coveredFrom = shift.startAt,
+            coveredUntilExclusive = shift.endAt,
+            coverage = WeatherCoverage.COMPLETE,
+            condition = WeatherCondition.RAIN,
+            minimumTemperatureCelsius = 8.0,
+            maximumTemperatureCelsius = 14.0,
+            minimumApparentTemperatureCelsius = 7.0,
+            maximumApparentTemperatureCelsius = 13.0,
+            maximumPrecipitationProbabilityPercent = 70,
+            precipitationMillimeters = 4.0,
+            maximumWindSpeedKmh = 25.0,
+            maximumWindGustKmh = 40.0,
+        )
+        composeRule.setContent {
+            MaterialTheme {
+                MiGuardiaApp(
+                    calendarState = state,
+                    onPreviousMonth = {},
+                    onNextMonth = {},
+                    onToday = {},
+                    onSelectDate = {},
+                    onDismissDate = {},
+                    onRetry = {},
+                    weatherState = WeatherUiState(
+                        preferences = WeatherPreferences(enabled = true, providerExplanationAccepted = true),
+                        shiftBriefs = mapOf(shift.id to ShiftWeatherBrief(summary, WeatherFreshness.FRESH)),
+                        isLoading = false,
+                    ),
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Clima durante la guardia").assertExists()
+        composeRule.onNodeWithText("Lluvia · 8–14 °C").assertExists()
+        composeRule.onNodeWithText("Probabilidad máxima de lluvia: 70 %").assertExists()
+        composeRule.onNodeWithText("Cobertura completa del horario").assertExists()
     }
 
     @Composable

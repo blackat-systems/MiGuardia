@@ -427,6 +427,20 @@ class MonthlyHoursTest {
         assertEquals(29, result.vacationDayCount)
     }
 
+    @Test fun projectedTotalsIncludeEligiblePendingNightHolidayAndOvertimeHours() {
+        val shifts = (1..18).map { day -> shift(day, 19, 7) }
+        val result = summary(
+            shifts = shifts,
+            now = at(1, 12),
+            holidays = setOf(month.atDay(10)),
+        )
+
+        assertHours(216, result.projectedWorked)
+        assertHours(12, result.projectedOvertime)
+        assertHours(162, result.projectedNightWorked)
+        assertHours(12, result.projectedHolidayWorked)
+    }
+
     @Test fun invalidMedicalRangeIsRejected() {
         assertThrows(IllegalArgumentException::class.java) {
             summary(

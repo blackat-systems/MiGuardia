@@ -405,3 +405,6 @@ Checklist final:
 - [ ] Paquete principal preservado y sólo QA retirado.
 - [ ] `git diff --check` limpio.
 - [ ] Sin commit, push ni merge.
+# Enmienda posterior de MAIN (2026-08-16)
+
+La configuración particular `Avisos` se conserva, pero se abre desde `Editar` la guardia y no como acción principal del detalle. La presentación visible es una notificación común: la alarma de Android es sólo programación interna de fronteras. Por defecto la notificación permanece fija hasta finalizar y usa el cronómetro nativo, sin polling ni alarmas por minuto.

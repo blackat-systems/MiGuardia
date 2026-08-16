@@ -9,6 +9,8 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import com.blackatsystems.miguardia.core.domain.hours.MonthlyHoursSummary
+import com.blackatsystems.miguardia.core.domain.remuneration.SuvicoSalaryScales
+import com.blackatsystems.miguardia.core.domain.remuneration.estimateSuvicoRemuneration
 import com.blackatsystems.miguardia.ui.summary.SummaryLoadState
 import com.blackatsystems.miguardia.ui.summary.SummaryScreen
 import com.blackatsystems.miguardia.ui.summary.SummaryUiState
@@ -113,6 +115,33 @@ class SummaryComposeTest {
 
         composeRule.onNodeWithContentDescription("Planificadas, 0 h")
             .assertContentDescriptionEquals("Planificadas, 0 h")
+    }
+
+    @Test
+    fun remunerationAppearsAfterSummaryWithSeniorityAndSuvicoSource() {
+        val scale = requireNotNull(SuvicoSalaryScales.forMonth(YearMonth.of(2026, 8)))
+        val estimate = estimateSuvicoRemuneration(
+            scale = scale,
+            seniorityYears = 5,
+            projectedNightHours = Duration.ofHours(10),
+            projectedHolidayHours = Duration.ofHours(8),
+            projectedOvertimeHours = Duration.ofHours(4),
+        )
+        composeRule.setContent {
+            Screen(
+                state().copy(
+                    seniorityYears = 5,
+                    remuneration = estimate,
+                ),
+            )
+        }
+
+        composeRule.onNodeWithText("Estimación remunerativa").performScrollTo().assertExists()
+        composeRule.onNodeWithText("Antigüedad (años)").assertExists()
+        composeRule.onNodeWithText("Estimado bruto al cierre").assertExists()
+        composeRule.onNodeWithText("Antigüedad (10 %)").assertExists()
+        composeRule.onNodeWithText("WhatsApp Image 2026-08-13 at 10.07.56 (1).jpeg", substring = true)
+            .assertExists()
     }
 
     private fun state(): SummaryUiState {

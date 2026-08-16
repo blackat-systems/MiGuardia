@@ -33,6 +33,10 @@ data class MonthlyHoursSummary(
     val cancellationCount: Int,
     val cancellationHours: Duration,
     val vacationDayCount: Int = 0,
+    val projectedWorked: Duration = worked.plus(pending),
+    val projectedOvertime: Duration = Duration.ZERO,
+    val projectedNightWorked: Duration = nightWorked,
+    val projectedHolidayWorked: Duration = holidayWorked,
 )
 
 fun calculateMonthlyHours(
@@ -64,6 +68,8 @@ fun calculateMonthlyHours(
     var cancellationHours = Duration.ZERO
     var nightWorked = Duration.ZERO
     var holidayWorked = Duration.ZERO
+    var projectedNightWorked = Duration.ZERO
+    var projectedHolidayWorked = Duration.ZERO
     var absenceCount = 0
     var cancellationCount = 0
 
@@ -91,6 +97,30 @@ fun calculateMonthlyHours(
 
             else -> {
                 planned = planned.plus(fullDuration)
+                projectedNightWorked = projectedNightWorked.plus(
+                    classifiedDuration(
+                        start = shift.startAt,
+                        end = shift.endAt,
+                        zoneId = shift.zoneId,
+                        dates = nightlyWindowDates(shift.startAt, shift.endAt, shift.zoneId),
+                        intervalForDate = { date, zone ->
+                            date.atTime(NIGHT_START).atZone(zone).toInstant() to
+                                date.plusDays(1).atTime(NIGHT_END).atZone(zone).toInstant()
+                        },
+                    ),
+                )
+                projectedHolidayWorked = projectedHolidayWorked.plus(
+                    classifiedDuration(
+                        start = shift.startAt,
+                        end = shift.endAt,
+                        zoneId = shift.zoneId,
+                        dates = holidayDates,
+                        intervalForDate = { date, zone ->
+                            date.atStartOfDay(zone).toInstant() to
+                                date.plusDays(1).atStartOfDay(zone).toInstant()
+                        },
+                    ),
+                )
                 val workedEnd = minOf(shift.endAt, referenceInstant)
                 if (workedEnd.isAfter(shift.startAt)) {
                     worked = worked.plus(Duration.between(shift.startAt, workedEnd))
@@ -135,6 +165,7 @@ fun calculateMonthlyHours(
         .plus(medicalHours)
     check(accounted == planned) { "Las categorías mensuales deben cubrir todas las horas planificadas" }
 
+    val projectedWorked = worked.plus(pending)
     return MonthlyHoursSummary(
         month = month,
         referenceInstant = referenceInstant,
@@ -158,6 +189,10 @@ fun calculateMonthlyHours(
         cancellationCount = cancellationCount,
         cancellationHours = cancellationHours,
         vacationDayCount = vacationDates.size,
+        projectedWorked = projectedWorked,
+        projectedOvertime = projectedWorked.minus(monthlyThreshold).coerceAtLeastZero(),
+        projectedNightWorked = projectedNightWorked,
+        projectedHolidayWorked = projectedHolidayWorked,
     )
 }
 

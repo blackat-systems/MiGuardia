@@ -27,6 +27,7 @@ class NotificationPreferencesInstrumentedTest {
         val defaults = store.current()
         assertFalse(defaults.enabled)
         assertEquals(listOf(NotificationPreferences.DEFAULT_REMINDER_MINUTES), defaults.globalReminderLeadMinutes)
+        assertEquals(true, defaults.persistentWhileActive)
         assertEquals(NotificationPrivacy.COMPLETE, defaults.privacy)
     }
 

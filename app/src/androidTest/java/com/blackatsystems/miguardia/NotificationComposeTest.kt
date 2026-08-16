@@ -45,8 +45,9 @@ class NotificationComposeTest {
 
         compose.onNodeWithText("Notificaciones").assertExists()
         compose.onNodeWithText("Notificaciones: pendiente").assertExists()
-        compose.onNodeWithText("Alarmas exactas: pendiente").assertExists()
-        compose.onNodeWithText("Sin este acceso, Android puede demorar el aviso. MiGuardia usa una alarma aproximada.").assertExists()
+        compose.onNodeWithText("Puntualidad exacta: pendiente").assertExists()
+        compose.onNodeWithText("Sin este acceso, Android puede demorar la notificación. Nunca suena ni se presenta como un despertador.").assertExists()
+        compose.onNodeWithText("Mantener fija hasta finalizar la guardia").assertExists()
         compose.onNodeWithText("Completa: objetivo, horario y puesto").assertExists()
         compose.onNodeWithText("Reducida: estado y horario").assertExists()
         compose.onNodeWithText("Oculta: mensaje genérico").assertExists()

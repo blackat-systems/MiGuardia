@@ -80,8 +80,6 @@ data class PhotosActions(
     val replace: (UUID, Uri) -> Unit = { _, _ -> },
     val requestDelete: (UUID) -> Unit = {},
     val confirmDelete: () -> Unit = {},
-    val requestDeleteAll: () -> Unit = {},
-    val confirmDeleteAll: () -> Unit = {},
     val dismissDelete: () -> Unit = {},
     val retry: () -> Unit = {},
     val clearMessage: () -> Unit = {},
@@ -99,8 +97,6 @@ data class PhotosActions(
             replace = vm::replace,
             requestDelete = vm::requestDelete,
             confirmDelete = vm::confirmDelete,
-            requestDeleteAll = vm::requestDeleteAll,
-            confirmDeleteAll = vm::confirmDeleteAll,
             dismissDelete = vm::dismissDelete,
             retry = vm::retry,
             clearMessage = vm::clearMessage,
@@ -130,15 +126,6 @@ fun PhotosSurfaceHost(
             body = "La foto se quitará de MiGuardia. Esta acción no se puede deshacer.",
             confirmLabel = "Eliminar foto",
             onConfirm = actions.confirmDelete,
-            onDismiss = actions.dismissDelete,
-        )
-    }
-    if (state.confirmDeleteAll) {
-        ConfirmDestructive(
-            title = "Eliminar todas las fotos",
-            body = "Se eliminarán todas las fotos asociadas a este mes.",
-            confirmLabel = "Eliminar todas",
-            onConfirm = actions.confirmDeleteAll,
             onDismiss = actions.dismissDelete,
         )
     }
@@ -182,6 +169,13 @@ private fun PhotosList(
                     working = state.isWorking,
                 )
             }
+            item {
+                Text(
+                    "Tocá cualquier foto para verla completa. Cada imagen se elimina individualmente desde Acciones.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             state.errorMessage?.let { message ->
                 item {
                     PersistentMessage(
@@ -221,16 +215,6 @@ private fun PhotosList(
                     fileStore = fileStore,
                 )
             }
-            if (state.photos.isNotEmpty()) {
-                item {
-                    DestructiveAction(
-                        label = "Eliminar todas las fotos del mes",
-                        onClick = actions.requestDeleteAll,
-                        enabled = !state.isWorking,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-            }
         }
     }
 }
@@ -250,6 +234,7 @@ private fun PhotoCard(
     var menuExpanded by remember(photo.id) { mutableStateOf(false) }
     val objective = photo.objectiveAbbreviationSnapshot?.let { ", objetivo $it" }.orEmpty()
     Card(
+        onClick = { actions.view(photo.id) },
         modifier = Modifier
             .fillMaxWidth()
             .semantics { contentDescription = "Foto ${index + 1} de $total$objective" },
@@ -259,23 +244,23 @@ private fun PhotoCard(
             modifier = Modifier.padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            PhotoImage(
-                photo = photo,
-                fileStore = fileStore,
-                modifier = Modifier.fillMaxWidth().height(180.dp).clickable { actions.view(photo.id) },
-                maxDimension = 512,
-            )
-            Text(
-                photo.objectiveNameSnapshot ?: "Sin objetivo asociado",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-            )
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment = Alignment.Top,
             ) {
-                TextButton(onClick = { actions.view(photo.id) }) { Text("Abrir foto") }
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        "Foto ${index + 1} de $total",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Text(
+                        photo.objectiveNameSnapshot ?: "Sin objetivo asociado",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
                 Box {
                     TextButton(onClick = { menuExpanded = true }) { Text("Acciones") }
                     DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
@@ -312,6 +297,17 @@ private fun PhotoCard(
                     }
                 }
             }
+            PhotoImage(
+                photo = photo,
+                fileStore = fileStore,
+                modifier = Modifier.fillMaxWidth().height(210.dp),
+                maxDimension = 512,
+            )
+            Text(
+                "Tocá la foto para abrir el visor con zoom.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }

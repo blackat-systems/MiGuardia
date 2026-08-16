@@ -96,6 +96,7 @@ data class ManagementActions(
     val hideSchedule: (UUID) -> Unit = {},
     val deleteSchedule: (UUID) -> Unit = {},
     val openAddShift: (YearMonth, LocalDate?) -> Unit = { _, _ -> },
+    val openDayOffs: (YearMonth, LocalDate?) -> Unit = { _, _ -> },
     val openEditShift: (Shift) -> Unit = {},
     val openDuplicateShift: (Shift) -> Unit = {},
     val updateShiftMode: (ShiftEntryMode) -> Unit = {},
@@ -106,6 +107,8 @@ data class ManagementActions(
     val confirmWarnings: () -> Unit = {},
     val dismissWarnings: () -> Unit = {},
     val deleteShift: (UUID) -> Unit = {},
+    val toggleDayOffDate: (LocalDate) -> Unit = {},
+    val saveDayOffs: () -> Unit = {},
     val clearMessage: () -> Unit = {},
 ) {
     companion object {
@@ -125,6 +128,7 @@ data class ManagementActions(
             hideSchedule = viewModel::hideSchedule,
             deleteSchedule = viewModel::deleteSchedule,
             openAddShift = viewModel::openAddShift,
+            openDayOffs = viewModel::openDayOffs,
             openEditShift = viewModel::openEditShift,
             openDuplicateShift = viewModel::openDuplicateShift,
             updateShiftMode = viewModel::updateShiftMode,
@@ -135,6 +139,8 @@ data class ManagementActions(
             confirmWarnings = viewModel::confirmShiftWarnings,
             dismissWarnings = viewModel::dismissShiftWarnings,
             deleteShift = viewModel::deleteShift,
+            toggleDayOffDate = viewModel::toggleDayOffDate,
+            saveDayOffs = viewModel::saveDayOffs,
             clearMessage = viewModel::clearMessage,
         )
     }
@@ -144,12 +150,14 @@ data class ManagementActions(
 fun ManagementSurfaceHost(
     state: ManagementUiState,
     actions: ManagementActions,
+    onOpenNotifications: (Shift) -> Unit = {},
 ) {
     var confirmClose by rememberSaveable { mutableStateOf(false) }
     val formOpen = state.surface in setOf(
         ManagementSurface.OBJECTIVE_FORM,
         ManagementSurface.SCHEDULE_FORM,
         ManagementSurface.SHIFT_FORM,
+        ManagementSurface.DAY_OFF_FORM,
     )
     val requestClose = {
         if (formOpen) confirmClose = true else actions.close()
@@ -171,7 +179,8 @@ fun ManagementSurfaceHost(
                 ManagementSurface.SETTINGS -> SettingsManagementContent(state, actions)
                 ManagementSurface.OBJECTIVE_FORM -> ObjectiveForm(state, actions)
                 ManagementSurface.SCHEDULE_FORM -> ScheduleForm(state, actions)
-                ManagementSurface.SHIFT_FORM -> ShiftForm(state, actions)
+                ManagementSurface.SHIFT_FORM -> ShiftForm(state, actions, onOpenNotifications)
+                ManagementSurface.DAY_OFF_FORM -> DayOffForm(state, actions)
                 }
             }
         }
@@ -186,6 +195,42 @@ fun ManagementSurfaceHost(
                 TextButton(onClick = { confirmClose = false; actions.discardForm() }) { Text("Descartar") }
             },
             dismissButton = { TextButton(onClick = { confirmClose = false }) { Text("Seguir editando") } },
+        )
+    }
+}
+
+@Composable
+private fun DayOffForm(state: ManagementUiState, actions: ManagementActions) {
+    val draft = state.dayOffDraft ?: return
+    Column(
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        ScreenHeading(
+            title = "Agregar francos",
+            supportingText = "Elegí una o varias fechas. Marcar F no elimina guardias ni otros datos del día.",
+        )
+        Text(monthLabel(draft.month), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        SelectableMonthCalendar(
+            month = draft.month,
+            selectedDates = draft.selectedDates,
+            onToggleDate = actions.toggleDayOffDate,
+            monthLabel = monthLabel(draft.month),
+            testTag = "day-off-date-selector",
+        )
+        Text(
+            when (draft.selectedDates.size) {
+                0 -> "No hay fechas seleccionadas."
+                1 -> "1 fecha seleccionada."
+                else -> "${draft.selectedDates.size} fechas seleccionadas."
+            },
+            fontWeight = FontWeight.SemiBold,
+        )
+        PrimaryAction(
+            label = if (draft.selectedDates.size == 1) "Agregar franco" else "Agregar francos",
+            onClick = actions.saveDayOffs,
+            enabled = draft.selectedDates.isNotEmpty(),
+            working = state.isSaving,
         )
     }
 }
@@ -632,7 +677,11 @@ private fun TimeSelectionDialog(
 }
 
 @Composable
-private fun ShiftForm(state: ManagementUiState, actions: ManagementActions) {
+private fun ShiftForm(
+    state: ManagementUiState,
+    actions: ManagementActions,
+    onOpenNotifications: (Shift) -> Unit,
+) {
     val draft = state.shiftDraft ?: return
     var finalConfirmation by rememberSaveable { mutableStateOf(false) }
     val activeOptions = state.scheduleOptions.filter { it.objective.isActive && it.combination.isActive }
@@ -716,6 +765,17 @@ private fun ShiftForm(state: ManagementUiState, actions: ManagementActions) {
             label = { Text("Puesto opcional") },
             modifier = Modifier.fillMaxWidth(),
         )
+        draft.editingShift?.let { shift ->
+            SectionCard(
+                title = "Avisos de esta guardia",
+                supportingText = "Usa la configuración global salvo que elijas una excepción para esta guardia.",
+            ) {
+                OutlinedButton(
+                    onClick = { onOpenNotifications(shift) },
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text("Configurar avisos") }
+            }
+        }
         ShiftPreview(state)
         SaveButton(state.isSaving, "Revisar y guardar") { finalConfirmation = true }
         Spacer(Modifier.height(24.dp))
@@ -901,6 +961,35 @@ private fun OccupiedDatesDialog(draft: ShiftDraft, isSaving: Boolean, actions: M
         )
         return
     }
+    if (draft.selectedDates.size == 1) {
+        AlertDialog(
+            onDismissRequest = { actions.saveShift(OccupiedDatePolicy.CANCEL, false) },
+            title = { Text("¿Reemplazar la guardia existente?") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("La fecha elegida ya tiene una guardia. ¿Qué querés hacer?")
+                    Button(
+                        enabled = !isSaving,
+                        onClick = { actions.saveShift(OccupiedDatePolicy.REPLACE, false) },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { Text("Reemplazar") }
+                    OutlinedButton(
+                        enabled = !isSaving,
+                        onClick = { secondShift = true },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { Text("Agregar segunda guardia") }
+                    OutlinedButton(
+                        enabled = !isSaving,
+                        onClick = { actions.saveShift(OccupiedDatePolicy.CANCEL, false) },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { Text("Cancelar") }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {},
+        )
+        return
+    }
     AlertDialog(
         onDismissRequest = { actions.saveShift(OccupiedDatePolicy.CANCEL, false) },
         title = { Text("Fechas ocupadas") },
@@ -908,7 +997,7 @@ private fun OccupiedDatesDialog(draft: ShiftDraft, isSaving: Boolean, actions: M
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Ya tienen guardias: ${draft.occupiedDates.sorted().joinToString { it.dayOfMonth.toString() }}.")
                 Button(enabled = !isSaving, onClick = { actions.saveShift(OccupiedDatePolicy.REPLACE, false) }, modifier = Modifier.fillMaxWidth()) { Text("Reemplazar") }
-                OutlinedButton(enabled = !isSaving, onClick = { actions.saveShift(OccupiedDatePolicy.KEEP_OCCUPIED, false) }, modifier = Modifier.fillMaxWidth()) { Text("Conservar ocupadas") }
+                OutlinedButton(enabled = !isSaving, onClick = { actions.saveShift(OccupiedDatePolicy.KEEP_OCCUPIED, false) }, modifier = Modifier.fillMaxWidth()) { Text("Agregar sólo en días libres") }
                 OutlinedButton(enabled = !isSaving, onClick = { secondShift = true }, modifier = Modifier.fillMaxWidth()) { Text("Agregar segunda guardia") }
             }
         },
@@ -957,6 +1046,7 @@ private fun surfaceTitle(surface: ManagementSurface): String = when (surface) {
     ManagementSurface.OBJECTIVE_FORM -> "Objetivo"
     ManagementSurface.SCHEDULE_FORM -> "Horario"
     ManagementSurface.SHIFT_FORM -> "Guardias"
+    ManagementSurface.DAY_OFF_FORM -> "Francos"
 }
 
 private fun monthLabel(month: YearMonth): String {

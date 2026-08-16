@@ -33,13 +33,15 @@ internal class ShiftNotificationPresenter(private val context: Context) {
     ) {
         val ongoing = now >= shift.startAt
         val channelId = ensureChannel(preferences.soundUri)
-        val title = if (ongoing) "Guardia en curso" else "Próxima guardia"
+        val entryTime = shift.startTimeSnapshot.format(TimeFormatter)
+        val title = if (ongoing) "Guardia en curso" else "Entrás a las $entryTime"
         val timeRange = "${shift.startTimeSnapshot.format(TimeFormatter)}–${shift.endTimeSnapshot.format(TimeFormatter)}"
         val fullText = buildString {
             append(shift.objectiveNameSnapshot)
             append(" (")
             append(shift.objectiveAbbreviationSnapshot)
             append(") · ")
+            append("Horario ")
             append(timeRange)
             shift.position?.takeIf(String::isNotBlank)?.let { append(" · Puesto: ").append(it) }
             weatherText

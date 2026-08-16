@@ -111,6 +111,7 @@ class MainActivity : ComponentActivity() {
             medicalLeaveRepository = dataStore.medicalLeaves,
             holidayRepository = dataStore.holidays,
             vacationRepository = dataStore.vacations,
+            remunerationPreferences = (application as MiGuardiaApplication).remunerationPreferences,
         )
     }
 

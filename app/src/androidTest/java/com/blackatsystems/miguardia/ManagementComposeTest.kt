@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.click
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -21,6 +22,7 @@ import com.blackatsystems.miguardia.core.domain.model.Objective
 import com.blackatsystems.miguardia.core.domain.model.ScheduleCombination
 import com.blackatsystems.miguardia.core.domain.shift.OccupiedDatePolicy
 import com.blackatsystems.miguardia.ui.management.ManagementActions
+import com.blackatsystems.miguardia.ui.management.DayOffDraft
 import com.blackatsystems.miguardia.ui.management.ManagementSurface
 import com.blackatsystems.miguardia.ui.management.ManagementSurfaceHost
 import com.blackatsystems.miguardia.ui.management.ManagementUiState
@@ -220,6 +222,60 @@ class ManagementComposeTest {
     }
 
     @Test
+    fun dayOffFormSupportsOneOrSeveralExplicitDates() {
+        var saves = 0
+        val month = YearMonth.of(2026, 8)
+        composeRule.setContent {
+            MaterialTheme {
+                ManagementSurfaceHost(
+                    state = ManagementUiState(
+                        surface = ManagementSurface.DAY_OFF_FORM,
+                        dayOffDraft = DayOffDraft(
+                            month = month,
+                            selectedDates = setOf(month.atDay(3), month.atDay(7)),
+                        ),
+                    ),
+                    actions = ManagementActions(saveDayOffs = { saves++ }),
+                )
+            }
+        }
+
+        composeRule.onAllNodesWithText("Agregar francos").assertCountEquals(2)
+        composeRule.onNodeWithText("2 fechas seleccionadas.").assertExists()
+        composeRule.onAllNodesWithText("Agregar francos")[1].performScrollTo()
+            .performSemanticsAction(SemanticsActions.OnClick)
+        composeRule.runOnIdle { assertEquals(1, saves) }
+    }
+
+    @Test
+    fun editingShiftKeepsNotificationSettingsInsideTheForm() {
+        var opened: UUID? = null
+        composeRule.setContent {
+            MaterialTheme {
+                ManagementSurfaceHost(
+                    state = ManagementUiState(
+                        surface = ManagementSurface.SHIFT_FORM,
+                        scheduleOptions = listOf(ScheduleOption(ACTIVE_OBJECTIVE, SCHEDULE)),
+                        shiftDraft = ShiftDraft(
+                            month = YearMonth.of(2026, 8),
+                            selectedDates = setOf(SHIFT.localStartDate),
+                            editingShift = SHIFT,
+                            combinationId = SCHEDULE.id,
+                        ),
+                    ),
+                    actions = ManagementActions(),
+                    onOpenNotifications = { opened = it.id },
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Avisos de esta guardia").performScrollTo().assertExists()
+        composeRule.onNodeWithText("Configurar avisos").performScrollTo()
+            .performSemanticsAction(SemanticsActions.OnClick)
+        composeRule.runOnIdle { assertEquals(SHIFT.id, opened) }
+    }
+
+    @Test
     fun shiftFormGroupsSchedulesInsideSelectableObjectiveFolders() {
         var chosen: UUID? = null
         var scheduleObjective: UUID? = null
@@ -287,7 +343,8 @@ class ManagementComposeTest {
         }
 
         composeRule.onNodeWithText("Reemplazar").assertExists()
-        composeRule.onNodeWithText("Conservar ocupadas").assertExists()
+        composeRule.onNodeWithText("Cancelar").assertExists()
+        composeRule.onNodeWithText("Agregar sólo en días libres").assertDoesNotExist()
         composeRule.onNodeWithText("Agregar segunda guardia").assertExists().performSemanticsAction(SemanticsActions.OnClick)
         composeRule.onNodeWithText("Agregar segunda").performSemanticsAction(SemanticsActions.OnClick)
         composeRule.runOnIdle { assertEquals(OccupiedDatePolicy.ADD_SECOND_SHIFT, requested) }
@@ -315,7 +372,7 @@ class ManagementComposeTest {
 
         composeRule.onNodeWithText("Guardar como segunda").assertExists()
         composeRule.onNodeWithText("Reemplazar").assertDoesNotExist()
-        composeRule.onNodeWithText("Conservar ocupadas").assertDoesNotExist()
+        composeRule.onNodeWithText("Agregar sólo en días libres").assertDoesNotExist()
     }
 
     @Test

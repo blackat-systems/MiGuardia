@@ -15,6 +15,7 @@ enum class ManagementSurface {
     OBJECTIVE_FORM,
     SCHEDULE_FORM,
     SHIFT_FORM,
+    DAY_OFF_FORM,
 }
 
 enum class ShiftEntryMode {
@@ -57,6 +58,11 @@ data class ShiftDraft(
     val coexistenceWarnings: List<String> = emptyList(),
 )
 
+data class DayOffDraft(
+    val month: YearMonth,
+    val selectedDates: Set<LocalDate>,
+)
+
 data class ManagementUiState(
     val surface: ManagementSurface = ManagementSurface.NONE,
     val formReturnSurface: ManagementSurface = ManagementSurface.NONE,
@@ -67,6 +73,7 @@ data class ManagementUiState(
     val objectiveDraft: ObjectiveDraft = ObjectiveDraft(),
     val scheduleDraft: ScheduleDraft = ScheduleDraft(),
     val shiftDraft: ShiftDraft? = null,
+    val dayOffDraft: DayOffDraft? = null,
     val isSaving: Boolean = false,
     val errorMessage: String? = null,
     val infoMessage: String? = null,

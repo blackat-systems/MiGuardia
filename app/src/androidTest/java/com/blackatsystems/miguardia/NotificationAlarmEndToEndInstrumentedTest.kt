@@ -185,7 +185,7 @@ class NotificationAlarmEndToEndInstrumentedTest {
             application.localDataStore.shifts.insert(shift)
             application.notificationRuntime.reconcile()
 
-            val reminder = waitForNotification(notificationManager, "Próxima guardia", 25_000L)
+            val reminder = waitForNotification(notificationManager, "Entrás a las", 25_000L)
             assertTrue(reminder.extras.getString(Notification.EXTRA_TEXT).orEmpty().contains("QAT"))
 
             val ongoing = waitForNotification(notificationManager, "Guardia en curso", 75_000L)
@@ -256,7 +256,7 @@ class NotificationAlarmEndToEndInstrumentedTest {
             found = manager.activeNotifications
                 .firstOrNull { it.tag == SHIFT_ID.toString() }
                 ?.notification
-                ?.takeIf { it.extras.getString(Notification.EXTRA_TITLE) == expectedTitle }
+                ?.takeIf { it.extras.getString(Notification.EXTRA_TITLE).orEmpty().startsWith(expectedTitle) }
             found != null
         }
         return requireNotNull(found) { "No llegó el estado QA esperado: $expectedTitle" }

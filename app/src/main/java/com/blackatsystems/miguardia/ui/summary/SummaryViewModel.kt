@@ -8,6 +8,8 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.CreationExtras
 import com.blackatsystems.miguardia.core.domain.AppDefaults
 import com.blackatsystems.miguardia.core.domain.hours.calculateMonthlyHours
+import com.blackatsystems.miguardia.core.domain.remuneration.SuvicoSalaryScales
+import com.blackatsystems.miguardia.core.domain.remuneration.estimateSuvicoRemuneration
 import com.blackatsystems.miguardia.core.domain.model.MedicalLeave
 import com.blackatsystems.miguardia.core.domain.model.Shift
 import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
@@ -17,6 +19,7 @@ import com.blackatsystems.miguardia.core.domain.repository.MedicalLeaveRepositor
 import com.blackatsystems.miguardia.core.domain.repository.HolidayRepository
 import com.blackatsystems.miguardia.core.domain.repository.ShiftRepository
 import com.blackatsystems.miguardia.core.domain.repository.VacationRepository
+import com.blackatsystems.miguardia.remuneration.RemunerationPreferencesStore
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -28,6 +31,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -38,6 +42,7 @@ class SummaryViewModel(
     medicalLeaveRepository: MedicalLeaveRepository,
     holidayRepository: HolidayRepository? = null,
     vacationRepository: VacationRepository? = null,
+    private val remunerationPreferences: RemunerationPreferencesStore? = null,
     private val clock: Clock,
     private val savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
@@ -72,10 +77,27 @@ class SummaryViewModel(
 
     fun retry() = observeMonth(_uiState.value.visibleMonth)
 
+    fun setSeniorityYears(years: Int) {
+        val store = remunerationPreferences ?: return
+        viewModelScope.launch {
+            try {
+                store.setSeniorityYears(years)
+            } catch (_: IllegalArgumentException) {
+                _uiState.update { it.copy(remunerationErrorMessage = "Ingresá una antigüedad entre 0 y 60 años.") }
+            } catch (_: Exception) {
+                _uiState.update { it.copy(remunerationErrorMessage = "No pudimos guardar la antigüedad.") }
+            }
+        }
+    }
+
     private fun setVisibleMonth(month: YearMonth) {
         if (month == _uiState.value.visibleMonth) return
         savedStateHandle[VISIBLE_MONTH_KEY] = month.toString()
-        _uiState.value = SummaryUiState(month, clock.instant())
+        _uiState.value = SummaryUiState(
+            visibleMonth = month,
+            referenceInstant = clock.instant(),
+            seniorityYears = _uiState.value.seniorityYears,
+        )
         observeMonth(month)
     }
 
@@ -84,7 +106,12 @@ class SummaryViewModel(
         temporalJob?.cancel()
         _uiState.update { it.copy(loadState = SummaryLoadState.LOADING, errorMessage = null) }
         observationJob = viewModelScope.launch {
-            observer.observe(month)
+            combine(
+                observer.observe(month),
+                remunerationPreferences?.preferences ?: kotlinx.coroutines.flow.flowOf(
+                    com.blackatsystems.miguardia.remuneration.RemunerationPreferences(),
+                ),
+            ) { data, preferences -> data to preferences }
                 .catch {
                     temporalJob?.cancel()
                     _uiState.update {
@@ -94,28 +121,45 @@ class SummaryViewModel(
                         )
                     }
                 }
-                .collect { data ->
-                    publish(month, data, clock.instant())
+                .collect { (data, preferences) ->
+                    publish(month, data, clock.instant(), preferences.seniorityYears)
                     scheduleTemporalUpdates(month, data)
                 }
         }
     }
 
-    private fun publish(month: YearMonth, data: SummaryMonthSourceData, now: Instant) {
+    private fun publish(
+        month: YearMonth,
+        data: SummaryMonthSourceData,
+        now: Instant,
+        seniorityYears: Int = _uiState.value.seniorityYears,
+    ) {
         if (_uiState.value.visibleMonth != month) return
+        val summary = calculateMonthlyHours(
+            month = month,
+            shifts = data.shifts,
+            explicitDayStatuses = data.explicitStatuses,
+            medicalLeaves = data.medicalLeaves,
+            referenceInstant = now,
+            holidayDates = data.holidays.mapTo(linkedSetOf()) { it.date },
+            vacations = data.vacations,
+        )
+        val remuneration = SuvicoSalaryScales.forMonth(month)?.let { scale ->
+            estimateSuvicoRemuneration(
+                scale = scale,
+                seniorityYears = seniorityYears,
+                projectedNightHours = summary.projectedNightWorked,
+                projectedHolidayHours = summary.projectedHolidayWorked,
+                projectedOvertimeHours = summary.projectedOvertime,
+            )
+        }
         _uiState.value = SummaryUiState(
             visibleMonth = month,
             referenceInstant = now,
-            summary = calculateMonthlyHours(
-                month = month,
-                shifts = data.shifts,
-                explicitDayStatuses = data.explicitStatuses,
-                medicalLeaves = data.medicalLeaves,
-                referenceInstant = now,
-                holidayDates = data.holidays.mapTo(linkedSetOf()) { it.date },
-                vacations = data.vacations,
-            ),
+            summary = summary,
             loadState = SummaryLoadState.CONTENT,
+            seniorityYears = seniorityYears,
+            remuneration = remuneration,
         )
     }
 
@@ -145,6 +189,7 @@ class SummaryViewModel(
         private val medicalLeaveRepository: MedicalLeaveRepository,
         private val holidayRepository: HolidayRepository? = null,
         private val vacationRepository: VacationRepository? = null,
+        private val remunerationPreferences: RemunerationPreferencesStore? = null,
         private val clock: Clock = Clock.system(AppDefaults.zoneId()),
     ) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
@@ -156,6 +201,7 @@ class SummaryViewModel(
                 medicalLeaveRepository,
                 holidayRepository,
                 vacationRepository,
+                remunerationPreferences,
                 clock,
                 extras.createSavedStateHandle(),
             ) as T

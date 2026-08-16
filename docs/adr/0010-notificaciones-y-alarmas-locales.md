@@ -38,7 +38,9 @@ Los receptores aceptan únicamente acciones conocidas. La entrega usa `goAsync()
 
 ### Presentación, privacidad y acciones
 
-Cada guardia usa el UUID como `tag` estable de `NotificationManager`; el entero es constante y no constituye por sí solo la identidad. Los sucesivos recordatorios actualizan esa notificación y pueden alertar otra vez. El comienzo activa un cronómetro regresivo con `setChronometerCountDown(true)` hasta el fin, sin alarmas por minuto. Las guardias simultáneas conservan notificaciones separadas bajo un mismo grupo y un resumen genérico.
+Cada guardia usa el UUID como `tag` estable de `NotificationManager`; el entero es constante y no constituye por sí solo la identidad. Los sucesivos recordatorios actualizan esa notificación y pueden alertar otra vez. Antes de empezar, el título informa `Entrás a las HH:mm`; al comenzar cambia a `Guardia en curso`. El cronómetro regresivo nativo cuenta hasta la frontera correspondiente, sin alarmas por minuto. Por defecto la notificación queda fija hasta el fin y el usuario puede volverla descartable. Las guardias simultáneas conservan notificaciones separadas bajo un mismo grupo y un resumen genérico.
+
+La alarma de Android es sólo el mecanismo interno que despierta el proceso en una frontera temporal; nunca se presenta como alarma de despertador, pantalla completa, sonido en bucle ni interfaz invasiva. La aplicación publica una notificación común y no usa servicio en primer plano ni polling para mantener el cronómetro.
 
 Se usan plantillas `NotificationCompat`, sin `RemoteViews`. El contenido completo toma exclusivamente las instantáneas históricas de objetivo, abreviatura, horario, puesto y color. Nunca incluye notas, descripciones de novedades, datos médicos, fotos, terceros ni otros datos privados. La privacidad de pantalla bloqueada ofrece contenido completo, versión pública reducida a estado y horario, o versión genérica oculta.
 

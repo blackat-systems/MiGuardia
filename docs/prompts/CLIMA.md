@@ -524,3 +524,6 @@ Checklist:
 - [ ] Sin secretos, datos reales, logs ni artefactos.
 - [ ] `git diff --check` limpio.
 - [ ] Sin commit, push ni merge.
+# Enmienda posterior de MAIN (2026-08-16)
+
+El detalle ya no presenta un botón independiente `Clima`: muestra un mini resumen integrado para el horario completo de cada guardia futura elegible. Tocar esa tarjeta abre por UUID el mismo detalle horario y conserva todas las revalidaciones, estados de caché, privacidad y cobertura definidos en este prompt.

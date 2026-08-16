@@ -18,6 +18,7 @@ MiGuardia necesita conservar una o varias imágenes de referencia por mes sin ac
 - `MIGRATION_3_4` crea la tabla y los índices. Los esquemas v1, v2 y v3 permanecen inmutables y la cadena 1→2→3→4 es obligatoria.
 - La importación usa temporal y compensación si Room falla. Eliminación y reemplazo conservan el archivo anterior hasta que la escritura relacional pueda confirmarse.
 - El visor decodifica con muestreo y ofrece zoom interno/paneo; no consulta zoom, fuente o densidad del sistema.
+- Tocar una tarjeta abre directamente el visor. Las acciones individuales conservan asociación, reemplazo y eliminación confirmada; no existe un botón redundante para abrir ni una acción de borrado masivo del mes.
 
 ## Privacidad y límites
 

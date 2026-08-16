@@ -76,6 +76,8 @@ Podés crear o refactorizar componentes Compose internos para:
 
 ## 4. Decisiones de producto congeladas
 
+> Enmienda de MAIN del 16 de agosto de 2026: la decisión explícita posterior de Joa reemplaza únicamente las restricciones que impedían quitar acciones redundantes. El detalle de guardia se simplifica a novedad/notas, editar y eliminar; Fotos elimina abrir redundante y borrado masivo; Agregar ofrece guardia y francos. Los contratos de dominio, historial y confirmación destructiva continúan vigentes.
+
 Estas conductas no se negocian en este módulo:
 
 ### Calendario

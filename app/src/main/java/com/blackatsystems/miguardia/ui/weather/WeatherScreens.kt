@@ -54,6 +54,8 @@ import java.util.UUID
 data class WeatherActions(
     val openGlobal: () -> Unit = {},
     val openShift: (UUID) -> Unit = {},
+    val loadBriefs: (Set<UUID>) -> Unit = {},
+    val clearBriefs: () -> Unit = {},
     val close: () -> Unit = {},
     val enableAfterExplanation: () -> Unit = {},
     val setEnabled: (Boolean) -> Unit = {},
@@ -68,6 +70,8 @@ data class WeatherActions(
         fun from(viewModel: WeatherViewModel) = WeatherActions(
             openGlobal = viewModel::openGlobal,
             openShift = viewModel::openShift,
+            loadBriefs = viewModel::loadBriefs,
+            clearBriefs = viewModel::clearBriefs,
             close = viewModel::close,
             enableAfterExplanation = viewModel::enableAfterExplanation,
             setEnabled = viewModel::setEnabled,

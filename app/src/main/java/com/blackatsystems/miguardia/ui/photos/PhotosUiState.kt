@@ -14,7 +14,6 @@ data class PhotosUiState(
     val objectives: List<Objective> = emptyList(),
     val selectedId: UUID? = null,
     val pendingDeleteId: UUID? = null,
-    val confirmDeleteAll: Boolean = false,
     val isLoading: Boolean = true,
     val isWorking: Boolean = false,
     val errorMessage: String? = null,

@@ -75,6 +75,11 @@ import com.blackatsystems.miguardia.core.domain.calendar.ShiftTemporalStatus
 import com.blackatsystems.miguardia.core.domain.model.ExplicitDayStatusType
 import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
 import com.blackatsystems.miguardia.core.domain.nextevent.isEligibleUpcomingWork
+import com.blackatsystems.miguardia.core.domain.weather.WeatherCoverage
+import com.blackatsystems.miguardia.core.domain.weather.WeatherFreshness
+import com.blackatsystems.miguardia.core.domain.weather.WeatherUnitSystem
+import com.blackatsystems.miguardia.core.domain.weather.roundedTemperature
+import com.blackatsystems.miguardia.core.domain.weather.spanishLabel
 import com.blackatsystems.miguardia.ui.calendar.CalendarLoadState
 import com.blackatsystems.miguardia.ui.calendar.CalendarUiState
 import com.blackatsystems.miguardia.ui.calendar.CalendarViewModel
@@ -84,7 +89,6 @@ import com.blackatsystems.miguardia.ui.components.PersistentMessage
 import com.blackatsystems.miguardia.ui.components.ScreenHeading
 import com.blackatsystems.miguardia.ui.components.SectionCard
 import com.blackatsystems.miguardia.ui.management.ManagementActions
-import com.blackatsystems.miguardia.ui.management.ShiftEntryMode
 import com.blackatsystems.miguardia.ui.management.ManagementSurface
 import com.blackatsystems.miguardia.ui.management.ManagementSurfaceHost
 import com.blackatsystems.miguardia.ui.management.ManagementUiState
@@ -117,6 +121,7 @@ import com.blackatsystems.miguardia.ui.vacation.VacationUiState
 import com.blackatsystems.miguardia.ui.vacation.VacationViewModel
 import com.blackatsystems.miguardia.ui.theme.AppZoom
 import com.blackatsystems.miguardia.ui.weather.WeatherActions
+import com.blackatsystems.miguardia.ui.weather.ShiftWeatherBrief
 import com.blackatsystems.miguardia.ui.weather.WeatherSurface
 import com.blackatsystems.miguardia.ui.weather.WeatherSurfaceHost
 import com.blackatsystems.miguardia.ui.weather.WeatherUiState
@@ -184,6 +189,7 @@ fun MiGuardiaApp(
         onSummaryNextMonth = summaryViewModel::showNextMonth,
         onSummaryToday = summaryViewModel::showCurrentMonth,
         onSummaryRetry = summaryViewModel::retry,
+        onSeniorityYearsChange = summaryViewModel::setSeniorityYears,
         managementState = managementState,
         managementActions = ManagementActions.from(managementViewModel),
         exceptionsState = exceptionsState,
@@ -227,6 +233,7 @@ fun MiGuardiaApp(
     onSummaryNextMonth: () -> Unit = {},
     onSummaryToday: () -> Unit = {},
     onSummaryRetry: () -> Unit = {},
+    onSeniorityYearsChange: (Int) -> Unit = {},
     exceptionsState: ExceptionsUiState = ExceptionsUiState(holidayMonth = calendarState.visibleMonth),
     exceptionsActions: ExceptionsActions = ExceptionsActions(),
     vacationState: VacationUiState = VacationUiState(visibleMonth = calendarState.visibleMonth),
@@ -321,6 +328,7 @@ fun MiGuardiaApp(
                 onNextMonth = onSummaryNextMonth,
                 onToday = onSummaryToday,
                 onRetry = onSummaryRetry,
+                onSeniorityYearsChange = onSeniorityYearsChange,
             )
 
             MainDestination.SETTINGS -> SettingsScreen(
@@ -339,6 +347,19 @@ fun MiGuardiaApp(
     val selectedDay = calendarState.selectedDate?.let { selectedDate ->
         calendarState.days.firstOrNull { it.date == selectedDate }
     }
+    val weatherBriefIds = selectedDay
+        ?.shifts
+        ?.map(CalendarShift::shift)
+        ?.filter { it.isEligibleUpcomingWork(calendarState.referenceInstant, listOfNotNull(selectedDay.vacation)) }
+        ?.mapTo(linkedSetOf()) { it.id }
+        .orEmpty()
+    LaunchedEffect(weatherBriefIds, weatherState.preferences.enabled) {
+        if (weatherBriefIds.isEmpty() || !weatherState.preferences.enabled) {
+            weatherActions.clearBriefs()
+        } else {
+            weatherActions.loadBriefs(weatherBriefIds)
+        }
+    }
     if (selectedDay != null) {
         ModalBottomSheet(onDismissRequest = onDismissDate) {
             DayDetailSheet(
@@ -348,26 +369,21 @@ fun MiGuardiaApp(
                     onDismissDate()
                     managementActions.openAddShift(calendarState.visibleMonth, selectedDay.date)
                 },
-                onAddRange = {
+                onAddDayOff = {
                     onDismissDate()
-                    managementActions.openAddShift(calendarState.visibleMonth, selectedDay.date)
-                    managementActions.updateShiftMode(ShiftEntryMode.MULTIPLE)
+                    managementActions.openDayOffs(calendarState.visibleMonth, selectedDay.date)
                 },
                 onEditShift = {
                     onDismissDate()
                     managementActions.openEditShift(it)
-                },
-                onDuplicateShift = {
-                    onDismissDate()
-                    managementActions.openDuplicateShift(it)
                 },
                 onDeleteShift = managementActions.deleteShift,
                 onOpenExceptions = {
                     onDismissDate()
                     exceptionsActions.openShift(it)
                 },
-                onOpenNotifications = notificationActions.openShift,
                 onOpenWeather = weatherActions.openShift,
+                weatherState = weatherState,
             )
         }
     }
@@ -376,6 +392,7 @@ fun MiGuardiaApp(
         ManagementSurfaceHost(
             state = managementState,
             actions = managementActions,
+            onOpenNotifications = notificationActions.openShift,
         )
     }
     if (exceptionsState.surface != ExceptionsSurface.NONE) {
@@ -399,7 +416,7 @@ fun MiGuardiaApp(
             title = { Text("Agregar") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Elegí si querés cargar una guardia o un rango de fechas.")
+                    Text("Elegí si querés cargar guardias o marcar francos.")
                     Button(
                         modifier = Modifier.fillMaxWidth(),
                         onClick = {
@@ -411,10 +428,9 @@ fun MiGuardiaApp(
                         modifier = Modifier.fillMaxWidth(),
                         onClick = {
                             showAddChoice = false
-                            managementActions.openAddShift(calendarState.visibleMonth, null)
-                            managementActions.updateShiftMode(ShiftEntryMode.MULTIPLE)
+                            managementActions.openDayOffs(calendarState.visibleMonth, null)
                         },
-                    ) { Text("Agregar rangos") }
+                    ) { Text("Agregar francos") }
                 }
             },
             confirmButton = {},
@@ -879,13 +895,12 @@ private fun DayDetailSheet(
     day: CalendarDay,
     referenceInstant: java.time.Instant,
     onAddShift: () -> Unit,
-    onAddRange: () -> Unit,
+    onAddDayOff: () -> Unit,
     onEditShift: (com.blackatsystems.miguardia.core.domain.model.Shift) -> Unit,
-    onDuplicateShift: (com.blackatsystems.miguardia.core.domain.model.Shift) -> Unit,
     onDeleteShift: (java.util.UUID) -> Unit,
     onOpenExceptions: (com.blackatsystems.miguardia.core.domain.model.Shift) -> Unit,
-    onOpenNotifications: (com.blackatsystems.miguardia.core.domain.model.Shift) -> Unit,
     onOpenWeather: (java.util.UUID) -> Unit,
+    weatherState: WeatherUiState,
 ) {
     var pendingDeleteId by rememberSaveable { androidx.compose.runtime.mutableStateOf<String?>(null) }
     Column(
@@ -911,10 +926,8 @@ private fun DayDetailSheet(
                 calendarShift = calendarShift,
                 excludedByVacation = day.vacation != null && calendarShift.shift.status == ShiftStatus.PLANNED,
                 onEdit = onEditShift,
-                onDuplicate = onDuplicateShift,
                 onDelete = { pendingDeleteId = it.toString() },
                 onOpenExceptions = onOpenExceptions,
-                onOpenNotifications = onOpenNotifications,
                 onOpenWeather = if (
                     calendarShift.shift.isEligibleUpcomingWork(referenceInstant, listOfNotNull(day.vacation))
                 ) {
@@ -922,6 +935,10 @@ private fun DayDetailSheet(
                 } else {
                     null
                 },
+                weatherEnabled = weatherState.preferences.enabled,
+                weatherUnit = weatherState.preferences.unitSystem,
+                weatherBrief = weatherState.shiftBriefs[calendarShift.shift.id],
+                weatherLoading = calendarShift.shift.id in weatherState.loadingBriefIds,
             )
         }
         when (day.explicitStatus) {
@@ -944,8 +961,8 @@ private fun DayDetailSheet(
         Button(onClick = onAddShift, modifier = Modifier.fillMaxWidth()) {
             Text("Agregar guardia")
         }
-        OutlinedButton(onClick = onAddRange, modifier = Modifier.fillMaxWidth()) {
-            Text("Agregar rangos")
+        OutlinedButton(onClick = onAddDayOff, modifier = Modifier.fillMaxWidth()) {
+            Text("Agregar francos")
         }
     }
     pendingDeleteId?.let { id ->
@@ -971,11 +988,13 @@ private fun ShiftDetail(
     calendarShift: CalendarShift,
     excludedByVacation: Boolean = false,
     onEdit: ((com.blackatsystems.miguardia.core.domain.model.Shift) -> Unit)? = null,
-    onDuplicate: ((com.blackatsystems.miguardia.core.domain.model.Shift) -> Unit)? = null,
     onDelete: ((java.util.UUID) -> Unit)? = null,
     onOpenExceptions: ((com.blackatsystems.miguardia.core.domain.model.Shift) -> Unit)? = null,
-    onOpenNotifications: ((com.blackatsystems.miguardia.core.domain.model.Shift) -> Unit)? = null,
     onOpenWeather: ((java.util.UUID) -> Unit)? = null,
+    weatherEnabled: Boolean = false,
+    weatherUnit: WeatherUnitSystem = WeatherUnitSystem.CELSIUS,
+    weatherBrief: ShiftWeatherBrief? = null,
+    weatherLoading: Boolean = false,
 ) {
     val shift = calendarShift.shift
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1006,29 +1025,18 @@ private fun ShiftDetail(
                     Text("Informar novedad / notas")
                 }
             }
-            if (onOpenNotifications != null) {
-                OutlinedButton(
-                    onClick = { onOpenNotifications(shift) },
-                    modifier = Modifier.fillMaxWidth(),
-                ) { Text("Avisos") }
-            }
             if (onOpenWeather != null) {
-                OutlinedButton(
-                    onClick = { onOpenWeather(shift.id) },
-                    modifier = Modifier.fillMaxWidth(),
-                ) { Text("Clima") }
+                ShiftWeatherBriefCard(
+                    enabled = weatherEnabled,
+                    loading = weatherLoading,
+                    brief = weatherBrief,
+                    unit = weatherUnit,
+                    onOpen = { onOpenWeather(shift.id) },
+                )
             }
-            if (onEdit != null && onDuplicate != null && onDelete != null) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    OutlinedButton(onClick = { onEdit(shift) }, modifier = Modifier.weight(1f)) {
-                        Text("Editar")
-                    }
-                    OutlinedButton(onClick = { onDuplicate(shift) }, modifier = Modifier.weight(1f)) {
-                        Text("Duplicar")
-                    }
+            if (onEdit != null && onDelete != null) {
+                OutlinedButton(onClick = { onEdit(shift) }, modifier = Modifier.fillMaxWidth()) {
+                    Text("Editar")
                 }
                 DestructiveAction(label = "Eliminar", onClick = { onDelete(shift.id) })
             }
@@ -1037,6 +1045,75 @@ private fun ShiftDetail(
                     "Esta guardia se conserva, pero no computa horas porque su fecha inicial está en vacaciones.",
                     style = MaterialTheme.typography.bodySmall,
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ShiftWeatherBriefCard(
+    enabled: Boolean,
+    loading: Boolean,
+    brief: ShiftWeatherBrief?,
+    unit: WeatherUnitSystem,
+    onOpen: () -> Unit,
+) {
+    Card(
+        onClick = onOpen,
+        enabled = enabled && brief != null,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text("Clima durante la guardia", fontWeight = FontWeight.Bold)
+            when {
+                !enabled -> Text("Clima está desactivado en Configuración.")
+                brief != null -> {
+                    val summary = brief.summary
+                    val minimumTemperature = summary.minimumTemperatureCelsius
+                    val maximumTemperature = summary.maximumTemperatureCelsius
+                    val temperatures = if (minimumTemperature != null && maximumTemperature != null) {
+                        val suffix = if (unit == WeatherUnitSystem.CELSIUS) "°C" else "°F"
+                        "${roundedTemperature(minimumTemperature, unit)}–" +
+                            "${roundedTemperature(maximumTemperature, unit)} $suffix"
+                    } else {
+                        null
+                    }
+                    Text(
+                        listOfNotNull(summary.condition?.spanishLabel(), temperatures).joinToString(" · ")
+                            .ifBlank { "Pronóstico disponible" },
+                    )
+                    summary.maximumPrecipitationProbabilityPercent?.let { probability ->
+                        Text("Probabilidad máxima de lluvia: $probability %")
+                    }
+                    Text(
+                        when (summary.coverage) {
+                            WeatherCoverage.COMPLETE -> "Cobertura completa del horario"
+                            WeatherCoverage.PARTIAL -> "Cobertura parcial; no se inventan las horas faltantes"
+                            WeatherCoverage.NONE -> "Sin cobertura"
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    Text(
+                        when (brief.freshness) {
+                            WeatherFreshness.FRESH -> "Actualizado · tocá para ver el detalle horario"
+                            WeatherFreshness.STALE -> "Pronóstico antiguo · tocá para actualizar o ver el detalle"
+                            WeatherFreshness.EXPIRED -> "Pronóstico vencido · tocá para intentar actualizar"
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    if (loading) {
+                        Text(
+                            "Actualizando sin ocultar el último pronóstico…",
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                }
+                loading -> Text("Consultando el pronóstico de Córdoba…")
+                else -> Text("No hay cobertura meteorológica para todo o parte de este horario.")
             }
         }
     }

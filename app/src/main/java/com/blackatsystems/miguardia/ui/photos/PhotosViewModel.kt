@@ -59,8 +59,7 @@ class PhotosViewModel(
 
     fun view(id: UUID) { savedState[SELECTED] = id.toString(); _uiState.update { it.copy(selectedId = id) }; setSurface(PhotosSurface.VIEWER) }
     fun requestDelete(id: UUID) = _uiState.update { it.copy(pendingDeleteId = id) }
-    fun dismissDelete() = _uiState.update { it.copy(pendingDeleteId = null, confirmDeleteAll = false) }
-    fun requestDeleteAll() = _uiState.update { it.copy(confirmDeleteAll = true) }
+    fun dismissDelete() = _uiState.update { it.copy(pendingDeleteId = null) }
 
     fun import(uris: List<Uri>, objectiveId: UUID? = null) = write {
         if (uris.isEmpty()) return@write
@@ -112,11 +111,6 @@ class PhotosViewModel(
         clearSelectedPhoto()
         _uiState.update { it.copy(pendingDeleteId = null, infoMessage = "Foto eliminada.") }
         if (_uiState.value.surface == PhotosSurface.VIEWER) setSurface(PhotosSurface.LIST)
-    }
-
-    fun confirmDeleteAll() = write {
-        _uiState.value.photos.forEach { photo -> fileStore.removeRecoverably(photo.storageKey) { repository.delete(photo.id) } }
-        _uiState.update { it.copy(confirmDeleteAll = false, infoMessage = "Fotos del mes eliminadas.") }
     }
 
     private fun setMonth(month: YearMonth) {

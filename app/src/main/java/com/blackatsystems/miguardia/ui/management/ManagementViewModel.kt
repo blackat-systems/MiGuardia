@@ -117,6 +117,7 @@ class ManagementViewModel(
                 errorMessage = null,
                 infoMessage = null,
                 shiftDraft = null,
+                dayOffDraft = null,
             )
         }
     }
@@ -129,6 +130,7 @@ class ManagementViewModel(
                 surface = target,
                 formReturnSurface = ManagementSurface.NONE,
                 shiftDraft = if (state.surface == ManagementSurface.SHIFT_FORM) null else it.shiftDraft,
+                dayOffDraft = if (state.surface == ManagementSurface.DAY_OFF_FORM) null else it.dayOffDraft,
                 errorMessage = null,
             )
         }
@@ -304,6 +306,64 @@ class ManagementViewModel(
             )
         }
         persistSurface(ManagementSurface.SHIFT_FORM)
+    }
+
+    fun openDayOffs(month: YearMonth, date: LocalDate? = null) {
+        val initialDate = date?.takeIf { YearMonth.from(it) == month }
+        _uiState.update {
+            it.copy(
+                surface = ManagementSurface.DAY_OFF_FORM,
+                formReturnSurface = ManagementSurface.NONE,
+                dayOffDraft = DayOffDraft(
+                    month = month,
+                    selectedDates = setOfNotNull(initialDate),
+                ),
+                errorMessage = null,
+            )
+        }
+        persistSurface(ManagementSurface.DAY_OFF_FORM)
+    }
+
+    fun toggleDayOffDate(date: LocalDate) {
+        _uiState.update { state ->
+            val draft = state.dayOffDraft ?: return@update state
+            if (YearMonth.from(date) != draft.month) return@update state
+            state.copy(
+                dayOffDraft = draft.copy(
+                    selectedDates = if (date in draft.selectedDates) {
+                        draft.selectedDates - date
+                    } else {
+                        draft.selectedDates + date
+                    },
+                ),
+                errorMessage = null,
+            )
+        }
+    }
+
+    fun saveDayOffs() {
+        if (_uiState.value.isSaving) return
+        val draft = _uiState.value.dayOffDraft ?: return
+        if (draft.selectedDates.isEmpty()) return showError("Elegí al menos una fecha para marcar como franco.")
+        viewModelScope.launch {
+            saving {
+                draft.selectedDates.sorted().forEach { date ->
+                    explicitDayStatusRepository.set(date, ExplicitDayStatusType.DAY_OFF)
+                }
+                _uiState.update {
+                    it.copy(
+                        surface = ManagementSurface.NONE,
+                        dayOffDraft = null,
+                        infoMessage = if (draft.selectedDates.size == 1) {
+                            "Franco agregado."
+                        } else {
+                            "${draft.selectedDates.size} francos agregados."
+                        },
+                    )
+                }
+                persistSurface(ManagementSurface.NONE)
+            }
+        }
     }
 
     fun openEditShift(shift: Shift) {
@@ -570,6 +630,7 @@ class ManagementViewModel(
 
     private fun formReturnSurfaceFor(current: ManagementSurface): ManagementSurface = when (current) {
         ManagementSurface.SHIFT_FORM -> ManagementSurface.SHIFT_FORM
+        ManagementSurface.DAY_OFF_FORM -> ManagementSurface.NONE
         else -> ManagementSurface.SETTINGS
     }
 

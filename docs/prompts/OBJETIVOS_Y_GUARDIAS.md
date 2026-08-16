@@ -512,3 +512,6 @@ MAIN integró y auditó la entrega el 2026-08-13. Durante la revisión se corrig
 - pruebas de regresión de recreación de actividad, atomicidad preventiva, selector horario, advertencias e interfaz ocupada.
 
 La decisión arquitectónica resultante quedó registrada en `docs/adr/0004-objetivos-horarios-y-mutaciones-de-guardias.md`. Room continuó en versión 1 y su esquema permaneció idéntico.
+# Enmienda posterior de MAIN (2026-08-16)
+
+La decisión explícita posterior de Joa simplifica el detalle: sus acciones principales son únicamente `Informar novedad / notas`, `Editar` y `Eliminar`. La duplicación deja de exponerse allí. Para una única fecha ocupada, el orden visible es `Reemplazar`, `Agregar segunda guardia`, `Cancelar`; en lotes, la política interna `KEEP_OCCUPIED` se muestra como `Agregar sólo en días libres` y conserva exactamente su semántica atómica.

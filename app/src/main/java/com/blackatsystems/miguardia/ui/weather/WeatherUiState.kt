@@ -6,8 +6,14 @@ import com.blackatsystems.miguardia.core.domain.weather.WeatherForecast
 import com.blackatsystems.miguardia.core.domain.weather.WeatherFreshness
 import com.blackatsystems.miguardia.core.domain.weather.WeatherHour
 import com.blackatsystems.miguardia.weather.WeatherPreferences
+import java.util.UUID
 
 enum class WeatherSurface { NONE, GLOBAL, SHIFT }
+
+data class ShiftWeatherBrief(
+    val summary: ShiftWeatherSummary,
+    val freshness: WeatherFreshness,
+)
 
 data class WeatherUiState(
     val surface: WeatherSurface = WeatherSurface.NONE,
@@ -17,6 +23,8 @@ data class WeatherUiState(
     val selectedShift: Shift? = null,
     val shiftSummary: ShiftWeatherSummary? = null,
     val shiftHours: List<WeatherHour> = emptyList(),
+    val shiftBriefs: Map<UUID, ShiftWeatherBrief> = emptyMap(),
+    val loadingBriefIds: Set<UUID> = emptySet(),
     val ineligibleReason: String? = null,
     val isLoading: Boolean = true,
     val isRefreshing: Boolean = false,
