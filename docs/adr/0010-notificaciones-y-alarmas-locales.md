@@ -1,6 +1,6 @@
 # ADR 0010: Notificaciones y alarmas locales
 
-- Estado: Propuesto para revisión de MAIN
+- Estado: aceptada e integrada por MAIN
 - Fecha: 2026-08-15
 
 ## Contexto

@@ -662,6 +662,8 @@ Decisión posterior del 14 de agosto de 2026: después de integrar novedades, fe
 
 Decisión posterior del 15 de agosto de 2026: después de integrar fotos, accesibilidad y pulido visual, Joaquin autorizó implementar primero el **Motor de próximo evento** como dependencia separada. Debe ser la única fuente reutilizable para la aplicación, las futuras notificaciones y los futuros widgets; las notificaciones no forman parte de ese primer incremento.
 
+Decisión posterior del 16 de agosto de 2026: después de integrar y publicar Notificaciones sobre Room v5, Joa autorizó **Clima** como la siguiente dependencia separada. V1 conserva Córdoba Capital como ubicación fija, no solicita ubicación del teléfono, usa caché privada y debe degradar sin bloquear Calendario ni notificaciones. El proveedor queda detrás de una interfaz reemplazable; cualquier uso comercial debe respetar términos vigentes y no puede asumir que un endpoint gratuito lo autoriza.
+
 La primera versión utilizable debe alcanzar almacenamiento local, calendario, carga individual/múltiple, objetivos/horarios, fotos y horas básicas antes de sumar capas más complejas.
 
 ## 26. Criterios transversales de aceptación
