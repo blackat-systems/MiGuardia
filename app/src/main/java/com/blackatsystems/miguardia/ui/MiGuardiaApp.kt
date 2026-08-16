@@ -74,6 +74,7 @@ import com.blackatsystems.miguardia.core.domain.calendar.CalendarShift
 import com.blackatsystems.miguardia.core.domain.calendar.ShiftTemporalStatus
 import com.blackatsystems.miguardia.core.domain.model.ExplicitDayStatusType
 import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
+import com.blackatsystems.miguardia.core.domain.nextevent.isEligibleUpcomingWork
 import com.blackatsystems.miguardia.ui.calendar.CalendarLoadState
 import com.blackatsystems.miguardia.ui.calendar.CalendarUiState
 import com.blackatsystems.miguardia.ui.calendar.CalendarViewModel
@@ -115,6 +116,11 @@ import com.blackatsystems.miguardia.ui.vacation.VacationSurfaceHost
 import com.blackatsystems.miguardia.ui.vacation.VacationUiState
 import com.blackatsystems.miguardia.ui.vacation.VacationViewModel
 import com.blackatsystems.miguardia.ui.theme.AppZoom
+import com.blackatsystems.miguardia.ui.weather.WeatherActions
+import com.blackatsystems.miguardia.ui.weather.WeatherSurface
+import com.blackatsystems.miguardia.ui.weather.WeatherSurfaceHost
+import com.blackatsystems.miguardia.ui.weather.WeatherUiState
+import com.blackatsystems.miguardia.ui.weather.WeatherViewModel
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.DayOfWeek
@@ -148,6 +154,7 @@ fun MiGuardiaApp(
     vacationViewModel: VacationViewModel,
     photosViewModel: PhotosViewModel,
     notificationViewModel: NotificationViewModel,
+    weatherViewModel: WeatherViewModel,
     modifier: Modifier = Modifier,
     calendarNavigationRequest: Int = 0,
     appZoom: AppZoom = AppZoom.STANDARD,
@@ -161,6 +168,7 @@ fun MiGuardiaApp(
     val vacationState by vacationViewModel.uiState.collectAsStateWithLifecycle()
     val photosState by photosViewModel.uiState.collectAsStateWithLifecycle()
     val notificationState by notificationViewModel.uiState.collectAsStateWithLifecycle()
+    val weatherState by weatherViewModel.uiState.collectAsStateWithLifecycle()
     MiGuardiaApp(
         calendarState = calendarState,
         nextEventState = nextEventState,
@@ -187,6 +195,8 @@ fun MiGuardiaApp(
         photosViewModel = photosViewModel,
         notificationState = notificationState,
         notificationActions = NotificationActions.from(notificationViewModel),
+        weatherState = weatherState,
+        weatherActions = WeatherActions.from(weatherViewModel),
         calendarNavigationRequest = calendarNavigationRequest,
         appZoom = appZoom,
         onAppZoomChange = onAppZoomChange,
@@ -226,6 +236,8 @@ fun MiGuardiaApp(
     photosViewModel: PhotosViewModel? = null,
     notificationState: NotificationUiState = NotificationUiState(),
     notificationActions: NotificationActions = NotificationActions(),
+    weatherState: WeatherUiState = WeatherUiState(),
+    weatherActions: WeatherActions = WeatherActions(),
     calendarNavigationRequest: Int = 0,
     appZoom: AppZoom = AppZoom.STANDARD,
     onAppZoomChange: (AppZoom) -> Unit = {},
@@ -317,6 +329,7 @@ fun MiGuardiaApp(
                 onOpenHolidays = { exceptionsActions.openHolidays(calendarState.visibleMonth) },
                 onOpenVacations = { vacationActions.openList(calendarState.visibleMonth) },
                 onOpenNotifications = notificationActions.openGlobal,
+                onOpenWeather = weatherActions.openGlobal,
                 appZoom = appZoom,
                 onAppZoomChange = onAppZoomChange,
             )
@@ -330,6 +343,7 @@ fun MiGuardiaApp(
         ModalBottomSheet(onDismissRequest = onDismissDate) {
             DayDetailSheet(
                 day = selectedDay,
+                referenceInstant = calendarState.referenceInstant,
                 onAddShift = {
                     onDismissDate()
                     managementActions.openAddShift(calendarState.visibleMonth, selectedDay.date)
@@ -353,6 +367,7 @@ fun MiGuardiaApp(
                     exceptionsActions.openShift(it)
                 },
                 onOpenNotifications = notificationActions.openShift,
+                onOpenWeather = weatherActions.openShift,
             )
         }
     }
@@ -374,6 +389,9 @@ fun MiGuardiaApp(
     }
     if (notificationState.surface != NotificationSurface.NONE) {
         NotificationSurfaceHost(notificationState, notificationActions)
+    }
+    if (weatherState.surface != WeatherSurface.NONE) {
+        WeatherSurfaceHost(weatherState, weatherActions)
     }
     if (showAddChoice) {
         AlertDialog(
@@ -859,6 +877,7 @@ private fun AutoSizeSingleLineText(
 @Composable
 private fun DayDetailSheet(
     day: CalendarDay,
+    referenceInstant: java.time.Instant,
     onAddShift: () -> Unit,
     onAddRange: () -> Unit,
     onEditShift: (com.blackatsystems.miguardia.core.domain.model.Shift) -> Unit,
@@ -866,6 +885,7 @@ private fun DayDetailSheet(
     onDeleteShift: (java.util.UUID) -> Unit,
     onOpenExceptions: (com.blackatsystems.miguardia.core.domain.model.Shift) -> Unit,
     onOpenNotifications: (com.blackatsystems.miguardia.core.domain.model.Shift) -> Unit,
+    onOpenWeather: (java.util.UUID) -> Unit,
 ) {
     var pendingDeleteId by rememberSaveable { androidx.compose.runtime.mutableStateOf<String?>(null) }
     Column(
@@ -895,6 +915,13 @@ private fun DayDetailSheet(
                 onDelete = { pendingDeleteId = it.toString() },
                 onOpenExceptions = onOpenExceptions,
                 onOpenNotifications = onOpenNotifications,
+                onOpenWeather = if (
+                    calendarShift.shift.isEligibleUpcomingWork(referenceInstant, listOfNotNull(day.vacation))
+                ) {
+                    onOpenWeather
+                } else {
+                    null
+                },
             )
         }
         when (day.explicitStatus) {
@@ -948,6 +975,7 @@ private fun ShiftDetail(
     onDelete: ((java.util.UUID) -> Unit)? = null,
     onOpenExceptions: ((com.blackatsystems.miguardia.core.domain.model.Shift) -> Unit)? = null,
     onOpenNotifications: ((com.blackatsystems.miguardia.core.domain.model.Shift) -> Unit)? = null,
+    onOpenWeather: ((java.util.UUID) -> Unit)? = null,
 ) {
     val shift = calendarShift.shift
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -984,6 +1012,12 @@ private fun ShiftDetail(
                     modifier = Modifier.fillMaxWidth(),
                 ) { Text("Avisos") }
             }
+            if (onOpenWeather != null) {
+                OutlinedButton(
+                    onClick = { onOpenWeather(shift.id) },
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text("Clima") }
+            }
             if (onEdit != null && onDuplicate != null && onDelete != null) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -1015,6 +1049,7 @@ private fun SettingsScreen(
     onOpenHolidays: () -> Unit,
     onOpenVacations: () -> Unit,
     onOpenNotifications: () -> Unit,
+    onOpenWeather: () -> Unit,
     appZoom: AppZoom,
     onAppZoomChange: (AppZoom) -> Unit,
 ) {
@@ -1046,6 +1081,11 @@ private fun SettingsScreen(
             title = "Notificaciones",
             description = "Recordatorios, permisos, privacidad y sonido.",
             onClick = onOpenNotifications,
+        )
+        NavigationCard(
+            title = "Clima",
+            description = "Pronóstico de Córdoba, unidades, caché y atribución.",
+            onClick = onOpenWeather,
         )
         SectionCard(
             title = "Zoom de MiGuardia",

@@ -2,6 +2,7 @@ package com.blackatsystems.miguardia.notifications
 
 import android.content.Context
 import com.blackatsystems.miguardia.core.database.LocalDataStore
+import com.blackatsystems.miguardia.weather.WeatherRuntime
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -11,6 +12,7 @@ class NotificationRuntime(
     context: Context,
     localDataStore: LocalDataStore,
     val preferences: NotificationPreferencesStore,
+    weatherRuntime: WeatherRuntime,
 ) {
     internal val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val reconciler = NotificationReconciler(
@@ -21,6 +23,7 @@ class NotificationRuntime(
         alarmScheduler = AndroidShiftAlarmScheduler(context.applicationContext),
         scope = scope,
         context = context.applicationContext,
+        weatherRuntime = weatherRuntime,
     )
 
     fun start() = reconciler.start()

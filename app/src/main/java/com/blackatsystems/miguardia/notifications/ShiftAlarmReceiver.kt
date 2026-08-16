@@ -11,6 +11,7 @@ import java.time.Instant
 import java.util.UUID
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 class ShiftAlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -63,8 +64,47 @@ class ShiftAlarmReceiver : BroadcastReceiver() {
                 if (!identity.isStillCurrent(shift.startAt, shift.endAt, preferences, override)) {
                     return@launch
                 }
-                presenter.show(shift, now, preferences)
+                val cachedWeather = if (preferences.privacy == NotificationPrivacy.COMPLETE) {
+                    application.weatherRuntime.notificationTextFromCache(shift, now)
+                } else {
+                    null
+                }
+                presenter.show(shift, now, preferences, cachedWeather)
                 application.notificationPreferences.markDisplayed(shift.id.toString())
+                if (cachedWeather == null && preferences.privacy == NotificationPrivacy.COMPLETE) {
+                    val refreshedWeather = withTimeoutOrNull(8_000L) {
+                        application.weatherRuntime.refreshNotificationText(shift)
+                    }
+                    if (refreshedWeather != null) {
+                        val currentPreferences = application.notificationPreferences.current()
+                        val currentShift = dataStore.shifts.getById(identity.shiftId)
+                        val updateAt = Instant.now()
+                        val currentVacations = currentShift?.let {
+                            dataStore.vacations.observeEndingOnOrAfter(it.localStartDate).first()
+                        }.orEmpty()
+                        if (
+                            currentShift != null &&
+                            currentPreferences.enabled &&
+                            currentPreferences.privacy == NotificationPrivacy.COMPLETE &&
+                            NotificationSystemAccess(application).read().notificationPermissionGranted &&
+                            currentShift.isEligibleUpcomingWork(updateAt, currentVacations) &&
+                            identity.isStillCurrent(
+                                currentShift.startAt,
+                                currentShift.endAt,
+                                currentPreferences,
+                                dataStore.shiftNotificationConfigs.getForShift(currentShift.id),
+                            )
+                        ) {
+                            presenter.show(
+                                currentShift,
+                                updateAt,
+                                currentPreferences,
+                                refreshedWeather,
+                                silentUpdate = true,
+                            )
+                        }
+                    }
+                }
             } finally {
                 try {
                     application.notificationRuntime.reconcileNow()

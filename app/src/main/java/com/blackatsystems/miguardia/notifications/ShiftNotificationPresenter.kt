@@ -24,7 +24,13 @@ import java.time.format.DateTimeFormatter
 internal class ShiftNotificationPresenter(private val context: Context) {
     private val manager = NotificationManagerCompat.from(context)
 
-    fun show(shift: Shift, now: Instant, preferences: NotificationPreferences) {
+    fun show(
+        shift: Shift,
+        now: Instant,
+        preferences: NotificationPreferences,
+        weatherText: String? = null,
+        silentUpdate: Boolean = false,
+    ) {
         val ongoing = now >= shift.startAt
         val channelId = ensureChannel(preferences.soundUri)
         val title = if (ongoing) "Guardia en curso" else "Próxima guardia"
@@ -36,6 +42,9 @@ internal class ShiftNotificationPresenter(private val context: Context) {
             append(") · ")
             append(timeRange)
             shift.position?.takeIf(String::isNotBlank)?.let { append(" · Puesto: ").append(it) }
+            weatherText
+                ?.takeIf { preferences.privacy == NotificationPrivacy.COMPLETE }
+                ?.let { append('\n').append(it) }
         }
         val reducedText = "$title · $timeRange"
         val builder = NotificationCompat.Builder(context, channelId)
@@ -50,7 +59,7 @@ internal class ShiftNotificationPresenter(private val context: Context) {
             .setWhen((if (ongoing) shift.endAt else shift.startAt).toEpochMilli())
             .setUsesChronometer(true)
             .setChronometerCountDown(true)
-            .setOnlyAlertOnce(false)
+            .setOnlyAlertOnce(silentUpdate)
             .setOngoing(preferences.persistentWhileActive)
             .setAutoCancel(!preferences.persistentWhileActive)
             .setContentIntent(actionIntent(MainActivity.ACTION_VIEW_SHIFT, shift, now))
@@ -58,6 +67,7 @@ internal class ShiftNotificationPresenter(private val context: Context) {
             .addAction(secureAction("Ver detalles", MainActivity.ACTION_VIEW_SHIFT, shift, now))
             .addAction(secureAction("Cómo llegar", MainActivity.ACTION_DIRECTIONS, shift, now))
             .addAction(secureAction("Informar novedad", MainActivity.ACTION_REPORT_NOVELTY, shift, now))
+        if (silentUpdate) builder.setSilent(true)
         when (preferences.privacy) {
             NotificationPrivacy.COMPLETE -> builder.setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             NotificationPrivacy.REDUCED -> builder

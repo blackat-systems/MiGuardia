@@ -29,6 +29,7 @@ import com.blackatsystems.miguardia.ui.summary.SummaryViewModel
 import com.blackatsystems.miguardia.ui.vacation.VacationViewModel
 import com.blackatsystems.miguardia.ui.theme.MiGuardiaTheme
 import com.blackatsystems.miguardia.ui.theme.AppZoom
+import com.blackatsystems.miguardia.ui.weather.WeatherViewModel
 import kotlinx.coroutines.launch
 import java.util.UUID
 
@@ -41,6 +42,14 @@ class MainActivity : ComponentActivity() {
             preferencesStore = application.notificationPreferences,
             configs = application.localDataStore.shiftNotificationConfigs,
             systemAccess = NotificationSystemAccess(application),
+        )
+    }
+    private val weatherViewModel: WeatherViewModel by viewModels {
+        val application = application as MiGuardiaApplication
+        WeatherViewModel.Factory(
+            runtime = application.weatherRuntime,
+            shifts = application.localDataStore.shifts,
+            vacations = application.localDataStore.vacations,
         )
     }
     private val nextEventViewModel: NextEventViewModel by viewModels {
@@ -128,6 +137,7 @@ class MainActivity : ComponentActivity() {
                     vacationViewModel = vacationViewModel,
                     photosViewModel = photosViewModel,
                     notificationViewModel = notificationViewModel,
+                    weatherViewModel = weatherViewModel,
                     calendarNavigationRequest = calendarNavigationRequest,
                     appZoom = appZoom,
                     onAppZoomChange = { selected ->
@@ -149,6 +159,7 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         notificationViewModel.refreshSystemAccess()
+        weatherViewModel.onResume()
         (application as MiGuardiaApplication).notificationRuntime.reconcile()
     }
 

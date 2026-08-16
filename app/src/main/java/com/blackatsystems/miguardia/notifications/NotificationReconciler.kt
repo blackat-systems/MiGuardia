@@ -11,6 +11,7 @@ import com.blackatsystems.miguardia.core.domain.nextevent.isEligibleUpcomingWork
 import com.blackatsystems.miguardia.core.domain.repository.ShiftNotificationConfigRepository
 import com.blackatsystems.miguardia.core.domain.repository.ShiftRepository
 import com.blackatsystems.miguardia.core.domain.repository.VacationRepository
+import com.blackatsystems.miguardia.weather.WeatherRuntime
 import java.time.Clock
 import java.util.UUID
 import kotlinx.coroutines.CoroutineScope
@@ -29,6 +30,7 @@ internal class NotificationReconciler(
     private val alarmScheduler: AndroidShiftAlarmScheduler,
     private val scope: CoroutineScope,
     context: Context,
+    private val weatherRuntime: WeatherRuntime,
     private val clock: Clock = Clock.system(AppDefaults.zoneId()),
 ) {
     private val mutex = Mutex()
@@ -124,7 +126,14 @@ internal class NotificationReconciler(
         }
         (displayed - shouldDisplay).forEach(presenter::cancel)
         shouldDisplay.forEach { id ->
-            eligibleById[id]?.let { presenter.show(it, now, source.preferences) }
+            eligibleById[id]?.let { shift ->
+                val weatherText = if (source.preferences.privacy == NotificationPrivacy.COMPLETE) {
+                    weatherRuntime.notificationTextFromCache(shift, now)
+                } else {
+                    null
+                }
+                presenter.show(shift, now, source.preferences, weatherText)
+            }
         }
         presenter.updateGroupSummary(shouldDisplay.size, source.preferences)
         preferences.setDisplayedShiftIds(shouldDisplay)

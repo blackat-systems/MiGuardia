@@ -99,6 +99,31 @@ class ShiftNotificationPresenterInstrumentedTest {
     }
 
     @Test
+    fun weatherAppearsOnlyInCompletePrivacyAndSilentRefreshDoesNotAlertAgain() {
+        val shift = shift(SHIFT_ONE)
+        presenter.show(
+            shift,
+            NOW,
+            NotificationPreferences(enabled = true, privacy = NotificationPrivacy.COMPLETE),
+            weatherText = "Clima: Lluvia · 12–18 °C",
+            silentUpdate = true,
+        )
+        var posted = notificationForTag(shift.id)
+        assertTrue(posted.extras.getString(Notification.EXTRA_TEXT).orEmpty().contains("Clima: Lluvia"))
+        assertTrue(posted.flags and Notification.FLAG_ONLY_ALERT_ONCE != 0)
+
+        presenter.show(
+            shift,
+            NOW,
+            NotificationPreferences(enabled = true, privacy = NotificationPrivacy.REDUCED),
+            weatherText = "Clima: dato que debe omitirse",
+        )
+        posted = notificationForTag(shift.id)
+        assertFalse(posted.extras.getString(Notification.EXTRA_TEXT).orEmpty().contains("Clima:"))
+        assertFalse(posted.publicVersion.extras.getString(Notification.EXTRA_TEXT).orEmpty().contains("Clima:"))
+    }
+
+    @Test
     fun simultaneousGuardsStaySeparateGroupedAndSoundCreatesDeterministicVersionedChannel() {
         val first = shift(SHIFT_ONE)
         val second = shift(SHIFT_TWO)
