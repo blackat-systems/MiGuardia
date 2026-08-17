@@ -2,6 +2,7 @@ package com.blackatsystems.miguardia.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,6 +16,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -38,6 +41,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.blackatsystems.miguardia.R
+import com.blackatsystems.miguardia.ui.theme.vigiliaColors
 import java.time.LocalDate
 import java.time.YearMonth
 
@@ -47,6 +51,7 @@ object MiGuardiaSpacing {
     val medium = 12.dp
     val large = 16.dp
     val extraLarge = 24.dp
+    val huge = 32.dp
 }
 
 @Composable
@@ -282,6 +287,51 @@ fun SectionCard(
 }
 
 @Composable
+fun HeroCard(
+    title: String,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    val colors = MaterialTheme.vigiliaColors
+    val shape = MaterialTheme.shapes.large
+    val background = if (colors.isDark) {
+        Brush.linearGradient(
+            listOf(
+                colors.surfaceHero,
+                MaterialTheme.colorScheme.primary.copy(alpha = 0.24f),
+            ),
+        )
+    } else {
+        Brush.linearGradient(listOf(colors.surfaceRaised, colors.surfaceRaised))
+    }
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(background)
+            .border(
+                width = 1.dp,
+                color = if (colors.isDark) {
+                    MaterialTheme.colorScheme.primary.copy(alpha = 0.55f)
+                } else {
+                    MaterialTheme.colorScheme.outlineVariant
+                },
+                shape = shape,
+            )
+            .padding(MiGuardiaSpacing.extraLarge),
+        verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small),
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.labelLarge,
+            color = if (colors.isDark) colors.active else MaterialTheme.colorScheme.primary,
+            fontWeight = FontWeight.Bold,
+        )
+        content()
+    }
+}
+
+@Composable
 fun EmptyState(
     title: String,
     message: String,
@@ -425,5 +475,44 @@ fun NavigationCard(
             }
             Text("›", style = MaterialTheme.typography.headlineSmall)
         }
+    }
+}
+
+@Composable
+fun NavigationRow(
+    title: String,
+    description: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val accessibility = "$title. $description"
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .semantics {
+                contentDescription = accessibility
+                role = Role.Button
+            }
+            .clickable(onClick = onClick)
+            .padding(vertical = MiGuardiaSpacing.medium),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.medium),
+    ) {
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.extraSmall),
+        ) {
+            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text(
+                description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.vigiliaColors.onSurfaceMuted,
+            )
+        }
+        Text(
+            "›",
+            style = MaterialTheme.typography.headlineSmall,
+            color = MaterialTheme.colorScheme.primary,
+        )
     }
 }

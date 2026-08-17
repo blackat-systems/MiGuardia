@@ -50,7 +50,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -58,6 +57,7 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -83,7 +83,7 @@ import com.blackatsystems.miguardia.core.domain.weather.spanishLabel
 import com.blackatsystems.miguardia.ui.calendar.CalendarLoadState
 import com.blackatsystems.miguardia.ui.calendar.CalendarUiState
 import com.blackatsystems.miguardia.ui.calendar.CalendarViewModel
-import com.blackatsystems.miguardia.ui.components.NavigationCard
+import com.blackatsystems.miguardia.ui.components.NavigationRow
 import com.blackatsystems.miguardia.ui.components.PersistentMessage
 import com.blackatsystems.miguardia.ui.components.ScreenHeading
 import com.blackatsystems.miguardia.ui.components.SectionCard
@@ -119,6 +119,8 @@ import com.blackatsystems.miguardia.ui.vacation.VacationSurfaceHost
 import com.blackatsystems.miguardia.ui.vacation.VacationUiState
 import com.blackatsystems.miguardia.ui.vacation.VacationViewModel
 import com.blackatsystems.miguardia.ui.theme.AppZoom
+import com.blackatsystems.miguardia.ui.theme.AppThemeMode
+import com.blackatsystems.miguardia.ui.theme.vigiliaColors
 import com.blackatsystems.miguardia.ui.weather.WeatherActions
 import com.blackatsystems.miguardia.ui.weather.ShiftWeatherBrief
 import com.blackatsystems.miguardia.ui.weather.WeatherSurface
@@ -136,9 +138,6 @@ import java.util.Locale
 private val SpanishArgentina = Locale.forLanguageTag("es-AR")
 private val FullDateFormatter = DateTimeFormatter.ofPattern("EEEE d 'de' MMMM 'de' yyyy", SpanishArgentina)
 private val ShiftTimeFormatter = DateTimeFormatter.ofPattern("HH:mm", SpanishArgentina)
-private val CompletedDayLight = Color(0xFFC8E6C9)
-private val CompletedDayDark = Color(0xFF1B5E20)
-
 private enum class MainDestination(
     @param:StringRes val labelRes: Int,
     val glyph: String,
@@ -163,6 +162,8 @@ fun MiGuardiaApp(
     calendarNavigationRequest: Int = 0,
     appZoom: AppZoom = AppZoom.STANDARD,
     onAppZoomChange: (AppZoom) -> Unit = {},
+    appThemeMode: AppThemeMode = AppThemeMode.SYSTEM,
+    onAppThemeModeChange: (AppThemeMode) -> Unit = {},
 ) {
     val calendarState by calendarViewModel.uiState.collectAsStateWithLifecycle()
     val nextEventState by nextEventViewModel.uiState.collectAsStateWithLifecycle()
@@ -205,6 +206,8 @@ fun MiGuardiaApp(
         calendarNavigationRequest = calendarNavigationRequest,
         appZoom = appZoom,
         onAppZoomChange = onAppZoomChange,
+        appThemeMode = appThemeMode,
+        onAppThemeModeChange = onAppThemeModeChange,
         modifier = modifier,
     )
 }
@@ -247,6 +250,8 @@ fun MiGuardiaApp(
     calendarNavigationRequest: Int = 0,
     appZoom: AppZoom = AppZoom.STANDARD,
     onAppZoomChange: (AppZoom) -> Unit = {},
+    appThemeMode: AppThemeMode = AppThemeMode.SYSTEM,
+    onAppThemeModeChange: (AppThemeMode) -> Unit = {},
 ) {
     var destination by rememberSaveable { androidx.compose.runtime.mutableStateOf(MainDestination.CALENDAR) }
     var showAddChoice by rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
@@ -307,9 +312,9 @@ fun MiGuardiaApp(
                         },
                         alwaysShowLabel = showLabel,
                         colors = androidx.compose.material3.NavigationBarItemDefaults.colors(
-                            selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                            selectedTextColor = MaterialTheme.colorScheme.primary,
-                            indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                            selectedIconColor = MaterialTheme.vigiliaColors.active,
+                            selectedTextColor = MaterialTheme.vigiliaColors.active,
+                            indicatorColor = MaterialTheme.vigiliaColors.active.copy(alpha = 0.18f),
                             unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
                             unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
                         ),
@@ -353,6 +358,8 @@ fun MiGuardiaApp(
                 onOpenWeather = weatherActions.openGlobal,
                 appZoom = appZoom,
                 onAppZoomChange = onAppZoomChange,
+                appThemeMode = appThemeMode,
+                onAppThemeModeChange = onAppThemeModeChange,
             )
         }
     }
@@ -638,7 +645,7 @@ private fun MonthControls(
                     OutlinedButton(onClick = onToday, modifier = Modifier.weight(1f)) {
                         Text("Ir a hoy")
                     }
-                    Button(
+                    OutlinedButton(
                         onClick = onPhotos,
                         modifier = Modifier
                             .weight(1f)
@@ -650,7 +657,7 @@ private fun MonthControls(
                     OutlinedButton(onClick = onToday, modifier = Modifier.fillMaxWidth()) {
                         Text("Ir a hoy")
                     }
-                    Button(
+                    OutlinedButton(
                         onClick = onPhotos,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -772,11 +779,12 @@ private fun DayCell(
     val isCompletedDay = day.vacation == null &&
         day.shifts.isNotEmpty() &&
         day.shifts.all { it.temporalStatus == ShiftTemporalStatus.COMPLETED }
+    val vigilia = MaterialTheme.vigiliaColors
     val background = when {
-        isCompletedDay && MaterialTheme.colorScheme.background.luminance() < 0.5f -> CompletedDayDark
-        isCompletedDay -> CompletedDayLight
+        day.vacation != null -> vigilia.vacation.copy(alpha = if (vigilia.isDark) 0.20f else 0.12f)
+        isCompletedDay -> vigilia.success.copy(alpha = if (vigilia.isDark) 0.22f else 0.13f)
         isToday -> MaterialTheme.colorScheme.primaryContainer
-        else -> MaterialTheme.colorScheme.surfaceVariant
+        else -> MaterialTheme.colorScheme.surfaceContainerHigh
     }
     Column(
         modifier = modifier
@@ -816,6 +824,7 @@ private fun DayCell(
                 text = "V",
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Bold,
+                color = vigilia.vacation,
             )
         } else if (firstShift != null) {
             Box(
@@ -1159,6 +1168,8 @@ private fun SettingsScreen(
     onOpenWeather: () -> Unit,
     appZoom: AppZoom,
     onAppZoomChange: (AppZoom) -> Unit,
+    appThemeMode: AppThemeMode,
+    onAppThemeModeChange: (AppThemeMode) -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -1169,31 +1180,75 @@ private fun SettingsScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         ScreenHeading("Configuración", supportingText = stringResource(R.string.settings_intro))
-        NavigationCard(
-            title = "Objetivos y horarios",
-            description = "Plantillas, colores y horarios para nuevas guardias.",
-            onClick = onOpenObjectives,
-        )
-        NavigationCard(
-            title = "Feriados",
-            description = "Elegí fechas en un calendario y agregá un nombre opcional.",
-            onClick = onOpenHolidays,
-        )
-        NavigationCard(
-            title = "Vacaciones",
-            description = "Períodos inclusivos y su efecto en el calendario.",
-            onClick = onOpenVacations,
-        )
-        NavigationCard(
-            title = "Notificaciones",
-            description = "Recordatorios, permisos, privacidad y sonido.",
-            onClick = onOpenNotifications,
-        )
-        NavigationCard(
-            title = "Clima",
-            description = "Pronóstico de Córdoba, unidades, caché y atribución.",
-            onClick = onOpenWeather,
-        )
+        SectionCard(
+            title = "Organización",
+            supportingText = "Primero, las herramientas que definen tu calendario.",
+        ) {
+            NavigationRow(
+                title = "Objetivos y horarios",
+                description = "Plantillas, colores y horarios para nuevas guardias.",
+                onClick = onOpenObjectives,
+            )
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            NavigationRow(
+                title = "Feriados",
+                description = "Elegí fechas en un calendario y agregá un nombre opcional.",
+                onClick = onOpenHolidays,
+            )
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            NavigationRow(
+                title = "Vacaciones",
+                description = "Períodos inclusivos y su efecto en el calendario.",
+                onClick = onOpenVacations,
+            )
+        }
+        SectionCard(
+            title = "Avisos y contexto",
+            supportingText = "Configurá señales útiles sin mezclar la lógica del calendario.",
+        ) {
+            NavigationRow(
+                title = "Notificaciones",
+                description = "Recordatorios, permisos, privacidad y sonido.",
+                onClick = onOpenNotifications,
+            )
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            NavigationRow(
+                title = "Clima",
+                description = "Pronóstico de Córdoba, unidades, caché y atribución.",
+                onClick = onOpenWeather,
+            )
+        }
+        SectionCard(
+            title = "Tema de MiGuardia",
+            supportingText = "Alterná entre claro y oscuro, o dejá que Android elija.",
+        ) {
+            val alternateMode = if (appThemeMode == AppThemeMode.LIGHT) {
+                AppThemeMode.DARK
+            } else {
+                AppThemeMode.LIGHT
+            }
+            Text(
+                "Tema actual: ${appThemeMode.label}",
+                color = MaterialTheme.vigiliaColors.onSurfaceMuted,
+            )
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(
+                    onClick = { onAppThemeModeChange(alternateMode) },
+                    modifier = Modifier.testTag("theme-mode-toggle"),
+                ) {
+                    Text(if (alternateMode == AppThemeMode.LIGHT) "Usar modo claro" else "Usar modo oscuro")
+                }
+                OutlinedButton(
+                    onClick = { onAppThemeModeChange(AppThemeMode.SYSTEM) },
+                    enabled = appThemeMode != AppThemeMode.SYSTEM,
+                    modifier = Modifier
+                        .testTag("theme-mode-system")
+                        .semantics { selected = appThemeMode == AppThemeMode.SYSTEM },
+                ) {
+                    Text("Seguir el sistema")
+                }
+            }
+        }
         SectionCard(
             title = "Zoom de MiGuardia",
             supportingText = "Aumenta toda la aplicación sin modificar ajustes de Android.",

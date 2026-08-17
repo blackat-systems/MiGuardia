@@ -24,7 +24,7 @@ import com.blackatsystems.miguardia.core.domain.model.Shift
 import com.blackatsystems.miguardia.core.domain.nextevent.NextEventPrimary
 import com.blackatsystems.miguardia.core.domain.nextevent.NextEventResult
 import com.blackatsystems.miguardia.ui.components.PersistentMessage
-import com.blackatsystems.miguardia.ui.components.SectionCard
+import com.blackatsystems.miguardia.ui.components.HeroCard
 import java.time.Duration
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -42,7 +42,7 @@ fun NextEventCard(
     val accessibility = state.result?.accessibilityDescription()
         ?: state.errorMessage
         ?: "Próximo evento, cargando"
-    SectionCard(
+    HeroCard(
         title = "Próximo evento",
         modifier = modifier
             .testTag("next-event-card")
@@ -123,11 +123,17 @@ private fun ShiftEventContent(
         )
         Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Text(
-                "${shift.objectiveNameSnapshot} (${shift.objectiveAbbreviationSnapshot})",
+                shift.objectiveAbbreviationSnapshot,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(shift.objectiveNameSnapshot, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(shift.localStartDate.format(ArgentineDateFormatter))
+            Text(
+                "${shift.startTimeSnapshot.format(EventTimeFormatter)}–${shift.endTimeSnapshot.format(EventTimeFormatter)}",
+                style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
             )
-            Text(shift.localStartDate.format(ArgentineDateFormatter))
-            Text("${shift.startTimeSnapshot.format(EventTimeFormatter)}–${shift.endTimeSnapshot.format(EventTimeFormatter)}")
             shift.position?.takeIf(String::isNotBlank)?.let { Text("Puesto: $it") }
         }
     }

@@ -1,34 +1,39 @@
 package com.blackatsystems.miguardia
 
-import android.os.Bundle
-import android.content.Intent
 import android.content.ActivityNotFoundException
+import android.content.Intent
 import android.net.Uri
+import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.core.content.edit
 import androidx.core.net.toUri
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
+import com.blackatsystems.miguardia.notifications.NotificationSystemAccess
 import com.blackatsystems.miguardia.ui.MiGuardiaApp
 import com.blackatsystems.miguardia.ui.calendar.CalendarViewModel
+import com.blackatsystems.miguardia.ui.exceptions.ExceptionsViewModel
 import com.blackatsystems.miguardia.ui.management.ManagementViewModel
 import com.blackatsystems.miguardia.ui.nextevent.NextEventViewModel
 import com.blackatsystems.miguardia.ui.notifications.NotificationViewModel
-import com.blackatsystems.miguardia.notifications.NotificationSystemAccess
 import com.blackatsystems.miguardia.ui.photos.PhotosViewModel
 import com.blackatsystems.miguardia.ui.photos.SchedulePhotoFileStore
-import com.blackatsystems.miguardia.ui.exceptions.ExceptionsViewModel
 import com.blackatsystems.miguardia.ui.summary.SummaryViewModel
-import com.blackatsystems.miguardia.ui.vacation.VacationViewModel
-import com.blackatsystems.miguardia.ui.theme.MiGuardiaTheme
+import com.blackatsystems.miguardia.ui.theme.AppThemeMode
 import com.blackatsystems.miguardia.ui.theme.AppZoom
+import com.blackatsystems.miguardia.ui.theme.MiGuardiaTheme
+import com.blackatsystems.miguardia.ui.theme.vigiliaSystemBarStyle
+import com.blackatsystems.miguardia.ui.vacation.VacationViewModel
 import com.blackatsystems.miguardia.ui.weather.WeatherViewModel
 import kotlinx.coroutines.launch
 import java.util.UUID
@@ -115,6 +120,7 @@ class MainActivity : ComponentActivity() {
         )
     }
 
+    @Suppress("DEPRECATION")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
@@ -128,7 +134,25 @@ class MainActivity : ComponentActivity() {
                     ),
                 )
             }
-            MiGuardiaTheme(appZoom = appZoom) {
+            var appThemeMode by remember {
+                mutableStateOf(
+                    AppThemeMode.fromStorage(preferences.getString(APP_THEME_MODE, null)),
+                )
+            }
+            val useDarkTheme = appThemeMode.resolve(isSystemInDarkTheme())
+            val systemBarStyle = vigiliaSystemBarStyle(useDarkTheme)
+            SideEffect {
+                window.statusBarColor = systemBarStyle.backgroundArgb
+                window.navigationBarColor = systemBarStyle.backgroundArgb
+                WindowCompat.getInsetsController(window, window.decorView).apply {
+                    isAppearanceLightStatusBars = systemBarStyle.useDarkIcons
+                    isAppearanceLightNavigationBars = systemBarStyle.useDarkIcons
+                }
+            }
+            MiGuardiaTheme(
+                darkTheme = useDarkTheme,
+                appZoom = appZoom,
+            ) {
                 MiGuardiaApp(
                     calendarViewModel = calendarViewModel,
                     nextEventViewModel = nextEventViewModel,
@@ -144,6 +168,11 @@ class MainActivity : ComponentActivity() {
                     onAppZoomChange = { selected ->
                         appZoom = selected
                         preferences.edit { putInt(APP_ZOOM_PERCENT, selected.percent) }
+                    },
+                    appThemeMode = appThemeMode,
+                    onAppThemeModeChange = { selected ->
+                        appThemeMode = selected
+                        preferences.edit { putString(APP_THEME_MODE, selected.name) }
                     },
                 )
             }
@@ -213,6 +242,7 @@ class MainActivity : ComponentActivity() {
         const val EXTRA_SHIFT_ID = "shift_id"
         const val DISPLAY_PREFERENCES = "miguardia_display_preferences"
         const val APP_ZOOM_PERCENT = "app_zoom_percent"
+        const val APP_THEME_MODE = "app_theme_mode"
         private val NotificationActions = setOf(ACTION_VIEW_SHIFT, ACTION_DIRECTIONS, ACTION_REPORT_NOVELTY)
     }
 }

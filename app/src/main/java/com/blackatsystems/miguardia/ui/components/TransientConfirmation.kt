@@ -15,6 +15,7 @@ import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.blackatsystems.miguardia.ui.theme.vigiliaColors
 import kotlinx.coroutines.delay
 
 const val CONFIRMATION_DURATION_MILLIS = 2_500L
@@ -41,8 +42,8 @@ fun TransientConfirmation(
                     .safeDrawingPadding()
                     .padding(horizontal = 16.dp, vertical = 8.dp)
                     .semantics { liveRegion = LiveRegionMode.Polite },
-                containerColor = MaterialTheme.colorScheme.inverseSurface,
-                contentColor = MaterialTheme.colorScheme.inverseOnSurface,
+                containerColor = MaterialTheme.vigiliaColors.success,
+                contentColor = MaterialTheme.vigiliaColors.onSuccess,
             ) {
                 Text(message)
             }

@@ -44,6 +44,8 @@ import com.blackatsystems.miguardia.core.domain.remuneration.SuvicoRemunerationE
 import com.blackatsystems.miguardia.ui.components.EmptyState
 import com.blackatsystems.miguardia.ui.components.PersistentMessage
 import com.blackatsystems.miguardia.ui.components.SectionCard
+import com.blackatsystems.miguardia.ui.components.ScreenHeading
+import com.blackatsystems.miguardia.ui.theme.vigiliaColors
 import java.time.Duration
 import java.time.YearMonth
 import java.time.format.TextStyle
@@ -72,6 +74,10 @@ fun SummaryScreen(
             .padding(bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        ScreenHeading(
+            title = "Resumen",
+            supportingText = "Horas, eventos y estimaciones del mes seleccionado.",
+        )
         SummaryMonthControls(state.visibleMonth, onPreviousMonth, onNextMonth, onToday)
         when (state.loadState) {
             SummaryLoadState.LOADING -> SummaryLoading()
@@ -283,9 +289,19 @@ private fun SummaryValue(@androidx.annotation.StringRes labelRes: Int, value: St
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.Top,
     ) {
-        Text(label, modifier = Modifier.weight(1f))
+        Text(
+            label,
+            modifier = Modifier.weight(1f),
+            color = MaterialTheme.vigiliaColors.onSurfaceMuted,
+            style = MaterialTheme.typography.bodyMedium,
+        )
         Spacer(Modifier.width(12.dp))
-        Text(value, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.End)
+        Text(
+            value,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.End,
+            style = MaterialTheme.typography.titleMedium,
+        )
     }
 }
 
@@ -298,9 +314,19 @@ private fun SummaryValue(label: String, value: String) {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.Top,
     ) {
-        Text(label, modifier = Modifier.weight(1f))
+        Text(
+            label,
+            modifier = Modifier.weight(1f),
+            color = MaterialTheme.vigiliaColors.onSurfaceMuted,
+            style = MaterialTheme.typography.bodyMedium,
+        )
         Spacer(Modifier.width(12.dp))
-        Text(value, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.End)
+        Text(
+            value,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.End,
+            style = MaterialTheme.typography.titleMedium,
+        )
     }
 }
 

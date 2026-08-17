@@ -612,7 +612,10 @@ Permitir guardar, compartir y regenerar. Comprobar legibilidad, saltos de págin
 
 ## 22. Diseño y accesibilidad
 
-- Tema sistema, claro u oscuro.
+- La identidad visual definitiva se llama **Vigilia**: nocturna, precisa y humana. Su regla rectora es “Vigilia no grita. Señala.”
+- Vigilia ofrece tres opciones persistidas: `Seguir el sistema`, `Claro` y `Oscuro`. Configuración usa un botón compacto para alternar claro/oscuro y conserva `Seguir el sistema` como opción secundaria; no existe una tercera dirección visual.
+- La paleta se traduce centralmente a Material 3 y agrega roles semánticos `active`, `success`, `warning`, `info` y `vacation`; el magenta activo señala selección y no debe cubrir indiscriminadamente la interfaz.
+- Debe haber una sola acción primaria luminosa por superficie. Los niveles de fondo, superficie y tarjeta construyen jerarquía sin anidar contenedores innecesarios.
 - Nunca comunicar estado solo mediante color: conservar abreviatura, horario o símbolo.
 - Contraste automático de texto sobre colores elegidos.
 - Advertir colores demasiado similares, pero permitir continuar.
@@ -623,10 +626,10 @@ Permitir guardar, compartir y regenerar. Comprobar legibilidad, saltos de págin
 - Las verificaciones pueden recorrer el zoom interno de la aplicación, pero no deben consultar ni modificar `font_scale`, zoom, tamaño de visualización ni densidad del dispositivo.
 - Las confirmaciones de acciones completadas aparecen como avisos flotantes que no desplazan el contenido y desaparecen automáticamente alrededor de 2,5 segundos. Los errores persistentes conservan acción explícita de cierre o reintento.
 - En teléfonos pequeños priorizar abreviatura, horario y estado.
-- Descripciones completas para TalkBack/lector de pantalla.
+- Mantener semántica accesible suficiente para identificar controles, estados y acciones. No activar TalkBack ni desarrollar o declarar verificaciones específicas de TalkBack mientras esta decisión siga vigente.
 - Español en V1, pero textos estructurados para futura localización.
 - Retrato como orientación principal; paisaje soportado sin romper flujo.
-- Logo, tipografías definitivas y paleta de marca se decidirán después. Usar por ahora un lenguaje visual neutral y coherente.
+- Logo y tipografías definitivas siguen pendientes; la paleta y el lenguaje visual vigente son Vigilia en sus variantes clara y oscura.
 
 ## 23. Errores, recuperación y soporte
 

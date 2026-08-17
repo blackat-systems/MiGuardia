@@ -86,7 +86,8 @@ class NextEventComposeTest {
         setCard(projection(shifts = listOf(second, first)))
 
         compose.onNodeWithText("Guardia en curso").assertExists()
-        compose.onNodeWithText("Objetivo ficticio Norte (NRT)").assertExists()
+        compose.onNodeWithText("NRT").assertExists()
+        compose.onNodeWithText("Objetivo ficticio Norte").assertExists()
         compose.onNodeWithText("15/08/2026").assertExists()
         compose.onNodeWithText("08:00–17:20").assertExists()
         compose.onNodeWithText("Puesto: Acceso uno").assertExists()
@@ -174,14 +175,17 @@ class NextEventComposeTest {
             }
         }
 
-        compose.onNodeWithText("Objetivo ficticio (FIC)").assertExists()
+        compose.onNodeWithText("FIC").assertExists()
+        compose.onNodeWithText("Objetivo ficticio").assertExists()
         compose.onNodeWithContentDescription("Mes anterior").performClick()
         compose.onNodeWithText("Julio de 2026").assertExists()
-        compose.onNodeWithText("Objetivo ficticio (FIC)").assertExists()
+        compose.onNodeWithText("FIC").assertExists()
+        compose.onNodeWithText("Objetivo ficticio").assertExists()
 
         val edited = futureShift().copy(objectiveNameSnapshot = "Objetivo editado ficticio")
         compose.runOnIdle { nextState = contentState(projection(shifts = listOf(edited))) }
-        compose.onNodeWithText("Objetivo editado ficticio (FIC)").assertExists()
+        compose.onNodeWithText("FIC").assertExists()
+        compose.onNodeWithText("Objetivo editado ficticio").assertExists()
         compose.runOnIdle { nextState = contentState(projection()) }
         compose.onNodeWithText("Sin próximos eventos").assertExists()
     }

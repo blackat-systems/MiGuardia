@@ -38,7 +38,8 @@ El resultado debe:
 - reducir ruido, listas confusas y acciones repetidas;
 - unificar encabezados, tarjetas, botones, formularios, mensajes y diálogos;
 - conservar accesibilidad semántica y contraste;
-- sostener una identidad oscura exclusiva basada en `interfaz/000____core_view.jpg`;
+- sostener la identidad Vigilia aprobada, basada en `interfaz/000____core_view.jpg`, con variantes clara y oscura coherentes;
+- preservar las opciones persistidas `Seguir el sistema`, `Claro` y `Oscuro`, con un botón compacto para alternar claro/oscuro y `Seguir el sistema` como opción secundaria;
 - funcionar en retrato y paisaje;
 - respetar barras e insets del sistema;
 - funcionar con el zoom interno de MiGuardia en 100 %, 150 % y 200 %;
@@ -164,8 +165,8 @@ No reemplaces toda la navegación ni hagas una reescritura masiva sin evidencia.
 - Mensajes breves, accionables y sin detalles internos.
 - Desplazamiento disponible cuando el contenido no entra.
 - Nada esencial puede quedar detrás de barras del sistema, navegación o teclado.
-- Contraste suficiente en colores elegidos, estados completados y tema oscuro.
-- TalkBack debe anunciar qué es cada control, su estado y su acción.
+- Contraste suficiente en colores elegidos, estados completados y variantes clara y oscura.
+- Conservar semántica accesible para identificar cada control, su estado y su acción. No activar TalkBack ni agregar o declarar verificaciones específicas de TalkBack.
 - Paisaje no debe ser una versión cortada de retrato.
 - El zoom interno puede requerir desplazamiento, pero no debe volver inaccesibles las acciones.
 
@@ -181,7 +182,7 @@ Actualizar o agregar pruebas Compose para toda conducta visual modificada:
 - diálogo de ausencia/cancelación con descripción opcional;
 - zoom interno 100 %, 150 % y 200 %;
 - estados vacío, carga, error y reintento;
-- claro/oscuro;
+- Seguir el sistema/claro/oscuro y persistencia de la elección;
 - retrato/paisaje;
 - insets y semántica accesible.
 
@@ -204,14 +205,14 @@ Verificá en el Galaxy S25 Ultra/API 36, con datos QA ficticios:
 - todas las superficies enumeradas;
 - recorridos principales y vuelta atrás;
 - teclado y formularios largos;
-- identidad oscura exclusiva y contraste suficiente;
+- identidad Vigilia clara y oscura, opción Seguir el sistema y contraste suficiente;
 - retrato y paisaje;
 - zoom interno 100 %, 150 % y 200 %;
 - calendario con abreviatura y horario completos;
 - estados completados verdes;
 - barras del sistema e insets;
 - mensajes temporales y errores persistentes;
-- TalkBack mediante semántica verificable cuando la prueba manual completa no sea viable.
+- semántica accesible sin activar ni declarar una verificación específica de TalkBack.
 
 No consultes ni modifiques fuente, zoom, tamaño de visualización o densidad del sistema. Restaurá tema, orientación y rotación al finalizar. Eliminá datos y archivos QA sin tocar información real.
 
