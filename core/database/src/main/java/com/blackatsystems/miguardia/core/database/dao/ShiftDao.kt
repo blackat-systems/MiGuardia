@@ -10,6 +10,9 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 internal interface ShiftDao {
+    @Query("SELECT EXISTS(SELECT 1 FROM shifts LIMIT 1)")
+    fun observeHasAny(): Flow<Boolean>
+
     @Query(
         """SELECT * FROM shifts
             WHERE localStartDate BETWEEN :startDateInclusive AND :endDateInclusive

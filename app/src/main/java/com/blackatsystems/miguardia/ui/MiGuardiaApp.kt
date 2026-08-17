@@ -1,6 +1,7 @@
 package com.blackatsystems.miguardia.ui
 
 import androidx.annotation.StringRes
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -81,8 +82,10 @@ import com.blackatsystems.miguardia.core.domain.weather.WeatherUnitSystem
 import com.blackatsystems.miguardia.core.domain.weather.roundedTemperature
 import com.blackatsystems.miguardia.core.domain.weather.spanishLabel
 import com.blackatsystems.miguardia.ui.calendar.CalendarLoadState
+import com.blackatsystems.miguardia.ui.calendar.CalendarInteractionMode
 import com.blackatsystems.miguardia.ui.calendar.CalendarUiState
 import com.blackatsystems.miguardia.ui.calendar.CalendarViewModel
+import com.blackatsystems.miguardia.ui.calendar.firstShiftDate
 import com.blackatsystems.miguardia.ui.components.NavigationRow
 import com.blackatsystems.miguardia.ui.components.PersistentMessage
 import com.blackatsystems.miguardia.ui.components.ScreenHeading
@@ -183,6 +186,8 @@ fun MiGuardiaApp(
         onToday = calendarViewModel::showCurrentMonth,
         onSelectDate = calendarViewModel::selectDate,
         onDismissDate = calendarViewModel::clearSelectedDate,
+        onEnterCalendarEditMode = calendarViewModel::enterEditMode,
+        onFinishCalendarEditMode = calendarViewModel::finishEditMode,
         onRetry = calendarViewModel::retry,
         summaryState = summaryState,
         onSummaryPreviousMonth = summaryViewModel::showPreviousMonth,
@@ -223,6 +228,8 @@ fun MiGuardiaApp(
     onDismissDate: () -> Unit,
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
+    onEnterCalendarEditMode: (LocalDate?) -> Unit = {},
+    onFinishCalendarEditMode: () -> Unit = {},
     nextEventState: NextEventUiState = NextEventUiState(),
     onNextEventRetry: () -> Unit = {},
     managementState: ManagementUiState = ManagementUiState(),
@@ -254,7 +261,6 @@ fun MiGuardiaApp(
     onAppThemeModeChange: (AppThemeMode) -> Unit = {},
 ) {
     var destination by rememberSaveable { androidx.compose.runtime.mutableStateOf(MainDestination.CALENDAR) }
-    var showAddChoice by rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
     LaunchedEffect(calendarNavigationRequest) {
         if (calendarNavigationRequest > 0) destination = MainDestination.CALENDAR
     }
@@ -334,7 +340,14 @@ fun MiGuardiaApp(
                 onSelectDate = onSelectDate,
                 onRetry = onRetry,
                 onNextEventRetry = onNextEventRetry,
-                onAddShift = { showAddChoice = true },
+                onEnterEditMode = { onEnterCalendarEditMode(null) },
+                onFinishEditMode = onFinishCalendarEditMode,
+                onLoadFirstShift = {
+                    val today = calendarState.referenceInstant.atZone(AppDefaults.zoneId()).toLocalDate()
+                    val selectedDate = firstShiftDate(calendarState.visibleMonth, today)
+                    onEnterCalendarEditMode(selectedDate)
+                    managementActions.openAddShift(calendarState.visibleMonth, selectedDate)
+                },
                 onOpenPhotos = { photosActions.open(calendarState.visibleMonth) },
                 appZoom = appZoom,
             )
@@ -367,6 +380,19 @@ fun MiGuardiaApp(
     val selectedDay = calendarState.selectedDate?.let { selectedDate ->
         calendarState.days.firstOrNull { it.date == selectedDate }
     }
+    val hasBlockingSurface = managementState.surface != ManagementSurface.NONE ||
+        exceptionsState.surface != ExceptionsSurface.NONE ||
+        vacationState.surface != VacationSurface.NONE ||
+        photosState.surface != PhotosSurface.NONE ||
+        notificationState.surface != NotificationSurface.NONE ||
+        weatherState.surface != WeatherSurface.NONE
+    BackHandler(
+        enabled = destination == MainDestination.CALENDAR &&
+            calendarState.interactionMode == CalendarInteractionMode.EDIT &&
+            selectedDay == null &&
+            !hasBlockingSurface,
+        onBack = onFinishCalendarEditMode,
+    )
     val weatherBriefIds = selectedDay
         ?.shifts
         ?.map(CalendarShift::shift)
@@ -380,27 +406,44 @@ fun MiGuardiaApp(
             weatherActions.loadBriefs(weatherBriefIds)
         }
     }
-    if (selectedDay != null) {
+    if (selectedDay != null && managementState.surface == ManagementSurface.NONE) {
+        val isEditing = calendarState.interactionMode == CalendarInteractionMode.EDIT
         ModalBottomSheet(onDismissRequest = onDismissDate) {
             DayDetailSheet(
                 day = selectedDay,
                 referenceInstant = calendarState.referenceInstant,
-                onAddShift = {
-                    onDismissDate()
-                    managementActions.openAddShift(calendarState.visibleMonth, selectedDay.date)
+                onAddShift = if (isEditing) {
+                    {
+                        onDismissDate()
+                        managementActions.openAddShift(calendarState.visibleMonth, selectedDay.date)
+                    }
+                } else {
+                    null
                 },
-                onAddDayOff = {
-                    onDismissDate()
-                    managementActions.openDayOffs(calendarState.visibleMonth, selectedDay.date)
+                onAddDayOff = if (isEditing) {
+                    {
+                        onDismissDate()
+                        managementActions.openDayOffs(calendarState.visibleMonth, selectedDay.date)
+                    }
+                } else {
+                    null
                 },
-                onEditShift = {
-                    onDismissDate()
-                    managementActions.openEditShift(it)
+                onEditShift = if (isEditing) {
+                    {
+                        onDismissDate()
+                        managementActions.openEditShift(it)
+                    }
+                } else {
+                    null
                 },
-                onDeleteShift = managementActions.deleteShift,
-                onOpenExceptions = {
-                    onDismissDate()
-                    exceptionsActions.openShift(it)
+                onDeleteShift = if (isEditing) managementActions.deleteShift else null,
+                onOpenExceptions = if (isEditing) {
+                    {
+                        onDismissDate()
+                        exceptionsActions.openShift(it)
+                    }
+                } else {
+                    null
                 },
                 onOpenWeather = weatherActions.openShift,
                 weatherState = weatherState,
@@ -430,39 +473,6 @@ fun MiGuardiaApp(
     if (weatherState.surface != WeatherSurface.NONE) {
         WeatherSurfaceHost(weatherState, weatherActions)
     }
-    if (showAddChoice) {
-        AlertDialog(
-            onDismissRequest = { showAddChoice = false },
-            title = { Text("Agregar") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Elegí si querés cargar guardias o marcar francos.")
-                    Button(
-                        modifier = Modifier.fillMaxWidth(),
-                        onClick = {
-                            showAddChoice = false
-                            managementActions.openAddShift(calendarState.visibleMonth, null)
-                        },
-                    ) { Text("Agregar guardia") }
-                    OutlinedButton(
-                        modifier = Modifier.fillMaxWidth(),
-                        onClick = {
-                            showAddChoice = false
-                            managementActions.openDayOffs(calendarState.visibleMonth, null)
-                        },
-                    ) { Text("Agregar francos") }
-                }
-            },
-            confirmButton = {},
-            dismissButton = {
-                TextButton(
-                    onClick = {
-                        showAddChoice = false
-                    },
-                ) { Text("Cancelar") }
-            },
-        )
-    }
 }
 
 @Composable
@@ -476,7 +486,9 @@ private fun CalendarScreen(
     onSelectDate: (LocalDate) -> Unit,
     onRetry: () -> Unit,
     onNextEventRetry: () -> Unit,
-    onAddShift: () -> Unit,
+    onEnterEditMode: () -> Unit,
+    onFinishEditMode: () -> Unit,
+    onLoadFirstShift: () -> Unit,
     onOpenPhotos: () -> Unit,
     appZoom: AppZoom,
 ) {
@@ -491,6 +503,17 @@ private fun CalendarScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         NextEventCard(state = nextEventState, onRetry = onNextEventRetry)
+        if (state.interactionMode == CalendarInteractionMode.EDIT) {
+            Text(
+                text = "Editando calendario",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.vigiliaColors.active,
+                modifier = Modifier.semantics {
+                    contentDescription = "Editando calendario. Las acciones para modificar están habilitadas."
+                },
+            )
+        }
         MonthControls(
             visibleMonth = state.visibleMonth,
             onPrevious = onPreviousMonth,
@@ -522,10 +545,20 @@ private fun CalendarScreen(
         }
 
         Button(
-            onClick = onAddShift,
+            onClick = when {
+                state.interactionMode == CalendarInteractionMode.EDIT -> onFinishEditMode
+                state.hasAnyShifts -> onEnterEditMode
+                else -> onLoadFirstShift
+            },
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Text(stringResource(R.string.add))
+            Text(
+                when {
+                    state.interactionMode == CalendarInteractionMode.EDIT -> "Terminar"
+                    state.hasAnyShifts -> "Editar calendario"
+                    else -> "Cargar mi primera guardia"
+                },
+            )
         }
     }
 }
@@ -916,11 +949,11 @@ private fun AutoSizeSingleLineText(
 private fun DayDetailSheet(
     day: CalendarDay,
     referenceInstant: java.time.Instant,
-    onAddShift: () -> Unit,
-    onAddDayOff: () -> Unit,
-    onEditShift: (com.blackatsystems.miguardia.core.domain.model.Shift) -> Unit,
-    onDeleteShift: (java.util.UUID) -> Unit,
-    onOpenExceptions: (com.blackatsystems.miguardia.core.domain.model.Shift) -> Unit,
+    onAddShift: (() -> Unit)?,
+    onAddDayOff: (() -> Unit)?,
+    onEditShift: ((com.blackatsystems.miguardia.core.domain.model.Shift) -> Unit)?,
+    onDeleteShift: ((java.util.UUID) -> Unit)?,
+    onOpenExceptions: ((com.blackatsystems.miguardia.core.domain.model.Shift) -> Unit)?,
     onOpenWeather: (java.util.UUID) -> Unit,
     weatherState: WeatherUiState,
 ) {
@@ -954,7 +987,7 @@ private fun DayDetailSheet(
                 } else {
                     "Agregar otra guardia"
                 },
-                onDelete = { pendingDeleteId = it.toString() },
+                onDelete = onDeleteShift?.let { { id -> pendingDeleteId = id.toString() } },
                 onOpenExceptions = onOpenExceptions,
                 onOpenWeather = if (
                     calendarShift.shift.isEligibleUpcomingWork(referenceInstant, listOfNotNull(day.vacation))
@@ -986,7 +1019,7 @@ private fun DayDetailSheet(
                 fontWeight = FontWeight.SemiBold,
             )
         }
-        if (day.shifts.isEmpty()) {
+        if (day.shifts.isEmpty() && onAddShift != null && onAddDayOff != null) {
             Button(onClick = onAddShift, modifier = Modifier.fillMaxWidth()) {
                 Text("Agregar guardia")
             }
@@ -1002,7 +1035,7 @@ private fun DayDetailSheet(
             text = { Text("Se eliminará solamente esta guardia. ¿Querés continuar?") },
             confirmButton = {
                 TextButton(onClick = {
-                    onDeleteShift(java.util.UUID.fromString(id))
+                    onDeleteShift?.invoke(java.util.UUID.fromString(id))
                     pendingDeleteId = null
                 }) { Text("Eliminar") }
             },
@@ -1071,7 +1104,7 @@ private fun ShiftDetail(
                     Text("Editar")
                 }
                 if (onAddAnotherShift != null) {
-                    Button(onClick = onAddAnotherShift, modifier = Modifier.fillMaxWidth()) {
+                    OutlinedButton(onClick = onAddAnotherShift, modifier = Modifier.fillMaxWidth()) {
                         Text(addAnotherShiftLabel)
                     }
                 }

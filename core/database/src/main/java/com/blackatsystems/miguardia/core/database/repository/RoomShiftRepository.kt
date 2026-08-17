@@ -22,6 +22,9 @@ internal class RoomShiftRepository(
     private val database: MiGuardiaDatabase,
 ) : ShiftRepository {
     private val dao: ShiftDao = database.shiftDao()
+
+    override fun observeHasAny(): Flow<Boolean> = dao.observeHasAny()
+
     override fun observeStartingBetween(
         startDateInclusive: LocalDate,
         endDateInclusive: LocalDate,

@@ -8,6 +8,8 @@ import java.util.UUID
 import kotlinx.coroutines.flow.Flow
 
 interface ShiftRepository {
+    fun observeHasAny(): Flow<Boolean>
+
     fun observeStartingBetween(
         startDateInclusive: LocalDate,
         endDateInclusive: LocalDate,

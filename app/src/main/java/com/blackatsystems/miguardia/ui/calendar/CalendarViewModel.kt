@@ -48,11 +48,17 @@ class CalendarViewModel(
     private val initialMonth = savedStateHandle.get<String>(VISIBLE_MONTH_KEY)
         ?.let(YearMonth::parse)
         ?: YearMonth.now(clock.withZone(zone))
+    private val initialInteractionMode = savedStateHandle.get<String>(INTERACTION_MODE_KEY)
+        .let(::calendarInteractionModeFromSaved)
+    private val initialSelectedDate = savedStateHandle.get<String>(SELECTED_DATE_KEY)
+        ?.let(LocalDate::parse)
 
     private val _uiState = kotlinx.coroutines.flow.MutableStateFlow(
         CalendarUiState(
             visibleMonth = initialMonth,
             referenceInstant = clock.instant(),
+            selectedDate = initialSelectedDate?.takeIf { YearMonth.from(it) == initialMonth },
+            interactionMode = initialInteractionMode,
         ),
     )
     val uiState: kotlinx.coroutines.flow.StateFlow<CalendarUiState> = _uiState
@@ -61,6 +67,7 @@ class CalendarViewModel(
     private var boundaryJob: Job? = null
 
     init {
+        observeGlobalShiftPresence()
         observeMonth(initialMonth)
     }
 
@@ -72,6 +79,7 @@ class CalendarViewModel(
 
     fun selectDate(date: LocalDate) {
         if (YearMonth.from(date) == _uiState.value.visibleMonth) {
+            savedStateHandle[SELECTED_DATE_KEY] = date.toString()
             _uiState.update { it.copy(selectedDate = date) }
         }
     }
@@ -79,11 +87,24 @@ class CalendarViewModel(
     fun openDate(date: LocalDate) {
         val month = YearMonth.from(date)
         if (month != _uiState.value.visibleMonth) setVisibleMonth(month)
+        savedStateHandle[SELECTED_DATE_KEY] = date.toString()
         _uiState.update { it.copy(selectedDate = date) }
     }
 
     fun clearSelectedDate() {
+        savedStateHandle.remove<String>(SELECTED_DATE_KEY)
         _uiState.update { it.copy(selectedDate = null) }
+    }
+
+    fun enterEditMode(selectedDate: LocalDate? = _uiState.value.selectedDate) {
+        savedStateHandle[INTERACTION_MODE_KEY] = CalendarInteractionMode.EDIT.name
+        selectedDate?.let { savedStateHandle[SELECTED_DATE_KEY] = it.toString() }
+        _uiState.update { it.enterEditing(selectedDate) }
+    }
+
+    fun finishEditMode() {
+        savedStateHandle[INTERACTION_MODE_KEY] = CalendarInteractionMode.VIEW.name
+        _uiState.update(CalendarUiState::finishEditing)
     }
 
     fun retry() {
@@ -93,13 +114,26 @@ class CalendarViewModel(
     private fun setVisibleMonth(month: YearMonth) {
         if (month == _uiState.value.visibleMonth) return
         savedStateHandle[VISIBLE_MONTH_KEY] = month.toString()
+        savedStateHandle.remove<String>(SELECTED_DATE_KEY)
         _uiState.update {
-            CalendarUiState(
+            it.copy(
                 visibleMonth = month,
                 referenceInstant = clock.instant(),
+                days = emptyList(),
+                selectedDate = null,
+                loadState = CalendarLoadState.LOADING,
+                errorMessage = null,
             )
         }
         observeMonth(month)
+    }
+
+    private fun observeGlobalShiftPresence() {
+        viewModelScope.launch {
+            shiftRepository.observeHasAny()
+                .catch { /* Conservamos el valor seguro: no ofrecer una falsa primera carga. */ }
+                .collect { hasAny -> _uiState.update { it.copy(hasAnyShifts = hasAny) } }
+        }
     }
 
     private fun observeMonth(month: YearMonth) {
@@ -208,5 +242,7 @@ class CalendarViewModel(
 
     private companion object {
         const val VISIBLE_MONTH_KEY = "calendar.visibleMonth"
+        const val INTERACTION_MODE_KEY = "calendar.interactionMode"
+        const val SELECTED_DATE_KEY = "calendar.selectedDate"
     }
 }

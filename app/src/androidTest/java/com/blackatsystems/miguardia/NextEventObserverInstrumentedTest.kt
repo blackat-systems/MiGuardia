@@ -206,6 +206,8 @@ class NextEventObserverInstrumentedTest {
         var fail = true
         var collectionCount = 0
 
+        override fun observeHasAny(): Flow<Boolean> = MutableStateFlow(false)
+
         override fun observeEndingAfter(instantExclusive: Instant): Flow<List<Shift>> = flow {
             collectionCount += 1
             if (fail) error("Fallo ficticio")
@@ -227,6 +229,8 @@ class NextEventObserverInstrumentedTest {
     private class StaticShiftRepository(
         private val values: List<Shift>,
     ) : ShiftRepository {
+        override fun observeHasAny(): Flow<Boolean> = MutableStateFlow(values.isNotEmpty())
+
         override fun observeEndingAfter(instantExclusive: Instant): Flow<List<Shift>> =
             MutableStateFlow(values.filter { it.endAt > instantExclusive })
 

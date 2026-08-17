@@ -114,6 +114,45 @@ class MiGuardiaAppTest {
         }
     }
 
+    @Test
+    fun calendarEditModeSurvivesActivityRecreationAndFinishesSafely() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val context = instrumentation.targetContext
+        val device = UiDevice.getInstance(instrumentation)
+        prepareDevice(instrumentation, context, device)
+
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            assertTrue(
+                "MiGuardia no se hizo visible dentro del tiempo esperado.",
+                device.wait(Until.hasObject(By.pkg(context.packageName).depth(0)), WAIT_TIMEOUT_MILLIS),
+            )
+            val firstShift = "Cargar mi primera guardia"
+            val editCalendar = "Editar calendario"
+            val entry = when {
+                device.scrollUntilText(firstShift) -> firstShift
+                device.scrollUntilText(editCalendar) -> editCalendar
+                else -> throw AssertionError("No apareció una entrada consciente a la edición del calendario.")
+            }
+            device.tapText(entry)
+            if (entry == firstShift) {
+                device.assertTextVisible("Guardias")
+                device.pressBack()
+                device.tapText("Descartar")
+                device.pressBack()
+            }
+
+            assertTrue("No apareció Terminar en modo edición.", device.scrollUntilText("Terminar"))
+            scenario.recreate()
+            assertTrue("El modo edición no sobrevivió la recreación.", device.scrollUntilText("Terminar"))
+
+            device.tapText("Terminar")
+            assertTrue(
+                "Terminar no regresó al modo consulta.",
+                device.scrollUntilText(firstShift) || device.scrollUntilText(editCalendar),
+            )
+        }
+    }
+
     private fun launchApp(): Pair<Context, UiDevice> {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val context = instrumentation.targetContext
@@ -168,6 +207,15 @@ class MiGuardiaAppTest {
             wait(Until.hasObject(By.desc(description)), WAIT_TIMEOUT_MILLIS),
         )
         findObject(By.desc(description)).click()
+    }
+
+    private fun UiDevice.scrollUntilText(text: String): Boolean {
+        repeat(8) {
+            if (hasObject(By.text(text))) return true
+            swipe(displayWidth / 2, displayHeight * 3 / 4, displayWidth / 2, displayHeight / 4, 30)
+            waitForIdle()
+        }
+        return hasObject(By.text(text))
     }
 
     private fun YearMonth.displayName(): String {

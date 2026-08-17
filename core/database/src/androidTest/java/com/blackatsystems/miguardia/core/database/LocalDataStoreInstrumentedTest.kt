@@ -21,8 +21,11 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 import java.util.UUID
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -116,6 +119,30 @@ class LocalDataStoreInstrumentedTest {
         assertEquals(LocalDate.of(2026, 8, 31), august.single().localStartDate)
         assertTrue(august.single().endAt.isAfter(august.single().startAt))
         assertEquals(0xFF123456.toInt(), august.single().colorArgbSnapshot)
+    }
+
+    @Test
+    fun globalShiftPresenceReactsToFirstInsertAndLastDelete() = runBlocking {
+        assertEquals(false, store.shifts.observeHasAny().first())
+        val candidate = shift(
+            id = SHIFT_ID,
+            startDate = LocalDate.of(2026, 8, 31),
+            startTime = LocalTime.of(19, 0),
+            endDate = LocalDate.of(2026, 9, 1),
+            endTime = LocalTime.of(7, 0),
+        )
+
+        val inserted = async(start = CoroutineStart.UNDISPATCHED) {
+            withTimeout(5_000) { store.shifts.observeHasAny().first { it } }
+        }
+        store.shifts.insert(candidate)
+        assertEquals(true, inserted.await())
+
+        val removed = async(start = CoroutineStart.UNDISPATCHED) {
+            withTimeout(5_000) { store.shifts.observeHasAny().first { !it } }
+        }
+        store.shifts.delete(candidate.id)
+        assertEquals(false, removed.await())
     }
 
     @Test
