@@ -137,11 +137,14 @@ Después de cada entrega:
 
 1. verificar ruta, rama, SHA base, estado y diff completo, incluidos nuevos;
 2. revisar Room, DataStore, navegación, dominio, permisos, dependencias, secretos y datos reales;
-3. ejecutar `git diff --check`, pruebas, lint y ensamblados pertinentes con `--max-workers=1`;
-4. usar el Samsung `SM-S938B` y paquetes QA aislados para recorridos destructivos;
-5. preservar `com.blackatsystems.miguardia` y sus datos;
-6. corregir o rechazar defectos;
-7. integrar y alcanzar un nuevo `HEAD` limpio antes de crear el worktree siguiente.
+3. construir un mapa de impacto y ejecutar con `--max-workers=1` las pruebas, lint y ensamblados pertinentes para las funciones o contratos realmente modificados;
+4. conservar como evidencia la última batería verde de módulos sin cambios, sin repetirla por rutina;
+5. usar el Samsung `SM-S938B` y paquetes QA aislados únicamente para las superficies Android afectadas o recorridos destructivos;
+6. reservar la batería global para cambios transversales, release, publicación o una auditoría integral solicitada;
+7. ejecutar siempre `git diff --check` y revisar alcance, seguridad y privacidad;
+8. preservar `com.blackatsystems.miguardia` y sus datos;
+9. corregir o rechazar defectos;
+10. integrar y alcanzar un nuevo `HEAD` limpio antes de crear el worktree siguiente.
 
 La evidencia del especialista no sustituye la verificación de MAIN.
 

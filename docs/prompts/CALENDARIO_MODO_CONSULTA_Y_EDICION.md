@@ -248,21 +248,24 @@ Con fakes y datos ficticios:
 - usa base UUID aislada;
 - esquema y migraciones permanecen idénticos.
 
-## 11. Batería y Samsung
+## 11. Validación por impacto y Samsung
 
-Ejecutá serializado:
+No repitas por rutina pruebas de Notificaciones, Clima, Fotos, Resumen o contratos que el diff no alcance. Partí de la última evidencia verde de MAIN y documentá el mapa de impacto.
 
-```powershell
-.\gradlew.bat --no-daemon --stacktrace --max-workers=1 clean testDebugUnitTest lintDebug assembleDebug assembleRelease :app:assembleDebugAndroidTest :app:assembleQa :app:assembleQaAndroidTest
-```
+Ejecutá serializado con `--max-workers=1`:
 
-Si tocaste consultas Room:
+- pruebas JVM nuevas o modificadas de Calendario/estado;
+- `CalendarComposeTest`, los casos afectados de `ManagementComposeTest` y cualquier prueba de navegación raíz directamente relacionada;
+- compilación de `:app` y lint sobre el árbol modificado;
+- ensamblado QA necesario para la verificación física.
+
+Si tocaste `ShiftRepository`, DAO o repositorio Room, agregá sus pruebas JVM/instrumentadas específicas y ejecutá Room aislado para ese contrato:
 
 ```powershell
 .\gradlew.bat --no-daemon --stacktrace --max-workers=1 :core:database:connectedDebugAndroidTest
 ```
 
-Obtené conteos exactos desde XML. Ejecutá `git diff --check`.
+No ejecutes toda la instrumentación Room si el diff no toca esa capa. Si aparece un fallo fuera del impacto esperado o cambia un contrato compartido, ampliá la batería de manera fundada. Obtené conteos exactos de lo realmente ejecutado y corré siempre `git diff --check`.
 
 En Samsung `SM-S938B`, API 36, usá exclusivamente `com.blackatsystems.miguardia.qa` y `.qa.test`. No borres, desinstales ni modifiques permisos/datos/alarmas de `com.blackatsystems.miguardia`.
 

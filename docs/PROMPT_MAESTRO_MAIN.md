@@ -721,6 +721,22 @@ La primera versión utilizable debe alcanzar almacenamiento local, calendario, c
 
 ## 26. Criterios transversales de aceptación
 
+### Política de validación por impacto
+
+Decisión de Joa del 17 de agosto de 2026: una función que ya fue auditada y permanece sin cambios conserva su última evidencia verde. No se repite automáticamente toda la batería histórica en cada integración sólo para volver a demostrar lo mismo.
+
+Para cada entrega, MAIN y la dependencia deben:
+
+1. construir un mapa de impacto a partir del diff real: archivos, contratos, consumidores y recorridos modificados;
+2. ejecutar las pruebas nuevas o modificadas y las regresiones vecinas que puedan verse afectadas;
+3. volver a auditar físicamente sólo las superficies o integraciones Android cuyo comportamiento cambió;
+4. dejar asentado qué se ejecutó, qué no se repitió y cuál es la última evidencia verde que se conserva;
+5. ampliar la batería si aparece un fallo inesperado, una dependencia compartida cambió o el impacto no puede acotarse con confianza.
+
+La batería global completa se reserva para cambios transversales —por ejemplo Gradle, manifiesto, dependencias, Room/migraciones, contratos compartidos de dominio, composición raíz o navegación con impacto amplio— y para hitos de release, publicación o auditoría integral solicitada. Compilar el módulo afectado, revisar el diff, ejecutar `git diff --check` y controlar seguridad/privacidad siguen siendo obligatorios en toda integración.
+
+Cambiar una función invalida su evidencia anterior: esa función y sus dependencias directas deben auditarse nuevamente. Un cambio meramente documental no obliga a repetir pruebas de aplicación salvo que revele una contradicción con el comportamiento implementado.
+
 Cada módulo debe demostrar como mínimo:
 
 - persistencia tras cerrar/reabrir y reiniciar cuando corresponda;
