@@ -2,6 +2,8 @@
 
 > Versión inicial: 2026-08-13
 >
+> Última actualización funcional: 2026-08-17
+>
 > Estado: decisiones funcionales aprobadas en PLANIFICACIÓN
 >
 > Destinatario: chat/tarea MAIN
@@ -35,6 +37,8 @@ PLANIFICACIÓN ya terminó de definir el comportamiento. MAIN:
 - integra lo producido y comprueba que no rompa otros módulos;
 - no permite que un chat especializado cambie reglas de negocio por iniciativa propia;
 - solo crea/abre una tarea separada cuando Joaquin lo solicite o autorice expresamente.
+
+Autorización del 17 de agosto de 2026: Joa autoriza a MAIN a crear dependencias especializadas cuando sean necesarias para implementar las superficies aprobadas. Cada dependencia debe nacer del `HEAD` limpio, actualizado y verificable de MAIN, usar un prompt acotado y volver a MAIN para auditoría e integración. Esta autorización no habilita worktrees redundantes, pagos ni otras profesiones fuera del alcance vigente.
 
 Dependencias conceptuales previstas:
 
@@ -73,6 +77,8 @@ Principios del producto:
 - experiencia `KEEP IT SIMPLE`: mostrar primero la decisión necesaria, revelar opciones avanzadas sólo a pedido y explicar cada consecuencia con palabras cotidianas.
 
 La primera versión es Android, en español y se prueba en Córdoba Capital. No hay cuentas ni servicios de MiGuardia en la nube.
+
+Decisión de alcance del 17 de agosto de 2026: completar primero una MiGuardia coherente para vigiladores. La adaptación futura a salud, policía, bomberos u otras profesiones queda pospuesta y no debe generalizar ni complicar la V1.
 
 ## 3. Plataforma y entorno ya preparado
 
@@ -137,7 +143,7 @@ Calendario, barra superior:
 - gesto horizontal para cambiar mes;
 - botón Hoy;
 - botón de fotos del cronograma del mes;
-- acción visible Agregar.
+- en el modo normal no muestra una acción permanente `Agregar`; la entrada consciente a las mutaciones es el botón inferior `Editar calendario`.
 
 Menú del mes:
 
@@ -156,7 +162,7 @@ Resumen:
 - estimación bruta SUVICO al final, con antigüedad persistida;
 - acción Generar informe.
 
-Configuración agrupa: perfil y valores predeterminados; objetivos y horarios; notificaciones; widgets; clima; feriados; remuneración; privacidad y bloqueo; copias de seguridad; apariencia; ayuda.
+Configuración agrupa: perfil laboral y valores predeterminados; objetivos y horarios; notificaciones; widgets; clima; feriados; remuneración; privacidad y bloqueo; copias de seguridad; apariencia; ayuda. La información profesional se concentra en Perfil y las preferencias funcionales permanecen en sus apartados; no duplicar datos ni ajustes entre ambas superficies.
 
 El botón Atrás sigue convenciones Android. Si hay edición sin confirmar, advierte antes de descartarla. La búsqueda global queda fuera de V1.
 
@@ -176,16 +182,21 @@ Estados:
 
 Un día vacío se considera visual y funcionalmente “sin definir”. No hace falta crear una fila persistente para cada día vacío si el modelo puede representarlo de modo inequívoco.
 
-Interacciones:
+El calendario usa una sola proyección y una sola pantalla con dos estados de interacción:
 
-- la acción inferior `Agregar` ofrece únicamente `Agregar guardia` y `Agregar francos`; la carga de guardia ya permite una o varias fechas;
-- tocar un día ocupado abre sus detalles;
-- mantener pulsado ofrece editar o limpiar/eliminar;
-- cada guardia del detalle muestra como acciones principales únicamente `Informar novedad / notas`, `Editar` y `Eliminar`; eliminar exige confirmación;
-- la configuración particular de avisos vive dentro de `Editar`, no como acción principal del detalle;
-- una guardia futura elegible muestra un resumen meteorológico de todo su horario y permite abrir el detalle hora por hora;
-- las eliminaciones masivas piden confirmación;
-- puede existir deshacer breve al limpiar un día o una guardia.
+1. **Modo consulta**, predeterminado:
+   - permite cambiar mes, volver a Hoy, abrir fotos, consultar resúmenes, clima y detalles informativos;
+   - ninguna interacción agrega, edita, reemplaza, limpia o elimina datos;
+   - muestra abajo `Editar calendario` sin tapar fechas ni competir con la navegación;
+   - si todavía no existe ninguna carga, puede mostrar `Cargar mi primera guardia`, que entra al mismo modo de edición guiado.
+2. **Modo edición**, iniciado conscientemente:
+   - conserva el mes, la posición y el mismo componente visual;
+   - se identifica con texto visible `Editando calendario`, no sólo mediante color;
+   - habilita los flujos vigentes de `Agregar guardia`, `Agregar francos`, edición, segunda guardia y eliminación confirmada;
+   - no agrega Vacaciones al calendario: siguen administrándose únicamente desde Configuración;
+   - la acción inferior cambia a `Terminar`; Atrás sale primero de edición y protege cualquier formulario sin confirmar.
+
+En consulta, tocar un día ocupado abre detalles sin acciones de mutación. En edición, cada guardia conserva `Informar novedad / notas`, `Editar`, `Agregar una segunda guardia` cuando corresponde y `Eliminar`; eliminar exige confirmación. La configuración particular de avisos vive dentro de `Editar`. Una guardia futura elegible muestra un resumen meteorológico de todo su horario y permite abrir el detalle hora por hora. No reintroducir duplicación ni limpieza general si no existe un flujo vigente y probado.
 
 Agregar guardia permite elegir “un solo día” o “varios días”. La selección múltiple trabaja sobre un mes por operación. Si una única fecha está ocupada, ofrecer en este orden `Reemplazar`, `Agregar segunda guardia` y `Cancelar`. Si hay varias fechas ocupadas, mostrar cuáles y ofrecer:
 
@@ -537,17 +548,26 @@ Preferencias: activar/desactivar clima, incluirlo o no en notificaciones/widgets
 
 Primera apertura:
 
+- una presentación técnica o splash, si se utiliza, es breve y no agrega demora artificial;
+- una bienvenida comunica directamente el valor de organizar guardias y conocer horas y próximos eventos;
 - tres pantallas introductorias: organizar guardias; conocer horas y próximas guardias; datos guardados en el teléfono;
-- guía interactiva de calendario, Agregar, carga simple/múltiple, fotos, plantillas, resumen, notificaciones, widget, clima y configuración;
+- guía interactiva de calendario, `Editar calendario`, carga simple/múltiple, fotos, plantillas, resumen, notificaciones, widget, clima y configuración;
 - se puede omitir y repetir desde Ayuda.
 
-Valores fijos/predeterminados V1:
+Al finalizar, la aplicación lleva al calendario. Si está vacío, `Cargar mi primera guardia` acompaña la creación del primer objetivo, su horario y la primera carga reutilizando los flujos reales.
 
-- empresa Inforce;
+Valores predeterminados V1:
+
+- profesión visible y fija `Vigilancia y seguridad`;
+- empresa Inforce como valor inicial editable;
 - Córdoba Capital, Argentina;
 - 204 horas mensuales.
 
-Una actualización futura puede ampliar estas opciones. Perfil: solo nombre o apodo opcional. No pedir DNI, email, teléfono ni domicilio.
+El Perfil laboral es local y no representa una cuenta. Incluye nombre o apodo opcional, profesión, empresa y resúmenes de objetivos y horarios activos obtenidos desde sus repositorios existentes. No guarda copias paralelas, no altera instantáneas históricas y no pide DNI, email, teléfono, domicilio ni otros identificadores innecesarios. Puesto continúa perteneciendo a cada carga.
+
+### Comercialización futura
+
+Joa quiere evaluar compra, suscripción o desbloqueo cuando la aplicación para vigiladores esté terminada. Hasta definir modelo, precio y matriz gratuita/paga: no incorporar muro de pago, planes Premium, cuentas, nube, anuncios o telemetría; tampoco diseñar la experiencia central alrededor de una suscripción hipotética.
 
 Permisos se solicitan cuando la función los necesita y con explicación previa: notificaciones, fotos/selector de documentos, alarmas exactas si fueran necesarias y biometría. Internet se usa solo para clima y funciones futuras explícitas.
 
@@ -589,7 +609,7 @@ Generar durante el mes o al cierre, en PDF y Excel/XLSX. Si el mes no terminó, 
 Encabezado:
 
 - nombre/apodo opcional;
-- Inforce;
+- empresa configurada en el perfil, con Inforce como valor inicial;
 - mes y año;
 - fecha/hora de generación;
 - referencia de 204 horas.
@@ -656,6 +676,8 @@ No implementar en V1 sin nueva decisión de Joaquin:
 - búsqueda global;
 - integración directa con Inforce o SUVICO;
 - cálculo neto oficial, prorrateos o deducciones personales no confirmadas por las escalas disponibles.
+- perfiles para salud, policía, bomberos u otras profesiones;
+- compras, suscripciones, planes Premium o bloqueos sin una matriz de valor aprobada.
 
 ## 25. Orden de construcción aprobado
 
@@ -689,9 +711,11 @@ Decisión posterior del 16 de agosto de 2026: el detalle meteorológico horario 
 
 Decisión posterior del 17 de agosto de 2026: al guardar o editar una guardia, cualquier `F` o `?` explícito de la fecha efectivamente guardada se elimina dentro de la misma transacción. La guardia pasa a definir ese día; una fecha omitida por la política `Conservar ocupadas` no se toca. Las carpetas médicas conservan su advertencia y no se modifican.
 
-Decisión posterior del 17 de agosto de 2026: MiGuardia adopta una identidad visual exclusivamente oscura inspirada en las referencias locales de `interfaz/`, con `000____core_view.jpg` como autoridad estética principal: fondo negro-violeta, paneles con profundidad sutil, bordes púrpura, acentos violeta/magenta, tipografía clara y una acción dominante por bloque. No se desarrolla ni mantiene una variante clara. La navegación y la configuración aplican divulgación progresiva: primero la tarea común, luego las opciones avanzadas.
+Decisión posterior del 17 de agosto de 2026: MiGuardia adopta **Vigilia** como identidad visual definitiva en variantes oscura y clara, con selección persistida `Seguir el sistema`, `Claro` y `Oscuro`. Conserva superficies profundas, acentos magenta/violeta usados con moderación, tokens semánticos y una acción dominante por bloque. La navegación y Configuración aplican divulgación progresiva. Regla rectora: “Vigilia no grita. Señala.”
 
 Decisión de hoja de ruta del 17 de agosto de 2026: después de cerrar la experiencia actual se evaluará distribución comercial en Google Play con suscripción y una organización del calendario para tres perfiles: seguridad privada, salud y policía. No forma parte del incremento actual. Antes de implementarlo se deben definir alcance compartido y específico, Google Play Billing, restauración de compras, privacidad, soporte, términos y un proveedor meteorológico compatible con uso comercial. Esta decisión no autoriza cuentas, servidor, nube ni sincronización.
+
+Decisión posterior del 17 de agosto de 2026: la experiencia inicial se implementa secuencialmente: primero un calendario en modo consulta con `Editar calendario`; luego Perfil laboral y reorganización de Configuración; por último bienvenida, onboarding y primera carga guiada. Cada dependencia nace del `HEAD` verificado de MAIN después de integrar la anterior.
 
 La primera versión utilizable debe alcanzar almacenamiento local, calendario, carga individual/múltiple, objetivos/horarios, fotos y horas básicas antes de sumar capas más complejas.
 
@@ -702,7 +726,7 @@ Cada módulo debe demostrar como mínimo:
 - persistencia tras cerrar/reabrir y reiniciar cuando corresponda;
 - conducta correcta sin internet;
 - permisos concedidos y denegados;
-- identidad oscura exclusiva, contraste y tipografía predeterminada de MiGuardia;
+- Vigilia clara y oscura, contraste y tipografía predeterminada de MiGuardia;
 - datos vacíos, inválidos y límites;
 - errores recuperables sin pérdida;
 - pruebas automatizadas de lógica;
@@ -734,6 +758,8 @@ Casos críticos obligatorios:
 21. guardia `PLANNED` dentro de vacaciones queda fuera de todas las horas sin ser borrada ni modificada;
 22. ausencia o cancelación explícita dentro de vacaciones conserva su clasificación propia;
 23. feriado, `F` o `?` puede coexistir con `V`, mientras carpeta médica superpuesta se rechaza.
+24. el calendario abre en modo consulta y ninguna interacción de ese modo modifica repositorios;
+25. `Editar calendario` conserva mes y posición, se distingue con texto y `Terminar` o Atrás regresan con seguridad a consulta.
 
 ## 27. Política para decisiones todavía abiertas
 
@@ -752,10 +778,11 @@ Abiertos conocidos:
 - componentes remunerativos, valores históricos, tope y contabilización exacta de vacaciones SUVICO;
 - selección entre recargo extra del 50 % y del 100 % según cada situación;
 - aplicabilidad de descuentos personales y cálculo neto;
-- identidad visual definitiva;
 - proveedor meteorológico;
 - `minSdk` y versiones técnicas;
 - detalles finos de publicación y distribución;
+- modelo de comercialización: compra única, suscripción o combinación;
+- matriz de funciones gratuitas y pagas, restauración y tratamiento de usuarios existentes;
 - límite/forma final de cualquier personalización no especificada por Android.
 
 No reabrir decisiones cerradas solo por preferencia técnica. Si Android impone una limitación, mostrar evidencia oficial y proponer la adaptación más fiel.
