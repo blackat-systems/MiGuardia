@@ -14,14 +14,24 @@ data class NotificationSystemAccessState(
 )
 
 class NotificationSystemAccess(private val context: Context) {
-    fun read(): NotificationSystemAccessState = NotificationSystemAccessState(
-        notificationPermissionGranted = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+    fun read(): NotificationSystemAccessState {
+        val runtimePermissionGranted = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
             ContextCompat.checkSelfPermission(
                 context,
                 Manifest.permission.POST_NOTIFICATIONS,
-            ) == PackageManager.PERMISSION_GRANTED &&
-            NotificationManagerCompat.from(context).areNotificationsEnabled(),
-        exactAlarmAccessGranted = Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
-            context.getSystemService(AlarmManager::class.java).canScheduleExactAlarms(),
-    )
+            ) == PackageManager.PERMISSION_GRANTED
+        return NotificationSystemAccessState(
+            notificationPermissionGranted = notificationAccessGranted(
+                runtimePermissionGranted = runtimePermissionGranted,
+                appNotificationsEnabled = NotificationManagerCompat.from(context).areNotificationsEnabled(),
+            ),
+            exactAlarmAccessGranted = Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
+                context.getSystemService(AlarmManager::class.java).canScheduleExactAlarms(),
+        )
+    }
 }
+
+internal fun notificationAccessGranted(
+    runtimePermissionGranted: Boolean,
+    appNotificationsEnabled: Boolean,
+): Boolean = runtimePermissionGranted && appNotificationsEnabled

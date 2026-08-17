@@ -4,6 +4,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import com.blackatsystems.miguardia.core.domain.model.Shift
@@ -156,6 +157,8 @@ class WeatherComposeTest {
         }
         compose.onNodeWithText("Cobertura completa").assertExists()
         compose.onNodeWithText("Temperatura: 10–17 °C").assertExists()
+        compose.onNodeWithText("Deslizá hacia la derecha.").assertExists()
+        compose.onNodeWithTag("weather-hourly-carousel").assertExists()
         compose.onNodeWithText("17/08 00:00").performScrollTo().assertExists()
         compose.onNodeWithText("Datos meteorológicos: Open-Meteo").performScrollTo().assertExists()
     }

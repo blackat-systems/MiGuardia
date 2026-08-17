@@ -18,19 +18,20 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -103,14 +104,19 @@ fun NotificationSurfaceHost(state: NotificationUiState, actions: NotificationAct
         if (result.resultCode == android.app.Activity.RESULT_OK) actions.setSound(selected)
     }
     Dialog(onDismissRequest = actions.close) {
-        Column(
-            modifier = Modifier
-                .widthIn(max = 620.dp)
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+        Surface(
+            shape = MaterialTheme.shapes.extraLarge,
+            color = MaterialTheme.colorScheme.surfaceContainerLow,
+            tonalElevation = 6.dp,
         ) {
+            Column(
+                modifier = Modifier
+                    .widthIn(max = 620.dp)
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
             ScreenHeading(
                 if (state.surface == NotificationSurface.GLOBAL) "Notificaciones" else "Avisos de la guardia",
                 supportingText = if (state.surface == NotificationSurface.GLOBAL) {
@@ -164,7 +170,8 @@ fun NotificationSurfaceHost(state: NotificationUiState, actions: NotificationAct
                 NotificationSurface.SHIFT -> ShiftSettings(state, actions)
                 NotificationSurface.NONE -> Unit
             }
-            OutlinedButton(onClick = actions.close, modifier = Modifier.fillMaxWidth()) { Text("Volver") }
+                OutlinedButton(onClick = actions.close, modifier = Modifier.fillMaxWidth()) { Text("Volver") }
+            }
         }
     }
 }
@@ -178,67 +185,176 @@ private fun GlobalSettings(
     openAppSettings: () -> Unit,
     chooseSound: () -> Unit,
 ) {
-    ToggleRow("Habilitar avisos de guardia", state.preferences.enabled, actions.setEnabled)
+    var showAdvanced by rememberSaveable { mutableStateOf(false) }
     SectionCard(
-        title = "Permisos y puntualidad",
-        supportingText = "MiGuardia muestra notificaciones comunes. Android llama “Alarmas y recordatorios” al acceso opcional que permite publicarlas exactamente a horario.",
+        title = if (state.preferences.enabled) "Avisos activados" else "Avisos desactivados",
+        supportingText = if (state.preferences.enabled) {
+            "Te guiamos en tres pasos. Podés cambiar cada detalle cuando quieras."
+        } else {
+            "MiGuardia no mostrará avisos hasta que los actives."
+        },
+    ) {
+        ToggleRow("Usar notificaciones", state.preferences.enabled, actions.setEnabled)
+        if (!state.preferences.enabled) {
+            Button(onClick = { actions.setEnabled(true) }, modifier = Modifier.fillMaxWidth()) {
+                Text("Activar avisos")
+            }
+            TextButton(onClick = openAppSettings, modifier = Modifier.fillMaxWidth()) {
+                Text("Abrir ajustes de notificaciones")
+            }
+        }
+    }
+    if (!state.preferences.enabled) return
+
+    SectionCard(
+        title = "1. Permití los avisos",
+        supportingText = "Android necesita tu permiso para mostrar notificaciones.",
     ) {
         PermissionRow(
             "Notificaciones",
             state.systemAccess.notificationPermissionGranted,
             if (state.systemAccess.notificationPermissionGranted) openAppSettings else requestPermission,
         )
-        PermissionRow(
-            "Puntualidad exacta",
-            state.systemAccess.exactAlarmAccessGranted,
-            requestExactAccess,
-        )
-        ToggleRow("Publicar exactamente a horario", state.preferences.preciseTiming, actions.setPreciseTiming)
-        if (state.preferences.preciseTiming && !state.systemAccess.exactAlarmAccessGranted) {
-            Text("Sin este acceso, Android puede demorar la notificación. Nunca suena ni se presenta como un despertador.")
+        TextButton(onClick = openAppSettings) {
+            Text("Abrir ajustes de notificaciones")
+        }
+        if (!state.systemAccess.notificationPermissionGranted) {
+            Text("Cuando lo resuelvas, vas a poder elegir cuándo y cómo querés recibir cada aviso.")
         }
     }
-    ReminderEditor(
-        title = "Recordatorios globales",
-        values = state.preferences.globalReminderLeadMinutes,
-        onChange = actions.setGlobalReminders,
-    )
-    SectionCard("Comportamiento") {
-        ToggleRow("Mantener fija hasta finalizar la guardia", state.preferences.persistentWhileActive, actions.setPersistent)
-        Text("El cronómetro lo actualiza Android; MiGuardia no despierta la aplicación cada minuto y el impacto de batería es mínimo.")
-        Text("Privacidad en pantalla bloqueada", style = MaterialTheme.typography.titleSmall)
-        NotificationPrivacy.entries.forEach { privacy ->
-            ChoiceRow(privacyLabel(privacy), state.preferences.privacy == privacy) { actions.setPrivacy(privacy) }
+    if (!state.systemAccess.notificationPermissionGranted) return
+
+    SectionCard(
+        title = "2. Elegí cuándo avisar",
+        supportingText = reminderSummary(state.preferences.globalReminderLeadMinutes),
+    ) {
+        Text("Elegí una opción. Recomendamos 12 horas antes.")
+        listOf(6L, 8L, 12L, 24L).chunked(2).forEach { row ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                row.forEach { hours ->
+                    val selected = state.preferences.globalReminderLeadMinutes == listOf(hours * 60L)
+                    if (selected) {
+                        Button(
+                            onClick = { actions.setGlobalReminders(listOf(hours * 60L)) },
+                            modifier = Modifier.weight(1f),
+                        ) { Text("$hours h") }
+                    } else {
+                        OutlinedButton(
+                            onClick = { actions.setGlobalReminders(listOf(hours * 60L)) },
+                            modifier = Modifier.weight(1f),
+                        ) { Text("$hours h") }
+                    }
+                }
+            }
         }
-        Text(if (state.preferences.soundUri == null) "Sonido: predeterminado de Android" else "Sonido: elegido en Android")
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = chooseSound) { Text("Elegir sonido") }
-            TextButton(onClick = { actions.setSound(null) }) { Text("Predeterminado") }
+    }
+    SectionCard(
+        title = "3. Elegí cómo se muestra",
+        supportingText = if (state.preferences.persistentWhileActive) {
+            "Queda visible mientras la guardia está en curso."
+        } else {
+            "Podés descartarla como cualquier otra notificación."
+        },
+    ) {
+        ChoiceRow("Fija durante la guardia", state.preferences.persistentWhileActive) {
+            actions.setPersistent(true)
+        }
+        ChoiceRow("Descartable", !state.preferences.persistentWhileActive) {
+            actions.setPersistent(false)
+        }
+        Text("El contador queda dentro de la notificación y Android lo actualiza sin despertar MiGuardia cada minuto.")
+    }
+    OutlinedButton(
+        onClick = { showAdvanced = !showAdvanced },
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Text(if (showAdvanced) "Ocultar opciones avanzadas" else "Ver opciones avanzadas")
+    }
+    if (showAdvanced) {
+        ReminderEditor(
+            title = "Más de un aviso",
+            values = state.preferences.globalReminderLeadMinutes,
+            onChange = actions.setGlobalReminders,
+        )
+        SectionCard(
+            title = "Puntualidad",
+            supportingText = "Es opcional. Sin este acceso, Android puede demorar algunos minutos el aviso.",
+        ) {
+            PermissionRow("Puntualidad exacta", state.systemAccess.exactAlarmAccessGranted, requestExactAccess)
+            ToggleRow("Intentar publicar exactamente a horario", state.preferences.preciseTiming, actions.setPreciseTiming)
+            Text("Es una notificación común: nunca funciona como despertador.")
+        }
+        SectionCard("Privacidad y sonido") {
+            Text("Pantalla bloqueada", style = MaterialTheme.typography.titleSmall)
+            NotificationPrivacy.entries.forEach { privacy ->
+                ChoiceRow(privacyLabel(privacy), state.preferences.privacy == privacy) { actions.setPrivacy(privacy) }
+            }
+            Text(if (state.preferences.soundUri == null) "Sonido: predeterminado de Android" else "Sonido: elegido en Android")
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = chooseSound) { Text("Elegir sonido") }
+                TextButton(onClick = { actions.setSound(null) }) { Text("Predeterminado") }
+            }
+            Text("Vibración: MiGuardia la solicita; Android conserva el control final.")
         }
     }
 }
 
 @Composable
 private fun ShiftSettings(state: NotificationUiState, actions: NotificationActions) {
+    var showEditor by rememberSaveable { mutableStateOf(false) }
     val override = state.shiftOverride
     val effective = override?.reminderLeadMinutes ?: state.preferences.globalReminderLeadMinutes
-    Text(
-        when {
-            override == null -> "Esta guardia usa los avisos globales."
-            override.reminderLeadMinutes.isEmpty() -> "Los avisos están desactivados sólo para esta guardia."
-            else -> "Esta guardia tiene una configuración propia."
+    SectionCard(
+        title = when {
+            override == null -> "Usa la configuración general"
+            override.reminderLeadMinutes.isEmpty() -> "Avisos desactivados"
+            else -> "Configuración propia"
         },
-    )
-    ReminderEditor("Avisos efectivos", effective) { actions.setShiftReminders(it) }
-    OutlinedButton(
-        onClick = { actions.setShiftReminders(state.preferences.globalReminderLeadMinutes) },
-        modifier = Modifier.fillMaxWidth(),
-    ) { Text("Crear configuración propia") }
-    OutlinedButton(onClick = actions.disableShift, modifier = Modifier.fillMaxWidth()) {
-        Text("Desactivar avisos en esta guardia")
+        supportingText = if (effective.isEmpty()) "Esta guardia no tendrá avisos." else reminderSummary(effective),
+    ) {
+        when {
+            override == null -> {
+                Button(
+                    onClick = {
+                        actions.setShiftReminders(state.preferences.globalReminderLeadMinutes)
+                        showEditor = true
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text("Personalizar esta guardia") }
+                OutlinedButton(onClick = actions.disableShift, modifier = Modifier.fillMaxWidth()) {
+                    Text("Desactivar sólo en esta guardia")
+                }
+            }
+            override.reminderLeadMinutes.isEmpty() -> {
+                Button(onClick = actions.useGlobalForShift, modifier = Modifier.fillMaxWidth()) {
+                    Text("Volver a usar la configuración general")
+                }
+                OutlinedButton(
+                    onClick = {
+                        actions.setShiftReminders(state.preferences.globalReminderLeadMinutes)
+                        showEditor = true
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text("Personalizar esta guardia") }
+            }
+            else -> {
+                Button(onClick = { showEditor = !showEditor }, modifier = Modifier.fillMaxWidth()) {
+                    Text(if (showEditor) "Listo" else "Cambiar horarios de aviso")
+                }
+                OutlinedButton(onClick = actions.useGlobalForShift, modifier = Modifier.fillMaxWidth()) {
+                    Text("Usar configuración general")
+                }
+                TextButton(onClick = actions.disableShift, modifier = Modifier.fillMaxWidth()) {
+                    Text("Desactivar sólo en esta guardia")
+                }
+            }
+        }
     }
-    Button(onClick = actions.useGlobalForShift, modifier = Modifier.fillMaxWidth()) {
-        Text("Volver a usar valores globales")
+    if (showEditor && override?.reminderLeadMinutes?.isNotEmpty() == true) {
+        ReminderEditor("Horarios de esta guardia", effective) { actions.setShiftReminders(it) }
     }
 }
 
@@ -249,21 +365,13 @@ private fun ReminderEditor(title: String, values: List<Long>, onChange: (Collect
         title = title,
         supportingText = "Entre cero y cinco avisos únicos; los avisos ya pasados no se recuperan tarde.",
     ) {
-        if (values.isEmpty()) Text("No hay recordatorios configurados.")
+        if (values.isEmpty()) Text("No hay avisos configurados.")
         listOf(6L, 8L, 12L, 24L).forEach { hours ->
             val minutes = hours * 60L
             val selected = minutes in values
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable {
-                        val updated = if (selected) values - minutes else (values + minutes).distinct()
-                        if (updated.size <= 5) onChange(updated)
-                    },
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Checkbox(selected, onCheckedChange = null)
-                Text("$hours horas antes")
+            ChoiceRow("$hours horas antes", selected) {
+                val updated = if (selected) values - minutes else (values + minutes).distinct()
+                if (updated.size <= 5) onChange(updated)
             }
         }
         values.filter { it % 60L != 0L || it / 60L !in setOf(6L, 8L, 12L, 24L) }.forEach { minutes ->
@@ -319,4 +427,13 @@ private fun privacyLabel(value: NotificationPrivacy): String = when (value) {
     NotificationPrivacy.COMPLETE -> "Completa: objetivo, horario y puesto"
     NotificationPrivacy.REDUCED -> "Reducida: estado y horario"
     NotificationPrivacy.HIDDEN -> "Oculta: mensaje genérico"
+}
+
+private fun reminderSummary(values: List<Long>): String = when (values.size) {
+    0 -> "Sin avisos previos."
+    1 -> {
+        val minutes = values.single()
+        if (minutes % 60L == 0L) "Un aviso ${minutes / 60L} horas antes." else "Un aviso $minutes minutos antes."
+    }
+    else -> "${values.size} avisos configurados."
 }

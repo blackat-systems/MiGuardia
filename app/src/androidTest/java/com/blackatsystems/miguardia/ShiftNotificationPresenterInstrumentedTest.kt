@@ -2,10 +2,12 @@ package com.blackatsystems.miguardia
 
 import android.Manifest
 import android.app.Notification
+import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import android.net.Uri
 import android.os.SystemClock
+import android.widget.Chronometer
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -23,6 +25,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Before
@@ -65,6 +68,12 @@ class ShiftNotificationPresenterInstrumentedTest {
         assertTrue(posted.deleteIntent != null)
         assertEquals(ShiftNotificationPresenter.GROUP_KEY, posted.group)
         assertTrue(posted.flags and Notification.FLAG_ONGOING_EVENT != 0)
+        assertFalse(posted.extras.getBoolean(Notification.EXTRA_SHOW_CHRONOMETER))
+        assertNotNull(posted.contentView)
+        val compactCountdown = posted.contentView.apply(context, null)
+            .findViewById<Chronometer>(R.id.notification_countdown)
+        assertTrue(compactCountdown.isCountDown)
+        assertTrue(compactCountdown.format.toString().startsWith("Comienza en"))
 
         presenter.show(shift, NOW.plusSeconds(60), NotificationPreferences(enabled = true))
         assertEquals(1, manager.activeNotifications.count { it.tag == shift.id.toString() })
@@ -82,8 +91,12 @@ class ShiftNotificationPresenterInstrumentedTest {
         assertEquals("Guardia en curso", posted.extras.getString(Notification.EXTRA_TITLE))
         assertEquals("Guardia en curso · 19:00–07:00", posted.publicVersion.extras.getString(Notification.EXTRA_TEXT))
         assertTrue(posted.flags and Notification.FLAG_ONGOING_EVENT != 0)
-        assertTrue(posted.extras.getBoolean(Notification.EXTRA_SHOW_CHRONOMETER))
-        assertTrue(posted.extras.getBoolean(Notification.EXTRA_CHRONOMETER_COUNT_DOWN))
+        assertFalse(posted.extras.getBoolean(Notification.EXTRA_SHOW_CHRONOMETER))
+        assertFalse(posted.extras.getBoolean(Notification.EXTRA_CHRONOMETER_COUNT_DOWN))
+        val bodyCountdown = posted.bigContentView.apply(context, null)
+            .findViewById<Chronometer>(R.id.notification_countdown)
+        assertTrue(bodyCountdown.isCountDown)
+        assertTrue(bodyCountdown.format.toString().startsWith("Finaliza en"))
 
         presenter.show(
             shift,
@@ -124,9 +137,13 @@ class ShiftNotificationPresenterInstrumentedTest {
     }
 
     @Test
-    fun simultaneousGuardsStaySeparateGroupedAndSoundCreatesDeterministicVersionedChannel() {
+    fun simultaneousGuardsStaySeparateGroupedAndSoundCreatesVibratingVersionedChannel() {
         val first = shift(SHIFT_ONE)
         val second = shift(SHIFT_TWO)
+        val legacyChannelId = "guard_shifts_v1_legacy"
+        manager.createNotificationChannel(
+            NotificationChannel(legacyChannelId, "Canal QA anterior", NotificationManager.IMPORTANCE_DEFAULT),
+        )
         val custom = NotificationPreferences(
             enabled = true,
             soundUri = Uri.parse("content://settings/system/alarm_alert"),
@@ -141,11 +158,13 @@ class ShiftNotificationPresenterInstrumentedTest {
         assertTrue(individual.all { it.notification.group == ShiftNotificationPresenter.GROUP_KEY })
         assertTrue(manager.activeNotifications.any { it.notification.flags and Notification.FLAG_GROUP_SUMMARY != 0 })
         assertTrue(channelBefore.startsWith(ShiftNotificationPresenter.CHANNEL_PREFIX))
+        assertTrue(manager.getNotificationChannel(channelBefore).shouldVibrate())
+        assertTrue(manager.notificationChannels.none { it.id == legacyChannelId })
 
         presenter.show(first, NOW, custom.copy(soundUri = null))
         val defaultChannel = notificationForTag(first.id).channelId
         assertNotEquals(channelBefore, defaultChannel)
-        assertEquals(1, manager.notificationChannels.count { it.id.startsWith(ShiftNotificationPresenter.CHANNEL_PREFIX) })
+        assertEquals(1, manager.notificationChannels.count { it.id.startsWith(ShiftNotificationPresenter.OWNED_CHANNEL_PREFIX) })
     }
 
     private fun shift(

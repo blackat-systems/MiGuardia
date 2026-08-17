@@ -70,6 +70,7 @@ Principios del producto:
 - cálculos transparentes, deterministas y probados;
 - estimaciones económicas informativas, nunca presentadas como recibo oficial;
 - interfaz entendible aunque el usuario no sea técnico.
+- experiencia `KEEP IT SIMPLE`: mostrar primero la decisión necesaria, revelar opciones avanzadas sólo a pedido y explicar cada consecuencia con palabras cotidianas.
 
 La primera versión es Android, en español y se prueba en Córdoba Capital. No hay cuentas ni servicios de MiGuardia en la nube.
 
@@ -473,7 +474,7 @@ Privacidad en pantalla bloqueada elegida por el usuario:
 
 Editar/eliminar una guardia reprograma o cancela avisos. Reinicio del teléfono, cambio de hora/zona, permiso de notificaciones, restricciones de batería y exact alarms deben tratarse explícitamente. Guardias excepcionales separadas reciben sus propios avisos.
 
-La experiencia visible es siempre una notificación común, nunca una alarma tipo despertador, pantalla completa o sonido en bucle. Internamente Android puede usar una alarma temporal única para publicar puntualmente cada frontera. El cronómetro es el nativo de la notificación y no requiere polling, un servicio en primer plano ni despertares por minuto.
+La experiencia visible es siempre una notificación común, nunca una alarma tipo despertador, pantalla completa o sonido en bucle. Internamente Android puede usar una alarma temporal única para publicar puntualmente cada frontera. La cuenta regresiva se presenta dentro del contenido de la notificación mediante un `Chronometer` del sistema; se oculta el pequeño contador temporal del encabezado. No requiere polling, un servicio en primer plano ni despertares por minuto.
 
 ## 15. Motor de próximo evento
 
@@ -679,7 +680,15 @@ Decisión posterior del 15 de agosto de 2026: después de integrar fotos, accesi
 
 Decisión posterior del 16 de agosto de 2026: después de integrar y publicar Notificaciones sobre Room v5, Joa autorizó **Clima** como la siguiente dependencia separada. V1 conserva Córdoba Capital como ubicación fija, no solicita ubicación del teléfono, usa caché privada y debe degradar sin bloquear Calendario ni notificaciones. El proveedor queda detrás de una interfaz reemplazable; cualquier uso comercial debe respetar términos vigentes y no puede asumir que un endpoint gratuito lo autoriza.
 
-Decisión posterior del 16 de agosto de 2026: Joa autorizó un incremento conjunto de UX y remuneración. Se simplifican Agregar, Fotos, conflictos y detalle de guardia; se aclara que los avisos visibles son notificaciones comunes con cronómetro nativo; y se incorpora al final de Resumen una primera estimación bruta SUVICO con antigüedad. Las reglas salariales todavía abiertas permanecen fuera de alcance y no pueden inferirse del estimador.
+Decisión posterior del 16 de agosto de 2026: Joa autorizó un incremento conjunto de UX y remuneración. Se simplifican Agregar, Fotos, conflictos y detalle de guardia; se aclara que los avisos visibles son notificaciones comunes con cronómetro nativo; y se incorpora al final de Resumen una primera estimación bruta SUVICO con antigüedad. En una fecha ocupada, el bloque de acciones conserva `Informar novedad / notas` y ordena las acciones de gestión como `Editar`, `Agregar una segunda guardia` y `Eliminar`; no ofrece `Agregar francos`. Las reglas salariales todavía abiertas permanecen fuera de alcance y no pueden inferirse del estimador.
+
+Decisión posterior del 16 de agosto de 2026: el detalle meteorológico horario se recorre horizontalmente mediante tarjetas, para no alargar la pantalla en vertical. Los calendarios usados al agregar guardias o francos ocupan todo el ancho disponible, tienen celdas ampliadas y muestran número más inicial histórica del día (`3L`, `4M`, `5X`, `6J`, `7V`, `8S`, `9D`). Esta decisión no cambia fechas, estados ni cálculos.
+
+Decisión posterior del 17 de agosto de 2026: al guardar o editar una guardia, cualquier `F` o `?` explícito de la fecha efectivamente guardada se elimina dentro de la misma transacción. La guardia pasa a definir ese día; una fecha omitida por la política `Conservar ocupadas` no se toca. Las carpetas médicas conservan su advertencia y no se modifican.
+
+Decisión posterior del 17 de agosto de 2026: MiGuardia adopta una identidad visual exclusivamente oscura inspirada en las referencias locales de `interfaz/`, con `000____core_view.jpg` como autoridad estética principal: fondo negro-violeta, paneles con profundidad sutil, bordes púrpura, acentos violeta/magenta, tipografía clara y una acción dominante por bloque. No se desarrolla ni mantiene una variante clara. La navegación y la configuración aplican divulgación progresiva: primero la tarea común, luego las opciones avanzadas.
+
+Decisión de hoja de ruta del 17 de agosto de 2026: después de cerrar la experiencia actual se evaluará distribución comercial en Google Play con suscripción y una organización del calendario para tres perfiles: seguridad privada, salud y policía. No forma parte del incremento actual. Antes de implementarlo se deben definir alcance compartido y específico, Google Play Billing, restauración de compras, privacidad, soporte, términos y un proveedor meteorológico compatible con uso comercial. Esta decisión no autoriza cuentas, servidor, nube ni sincronización.
 
 La primera versión utilizable debe alcanzar almacenamiento local, calendario, carga individual/múltiple, objetivos/horarios, fotos y horas básicas antes de sumar capas más complejas.
 
@@ -690,7 +699,7 @@ Cada módulo debe demostrar como mínimo:
 - persistencia tras cerrar/reabrir y reiniciar cuando corresponda;
 - conducta correcta sin internet;
 - permisos concedidos y denegados;
-- tema claro/oscuro con la tipografía predeterminada de MiGuardia;
+- identidad oscura exclusiva, contraste y tipografía predeterminada de MiGuardia;
 - datos vacíos, inválidos y límites;
 - errores recuperables sin pérdida;
 - pruebas automatizadas de lógica;

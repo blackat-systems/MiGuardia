@@ -11,6 +11,7 @@ import com.blackatsystems.miguardia.core.domain.model.ExplicitDayStatusType
 import com.blackatsystems.miguardia.core.domain.model.Objective
 import com.blackatsystems.miguardia.core.domain.model.ScheduleCombination
 import com.blackatsystems.miguardia.core.domain.model.Shift
+import com.blackatsystems.miguardia.core.domain.model.ShiftBatchMutation
 import com.blackatsystems.miguardia.core.domain.repository.DuplicateObjectiveAbbreviationException
 import com.blackatsystems.miguardia.core.domain.repository.DuplicateScheduleCombinationException
 import com.blackatsystems.miguardia.core.domain.repository.ExplicitDayStatusRepository
@@ -495,15 +496,6 @@ class ManagementViewModel(
                     return@saving
                 }
                 val coexistence = buildList {
-                    explicit.forEach { status ->
-                        add(
-                            if (status.type == ExplicitDayStatusType.DAY_OFF) {
-                                "${status.date.numericDisplayName()}: ya tiene un franco explícito. No se modificará."
-                            } else {
-                                "${status.date.numericDisplayName()}: ya está marcada sin definir. No se modificará."
-                            },
-                        )
-                    }
                     medical.forEach { leave ->
                         add(
                             "Existe una carpeta médica entre ${leave.startDate.numericDisplayName()} y " +
@@ -526,19 +518,36 @@ class ManagementViewModel(
                     }
                     return@saving
                 }
-                if (draft.editingShift != null) {
-                    shiftRepository.update(candidates.single())
+                val savedDates = if (draft.editingShift != null) {
+                    candidates.mapTo(linkedSetOf()) { it.localStartDate }
                 } else {
-                    shiftRepository.applyBatch(plan.mutation)
+                    plan.mutation.shiftsToInsert.mapTo(linkedSetOf()) { it.localStartDate }
                 }
+                val statusesReplaced = explicit.count { it.date in savedDates }
+                val mutation = if (draft.editingShift != null) {
+                    ShiftBatchMutation(
+                        shiftsToUpdate = listOf(candidates.single()),
+                        explicitDayStatusDatesToClear = savedDates,
+                    )
+                } else {
+                    plan.mutation.copy(explicitDayStatusDatesToClear = savedDates)
+                }
+                shiftRepository.applyBatch(mutation)
                 _uiState.update {
                     it.copy(
                         surface = ManagementSurface.NONE,
                         shiftDraft = null,
-                        infoMessage = if (plan.omittedDates.isEmpty()) {
-                            "Guardias guardadas."
-                        } else {
-                            "Guardias guardadas; se conservaron ${plan.omittedDates.size} fechas ocupadas."
+                        infoMessage = buildString {
+                            append(
+                                if (plan.omittedDates.isEmpty()) {
+                                    "Guardias guardadas."
+                                } else {
+                                    "Guardias guardadas; se conservaron ${plan.omittedDates.size} fechas ocupadas."
+                                },
+                            )
+                            if (statusesReplaced > 0) {
+                                append(" Se reemplazaron $statusesReplaced francos o días sin definir.")
+                            }
                         },
                     )
                 }

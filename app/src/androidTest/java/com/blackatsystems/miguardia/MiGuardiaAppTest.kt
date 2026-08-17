@@ -52,6 +52,7 @@ class MiGuardiaAppTest {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val context = instrumentation.targetContext
         val device = UiDevice.getInstance(instrumentation)
+        prepareDevice(instrumentation, context, device)
         val currentMonth = YearMonth.now(AppDefaults.zoneId())
 
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
@@ -91,11 +92,12 @@ class MiGuardiaAppTest {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val context = instrumentation.targetContext
         val keyguardManager = context.getSystemService(KeyguardManager::class.java)
+        val device = UiDevice.getInstance(instrumentation)
+        prepareDevice(instrumentation, context, device)
         assertFalse(
             "El dispositivo debe estar desbloqueado para probar la interfaz.",
             keyguardManager.isKeyguardLocked,
         )
-        val device = UiDevice.getInstance(instrumentation)
         val currentMonth = YearMonth.now(AppDefaults.zoneId())
 
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
@@ -115,6 +117,8 @@ class MiGuardiaAppTest {
     private fun launchApp(): Pair<Context, UiDevice> {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val context = instrumentation.targetContext
+        val device = UiDevice.getInstance(instrumentation)
+        prepareDevice(instrumentation, context, device)
         val keyguardManager = context.getSystemService(KeyguardManager::class.java)
         assertFalse(
             "El dispositivo debe estar desbloqueado para probar la interfaz.",
@@ -125,12 +129,25 @@ class MiGuardiaAppTest {
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
         context.startActivity(launchIntent)
 
-        val device = UiDevice.getInstance(instrumentation)
         assertTrue(
             "MiGuardia no se hizo visible dentro del tiempo esperado.",
             device.wait(Until.hasObject(By.pkg(context.packageName).depth(0)), WAIT_TIMEOUT_MILLIS),
         )
         return context to device
+    }
+
+    private fun prepareDevice(
+        instrumentation: android.app.Instrumentation,
+        context: Context,
+        device: UiDevice,
+    ) {
+        device.wakeUp()
+        instrumentation.uiAutomation.executeShellCommand("wm dismiss-keyguard").close()
+        device.waitForIdle()
+        assertFalse(
+            "El dispositivo debe estar desbloqueado para probar la interfaz.",
+            context.getSystemService(KeyguardManager::class.java).isKeyguardLocked,
+        )
     }
 
     private fun UiDevice.assertTextVisible(text: String) {

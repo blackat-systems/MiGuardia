@@ -242,9 +242,10 @@ class CalendarComposeTest {
     }
 
     @Test
-    fun shiftDetailExposesOnlyNoveltyEditAndConfirmedDelete() {
-        val state = contentState().copy(selectedDate = LocalDate.of(2026, 8, 3))
+    fun occupiedShiftDetailOrdersEditAddSecondAndConfirmedDelete() {
+        val state = contentState().copy(selectedDate = LocalDate.of(2026, 8, 2))
         var edited: UUID? = null
+        var addedSecond: LocalDate? = null
         var deleted: UUID? = null
         var openedExceptions: UUID? = null
         var dismissed = 0
@@ -260,6 +261,7 @@ class CalendarComposeTest {
                     onRetry = {},
                     managementActions = ManagementActions(
                         openEditShift = { edited = it.id },
+                        openAddShift = { _, date -> addedSecond = date },
                         deleteShift = { deleted = it },
                     ),
                     exceptionsActions = ExceptionsActions(
@@ -269,6 +271,11 @@ class CalendarComposeTest {
             }
         }
 
+        composeRule.onNodeWithText("Agregar una segunda guardia").assertExists()
+            .performSemanticsAction(SemanticsActions.OnClick)
+        composeRule.runOnIdle { assertEquals(LocalDate.of(2026, 8, 2), addedSecond) }
+        composeRule.onNodeWithText("Agregar guardia").assertDoesNotExist()
+        composeRule.onNodeWithText("Agregar francos").assertDoesNotExist()
         composeRule.onAllNodesWithText("Editar")[0].performSemanticsAction(SemanticsActions.OnClick)
         composeRule.runOnIdle {
             assertTrue(edited != null)
@@ -281,11 +288,10 @@ class CalendarComposeTest {
             assertTrue(openedExceptions != null)
             assertTrue(dismissed >= 2)
         }
-        composeRule.onNodeWithText("Agregar francos").performScrollTo().assertExists()
         composeRule.onNodeWithText("Agregar vacaciones").assertDoesNotExist()
         composeRule.onAllNodesWithText("Eliminar")[0].performSemanticsAction(SemanticsActions.OnClick)
         composeRule.onNodeWithText("Eliminar guardia").assertExists()
-        composeRule.onAllNodesWithText("Eliminar")[2].performSemanticsAction(SemanticsActions.OnClick)
+        composeRule.onAllNodesWithText("Eliminar")[1].performSemanticsAction(SemanticsActions.OnClick)
         composeRule.runOnIdle { assertTrue(deleted != null) }
     }
 

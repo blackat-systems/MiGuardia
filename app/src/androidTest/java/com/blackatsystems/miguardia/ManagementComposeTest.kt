@@ -213,6 +213,8 @@ class ManagementComposeTest {
             }
         }
 
+        composeRule.onNodeWithText("2D").assertExists()
+        composeRule.onNodeWithText("9D").assertExists()
         composeRule.onNodeWithText("2 fechas seleccionadas: 2, 9").assertExists()
         composeRule.onNodeWithText("Termina al día siguiente").assertExists()
         composeRule.onNodeWithText("Revisar y guardar").performScrollTo().performSemanticsAction(SemanticsActions.OnClick)
@@ -241,6 +243,8 @@ class ManagementComposeTest {
         }
 
         composeRule.onAllNodesWithText("Agregar francos").assertCountEquals(2)
+        composeRule.onNodeWithText("3L").assertExists()
+        composeRule.onNodeWithText("7V").assertExists()
         composeRule.onNodeWithText("2 fechas seleccionadas.").assertExists()
         composeRule.onAllNodesWithText("Agregar francos")[1].performScrollTo()
             .performSemanticsAction(SemanticsActions.OnClick)

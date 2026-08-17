@@ -83,7 +83,6 @@ import com.blackatsystems.miguardia.core.domain.weather.spanishLabel
 import com.blackatsystems.miguardia.ui.calendar.CalendarLoadState
 import com.blackatsystems.miguardia.ui.calendar.CalendarUiState
 import com.blackatsystems.miguardia.ui.calendar.CalendarViewModel
-import com.blackatsystems.miguardia.ui.components.DestructiveAction
 import com.blackatsystems.miguardia.ui.components.NavigationCard
 import com.blackatsystems.miguardia.ui.components.PersistentMessage
 import com.blackatsystems.miguardia.ui.components.ScreenHeading
@@ -259,6 +258,10 @@ fun MiGuardiaApp(
         modifier = modifier.fillMaxSize(),
         topBar = {
             CenterAlignedTopAppBar(
+                colors = androidx.compose.material3.TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    titleContentColor = MaterialTheme.colorScheme.onBackground,
+                ),
                 title = {
                     Text(
                         stringResource(R.string.app_name),
@@ -269,7 +272,10 @@ fun MiGuardiaApp(
             )
         },
         bottomBar = {
-            NavigationBar {
+            NavigationBar(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                tonalElevation = 0.dp,
+            ) {
                 MainDestination.entries.forEach { item ->
                     val label = stringResource(item.labelRes)
                     val showLabel = appZoom == AppZoom.STANDARD
@@ -300,6 +306,13 @@ fun MiGuardiaApp(
                             null
                         },
                         alwaysShowLabel = showLabel,
+                        colors = androidx.compose.material3.NavigationBarItemDefaults.colors(
+                            selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                            selectedTextColor = MaterialTheme.colorScheme.primary,
+                            indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        ),
                     )
                 }
             }
@@ -926,6 +939,12 @@ private fun DayDetailSheet(
                 calendarShift = calendarShift,
                 excludedByVacation = day.vacation != null && calendarShift.shift.status == ShiftStatus.PLANNED,
                 onEdit = onEditShift,
+                onAddAnotherShift = if (index == 0) onAddShift else null,
+                addAnotherShiftLabel = if (day.shifts.size == 1) {
+                    "Agregar una segunda guardia"
+                } else {
+                    "Agregar otra guardia"
+                },
                 onDelete = { pendingDeleteId = it.toString() },
                 onOpenExceptions = onOpenExceptions,
                 onOpenWeather = if (
@@ -958,11 +977,13 @@ private fun DayDetailSheet(
                 fontWeight = FontWeight.SemiBold,
             )
         }
-        Button(onClick = onAddShift, modifier = Modifier.fillMaxWidth()) {
-            Text("Agregar guardia")
-        }
-        OutlinedButton(onClick = onAddDayOff, modifier = Modifier.fillMaxWidth()) {
-            Text("Agregar francos")
+        if (day.shifts.isEmpty()) {
+            Button(onClick = onAddShift, modifier = Modifier.fillMaxWidth()) {
+                Text("Agregar guardia")
+            }
+            OutlinedButton(onClick = onAddDayOff, modifier = Modifier.fillMaxWidth()) {
+                Text("Agregar francos")
+            }
         }
     }
     pendingDeleteId?.let { id ->
@@ -988,6 +1009,8 @@ private fun ShiftDetail(
     calendarShift: CalendarShift,
     excludedByVacation: Boolean = false,
     onEdit: ((com.blackatsystems.miguardia.core.domain.model.Shift) -> Unit)? = null,
+    onAddAnotherShift: (() -> Unit)? = null,
+    addAnotherShiftLabel: String = "Agregar otra guardia",
     onDelete: ((java.util.UUID) -> Unit)? = null,
     onOpenExceptions: ((com.blackatsystems.miguardia.core.domain.model.Shift) -> Unit)? = null,
     onOpenWeather: ((java.util.UUID) -> Unit)? = null,
@@ -1038,7 +1061,14 @@ private fun ShiftDetail(
                 OutlinedButton(onClick = { onEdit(shift) }, modifier = Modifier.fillMaxWidth()) {
                     Text("Editar")
                 }
-                DestructiveAction(label = "Eliminar", onClick = { onDelete(shift.id) })
+                if (onAddAnotherShift != null) {
+                    Button(onClick = onAddAnotherShift, modifier = Modifier.fillMaxWidth()) {
+                        Text(addAnotherShiftLabel)
+                    }
+                }
+                OutlinedButton(onClick = { onDelete(shift.id) }, modifier = Modifier.fillMaxWidth()) {
+                    Text("Eliminar", color = MaterialTheme.colorScheme.error)
+                }
             }
             if (excludedByVacation) {
                 Text(

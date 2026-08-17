@@ -6,6 +6,7 @@ import android.app.NotificationManager
 import android.content.Intent
 import android.net.Uri
 import android.os.SystemClock
+import android.widget.Chronometer
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -189,9 +190,13 @@ class NotificationAlarmEndToEndInstrumentedTest {
             assertTrue(reminder.extras.getString(Notification.EXTRA_TEXT).orEmpty().contains("QAT"))
 
             val ongoing = waitForNotification(notificationManager, "Guardia en curso", 75_000L)
-            assertTrue(ongoing.extras.getBoolean(Notification.EXTRA_SHOW_CHRONOMETER))
-            assertTrue(ongoing.extras.getBoolean(Notification.EXTRA_CHRONOMETER_COUNT_DOWN))
-            assertEquals(end.toEpochMilli(), ongoing.`when`)
+            assertFalse(ongoing.extras.getBoolean(Notification.EXTRA_SHOW_CHRONOMETER))
+            assertFalse(ongoing.extras.getBoolean(Notification.EXTRA_CHRONOMETER_COUNT_DOWN))
+            assertFalse(ongoing.extras.getBoolean(Notification.EXTRA_SHOW_WHEN))
+            val countdown = ongoing.bigContentView.apply(application, null)
+                .findViewById<Chronometer>(R.id.notification_countdown)
+            assertTrue(countdown.isCountDown)
+            assertTrue(countdown.format.toString().startsWith("Finaliza en"))
 
             waitUntil(30_000L) {
                 notificationManager.activeNotifications.none { it.tag == SHIFT_ID.toString() }

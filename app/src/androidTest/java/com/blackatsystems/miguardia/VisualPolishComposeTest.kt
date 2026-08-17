@@ -152,7 +152,7 @@ class VisualPolishComposeTest {
             }
         }
 
-        compose.onNodeWithContentDescription("14 Agosto de 2026, seleccionado").assertExists()
+        compose.onNodeWithContentDescription("viernes 14 Agosto de 2026, seleccionado").assertExists()
         compose.onNodeWithText("Revisar y guardar").performScrollTo().assertIsDisplayed()
     }
 

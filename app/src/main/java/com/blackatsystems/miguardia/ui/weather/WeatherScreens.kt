@@ -8,11 +8,16 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -29,6 +34,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -235,8 +241,18 @@ private fun ShiftWeatherDetail(
     if (state.shiftHours.isEmpty()) {
         Text("No hay horas cubiertas dentro del horizonte disponible.")
     } else {
-        SectionCard("Pronóstico hora por hora") {
-            state.shiftHours.forEach { HourRow(it, state.preferences.unitSystem, shift.zoneId) }
+        SectionCard(
+            title = "Temperatura durante la guardia",
+            supportingText = "Deslizá hacia la derecha.",
+        ) {
+            LazyRow(
+                modifier = Modifier.fillMaxWidth().testTag("weather-hourly-carousel"),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                items(state.shiftHours, key = { it.validFrom }) { hour ->
+                    HourCard(hour, state.preferences.unitSystem, shift.zoneId)
+                }
+            }
         }
     }
     Button(
@@ -279,19 +295,32 @@ private fun SummaryCard(summary: ShiftWeatherSummary, unit: WeatherUnitSystem) {
 }
 
 @Composable
-private fun HourRow(hour: WeatherHour, unit: WeatherUnitSystem, zoneId: ZoneId) {
-    Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
-        Text(hour.validFrom.atZone(zoneId).format(HourFormatter), fontWeight = FontWeight.Bold)
-        Text(hour.condition.spanishLabel())
-        rangeText("Temperatura", hour.temperatureCelsius, hour.temperatureCelsius, unit)?.let { Text(it) }
-        hour.apparentTemperatureCelsius?.let { Text("Sensación: ${temperatureText(it, unit)}") }
-        val rain = buildList {
-            hour.precipitationProbabilityPercent?.let { add("$it %") }
-            hour.precipitationMillimeters?.let { add("${"%.1f".format(Locale.US, it)} mm") }
-        }
-        if (rain.isNotEmpty()) Text("Lluvia: ${rain.joinToString(" · ")}")
-        hour.windSpeedKmh?.let { speed ->
-            Text("Viento: ${speed.toInt()} km/h${hour.windGustKmh?.let { " · ráfagas ${it.toInt()} km/h" }.orEmpty()}")
+private fun HourCard(hour: WeatherHour, unit: WeatherUnitSystem, zoneId: ZoneId) {
+    Card(
+        modifier = Modifier.width(148.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        ),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Text(
+                hour.validFrom.atZone(zoneId).format(HourFormatter),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                hour.temperatureCelsius?.let { temperatureText(it, unit) } ?: "—",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Text(hour.condition.spanishLabel(), maxLines = 2)
+            hour.precipitationProbabilityPercent?.let {
+                Text("Lluvia $it %", style = MaterialTheme.typography.bodySmall)
+            }
         }
     }
 }

@@ -346,6 +346,23 @@ class LocalDataStoreInstrumentedTest {
     }
 
     @Test
+    fun savingShiftClearsExplicitDayStatusInSameTransaction() = runBlocking {
+        val date = LocalDate.of(2026, 8, 27)
+        val candidate = shift(SHIFT_ID, date, LocalTime.of(19, 0), date.plusDays(1), LocalTime.of(7, 0))
+        store.explicitDayStatuses.set(date, ExplicitDayStatusType.DAY_OFF)
+
+        store.shifts.applyBatch(
+            ShiftBatchMutation(
+                shiftsToInsert = listOf(candidate),
+                explicitDayStatusDatesToClear = setOf(date),
+            ),
+        )
+
+        assertEquals(candidate, store.shifts.getById(candidate.id))
+        assertTrue(store.explicitDayStatuses.observeBetween(date, date).first().isEmpty())
+    }
+
+    @Test
     fun batchRejectsDuplicateAndConflictingIdsBeforeMutatingData() = runBlocking {
         val date = LocalDate.of(2026, 8, 28)
         val original = shift(SHIFT_ID, date, LocalTime.of(8, 0), date, LocalTime.of(16, 0))

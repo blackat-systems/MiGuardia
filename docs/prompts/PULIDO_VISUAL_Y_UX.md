@@ -38,7 +38,7 @@ El resultado debe:
 - reducir ruido, listas confusas y acciones repetidas;
 - unificar encabezados, tarjetas, botones, formularios, mensajes y diálogos;
 - conservar accesibilidad semántica y contraste;
-- funcionar en tema claro y oscuro;
+- sostener una identidad oscura exclusiva basada en `interfaz/000____core_view.jpg`;
 - funcionar en retrato y paisaje;
 - respetar barras e insets del sistema;
 - funcionar con el zoom interno de MiGuardia en 100 %, 150 % y 200 %;
@@ -76,11 +76,13 @@ Podés crear o refactorizar componentes Compose internos para:
 
 ## 4. Decisiones de producto congeladas
 
-> Enmienda de MAIN del 16 de agosto de 2026: la decisión explícita posterior de Joa reemplaza únicamente las restricciones que impedían quitar acciones redundantes. El detalle de guardia se simplifica a novedad/notas, editar y eliminar; Fotos elimina abrir redundante y borrado masivo; Agregar ofrece guardia y francos. Los contratos de dominio, historial y confirmación destructiva continúan vigentes.
+> Enmienda de MAIN del 16 de agosto de 2026: la decisión explícita posterior de Joa reemplaza únicamente las restricciones que impedían quitar acciones redundantes. El detalle de una fecha ocupada conserva novedad/notas y ordena sus acciones de gestión como editar, agregar una segunda guardia y eliminar; no ofrece agregar francos. Fotos elimina abrir redundante y borrado masivo; el Agregar global ofrece guardia y francos. Los contratos de dominio, historial y confirmación destructiva continúan vigentes.
 
 Estas conductas no se negocian en este módulo:
 
 ### Calendario
+
+- Los selectores de fecha de Agregar guardia y Agregar francos usan un calendario ampliado que distribuye las siete columnas sobre todo el ancho disponible; cada celda muestra número más inicial histórica del día (`3L`, `4M`, `5X`, `6J`, `7V`, `8S`, `9D`).
 
 - Cuadrícula mensual estable de 42 días, semana desde lunes.
 - La celda con guardia muestra completa la abreviatura histórica del objetivo.
@@ -202,7 +204,7 @@ Verificá en el Galaxy S25 Ultra/API 36, con datos QA ficticios:
 - todas las superficies enumeradas;
 - recorridos principales y vuelta atrás;
 - teclado y formularios largos;
-- tema claro y oscuro;
+- identidad oscura exclusiva y contraste suficiente;
 - retrato y paisaje;
 - zoom interno 100 %, 150 % y 200 %;
 - calendario con abreviatura y horario completos;

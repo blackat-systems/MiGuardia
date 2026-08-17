@@ -72,10 +72,10 @@ Si necesitás reutilizar una primitiva pura del motor de próximo evento, extrae
 
 - Cada guardia usa una identidad de notificación estable basada en su UUID; no dependas únicamente de un `Int` susceptible a colisiones.
 - Los recordatorios sucesivos de la misma guardia actualizan la misma notificación y pueden volver a alertar.
-- Al comenzar, se actualiza a **Guardia en curso** y muestra una cuenta regresiva hasta el fin mediante el cronómetro del sistema; no programes alarmas por minuto.
+- Al comenzar, se actualiza a **Guardia en curso** y muestra una cuenta regresiva hasta el fin mediante un `Chronometer` del sistema ubicado dentro del contenido; no programes alarmas por minuto.
 - Al finalizar, la notificación se cancela.
 - Varias guardias simultáneas se muestran por separado y agrupadas sin perder ninguna.
-- Usá plantillas estándar de Android; no agregues `RemoteViews` personalizados.
+- Usá `NotificationCompat.DecoratedCustomViewStyle` y `RemoteViews` mínimas únicamente para llevar el `Chronometer` al cuerpo. El encabezado no muestra contador temporal; Android conserva decoración, acciones y control final.
 - Preservá los datos históricos reales ya guardados en la guardia: objetivo, abreviatura, horario, puesto y color.
 - La abreviatura y el horario completo nunca se reemplazan por etiquetas inventadas de día o noche.
 
@@ -213,7 +213,7 @@ Requisitos de UX:
 - la denegación no bloquea MiGuardia y puede corregirse después desde Configuración;
 - estados de carga, contenido, vacío y error persistente con reintento;
 - desplazamiento correcto y acciones alcanzables al zoom interno 100 %, 150 % y 200 %;
-- tema claro y oscuro, vertical y horizontal;
+- identidad oscura exclusiva, vertical y horizontal;
 - semántica básica coherente para controles y contenido;
 - no consultar ni modificar `font_scale`, densidad, zoom ni tamaño de visualización del sistema.
 
@@ -408,3 +408,7 @@ Checklist final:
 # Enmienda posterior de MAIN (2026-08-16)
 
 La configuración particular `Avisos` se conserva, pero se abre desde `Editar` la guardia y no como acción principal del detalle. La presentación visible es una notificación común: la alarma de Android es sólo programación interna de fronteras. Por defecto la notificación permanece fija hasta finalizar y usa el cronómetro nativo, sin polling ni alarmas por minuto.
+
+# Enmienda posterior de MAIN (2026-08-17)
+
+La configuración global guía al usuario paso a paso: activar, conceder permiso, elegir cuándo avisar y elegir si queda fija o es descartable. Puntualidad exacta, varios recordatorios, privacidad y sonido siguen disponibles bajo opciones avanzadas. La cuenta regresiva se muestra dentro del cuerpo mediante `DecoratedCustomViewStyle` y `RemoteViews` acotadas; el contador pequeño del encabezado se desactiva.

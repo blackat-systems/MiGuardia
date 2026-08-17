@@ -68,13 +68,22 @@ internal class RoomShiftRepository(
 
     override suspend fun applyBatch(mutation: ShiftBatchMutation) {
         val insertIds = mutation.shiftsToInsert.map { it.id }
+        val updateIds = mutation.shiftsToUpdate.map { it.id }
         if (insertIds.size != insertIds.distinct().size) {
             throw InvalidLocalDataException("La carga contiene identificadores de guardia duplicados.")
         }
-        if (insertIds.any { it in mutation.shiftIdsToDelete }) {
-            throw InvalidLocalDataException("Una guardia no puede borrarse e insertarse en el mismo lote.")
+        if (updateIds.size != updateIds.distinct().size) {
+            throw InvalidLocalDataException("La carga contiene actualizaciones de guardia duplicadas.")
         }
-        val entities = mutation.shiftsToInsert.map { it.validated().toEntity() }
+        val changedIds = insertIds + updateIds
+        if (changedIds.size != changedIds.distinct().size) {
+            throw InvalidLocalDataException("Una guardia no puede insertarse y actualizarse en el mismo lote.")
+        }
+        if (changedIds.any { it in mutation.shiftIdsToDelete }) {
+            throw InvalidLocalDataException("Una guardia no puede borrarse y guardarse en el mismo lote.")
+        }
+        val insertEntities = mutation.shiftsToInsert.map { it.validated().toEntity() }
+        val updateEntities = mutation.shiftsToUpdate.map { it.validated().toEntity() }
         try {
             database.withTransaction {
                 if (mutation.shiftIdsToDelete.isNotEmpty()) {
@@ -83,7 +92,15 @@ internal class RoomShiftRepository(
                     }
                     dao.deleteByIds(mutation.shiftIdsToDelete.map(UUID::toString))
                 }
-                if (entities.isNotEmpty()) dao.insertAll(entities)
+                if (insertEntities.isNotEmpty()) dao.insertAll(insertEntities)
+                updateEntities.forEach { entity ->
+                    if (dao.update(entity) == 0) {
+                        throw InvalidLocalDataException("No existe la guardia ${entity.id}.")
+                    }
+                }
+                mutation.explicitDayStatusDatesToClear.forEach { date ->
+                    database.explicitDayStatusDao().clear(date.toString())
+                }
             }
         } catch (error: SQLiteConstraintException) {
             throw InvalidLocalDataException("No se pudo guardar el lote de guardias.", error)

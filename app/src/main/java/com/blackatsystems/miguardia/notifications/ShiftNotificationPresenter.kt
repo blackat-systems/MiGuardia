@@ -11,6 +11,9 @@ import android.content.pm.PackageManager
 import android.media.AudioAttributes
 import android.media.RingtoneManager
 import android.net.Uri
+import android.os.SystemClock
+import android.view.View
+import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
@@ -18,6 +21,7 @@ import com.blackatsystems.miguardia.MainActivity
 import com.blackatsystems.miguardia.R
 import com.blackatsystems.miguardia.core.domain.model.Shift
 import java.security.MessageDigest
+import java.time.Duration
 import java.time.Instant
 import java.time.format.DateTimeFormatter
 
@@ -49,18 +53,42 @@ internal class ShiftNotificationPresenter(private val context: Context) {
                 ?.let { append('\n').append(it) }
         }
         val reducedText = "$title · $timeRange"
+        val displayedTitle = if (preferences.privacy == NotificationPrivacy.HIDDEN) "MiGuardia" else title
+        val displayedText = when (preferences.privacy) {
+            NotificationPrivacy.COMPLETE -> fullText
+            NotificationPrivacy.REDUCED -> "Horario $timeRange"
+            NotificationPrivacy.HIDDEN -> "Tenés un aviso de guardia."
+        }
+        val countdownBase = SystemClock.elapsedRealtime() +
+            Duration.between(now, if (ongoing) shift.endAt else shift.startAt).toMillis().coerceAtLeast(0L)
+        val compactView = notificationView(
+            layoutId = R.layout.notification_shift_compact,
+            title = displayedTitle,
+            text = displayedText,
+            countdownBase = countdownBase,
+            countdownLabel = if (ongoing) "Finaliza en %s" else "Comienza en %s",
+            showCountdown = preferences.privacy != NotificationPrivacy.HIDDEN,
+        )
+        val expandedView = notificationView(
+            layoutId = R.layout.notification_shift_expanded,
+            title = displayedTitle,
+            text = displayedText,
+            countdownBase = countdownBase,
+            countdownLabel = if (ongoing) "Finaliza en %s" else "Comienza en %s",
+            showCountdown = preferences.privacy != NotificationPrivacy.HIDDEN,
+        )
         val builder = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(R.drawable.ic_notification)
             .setColor(shift.colorArgbSnapshot)
-            .setContentTitle(title)
-            .setContentText(fullText)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(fullText))
+            .setContentTitle(displayedTitle)
+            .setContentText(displayedText)
+            .setStyle(NotificationCompat.DecoratedCustomViewStyle())
+            .setCustomContentView(compactView)
+            .setCustomBigContentView(expandedView)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setGroup(GROUP_KEY)
-            .setShowWhen(true)
-            .setWhen((if (ongoing) shift.endAt else shift.startAt).toEpochMilli())
-            .setUsesChronometer(true)
-            .setChronometerCountDown(true)
+            .setShowWhen(false)
+            .setUsesChronometer(false)
             .setOnlyAlertOnce(silentUpdate)
             .setOngoing(preferences.persistentWhileActive)
             .setAutoCancel(!preferences.persistentWhileActive)
@@ -80,6 +108,23 @@ internal class ShiftNotificationPresenter(private val context: Context) {
                 .setPublicVersion(publicVersion(channelId, "MiGuardia", "Tenés un aviso de guardia."))
         }
         notifySafely(shift.id.toString(), NOTIFICATION_ID, builder.build())
+    }
+
+    private fun notificationView(
+        layoutId: Int,
+        title: String,
+        text: String,
+        countdownBase: Long,
+        countdownLabel: String,
+        showCountdown: Boolean,
+    ): RemoteViews = RemoteViews(context.packageName, layoutId).apply {
+        setTextViewText(R.id.notification_title, title)
+        setTextViewText(R.id.notification_body, text)
+        setViewVisibility(R.id.notification_countdown, if (showCountdown) View.VISIBLE else View.GONE)
+        if (showCountdown) {
+            setChronometer(R.id.notification_countdown, countdownBase, countdownLabel, true)
+            setChronometerCountDown(R.id.notification_countdown, true)
+        }
     }
 
     fun cancel(shiftId: String) {
@@ -191,7 +236,7 @@ internal class ShiftNotificationPresenter(private val context: Context) {
             .joinToString("") { "%02x".format(it) }
         val id = "$CHANNEL_PREFIX$suffix"
         manager.notificationChannels
-            .filter { it.id.startsWith(CHANNEL_PREFIX) && it.id != id }
+            .filter { it.id.startsWith(OWNED_CHANNEL_PREFIX) && it.id != id }
             .forEach { manager.deleteNotificationChannel(it.id) }
         val channel = NotificationChannel(
             id,
@@ -206,6 +251,7 @@ internal class ShiftNotificationPresenter(private val context: Context) {
                     .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                     .build(),
             )
+            enableVibration(true)
             lockscreenVisibility = Notification.VISIBILITY_PRIVATE
         }
         manager.createNotificationChannel(channel)
@@ -213,7 +259,8 @@ internal class ShiftNotificationPresenter(private val context: Context) {
     }
 
     companion object {
-        const val CHANNEL_PREFIX = "guard_shifts_v1_"
+        const val CHANNEL_PREFIX = "guard_shifts_v2_"
+        const val OWNED_CHANNEL_PREFIX = "guard_shifts_"
         const val GROUP_KEY = "com.blackatsystems.miguardia.GUARD_SHIFTS"
         const val NOTIFICATION_ID = 1042
         private const val GROUP_SUMMARY_ID = 1043

@@ -217,6 +217,7 @@ private fun DayOffForm(state: ManagementUiState, actions: ManagementActions) {
             onToggleDate = actions.toggleDayOffDate,
             monthLabel = monthLabel(draft.month),
             testTag = "day-off-date-selector",
+            expandedDayLabels = true,
         )
         Text(
             when (draft.selectedDates.size) {
@@ -718,6 +719,7 @@ private fun ShiftForm(
             onToggleDate = actions.toggleShiftDate,
             monthLabel = monthLabel(draft.month),
             testTag = "shift-date-selector",
+            expandedDayLabels = true,
         )
 
         if (draft.duplicateSource == null) {
@@ -785,7 +787,12 @@ private fun ShiftForm(
         AlertDialog(
             onDismissRequest = { finalConfirmation = false },
             title = { Text("Confirmar guardias") },
-            text = { Text("Se guardarán ${draft.selectedDates.size} guardia(s) en ${monthLabel(draft.month)}. Las fechas pasadas se verán completadas automáticamente.") },
+            text = {
+                Text(
+                    "Vas a guardar ${draft.selectedDates.size} guardia(s) en ${monthLabel(draft.month)}. " +
+                        "Si alguna fecha ya pasó, MiGuardia la marcará automáticamente como realizada.",
+                )
+            },
             confirmButton = {
                 TextButton(
                     enabled = !state.isSaving,

@@ -1,6 +1,7 @@
 package com.blackatsystems.miguardia.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -109,6 +110,7 @@ fun MonthNavigator(
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainer,
         ),
@@ -148,22 +150,32 @@ fun SelectableMonthCalendar(
     monthLabel: String,
     modifier: Modifier = Modifier,
     testTag: String = "month-date-selector",
+    expandedDayLabels: Boolean = false,
 ) {
+    val weekdayInitials = listOf("L", "M", "X", "J", "V", "S", "D")
+    val weekdayNames = listOf("lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo")
+    val cellSize = if (expandedDayLabels) 50.dp else 42.dp
     val leadingEmptyCells = month.atDay(1).dayOfWeek.value - 1
     val cells = List(leadingEmptyCells) { null } +
         (1..month.lengthOfMonth()).map(month::atDay)
     Box(
         modifier
             .fillMaxWidth()
-            .horizontalScroll(rememberScrollState())
+            .then(
+                if (expandedDayLabels) {
+                    Modifier
+                } else {
+                    Modifier.horizontalScroll(rememberScrollState())
+                },
+            )
             .testTag(testTag),
     ) {
         Column(
-            modifier = Modifier.width(322.dp),
+            modifier = if (expandedDayLabels) Modifier.fillMaxWidth() else Modifier.width(322.dp),
             verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.extraSmall),
         ) {
             Row(Modifier.fillMaxWidth()) {
-                listOf("L", "M", "X", "J", "V", "S", "D").forEach { label ->
+                weekdayInitials.forEach { label ->
                     Text(
                         text = label,
                         modifier = Modifier.weight(1f),
@@ -176,40 +188,57 @@ fun SelectableMonthCalendar(
             cells.chunked(7).forEach { week ->
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    horizontalArrangement = if (expandedDayLabels) Arrangement.Start else Arrangement.SpaceBetween,
                 ) {
                     week.forEach { date ->
-                        if (date == null) {
-                            Spacer(Modifier.size(42.dp))
-                        } else {
-                            val selected = date in selectedDates
-                            Box(
-                                modifier = Modifier
-                                    .size(42.dp)
-                                    .background(
-                                        if (selected) {
-                                            MaterialTheme.colorScheme.primaryContainer
+                        Box(
+                            modifier = if (expandedDayLabels) Modifier.weight(1f) else Modifier,
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            if (date == null) {
+                                Spacer(Modifier.size(cellSize))
+                            } else {
+                                val selected = date in selectedDates
+                                val weekdayIndex = date.dayOfWeek.value - 1
+                                Box(
+                                    modifier = Modifier
+                                        .size(cellSize)
+                                        .background(
+                                            if (selected) {
+                                                MaterialTheme.colorScheme.primaryContainer
+                                            } else {
+                                                MaterialTheme.colorScheme.surface
+                                            },
+                                            CircleShape,
+                                        )
+                                        .semantics {
+                                            contentDescription =
+                                                "${weekdayNames[weekdayIndex]} ${date.dayOfMonth} $monthLabel, ${if (selected) "seleccionado" else "sin seleccionar"}"
+                                            role = Role.Button
+                                        }
+                                        .clickable { onToggleDate(date) },
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Text(
+                                        text = if (expandedDayLabels) {
+                                            "${date.dayOfMonth}${weekdayInitials[weekdayIndex]}"
                                         } else {
-                                            MaterialTheme.colorScheme.surface
+                                            date.dayOfMonth.toString()
                                         },
-                                        CircleShape,
+                                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
                                     )
-                                    .semantics {
-                                        contentDescription =
-                                            "${date.dayOfMonth} $monthLabel, ${if (selected) "seleccionado" else "sin seleccionar"}"
-                                        role = Role.Button
-                                    }
-                                    .clickable { onToggleDate(date) },
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Text(
-                                    text = date.dayOfMonth.toString(),
-                                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-                                )
+                                }
                             }
                         }
                     }
-                    repeat(7 - week.size) { Spacer(Modifier.size(42.dp)) }
+                    repeat(7 - week.size) {
+                        Box(
+                            modifier = if (expandedDayLabels) Modifier.weight(1f) else Modifier,
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Spacer(Modifier.size(cellSize))
+                        }
+                    }
                 }
             }
         }
@@ -225,6 +254,7 @@ fun SectionCard(
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainer,
         ),
@@ -261,6 +291,7 @@ fun EmptyState(
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         ),
@@ -371,6 +402,7 @@ fun NavigationCard(
                 role = Role.Button
             }
             .clickable(onClick = onClick),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainer,
         ),

@@ -173,7 +173,7 @@ El reemplazo afecta únicamente guardias de las fechas seleccionadas. No borra o
 
 Para agregar deliberadamente otra guardia en una fecha ya ocupada, ofrecé una acción separada “Agregar segunda guardia”. Mostrá las guardias existentes y pedí confirmación. No la bloquees definitivamente.
 
-Si una fecha contiene `F`, `?` explícito o `CM`, no lo borres ni lo modifiques desde este módulo. Mostrá la coexistencia y una advertencia clara. La gestión y el reemplazo transversal de esos tipos pertenecerá a EXCEPCIONES, NOTAS Y FERIADOS. Nunca ocultes datos ni simules que fueron reemplazados.
+Si una fecha contiene `F` o `?` explícito, guardar una guardia en esa fecha lo reemplaza de forma atómica: la guardia define el día y el estado explícito se elimina. Si contiene `CM`, no lo borres ni lo modifiques; mostrale al usuario una advertencia clara. Nunca ocultes datos ni simules un reemplazo que no se haya persistido.
 
 ### 3.6 Descanso menor a 12 horas
 
@@ -312,7 +312,7 @@ No incorpores Hilt, Service Locator mutable, singletons globales de edición ni 
 - Carga múltiple, reemplazo y duplicado múltiple son atómicos.
 - Una operación cancelada no escribe nada.
 - “Conservar ocupadas” no elimina ni actualiza sus guardias.
-- No borres `ExplicitDayStatus` ni modifiques `MedicalLeave`.
+- Sólo borrá `ExplicitDayStatus` para las fechas donde una guardia se guardó realmente y hacelo dentro de la misma transacción. No modifiques `MedicalLeave`.
 - No uses migración destructiva ni base en memoria en producción.
 - No accedas a Room desde el hilo principal.
 - No registres nombres, direcciones, puestos, horarios o notas en logs.
@@ -454,7 +454,7 @@ Ejecutá todas las pruebas relevantes en el Samsung Galaxy S25 Ultra conectado y
 7. editar, duplicar y eliminar;
 8. cerrar/reabrir y confirmar persistencia.
 
-Revisá tema claro/oscuro, fuente habitual y 200 %, retrato y paisaje, TalkBack/semántica, teclado y selectores de hora. Restaurá cualquier configuración del teléfono modificada. No uses datos reales de Joaquin.
+Revisá la identidad oscura, fuente habitual y 200 %, retrato y paisaje, semántica, teclado y selectores de hora. Restaurá cualquier configuración del teléfono modificada. No uses datos reales de Joaquin.
 
 ## 11. Criterios de aceptación
 

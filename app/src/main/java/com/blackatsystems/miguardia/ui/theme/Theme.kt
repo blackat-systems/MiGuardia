@@ -1,55 +1,48 @@
 package com.blackatsystems.miguardia.ui.theme
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
+import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import android.util.DisplayMetrics
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Density
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
-private val LightColors = lightColorScheme(
-    primary = Color(0xFF315DA8),
-    onPrimary = Color.White,
-    primaryContainer = Color(0xFFD9E2FF),
-    onPrimaryContainer = Color(0xFF001A41),
-    secondary = Color(0xFF53657D),
-    onSecondary = Color.White,
-    secondaryContainer = Color(0xFFD7E3F7),
-    onSecondaryContainer = Color(0xFF101C2B),
-    background = Color(0xFFF8F9FE),
-    onBackground = Color(0xFF191C20),
-    surface = Color(0xFFF8F9FE),
-    onSurface = Color(0xFF191C20),
-    surfaceVariant = Color(0xFFE1E2E8),
-    onSurfaceVariant = Color(0xFF44474E),
-    outline = Color(0xFF74777F),
-    outlineVariant = Color(0xFFC4C6CF),
-)
-
-private val DarkColors = darkColorScheme(
-    primary = Color(0xFFADC6FF),
-    onPrimary = Color(0xFF002E69),
-    primaryContainer = Color(0xFF16458F),
-    onPrimaryContainer = Color(0xFFD9E2FF),
-    secondary = Color(0xFFBBC7DB),
-    onSecondary = Color(0xFF253140),
-    secondaryContainer = Color(0xFF3B4858),
-    onSecondaryContainer = Color(0xFFD7E3F7),
-    background = Color(0xFF111318),
-    onBackground = Color(0xFFE2E2E9),
-    surface = Color(0xFF111318),
-    onSurface = Color(0xFFE2E2E9),
-    surfaceVariant = Color(0xFF44474F),
-    onSurfaceVariant = Color(0xFFC4C6CF),
-    outline = Color(0xFF8E9099),
-    outlineVariant = Color(0xFF44474F),
+private val CoreViewColors = darkColorScheme(
+    primary = Color(0xFFC06CFF),
+    onPrimary = Color(0xFF170022),
+    primaryContainer = Color(0xFF55217A),
+    onPrimaryContainer = Color(0xFFF5D9FF),
+    secondary = Color(0xFFFF72D2),
+    onSecondary = Color(0xFF330024),
+    secondaryContainer = Color(0xFF61204D),
+    onSecondaryContainer = Color(0xFFFFD8EF),
+    tertiary = Color(0xFF8D7CFF),
+    onTertiary = Color(0xFF10005B),
+    background = Color(0xFF080611),
+    onBackground = Color(0xFFF4EEFF),
+    surface = Color(0xFF0D0A18),
+    onSurface = Color(0xFFF4EEFF),
+    surfaceVariant = Color(0xFF241C35),
+    onSurfaceVariant = Color(0xFFD1C3DE),
+    surfaceContainerLowest = Color(0xFF07050E),
+    surfaceContainerLow = Color(0xFF0F0B1D),
+    surfaceContainer = Color(0xFF151025),
+    surfaceContainerHigh = Color(0xFF1B1430),
+    surfaceContainerHighest = Color(0xFF251B3D),
+    outline = Color(0xFF8D69A8),
+    outlineVariant = Color(0xFF3B2A52),
+    error = Color(0xFFFF6F91),
+    errorContainer = Color(0xFF5D1630),
+    onErrorContainer = Color(0xFFFFD9E1),
 )
 
 private val AppShapes = Shapes(
@@ -60,9 +53,21 @@ private val AppShapes = Shapes(
     extraLarge = RoundedCornerShape(28.dp),
 )
 
+private val AppTypography = Typography(
+    headlineSmall = TextStyle(fontSize = 26.sp, lineHeight = 32.sp, fontWeight = FontWeight.Bold),
+    titleLarge = TextStyle(fontSize = 22.sp, lineHeight = 28.sp, fontWeight = FontWeight.Bold),
+    titleMedium = TextStyle(fontSize = 18.sp, lineHeight = 24.sp, fontWeight = FontWeight.SemiBold),
+    titleSmall = TextStyle(fontSize = 15.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold),
+    bodyLarge = TextStyle(fontSize = 16.sp, lineHeight = 24.sp),
+    bodyMedium = TextStyle(fontSize = 14.sp, lineHeight = 21.sp),
+    bodySmall = TextStyle(fontSize = 12.sp, lineHeight = 18.sp),
+    labelLarge = TextStyle(fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold),
+)
+
+@Suppress("UNUSED_PARAMETER")
 @Composable
 fun MiGuardiaTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    darkTheme: Boolean = true,
     appZoom: AppZoom = AppZoom.STANDARD,
     content: @Composable () -> Unit,
 ) {
@@ -73,8 +78,9 @@ fun MiGuardiaTheme(
         ),
     ) {
         MaterialTheme(
-            colorScheme = if (darkTheme) DarkColors else LightColors,
+            colorScheme = CoreViewColors,
             shapes = AppShapes,
+            typography = AppTypography,
             content = content,
         )
     }

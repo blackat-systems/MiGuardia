@@ -28,14 +28,14 @@ class NotificationComposeTest {
     @get:Rule val compose = createComposeRule()
 
     @Test
-    fun globalSettingsExplainDeniedExactFallbackAndPrivacyChoices() {
+    fun globalSettingsGuideTheUserBeforeShowingAdvancedChoices() {
         compose.setContent {
             MaterialTheme {
                 NotificationSurfaceHost(
                     NotificationUiState(
                         surface = NotificationSurface.GLOBAL,
                         preferences = NotificationPreferences(enabled = true, preciseTiming = true),
-                        systemAccess = NotificationSystemAccessState(false, false),
+                        systemAccess = NotificationSystemAccessState(true, false),
                         isLoading = false,
                     ),
                     NotificationActions(),
@@ -44,18 +44,47 @@ class NotificationComposeTest {
         }
 
         compose.onNodeWithText("Notificaciones").assertExists()
-        compose.onNodeWithText("Notificaciones: pendiente").assertExists()
+        compose.onNodeWithText("1. Permití los avisos").assertExists()
+        compose.onNodeWithText("2. Elegí cuándo avisar").assertExists()
+        compose.onNodeWithText("3. Elegí cómo se muestra").assertExists()
+        compose.onNodeWithText("Recomendamos 12 horas antes.", substring = true).assertExists()
+        compose.onNodeWithText("Abrir ajustes de notificaciones").assertExists()
+        compose.onNodeWithText("Puntualidad exacta: pendiente").assertDoesNotExist()
+        compose.onNodeWithText("Ver opciones avanzadas").performScrollTo().performClick()
         compose.onNodeWithText("Puntualidad exacta: pendiente").assertExists()
-        compose.onNodeWithText("Sin este acceso, Android puede demorar la notificación. Nunca suena ni se presenta como un despertador.").assertExists()
-        compose.onNodeWithText("Mantener fija hasta finalizar la guardia").assertExists()
         compose.onNodeWithText("Completa: objetivo, horario y puesto").assertExists()
         compose.onNodeWithText("Reducida: estado y horario").assertExists()
         compose.onNodeWithText("Oculta: mensaje genérico").assertExists()
+        compose.onNodeWithText("Vibración: MiGuardia la solicita; Android conserva el control final.")
+            .performScrollTo()
+            .assertExists()
     }
 
     @Test
-    fun shiftSettingsExposeOwnDisabledAndReturnToGlobalActions() {
-        var disabled = 0
+    fun deniedPermissionKeepsTheSetupFocusedOnTheFirstStep() {
+        compose.setContent {
+            MaterialTheme {
+                NotificationSurfaceHost(
+                    NotificationUiState(
+                        surface = NotificationSurface.GLOBAL,
+                        preferences = NotificationPreferences(enabled = true),
+                        systemAccess = NotificationSystemAccessState(false, false),
+                        isLoading = false,
+                    ),
+                    NotificationActions(),
+                )
+            }
+        }
+
+        compose.onNodeWithText("1. Permití los avisos").assertExists()
+        compose.onNodeWithText("Notificaciones: pendiente").assertExists()
+        compose.onNodeWithText("2. Elegí cuándo avisar").assertDoesNotExist()
+        compose.onNodeWithText("3. Elegí cómo se muestra").assertDoesNotExist()
+    }
+
+    @Test
+    fun disabledShiftOffersSimpleRestoreAndPersonalizeActions() {
+        var personalized = 0
         var global = 0
         compose.setContent {
             MaterialTheme {
@@ -67,17 +96,18 @@ class NotificationComposeTest {
                         isLoading = false,
                     ),
                     NotificationActions(
-                        disableShift = { disabled++ },
+                        setShiftReminders = { personalized++ },
                         useGlobalForShift = { global++ },
                     ),
                 )
             }
         }
 
-        compose.onNodeWithText("Los avisos están desactivados sólo para esta guardia.").assertExists()
-        compose.onNodeWithText("Desactivar avisos en esta guardia").performScrollTo().performClick()
-        compose.onNodeWithText("Volver a usar valores globales").performScrollTo().performClick()
-        assertEquals(1, disabled)
+        compose.onNodeWithText("Avisos desactivados").assertExists()
+        compose.onNodeWithText("Desactivar sólo en esta guardia").assertDoesNotExist()
+        compose.onNodeWithText("Volver a usar la configuración general").performScrollTo().performClick()
+        compose.onNodeWithText("Personalizar esta guardia").performScrollTo().performClick()
+        assertEquals(1, personalized)
         assertEquals(1, global)
     }
 

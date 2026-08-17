@@ -248,6 +248,7 @@ Cada guardia elegible del detalle ofrece **Clima** y abre por UUID. Reconsultá 
 - objetivo histórico, fecha argentina y horario completo;
 - Córdoba Capital;
 - resumen de toda la guardia;
+- detalle hora por hora en tarjetas con desplazamiento horizontal hacia la derecha, sin producir una lista vertical extensa;
 - condición, rango térmico, sensación, lluvia, precipitación, viento y ráfagas disponibles;
 - lista horaria desde entrada hasta salida, incluso medianoche;
 - timestamp, frescura y cobertura completa/parcial;

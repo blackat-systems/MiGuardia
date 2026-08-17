@@ -61,8 +61,8 @@ class ExceptionsComposeTest {
                 )
             }
         }
-        composeRule.onNodeWithContentDescription("17 Agosto de 2026, sin seleccionar").performClick()
-        composeRule.onNodeWithContentDescription("18 Agosto de 2026, sin seleccionar").performClick()
+        composeRule.onNodeWithContentDescription("lunes 17 Agosto de 2026, sin seleccionar").performClick()
+        composeRule.onNodeWithContentDescription("martes 18 Agosto de 2026, sin seleccionar").performClick()
         composeRule.onNodeWithText("2 fechas seleccionadas.").assertExists()
         composeRule.onNodeWithText("Feriado ficticio").assertExists()
         composeRule.onNodeWithText("Editar").performScrollTo().performClick()
