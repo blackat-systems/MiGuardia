@@ -467,6 +467,8 @@ Flujo:
 4. al llegar la entrada cambia a “Guardia en curso” y cuenta hasta la salida;
 5. al llegar la salida se elimina automáticamente, salvo reglas necesarias del sistema ya explicadas al usuario.
 
+La notificación adopta la jerarquía visual de Vigilia sin intentar reemplazar la interfaz del sistema: debe sentirse como una tarjeta de estado compacta, clara y reconocible, con acento moderado, abreviatura y horario completos, estado y cuenta regresiva dentro del cuerpo. Android conserva el fondo, la tipografía final, la expansión y los controles del panel. Debe existir una presentación equivalente y legible desde Android 8/API 26; ninguna mejora visual autoriza a elevar el `minSdk` ni a excluir dispositivos antiguos.
+
 Contenido:
 
 - nombre completo del objetivo;
@@ -477,6 +479,10 @@ Contenido:
 
 Vista expandida: Ver detalles, Cómo llegar e Informar novedad. Evaluar cuáles acciones permanecen visibles según límites Android, sin perder las tres funciones.
 
+La vista expandida ofrece además un control explícito `Eliminar notificación`. No constituye una cuarta acción estándar: vive dentro del contenido personalizado compatible y oculta solamente el aviso de esa guardia, sin desactivar Notificaciones, cancelar futuros avisos ni modificar la guardia. Configuración muestra `Mostrar notificación nuevamente` cuando exista una guardia todavía elegible cuyo aviso fue ocultado; si hay varias, permite restaurarlas individualmente y puede ofrecer restaurarlas todas. La restauración revalida guardia, vacaciones, estado, preferencias y permiso, y vuelve a publicar silenciosamente la misma identidad estable.
+
+La intención de producto es que el aviso permanezca visible hasta que el usuario elija eliminarlo o termine la guardia. Android 14 y posteriores pueden permitir que el usuario descarte incluso una notificación marcada como permanente; MiGuardia no promete impedir ese gesto. Cuando Android informe el descarte, se trata como ocultamiento consciente y se ofrece la misma restauración desde la aplicación.
+
 Privacidad en pantalla bloqueada elegida por el usuario:
 
 1. toda la información;
@@ -486,6 +492,8 @@ Privacidad en pantalla bloqueada elegida por el usuario:
 Editar/eliminar una guardia reprograma o cancela avisos. Reinicio del teléfono, cambio de hora/zona, permiso de notificaciones, restricciones de batería y exact alarms deben tratarse explícitamente. Guardias excepcionales separadas reciben sus propios avisos.
 
 La experiencia visible es siempre una notificación común, nunca una alarma tipo despertador, pantalla completa o sonido en bucle. Internamente Android puede usar una alarma temporal única para publicar puntualmente cada frontera. La cuenta regresiva se presenta dentro del contenido de la notificación mediante un `Chronometer` del sistema; se oculta el pequeño contador temporal del encabezado. No requiere polling, un servicio en primer plano ni despertares por minuto.
+
+El ocultamiento se persiste en el DataStore exclusivo de Notificaciones con identificadores opacos y caduca cuando la guardia finaliza, deja de ser elegible, se elimina o el usuario restaura el aviso. No requiere cambios en Room, permisos, dependencias, servicios ni red.
 
 ## 15. Motor de próximo evento
 
@@ -715,7 +723,9 @@ Decisión posterior del 17 de agosto de 2026: MiGuardia adopta **Vigilia** como 
 
 Decisión de hoja de ruta del 17 de agosto de 2026: después de cerrar la experiencia actual se evaluará distribución comercial en Google Play con suscripción y una organización del calendario para tres perfiles: seguridad privada, salud y policía. No forma parte del incremento actual. Antes de implementarlo se deben definir alcance compartido y específico, Google Play Billing, restauración de compras, privacidad, soporte, términos y un proveedor meteorológico compatible con uso comercial. Esta decisión no autoriza cuentas, servidor, nube ni sincronización.
 
-Decisión posterior del 17 de agosto de 2026: la experiencia inicial se implementa secuencialmente: primero un calendario en modo consulta con `Editar calendario`; luego Perfil laboral y reorganización de Configuración; por último bienvenida, onboarding y primera carga guiada. Cada dependencia nace del `HEAD` verificado de MAIN después de integrar la anterior.
+Decisión posterior del 17 de agosto de 2026: la experiencia inicial se implementa secuencialmente: primero un calendario en modo consulta con `Editar calendario`; luego Perfil laboral y reorganización de Configuración; después el rediseño Vigilia y control de visibilidad de Notificaciones; por último bienvenida, onboarding y primera carga guiada. Cada dependencia nace del `HEAD` verificado de MAIN después de integrar la anterior.
+
+Decisión posterior del 17 de agosto de 2026: Notificaciones debe conservar Android 8/API 26 como mínimo compatible. Su contenido se refina como tarjeta de estado Vigilia dentro de los límites visuales del panel de Android, con degradación equivalente en versiones antiguas. `Eliminar notificación` oculta sólo el aviso de esa guardia y `Mostrar notificación nuevamente` permite restaurarlo desde Configuración mientras siga siendo elegible. En Android 14 o superior el sistema puede permitir también el descarte por gesto, aun cuando MiGuardia solicite persistencia; la aplicación debe reconocer esa limitación sin prometer un bloqueo imposible.
 
 La primera versión utilizable debe alcanzar almacenamiento local, calendario, carga individual/múltiple, objetivos/horarios, fotos y horas básicas antes de sumar capas más complejas.
 

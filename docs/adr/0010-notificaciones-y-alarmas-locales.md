@@ -44,6 +44,12 @@ La alarma de Android es sólo el mecanismo interno que despierta el proceso en u
 
 Se usa `NotificationCompat.DecoratedCustomViewStyle` con `RemoteViews` acotadas para ubicar el `Chronometer` dentro del contenido, conservando encabezado, icono, expansión y acciones controlados por Android. No se dibuja una interfaz de alarma. El contenido completo toma exclusivamente las instantáneas históricas de objetivo, abreviatura, horario, puesto y color. Nunca incluye notas, descripciones de novedades, datos médicos, fotos, terceros ni otros datos privados. La privacidad de pantalla bloqueada ofrece contenido completo, versión pública reducida a estado y horario, o versión genérica oculta.
 
+La presentación adopta la jerarquía de Vigilia como una tarjeta de estado compacta: acento moderado, estado, abreviatura, horario completo y cuenta regresiva claramente priorizados. No intenta imponer un fondo propio ni reemplazar la superficie del sistema. La implementación conserva `minSdk 26`; cualquier recurso visual más moderno debe degradar a una variante equivalente en Android 8 y posteriores sin perder contenido esencial.
+
+La vista expandida incorpora `Eliminar notificación` como control interno de las `RemoteViews`, sin desplazar las tres acciones estándar. La acción cancela solamente el aviso de esa guardia y registra su identidad opaca como ocultada en el DataStore existente. El reconciliador no la vuelve a publicar mientras siga ocultada. Configuración ofrece `Mostrar notificación nuevamente` para cada aviso todavía elegible y restaura silenciosamente la misma identidad sólo después de revalidar guardia, vacaciones, excepción, preferencias y permiso. El registro se limpia al restaurar o cuando la guardia finaliza, se elimina o pierde elegibilidad.
+
+`setOngoing(true)` expresa la intención de mantener el aviso visible, pero Android 14 y posteriores permiten que el usuario descarte determinadas notificaciones continuas. Cuando el sistema entrega `deleteIntent`, MiGuardia trata ese gesto como ocultamiento consciente y habilita la misma restauración. La interfaz no promete que el botón sea la única vía física de descarte en versiones donde Android conserva ese control.
+
 La configuración aplica divulgación progresiva: apagado/encendido, permiso, momento del aviso y comportamiento. Recordatorios múltiples, puntualidad exacta, privacidad y sonido permanecen disponibles como opciones avanzadas, sin enfrentar al usuario con todos los controles al mismo tiempo.
 
 Los canales tienen IDs deterministas `guard_shifts_v2_<hash-del-sonido>`. La versión 2 solicita sonido y vibración predeterminados; el cambio de versión permite aplicarlo sin intentar mutar un canal ya creado. Al usar un sonido distinto se crea el canal correspondiente y se retiran únicamente canales antiguos con el prefijo propio `guard_shifts_`, incluidos los `v1`. La URI elegida por el selector oficial se conserva como metadato; no se copia audio ni se solicita acceso general a archivos. Android y el usuario conservan el control final del sonido y la vibración.
@@ -69,6 +75,8 @@ El build type `qa` hereda de `debug`, agrega `.qa` al `applicationId` y conserva
 - Las ediciones, eliminaciones, vacaciones y cambios de preferencias invalidan el plan anterior de forma reactiva e idempotente.
 - Sin acceso exacto el producto sigue funcionando, aunque Android puede demorar las fronteras.
 - Tras force-stop Android no garantiza alarmas hasta que el usuario vuelva a abrir la aplicación; es una restricción de plataforma que no se intenta eludir.
+- La apariencia exacta cambia entre fabricantes y versiones; Vigilia se expresa dentro del contrato de notificaciones y conserva una presentación equivalente desde Android 8.
+- En Android 14 o superior una notificación continua puede ser descartable por gesto; la restauración desde Configuración evita convertir ese límite de plataforma en una pérdida irreversible del estado visible.
 - Cambiar el sonido puede reemplazar el canal gestionado por MiGuardia y restablecer personalizaciones previas de ese canal; el usuario sigue pudiendo configurarlo desde Android.
 - El recorrido de reinicio físico queda sujeto a autorización explícita inmediatamente anterior.
 
@@ -78,5 +86,7 @@ El build type `qa` hereda de `debug`, agrega `.qa` al `applicationId` y conserva
 - Alarmas y acceso exacto: <https://developer.android.com/develop/background-work/services/alarms>
 - Canales: <https://developer.android.com/develop/ui/compose/notifications/channels>
 - Diseño y acciones: <https://developer.android.com/develop/ui/compose/notifications>
+- Diseños personalizados y límites de `RemoteViews`: <https://developer.android.com/develop/ui/views/notifications/custom-notification>
+- Cambios de Android 14 para notificaciones continuas: <https://developer.android.com/about/versions/14/behavior-changes-all>
 - Cronómetro: <https://developer.android.com/reference/androidx/core/app/NotificationCompat.Builder.html>
 - Privacidad en pantalla bloqueada: <https://developer.android.com/design/ui/mobile/guides/home-screen/notifications>

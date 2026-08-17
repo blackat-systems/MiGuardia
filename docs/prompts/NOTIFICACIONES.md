@@ -75,7 +75,7 @@ Si necesitás reutilizar una primitiva pura del motor de próximo evento, extrae
 - Al comenzar, se actualiza a **Guardia en curso** y muestra una cuenta regresiva hasta el fin mediante un `Chronometer` del sistema ubicado dentro del contenido; no programes alarmas por minuto.
 - Al finalizar, la notificación se cancela.
 - Varias guardias simultáneas se muestran por separado y agrupadas sin perder ninguna.
-- Usá `NotificationCompat.DecoratedCustomViewStyle` y `RemoteViews` mínimas únicamente para llevar el `Chronometer` al cuerpo. El encabezado no muestra contador temporal; Android conserva decoración, acciones y control final.
+- Usá `NotificationCompat.DecoratedCustomViewStyle` y `RemoteViews` acotadas para llevar el `Chronometer` al cuerpo y expresar una jerarquía Vigilia compatible. El encabezado no muestra contador temporal; Android conserva decoración, fondo, expansión, acciones y control final.
 - Preservá los datos históricos reales ya guardados en la guardia: objetivo, abreviatura, horario, puesto y color.
 - La abreviatura y el horario completo nunca se reemplazan por etiquetas inventadas de día o noche.
 
@@ -213,7 +213,7 @@ Requisitos de UX:
 - la denegación no bloquea MiGuardia y puede corregirse después desde Configuración;
 - estados de carga, contenido, vacío y error persistente con reintento;
 - desplazamiento correcto y acciones alcanzables al zoom interno 100 %, 150 % y 200 %;
-- identidad oscura exclusiva, vertical y horizontal;
+- identidad Vigilia clara y oscura dentro de la aplicación; en el panel de notificaciones, contenido adaptable al tema y contraste controlados por Android;
 - semántica básica coherente para controles y contenido;
 - no consultar ni modificar `font_scale`, densidad, zoom ni tamaño de visualización del sistema.
 
@@ -412,3 +412,29 @@ La configuración particular `Avisos` se conserva, pero se abre desde `Editar` l
 # Enmienda posterior de MAIN (2026-08-17)
 
 La configuración global guía al usuario paso a paso: activar, conceder permiso, elegir cuándo avisar y elegir si queda fija o es descartable. Puntualidad exacta, varios recordatorios, privacidad y sonido siguen disponibles bajo opciones avanzadas. La cuenta regresiva se muestra dentro del cuerpo mediante `DecoratedCustomViewStyle` y `RemoteViews` acotadas; el contador pequeño del encabezado se desactiva.
+
+# Enmienda posterior de MAIN — Vigilia, visibilidad y compatibilidad (2026-08-17)
+
+## Presentación Vigilia compatible
+
+- Mantener `minSdk 26` y funcionamiento desde Android 8. No elevar el mínimo por este rediseño.
+- Tratar la notificación como una tarjeta de estado compacta, no como un widget real ni una interfaz libre: estado, abreviatura, horario completo y cuenta regresiva deben leerse de un vistazo.
+- Aplicar Vigilia mediante jerarquía, espaciado, icono y acento moderado. No fijar un fondo negro/violeta ni imágenes de fondo que puedan perder contraste con el panel controlado por Android.
+- La vista compacta conserva la información esencial. La expandida prioriza cuenta regresiva, objetivo, horario, puesto opcional, clima elegible y controles.
+- Mantener una variante equivalente en versiones antiguas cuando una capacidad visual moderna no exista. Ningún dato o acción esencial depende exclusivamente de color, expansión o versión de Android.
+
+## Ocultar y restaurar
+
+- La vista expandida incluye un control explícito `Eliminar notificación` dentro de las `RemoteViews`; no ocupa una cuarta acción estándar y usa un `PendingIntent` explícito, inmutable y único.
+- Ese control cancela sólo la notificación de la guardia elegida y persiste su ocultamiento en el DataStore exclusivo de Notificaciones mediante su identidad opaca. No elimina la guardia, no cancela sus fronteras temporales, no apaga la función global y no afecta guardias futuras.
+- Mientras la guardia continúe elegible, el reconciliador respeta el ocultamiento y no vuelve a publicarla automáticamente.
+- Configuración muestra `Mostrar notificación nuevamente` únicamente cuando exista al menos un aviso ocultado y todavía elegible. Con simultáneas permite restaurar cada guardia y puede ofrecer `Mostrar todas nuevamente`.
+- Restaurar vuelve a consultar guardia, estado, vacaciones, excepción, preferencias y permiso; si sigue siendo válido, publica silenciosamente la misma identidad estable. Si dejó de ser elegible, limpia el registro sin publicar.
+- El ocultamiento caduca al finalizar, eliminar o volver inelegible la guardia, o al restaurarla expresamente.
+- Usar también `deleteIntent` para registrar el descarte manual cuando Android lo comunique. En Android 14 o superior, el sistema puede permitir deslizar incluso una notificación marcada con `setOngoing(true)`; la UI no debe afirmar que sólo puede desaparecer mediante el botón.
+
+## Límites
+
+- No implementar un app widget, Live Update promovida, servicio en primer plano, polling, alarmas por minuto ni permiso nuevo.
+- No modificar Room v5/13 entidades, dominio de elegibilidad, Gradle, manifiesto, canales, privacidad ni las tres acciones vigentes.
+- Validar por impacto: presenter, `RemoteViews`, receiver, DataStore, reconciliación, pantalla de Notificaciones, navegación directa y recorrido físico QA. Las funciones estables no alcanzadas conservan su evidencia verde.

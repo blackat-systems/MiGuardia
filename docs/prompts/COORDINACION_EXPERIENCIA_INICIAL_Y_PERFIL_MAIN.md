@@ -39,7 +39,8 @@ Este bloque termina la experiencia para vigiladores mediante:
 
 1. Calendario con consulta y edición explícita;
 2. Perfil laboral del vigilador y organización de Configuración;
-3. bienvenida, onboarding y primera carga guiada.
+3. Notificaciones con presentación Vigilia y control de visibilidad;
+4. bienvenida, onboarding y primera carga guiada.
 
 Quedan fuera:
 
@@ -95,13 +96,32 @@ Debe nacer del `HEAD` posterior a Calendario e implementar un perfil local, no u
 
 MAIN debe decidir y documentar DataStore o Room. Toda persistencia requiere estrategia no destructiva y pruebas de valor inicial, edición, reapertura, nombre vacío, proyecciones sin duplicados e historia intacta.
 
-## 5. Dependencia 3 — Bienvenida, onboarding y primera carga
+## 5. Dependencia 3 — Notificaciones Vigilia y control de visibilidad
+
+Prompt a preparar después de integrar Perfil: `docs/prompts/NOTIFICACIONES_VIGILIA_Y_VISIBILIDAD.md`.
+
+Rama sugerida: `codex/notification-vigilia-visibility`.
+
+Debe nacer del `HEAD` posterior a Perfil y conservar Android 8/API 26, Room v5/13 entidades y los contratos vigentes. Su alcance es:
+
+- refinar la notificación como tarjeta de estado Vigilia dentro de los límites del panel Android;
+- mantener estado, abreviatura, horario completo y cronómetro dentro del cuerpo;
+- agregar `Eliminar notificación` como control explícito del contenido expandido;
+- registrar el ocultamiento por guardia en el DataStore existente;
+- ofrecer `Mostrar notificación nuevamente` en Configuración mientras el aviso siga siendo elegible;
+- reconocer el descarte por gesto que Android 14 o superior puede permitir, sin prometer persistencia absoluta;
+- conservar privacidad, clima elegible, agrupación, sonidos, vibración y las tres acciones actuales;
+- no agregar widget real, Live Update promovida, servicio en primer plano, polling, permisos, dependencias ni cambios de Room.
+
+La implementación se valida por impacto sobre presenter, `RemoteViews`, receiver, preferencias, reconciliación, Configuración y navegación. MAIN debe auditarla e integrarla antes de abrir Onboarding.
+
+## 6. Dependencia 4 — Bienvenida, onboarding y primera carga
 
 Prompt: `docs/prompts/ONBOARDING_Y_PRIMERA_CARGA.md`.
 
 Rama sugerida: `codex/onboarding-first-shift`.
 
-Debe nacer del `HEAD` posterior a Perfil e implementar:
+Debe nacer del `HEAD` posterior a Notificaciones e implementar:
 
 - splash técnico sólo si aporta, sin demora artificial;
 - bienvenida clara para vigiladores;
@@ -116,7 +136,7 @@ Debe nacer del `HEAD` posterior a Perfil e implementar:
 
 No crear login, cuenta ni formularios paralelos exclusivos del tutorial.
 
-## 6. Contrato común de dependencias
+## 7. Contrato común de dependencias
 
 Cada prompt debe incluir:
 
@@ -131,7 +151,7 @@ Cada prompt debe incluir:
 
 El especialista no redefine producto, no integra, no confirma ni publica por su cuenta. Un cambio compartido no autorizado vuelve a MAIN como bloqueo o propuesta mínima.
 
-## 7. Integración obligatoria de MAIN
+## 8. Integración obligatoria de MAIN
 
 Después de cada entrega:
 
