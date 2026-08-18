@@ -23,7 +23,7 @@ La cadena adicional de `codex/main-3` incorpora Clima, estimación SUVICO, mejor
 
 La carpeta principal presentaba 19 entradas pendientes: siete archivos rastreados modificados y doce archivos no rastreados. Antes de clasificar o trasladar contenido se creó:
 
-`C:\Users\Joaquin\Desktop\chatgptprojects\MiGuardia_RECOVERY_2026-08-17_PUERTA0`
+`C:\Users\Joaquin\Desktop\chatgptprojects\MiGaurdia_RECOVERY_2026-08-17_PUERTA0`
 
 El punto de recuperación contiene copias de los 19 archivos, inventario, hashes SHA-256, línea base, instrucciones de recuperación, comprobación y un parche binario. El parche tiene SHA-256:
 
