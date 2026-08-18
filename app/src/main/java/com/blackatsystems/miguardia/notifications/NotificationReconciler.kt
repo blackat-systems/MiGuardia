@@ -16,6 +16,7 @@ import java.time.Clock
 import java.util.UUID
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -79,6 +80,66 @@ internal class NotificationReconciler(
         preferences.markDismissed(shiftId)
     }
 
+    fun observeRestorableShifts(): Flow<List<Shift>> {
+        val observedAt = clock.instant()
+        val observedDate = observedAt.atZone(AppDefaults.zoneId()).toLocalDate()
+        return combine(
+            shifts.observeEndingAfter(observedAt),
+            vacations.observeEndingOnOrAfter(observedDate),
+            configs.observeAll(),
+            preferences.dismissedShiftIdsFlow,
+        ) { currentShifts, currentVacations, currentConfigs, dismissedIds ->
+            restorableDismissedShifts(
+                now = clock.instant(),
+                shifts = currentShifts,
+                vacations = currentVacations,
+                configs = currentConfigs,
+                dismissedShiftIds = dismissedIds,
+            )
+        }
+    }
+
+    suspend fun restoreShift(shiftId: String): Boolean = mutex.withLock {
+        val preferencesSnapshot = preferences.current()
+        val id = runCatching { UUID.fromString(shiftId) }.getOrNull()
+        val shift = id?.let { shifts.getById(it) }
+        val wasDismissed = shiftId in preferences.dismissedShiftIds()
+        if (shift == null || !wasDismissed) {
+            presenter.cancel(shiftId)
+            preferences.clearShiftTracking(shiftId)
+            presenter.updateGroupSummary(preferences.displayedShiftIds().size, preferencesSnapshot)
+            return@withLock false
+        }
+        val now = clock.instant()
+        val currentVacations = vacations.observeEndingOnOrAfter(shift.localStartDate).first()
+        val override = configs.getForShift(shift.id)
+        val canRestore = preferencesSnapshot.enabled &&
+            systemAccess.read().notificationPermissionGranted &&
+            shift.isEligibleUpcomingWork(now, currentVacations) &&
+            override?.reminderLeadMinutes?.isEmpty() != true
+        if (!canRestore) {
+            presenter.cancel(shiftId)
+            preferences.clearShiftTracking(shiftId)
+            presenter.updateGroupSummary(preferences.displayedShiftIds().size, preferencesSnapshot)
+            return@withLock false
+        }
+        val weatherText = if (preferencesSnapshot.privacy == NotificationPrivacy.COMPLETE) {
+            weatherRuntime.notificationTextFromCache(shift, now)
+        } else {
+            null
+        }
+        presenter.show(
+            shift = shift,
+            now = now,
+            preferences = preferencesSnapshot,
+            weatherText = weatherText,
+            silentUpdate = true,
+        )
+        preferences.markDisplayed(shiftId)
+        presenter.updateGroupSummary(preferences.displayedShiftIds().size, preferencesSnapshot)
+        true
+    }
+
     private suspend fun reconcile(source: Source) = mutex.withLock {
         val now = clock.instant()
         val plan = buildShiftNotificationPlan(
@@ -103,17 +164,14 @@ internal class NotificationReconciler(
 
         val displayed = preferences.displayedShiftIds()
         val dismissed = preferences.dismissedShiftIds()
-        val retainedDismissed = dismissed.filterTo(linkedSetOf()) { id ->
-            val shiftId = runCatching { UUID.fromString(id) }.getOrNull()
-            shiftId != null && shifts.getById(shiftId) != null
-        }
-        val eligibleById = source.shifts
-            .filter { shift ->
-                shift.isEligibleUpcomingWork(now, source.vacations) &&
-                    source.configs.firstOrNull { it.shiftId == shift.id }
-                        ?.reminderLeadMinutes?.isEmpty() != true
-            }
+        val eligibleById = eligibleNotificationShifts(
+            now = now,
+            shifts = source.shifts,
+            vacations = source.vacations,
+            configs = source.configs,
+        )
             .associateBy { it.id.toString() }
+        val retainedDismissed = dismissed.filterTo(linkedSetOf()) { id -> id in eligibleById }
         val shouldDisplay = buildSet {
             if (source.preferences.enabled && systemAccess.read().notificationPermissionGranted) {
                 addAll(displayed.filter { it in eligibleById && it !in retainedDismissed })

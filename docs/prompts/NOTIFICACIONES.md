@@ -1,6 +1,6 @@
 # MiGuardia — dependencia especializada NOTIFICACIONES
 
-> Estado al 17 de agosto de 2026: la base de Notificaciones está implementada e integrada. El registro del descarte informado por Android también existe. Los controles aprobados `Eliminar notificación` dentro de la vista expandida y `Mostrar notificación nuevamente` desde Configuración todavía no están implementados; las secciones que los exigen conservan el contrato pendiente y no deben leerse como evidencia de entrega. Este prompt refleja el alcance original sin red; el manifiesto actual incluye `INTERNET` únicamente porque Clima se integró después.
+> Estado al 18 de agosto de 2026: Notificaciones está implementada e integrada, incluidos `Eliminar notificación` dentro de la vista expandida y `Mostrar notificación nuevamente` desde Configuración. El cierre fue validado localmente y mediante QA físico aislado; la evidencia está en `docs/audits/2026-08-18-notificaciones-visibilidad.md`. Este prompt refleja el alcance original sin red; el manifiesto actual incluye `INTERNET` únicamente porque Clima se integró después.
 
 ## 1. Identidad y autoridad
 

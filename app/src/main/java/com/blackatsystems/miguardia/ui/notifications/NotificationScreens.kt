@@ -44,6 +44,8 @@ import com.blackatsystems.miguardia.core.domain.model.Shift
 import com.blackatsystems.miguardia.ui.components.PersistentMessage
 import com.blackatsystems.miguardia.ui.components.ScreenHeading
 import com.blackatsystems.miguardia.ui.components.SectionCard
+import java.time.format.DateTimeFormatter
+import java.util.UUID
 
 data class NotificationActions(
     val openGlobal: () -> Unit = {},
@@ -59,6 +61,8 @@ data class NotificationActions(
     val setShiftReminders: (Collection<Long>) -> Unit = {},
     val disableShift: () -> Unit = {},
     val useGlobalForShift: () -> Unit = {},
+    val restoreNotification: (UUID) -> Unit = {},
+    val restoreAllNotifications: () -> Unit = {},
     val clearMessage: () -> Unit = {},
     val retry: () -> Unit = {},
 ) {
@@ -77,6 +81,8 @@ data class NotificationActions(
             setShiftReminders = viewModel::setShiftReminders,
             disableShift = viewModel::disableShift,
             useGlobalForShift = viewModel::useGlobalForShift,
+            restoreNotification = viewModel::restoreNotification,
+            restoreAllNotifications = viewModel::restoreAllNotifications,
             clearMessage = viewModel::clearMessage,
             retry = viewModel::retry,
         )
@@ -204,6 +210,7 @@ private fun GlobalSettings(
             }
         }
     }
+    RestorableNotifications(state, actions)
     if (!state.preferences.enabled) return
 
     SectionCard(
@@ -298,6 +305,53 @@ private fun GlobalSettings(
                 TextButton(onClick = { actions.setSound(null) }) { Text("Predeterminado") }
             }
             Text("Vibración: MiGuardia la solicita; Android conserva el control final.")
+        }
+    }
+}
+
+@Composable
+private fun RestorableNotifications(state: NotificationUiState, actions: NotificationActions) {
+    if (state.restorableShifts.isEmpty()) return
+    val canRestore = state.preferences.enabled &&
+        state.systemAccess.notificationPermissionGranted &&
+        !state.isSaving
+    SectionCard(
+        title = if (state.restorableShifts.size == 1) {
+            "Notificación oculta"
+        } else {
+            "Notificaciones ocultas"
+        },
+        supportingText = if (canRestore) {
+            "Podés volver a mostrar cada aviso mientras la guardia siga vigente."
+        } else {
+            "Activá las notificaciones y resolvé el permiso para volver a mostrarlas."
+        },
+    ) {
+        state.restorableShifts.forEach { shift ->
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    "${shift.objectiveAbbreviationSnapshot} · " +
+                        "${shift.localStartDate.format(HiddenNotificationDateFormatter)} · " +
+                        "${shift.startTimeSnapshot.format(HiddenNotificationTimeFormatter)}–" +
+                        shift.endTimeSnapshot.format(HiddenNotificationTimeFormatter),
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                TextButton(
+                    onClick = { actions.restoreNotification(shift.id) },
+                    enabled = canRestore,
+                ) {
+                    Text("Mostrar notificación nuevamente")
+                }
+            }
+        }
+        if (state.restorableShifts.size > 1) {
+            OutlinedButton(
+                onClick = actions.restoreAllNotifications,
+                enabled = canRestore,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("Mostrar todas nuevamente")
+            }
         }
     }
 }
@@ -437,3 +491,6 @@ private fun reminderSummary(values: List<Long>): String = when (values.size) {
     }
     else -> "${values.size} avisos configurados."
 }
+
+private val HiddenNotificationDateFormatter = DateTimeFormatter.ofPattern("dd/MM")
+private val HiddenNotificationTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")

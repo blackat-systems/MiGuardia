@@ -8,6 +8,7 @@ import android.content.Context
 import android.net.Uri
 import android.os.SystemClock
 import android.widget.Chronometer
+import android.widget.TextView
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -74,6 +75,10 @@ class ShiftNotificationPresenterInstrumentedTest {
             .findViewById<Chronometer>(R.id.notification_countdown)
         assertTrue(compactCountdown.isCountDown)
         assertTrue(compactCountdown.format.toString().startsWith("Comienza en"))
+        val dismissControl = posted.bigContentView.apply(context, null)
+            .findViewById<TextView>(R.id.notification_dismiss)
+        assertEquals("Eliminar notificación", dismissControl.text.toString())
+        assertTrue(dismissControl.hasOnClickListeners())
 
         presenter.show(shift, NOW.plusSeconds(60), NotificationPreferences(enabled = true))
         assertEquals(1, manager.activeNotifications.count { it.tag == shift.id.toString() })

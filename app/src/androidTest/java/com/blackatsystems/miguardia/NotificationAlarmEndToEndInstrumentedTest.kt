@@ -7,6 +7,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.SystemClock
 import android.widget.Chronometer
+import android.widget.TextView
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -128,7 +129,7 @@ class NotificationAlarmEndToEndInstrumentedTest {
     }
 
     @Test
-    fun dismissibleOngoingNotificationStaysDismissedUntilAnotherBoundary() = runBlocking {
+    fun explicitDismissControlStaysHiddenAndCanBeRestoredSilently() = runBlocking {
         val application = ApplicationProvider.getApplicationContext<MiGuardiaApplication>()
         assumeTrue("Las notificaciones instrumentadas sólo pueden tocar el paquete QA.", application.packageName.endsWith(".qa"))
         InstrumentationRegistry.getInstrumentation().uiAutomation.grantRuntimePermission(
@@ -147,14 +148,27 @@ class NotificationAlarmEndToEndInstrumentedTest {
             val posted = manager.activeNotifications.first { it.tag == shift.id.toString() }.notification
 
             assertTrue(posted.deleteIntent != null)
-            manager.cancel(shift.id.toString(), ShiftNotificationPresenter.NOTIFICATION_ID)
-            application.notificationRuntime.dismissNow(shift.id.toString())
-            assertTrue(shift.id.toString() in application.notificationPreferences.dismissedShiftIds())
+            val dismissControl = posted.bigContentView.apply(application, null)
+                .findViewById<TextView>(R.id.notification_dismiss)
+            assertEquals("Eliminar notificación", dismissControl.text.toString())
+            assertTrue(dismissControl.performClick())
+            waitUntil(5_000L) {
+                shift.id.toString() in application.notificationPreferences.dismissedShiftIds()
+            }
             application.notificationRuntime.reconcileNow()
             waitUntil(5_000L) {
                 manager.activeNotifications.none { it.tag == shift.id.toString() }
             }
             assertFalse(manager.activeNotifications.any { it.tag == shift.id.toString() })
+
+            assertTrue(application.notificationRuntime.restoreNow(shift.id.toString()))
+            waitUntil(5_000L) {
+                manager.activeNotifications.any { it.tag == shift.id.toString() }
+            }
+            val restored = manager.activeNotifications.first { it.tag == shift.id.toString() }.notification
+            assertTrue(restored.flags and Notification.FLAG_ONLY_ALERT_ONCE != 0)
+            assertFalse(shift.id.toString() in application.notificationPreferences.dismissedShiftIds())
+            assertTrue(shift.id.toString() in application.notificationPreferences.displayedShiftIds())
         } finally {
             application.notificationPreferences.setEnabled(false)
             application.notificationPreferences.clearShiftTracking(shift.id.toString())

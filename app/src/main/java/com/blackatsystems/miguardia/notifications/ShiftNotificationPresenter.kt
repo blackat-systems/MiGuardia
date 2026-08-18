@@ -77,6 +77,8 @@ internal class ShiftNotificationPresenter(private val context: Context) {
             countdownLabel = if (ongoing) "Finaliza en %s" else "Comienza en %s",
             showCountdown = preferences.privacy != NotificationPrivacy.HIDDEN,
         )
+        val dismissPendingIntent = dismissIntent(shift)
+        expandedView.setOnClickPendingIntent(R.id.notification_dismiss, dismissPendingIntent)
         val builder = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(R.drawable.ic_notification)
             .setColor(shift.colorArgbSnapshot)
@@ -93,7 +95,7 @@ internal class ShiftNotificationPresenter(private val context: Context) {
             .setOngoing(preferences.persistentWhileActive)
             .setAutoCancel(!preferences.persistentWhileActive)
             .setContentIntent(actionIntent(MainActivity.ACTION_VIEW_SHIFT, shift, now))
-            .setDeleteIntent(dismissIntent(shift))
+            .setDeleteIntent(dismissPendingIntent)
             .addAction(secureAction("Ver detalles", MainActivity.ACTION_VIEW_SHIFT, shift, now))
             .addAction(secureAction("Cómo llegar", MainActivity.ACTION_DIRECTIONS, shift, now))
             .addAction(secureAction("Informar novedad", MainActivity.ACTION_REPORT_NOVELTY, shift, now))

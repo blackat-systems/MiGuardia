@@ -53,11 +53,11 @@ La promoción sólo modificó referencias Git; no cambió el árbol ejecutable a
 
 No se repitieron Gradle ni instrumentación física porque no hubo cambios de código, recursos, manifiesto, dependencias, Room ni comportamiento. No se instaló, desinstaló ni borró nada del teléfono.
 
-## Próximo incremento obligatorio
+## Incremento posterior completado
 
-La consolidación de base quedó cerrada. Antes de iniciar Perfil laboral debe implementarse únicamente la brecha ya documentada de Notificaciones:
+La consolidación de base quedó cerrada. La brecha de Notificaciones que debía resolverse antes de Perfil laboral fue implementada y validada el 18 de agosto de 2026:
 
 - `Eliminar notificación` dentro de la vista expandida;
 - `Mostrar notificación nuevamente` desde Configuración, con restauración individual y, si corresponde, total.
 
-Ese incremento debe partir de `main`, construir su mapa de impacto, incluir pruebas y repetir solamente el QA físico que el cambio invalide. La clasificación y eventual eliminación de worktrees históricos continúa siendo una operación separada que requiere inventario individual y autorización explícita de Joa.
+El cierre técnico y su evidencia se registran en `docs/audits/2026-08-18-notificaciones-visibilidad.md`. Perfil laboral queda habilitado como próximo incremento funcional. La clasificación y eventual eliminación de worktrees históricos continúa siendo una operación separada que requiere inventario individual y autorización explícita de Joa.

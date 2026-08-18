@@ -20,6 +20,7 @@ data class NotificationUiState(
     ),
     val selectedShift: Shift? = null,
     val shiftOverride: ShiftNotificationConfig? = null,
+    val restorableShifts: List<Shift> = emptyList(),
     val isLoading: Boolean = true,
     val isSaving: Boolean = false,
     val errorMessage: String? = null,

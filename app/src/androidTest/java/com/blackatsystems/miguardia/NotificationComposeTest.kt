@@ -2,6 +2,7 @@ package com.blackatsystems.miguardia
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -111,6 +112,45 @@ class NotificationComposeTest {
         assertEquals(1, global)
     }
 
+    @Test
+    fun hiddenNotificationsOfferIndividualAndBatchRestore() {
+        val restored = mutableListOf<UUID>()
+        var restoredAll = 0
+        compose.setContent {
+            MaterialTheme {
+                NotificationSurfaceHost(
+                    NotificationUiState(
+                        surface = NotificationSurface.GLOBAL,
+                        preferences = NotificationPreferences(enabled = true),
+                        systemAccess = NotificationSystemAccessState(true, false),
+                        restorableShifts = listOf(
+                            shift(),
+                            shift().copy(
+                                id = SECOND_SHIFT_ID,
+                                objectiveAbbreviationSnapshot = "QB",
+                                startAt = shift().startAt.plusSeconds(3600),
+                                endAt = shift().endAt.plusSeconds(3600),
+                            ),
+                        ),
+                        isLoading = false,
+                    ),
+                    NotificationActions(
+                        restoreNotification = { restored += it },
+                        restoreAllNotifications = { restoredAll++ },
+                    ),
+                )
+            }
+        }
+
+        compose.onNodeWithText("Notificaciones ocultas").assertExists()
+        compose.onAllNodesWithText("Mostrar notificación nuevamente")[0]
+            .performScrollTo()
+            .performClick()
+        compose.onNodeWithText("Mostrar todas nuevamente").performScrollTo().performClick()
+        assertEquals(listOf(SHIFT_ID), restored)
+        assertEquals(1, restoredAll)
+    }
+
     private fun shift(): Shift = Shift(
         id = SHIFT_ID,
         startAt = Instant.parse("2026-09-01T22:00:00Z"),
@@ -133,5 +173,6 @@ class NotificationComposeTest {
 
     private companion object {
         val SHIFT_ID: UUID = UUID.fromString("00000000-0000-0000-0000-000000000601")
+        val SECOND_SHIFT_ID: UUID = UUID.fromString("00000000-0000-0000-0000-000000000602")
     }
 }

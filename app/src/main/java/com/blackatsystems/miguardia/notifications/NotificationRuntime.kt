@@ -2,10 +2,12 @@ package com.blackatsystems.miguardia.notifications
 
 import android.content.Context
 import com.blackatsystems.miguardia.core.database.LocalDataStore
+import com.blackatsystems.miguardia.core.domain.model.Shift
 import com.blackatsystems.miguardia.weather.WeatherRuntime
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 
 class NotificationRuntime(
@@ -28,6 +30,8 @@ class NotificationRuntime(
 
     fun start() = reconciler.start()
 
+    val restorableShifts: Flow<List<Shift>> = reconciler.observeRestorableShifts()
+
     fun reconcile() {
         scope.launch { reconciler.reconcileOnce() }
     }
@@ -41,4 +45,6 @@ class NotificationRuntime(
     internal suspend fun rebuildNow() = reconciler.rebuildOnce()
 
     internal suspend fun dismissNow(shiftId: String) = reconciler.dismissShift(shiftId)
+
+    internal suspend fun restoreNow(shiftId: String): Boolean = reconciler.restoreShift(shiftId)
 }

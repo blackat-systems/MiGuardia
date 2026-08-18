@@ -9,7 +9,9 @@ import com.blackatsystems.miguardia.core.domain.model.ShiftNotificationConfig
 import com.blackatsystems.miguardia.core.domain.repository.ShiftNotificationConfigRepository
 import com.blackatsystems.miguardia.notifications.NotificationPreferencesStore
 import com.blackatsystems.miguardia.notifications.NotificationPrivacy
+import com.blackatsystems.miguardia.notifications.NotificationRuntime
 import com.blackatsystems.miguardia.notifications.NotificationSystemAccess
+import java.util.UUID
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,15 +25,27 @@ class NotificationViewModel(
     private val preferencesStore: NotificationPreferencesStore,
     private val configs: ShiftNotificationConfigRepository,
     private val systemAccess: NotificationSystemAccess,
+    private val runtime: NotificationRuntime,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(NotificationUiState(systemAccess = systemAccess.read()))
     val uiState: StateFlow<NotificationUiState> = _uiState
     private val writeMutex = Mutex()
     private var preferencesJob: Job? = null
     private var shiftJob: Job? = null
+    private var restorableShiftsJob: Job? = null
 
     init {
         observePreferences()
+        observeRestorableShifts()
+    }
+
+    private fun observeRestorableShifts() {
+        restorableShiftsJob?.cancel()
+        restorableShiftsJob = viewModelScope.launch {
+            runtime.restorableShifts
+                .catch { showError("No pudimos leer las notificaciones ocultas.") }
+                .collect { shifts -> _uiState.update { it.copy(restorableShifts = shifts) } }
+        }
     }
 
     private fun observePreferences() {
@@ -117,23 +131,50 @@ class NotificationViewModel(
         launchWrite { configs.clear(shift.id) }
     }
 
+    fun restoreNotification(shiftId: UUID) = launchOperation {
+        if (runtime.restoreNow(shiftId.toString())) {
+            "Notificación mostrada nuevamente."
+        } else {
+            "La guardia ya no podía mostrar esa notificación."
+        }
+    }
+
+    fun restoreAllNotifications() {
+        val shiftIds = _uiState.value.restorableShifts.map(Shift::id)
+        if (shiftIds.isEmpty()) return
+        launchOperation {
+            val restored = shiftIds.count { runtime.restoreNow(it.toString()) }
+            when (restored) {
+                0 -> "Las guardias ya no podían mostrar esas notificaciones."
+                1 -> "Se mostró nuevamente una notificación."
+                else -> "Se mostraron nuevamente $restored notificaciones."
+            }
+        }
+    }
+
     fun clearMessage() = _uiState.update { it.copy(errorMessage = null, infoMessage = null) }
 
     fun retry() {
         _uiState.update { it.copy(isLoading = true, errorMessage = null) }
         observePreferences()
+        observeRestorableShifts()
         _uiState.value.selectedShift?.let(::openShift)
         refreshSystemAccess()
     }
 
-    private fun launchWrite(block: suspend () -> Unit) {
+    private fun launchWrite(block: suspend () -> Unit) = launchOperation {
+        block()
+        "Configuración guardada."
+    }
+
+    private fun launchOperation(block: suspend () -> String) {
         if (_uiState.value.isSaving) return
         viewModelScope.launch {
             if (!writeMutex.tryLock()) return@launch
             _uiState.update { it.copy(isSaving = true, errorMessage = null) }
             try {
-                block()
-                _uiState.update { it.copy(infoMessage = "Configuración guardada.") }
+                val message = block()
+                _uiState.update { it.copy(infoMessage = message) }
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Exception) {
@@ -153,11 +194,12 @@ class NotificationViewModel(
         private val preferencesStore: NotificationPreferencesStore,
         private val configs: ShiftNotificationConfigRepository,
         private val systemAccess: NotificationSystemAccess,
+        private val runtime: NotificationRuntime,
     ) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             require(modelClass.isAssignableFrom(NotificationViewModel::class.java))
             @Suppress("UNCHECKED_CAST")
-            return NotificationViewModel(preferencesStore, configs, systemAccess) as T
+            return NotificationViewModel(preferencesStore, configs, systemAccess, runtime) as T
         }
     }
 }

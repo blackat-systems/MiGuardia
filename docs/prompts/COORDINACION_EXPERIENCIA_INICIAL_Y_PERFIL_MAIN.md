@@ -6,7 +6,7 @@
 >
 > Alcance: MiGuardia para vigiladores
 >
-> Reanudación actualizada el 18 de agosto de 2026: Calendario ya está integrado y `main` es la base canónica. La Puerta 0 detectó que el contrato de ocultar/restaurar Notificaciones quedó parcialmente implementado. Se cerrará ahora esa brecha acotada y recién luego se iniciará Perfil; no se abre una nueva decisión funcional ni se amplía el alcance.
+> Reanudación actualizada el 18 de agosto de 2026: Calendario ya está integrado, `main` es la base canónica y la brecha acotada de ocultar/restaurar Notificaciones quedó implementada y validada. Perfil laboral y la reorganización de Configuración son el próximo incremento habilitado.
 
 ## 0. Rol y misión
 

@@ -12,14 +12,14 @@ La base canónica contiene:
 - Room v5 con trece entidades, esquemas exportados v1 a v5 y migraciones explícitas `1→2→3→4→5`;
 - calendario mensual conectado a los repositorios, carga simple y múltiple, objetivos, horarios, francos, notas, novedades, feriados, carpeta médica, vacaciones y fotos mensuales;
 - motores de horas y próximo evento;
-- notificaciones locales, alarmas reconstruibles, cronómetro nativo, privacidad y registro del descarte informado por Android;
+- notificaciones locales, alarmas reconstruibles, cronómetro nativo, privacidad, ocultamiento explícito y restauración desde Configuración;
 - clima opcional para Córdoba Capital con caché privado y proveedor reemplazable;
 - estimación bruta SUVICO limitada a las escalas verificadas de julio a diciembre de 2026;
 - identidad Vigilia clara, oscura o siguiendo el sistema;
 - zoom interno persistente de 100 %, 150 % y 200 %;
 - calendario con modos explícitos de consulta y edición.
 
-Notificaciones conserva un cierre acotado pendiente: el contrato aprobado exige `Eliminar notificación` dentro de la vista expandida y `Mostrar notificación nuevamente` desde Configuración, pero esos dos controles todavía no están implementados. No se consideran terminados hasta agregar código, pruebas y QA por impacto.
+El cierre de visibilidad de Notificaciones está implementado y validado por impacto: `Eliminar notificación` oculta únicamente el aviso elegido, el reconciliador respeta y depura ese estado, y Configuración permite restaurar individualmente o en conjunto los avisos todavía elegibles.
 
 Perfil laboral, bienvenida/onboarding, widgets, informes PDF/XLSX, copias/restauración, bloqueo local y preparación de publicación están diseñados o planificados, pero no implementados.
 
@@ -52,5 +52,6 @@ Los datos laborales permanecen locales. No hay cuentas, nube, sincronización, a
 - Pausa y procedimiento de reanudación: `docs/PROMPT_MAESTRO_PAUSA_REVISION_Y_REANUDACION.md`.
 - Auditoría original de Puerta 0: `docs/audits/2026-08-17-puerta-0-consolidacion.md`.
 - Cierre de la promoción canónica: `docs/audits/2026-08-18-base-canonica.md`.
+- Cierre de visibilidad de Notificaciones: `docs/audits/2026-08-18-notificaciones-visibilidad.md`.
 - Decisiones técnicas: `docs/adr/`.
 - Contratos históricos y prompts de dependencias: `docs/prompts/`.

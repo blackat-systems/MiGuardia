@@ -47,6 +47,7 @@ class MainActivity : ComponentActivity() {
             preferencesStore = application.notificationPreferences,
             configs = application.localDataStore.shiftNotificationConfigs,
             systemAccess = NotificationSystemAccess(application),
+            runtime = application.notificationRuntime,
         )
     }
     private val weatherViewModel: WeatherViewModel by viewModels {

@@ -45,17 +45,20 @@ class NotificationPreferencesInstrumentedTest {
         first.setPrivacy(NotificationPrivacy.REDUCED)
         first.setGlobalReminderLeadMinutes(listOf(360L, 720L))
         first.setSoundUri(Uri.parse("content://settings/system/notification_sound"))
+        first.markDismissed(DISMISSED_SHIFT_ID)
 
         firstScope.cancel()
         delay(100)
         val secondScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-        val saved = NotificationPreferencesStore(file, secondScope).current()
+        val second = NotificationPreferencesStore(file, secondScope)
+        val saved = second.current()
         assertEquals(true, saved.enabled)
         assertEquals(true, saved.preciseTiming)
         assertEquals(true, saved.persistentWhileActive)
         assertEquals(NotificationPrivacy.REDUCED, saved.privacy)
         assertEquals(listOf(360L, 720L), saved.globalReminderLeadMinutes)
         assertEquals("content://settings/system/notification_sound", saved.soundUri.toString())
+        assertEquals(setOf(DISMISSED_SHIFT_ID), second.dismissedShiftIds())
         secondScope.cancel()
         directory.deleteRecursively()
         Unit
@@ -65,4 +68,8 @@ class NotificationPreferencesInstrumentedTest {
         ApplicationProvider.getApplicationContext(),
         "notification-${UUID.randomUUID()}.preferences_pb",
     )
+
+    private companion object {
+        const val DISMISSED_SHIFT_ID = "00000000-0000-0000-0000-000000000807"
+    }
 }

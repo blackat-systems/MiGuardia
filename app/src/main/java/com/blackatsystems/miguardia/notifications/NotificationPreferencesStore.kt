@@ -19,6 +19,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
@@ -63,6 +64,13 @@ class NotificationPreferencesStore private constructor(
             if (error is IOException) emit(emptyPreferences()) else throw error
         }
         .map(::toPreferences)
+
+    internal val dismissedShiftIdsFlow: Flow<Set<String>> = dataStore.data
+        .catch { error ->
+            if (error is IOException) emit(emptyPreferences()) else throw error
+        }
+        .map { values -> values[DismissedShiftIds].orEmpty() }
+        .distinctUntilChanged()
 
     suspend fun current(): NotificationPreferences = preferences.first()
 

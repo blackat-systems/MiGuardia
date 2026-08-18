@@ -4,6 +4,8 @@
 
 > Cierre posterior del 18 de agosto de 2026: en la instantánea de promoción, `main`, `origin/main`, `codex/main-3` y `origin/codex/main-3` quedaron alineadas en `e3caf6f4acba8af8a1ff27620b7c8c99a4ff176f`. Este documento conserva la fotografía previa y no debe usarse para repetir la promoción. El estado canónico vigente está en `docs/audits/2026-08-18-base-canonica.md`.
 
+> Continuidad posterior: la brecha de visibilidad de Notificaciones también quedó implementada y validada el 18 de agosto de 2026. Su evidencia vigente está en `docs/audits/2026-08-18-notificaciones-visibilidad.md`; las referencias internas que la describen pendiente son históricas.
+
 > Documento de continuidad integral
 >
 > Fotografía auditada: 17 de agosto de 2026

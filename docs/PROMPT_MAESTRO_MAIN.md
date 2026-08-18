@@ -497,7 +497,7 @@ La experiencia visible es siempre una notificación común, nunca una alarma tip
 
 El ocultamiento se persiste en el DataStore exclusivo de Notificaciones con identificadores opacos y caduca cuando la guardia finaliza, deja de ser elegible, se elimina o el usuario restaura el aviso. No requiere cambios en Room, permisos, dependencias, servicios ni red.
 
-Estado verificado durante la Puerta 0 del 17 de agosto de 2026: la base de Notificaciones y el registro de descartes informados por Android están implementados. Los controles explícitos `Eliminar notificación` dentro de la vista expandida y `Mostrar notificación nuevamente` desde Configuración siguen pendientes de una corrección acotada. Los párrafos anteriores son el contrato aprobado, no evidencia de que esos dos recorridos ya existan.
+Estado verificado el 18 de agosto de 2026: la base de Notificaciones, el registro de descartes informados por Android y los controles explícitos `Eliminar notificación` y `Mostrar notificación nuevamente` están implementados. La restauración revalida elegibilidad, configuración, preferencias y permiso, publica silenciosamente la misma identidad estable o limpia un registro obsoleto. La evidencia está en `docs/audits/2026-08-18-notificaciones-visibilidad.md`.
 
 ## 15. Motor de próximo evento
 
@@ -731,7 +731,7 @@ Decisión posterior del 17 de agosto de 2026: la experiencia inicial se implemen
 
 Decisión posterior del 17 de agosto de 2026: Notificaciones debe conservar Android 8/API 26 como mínimo compatible. Su contenido se refina como tarjeta de estado Vigilia dentro de los límites visuales del panel de Android, con degradación equivalente en versiones antiguas. `Eliminar notificación` oculta sólo el aviso de esa guardia y `Mostrar notificación nuevamente` permite restaurarlo desde Configuración mientras siga siendo elegible. En Android 14 o superior el sistema puede permitir también el descarte por gesto, aun cuando MiGuardia solicite persistencia; la aplicación debe reconocer esa limitación sin prometer un bloqueo imposible.
 
-Corrección de secuencia al reanudar, actualizada el 18 de agosto de 2026: el Calendario en consulta/edición ya está integrado en `main` y la base canónica quedó consolidada. La Puerta 0 comprobó que los dos controles explícitos de visibilidad de Notificaciones todavía no están implementados aunque su contrato sí fue documentado. Como es el cierre de una función existente y no una función nueva, debe corregirse y validarse ahora, antes de comenzar Perfil laboral. Esto no reabre la decisión funcional ni amplía Notificaciones.
+Corrección de secuencia cerrada el 18 de agosto de 2026: el Calendario en consulta/edición está integrado en `main`, la base canónica quedó consolidada y los dos controles explícitos de visibilidad de Notificaciones fueron implementados y validados. El próximo incremento habilitado es Perfil laboral y reorganización de Configuración; no se reabre ni amplía Notificaciones.
 
 La primera versión utilizable debe alcanzar almacenamiento local, calendario, carga individual/múltiple, objetivos/horarios, fotos y horas básicas antes de sumar capas más complejas.
 
