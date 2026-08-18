@@ -6,7 +6,7 @@
 >
 > Alcance actual: MiGuardia para vigiladores; expansión futura confirmada para médicos, enfermeros y policías sin implementación en este bloque
 >
-> Reanudación actualizada el 18 de agosto de 2026: Calendario, la brecha acotada de ocultar/restaurar Notificaciones y Perfil laboral están integrados y publicados. `main` y `origin/main` alcanzaron `bee79d54d563ca61bf1e75bfa08d95d22a563c39`. Antes de Onboarding se abre una puerta correctiva secuencial para orientación de Fotos, menú lateral y selección directa sobre la grilla principal.
+> Reanudación actualizada el 18 de agosto de 2026: Calendario, la brecha acotada de ocultar/restaurar Notificaciones, Perfil laboral y la corrección de orientación de Fotos están integrados y publicados. `main` y `origin/main` alcanzaron `84d2fafc3ed4abcaa648e23ab75dcb8878e1dbba`. Antes de Onboarding, la puerta correctiva continúa secuencialmente con menú lateral y selección directa sobre la grilla principal.
 
 ## 0. Rol y misión
 
@@ -128,7 +128,7 @@ Estado verificado el 18 de agosto de 2026: este cierre fue implementado, auditad
 
 Las observaciones físicas de Joa del 18 de agosto invalidan parte de la evidencia visual anterior y deben resolverse secuencialmente:
 
-1. `docs/prompts/CORRECCION_ORIENTACION_FOTOS.md` en `codex/photo-orientation-fix`;
+1. `docs/prompts/CORRECCION_ORIENTACION_FOTOS.md` en `codex/photo-orientation-fix`: integrado y publicado en `84d2fafc3ed4abcaa648e23ab75dcb8878e1dbba`;
 2. `docs/prompts/NAVEGACION_MENU_LATERAL.md` y ADR 0015 en `codex/navigation-drawer`;
 3. `docs/prompts/CALENDARIO_SELECCION_DIRECTA.md` en `codex/calendar-direct-selection`.
 

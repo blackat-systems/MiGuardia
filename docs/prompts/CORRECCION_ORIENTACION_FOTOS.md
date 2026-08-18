@@ -1,10 +1,12 @@
 # MiGuardia — corrección de orientación visual de Fotos
 
-> Estado: contrato listo para implementación y auditoría de MAIN
+> Estado: implementado, auditado, integrado y publicado en `main`
 >
 > Fecha: 2026-08-18
 >
 > Rama sugerida: `codex/photo-orientation-fix`
+>
+> Cierre verificado: `84d2fafc3ed4abcaa648e23ab75dcb8878e1dbba` (`fix: respect schedule photo EXIF orientation`)
 
 ## 1. Objetivo
 
