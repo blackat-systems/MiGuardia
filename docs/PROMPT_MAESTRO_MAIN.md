@@ -166,6 +166,8 @@ Resumen:
 
 Configuración agrupa: perfil laboral y valores predeterminados; objetivos y horarios; notificaciones; widgets; clima; feriados; remuneración; privacidad y bloqueo; copias de seguridad; apariencia; ayuda. La información profesional se concentra en Perfil y las preferencias funcionales permanecen en sus apartados; no duplicar datos ni ajustes entre ambas superficies.
 
+El Perfil laboral V1 persiste en un DataStore Preferences exclusivo únicamente el nombre o apodo opcional y la empresa, inicialmente `Inforce` y editable. La profesión `Vigilancia y seguridad` es fija y no se persiste. Objetivos y horarios activos se proyectan desde Room sin duplicarlos, y el puesto continúa perteneciendo a cada carga. Esta decisión no modifica Room v5 ni las instantáneas históricas y se registra en `docs/adr/0013-perfil-laboral-local-en-datastore.md`.
+
 El botón Atrás sigue convenciones Android. Si hay edición sin confirmar, advierte antes de descartarla. La búsqueda global queda fuera de V1.
 
 ## 6. Calendario y estados diarios
