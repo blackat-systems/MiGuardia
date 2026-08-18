@@ -28,6 +28,7 @@ import com.blackatsystems.miguardia.ui.nextevent.NextEventViewModel
 import com.blackatsystems.miguardia.ui.notifications.NotificationViewModel
 import com.blackatsystems.miguardia.ui.photos.PhotosViewModel
 import com.blackatsystems.miguardia.ui.photos.SchedulePhotoFileStore
+import com.blackatsystems.miguardia.ui.profile.ProfileViewModel
 import com.blackatsystems.miguardia.ui.summary.SummaryViewModel
 import com.blackatsystems.miguardia.ui.theme.AppThemeMode
 import com.blackatsystems.miguardia.ui.theme.AppZoom
@@ -94,6 +95,15 @@ class MainActivity : ComponentActivity() {
             shiftRepository = dataStore.shifts,
             explicitDayStatusRepository = dataStore.explicitDayStatuses,
             medicalLeaveRepository = dataStore.medicalLeaves,
+        )
+    }
+
+    private val profileViewModel: ProfileViewModel by viewModels {
+        val application = application as MiGuardiaApplication
+        ProfileViewModel.Factory(
+            store = application.guardProfile,
+            objectives = application.localDataStore.objectives,
+            schedules = application.localDataStore.scheduleCombinations,
         )
     }
 
@@ -164,6 +174,7 @@ class MainActivity : ComponentActivity() {
                     photosViewModel = photosViewModel,
                     notificationViewModel = notificationViewModel,
                     weatherViewModel = weatherViewModel,
+                    profileViewModel = profileViewModel,
                     calendarNavigationRequest = calendarNavigationRequest,
                     appZoom = appZoom,
                     onAppZoomChange = { selected ->

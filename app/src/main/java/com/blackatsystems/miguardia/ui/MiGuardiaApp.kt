@@ -108,6 +108,11 @@ import com.blackatsystems.miguardia.ui.photos.PhotosSurface
 import com.blackatsystems.miguardia.ui.photos.PhotosSurfaceHost
 import com.blackatsystems.miguardia.ui.photos.PhotosUiState
 import com.blackatsystems.miguardia.ui.photos.PhotosViewModel
+import com.blackatsystems.miguardia.ui.profile.ProfileActions
+import com.blackatsystems.miguardia.ui.profile.ProfileSurface
+import com.blackatsystems.miguardia.ui.profile.ProfileSurfaceHost
+import com.blackatsystems.miguardia.ui.profile.ProfileUiState
+import com.blackatsystems.miguardia.ui.profile.ProfileViewModel
 import com.blackatsystems.miguardia.ui.exceptions.ExceptionsActions
 import com.blackatsystems.miguardia.ui.exceptions.ExceptionsSurface
 import com.blackatsystems.miguardia.ui.exceptions.ExceptionsSurfaceHost
@@ -161,6 +166,7 @@ fun MiGuardiaApp(
     photosViewModel: PhotosViewModel,
     notificationViewModel: NotificationViewModel,
     weatherViewModel: WeatherViewModel,
+    profileViewModel: ProfileViewModel,
     modifier: Modifier = Modifier,
     calendarNavigationRequest: Int = 0,
     appZoom: AppZoom = AppZoom.STANDARD,
@@ -177,6 +183,7 @@ fun MiGuardiaApp(
     val photosState by photosViewModel.uiState.collectAsStateWithLifecycle()
     val notificationState by notificationViewModel.uiState.collectAsStateWithLifecycle()
     val weatherState by weatherViewModel.uiState.collectAsStateWithLifecycle()
+    val profileState by profileViewModel.uiState.collectAsStateWithLifecycle()
     MiGuardiaApp(
         calendarState = calendarState,
         nextEventState = nextEventState,
@@ -208,6 +215,8 @@ fun MiGuardiaApp(
         notificationActions = NotificationActions.from(notificationViewModel),
         weatherState = weatherState,
         weatherActions = WeatherActions.from(weatherViewModel),
+        profileState = profileState,
+        profileActions = ProfileActions.from(profileViewModel),
         calendarNavigationRequest = calendarNavigationRequest,
         appZoom = appZoom,
         onAppZoomChange = onAppZoomChange,
@@ -254,6 +263,8 @@ fun MiGuardiaApp(
     notificationActions: NotificationActions = NotificationActions(),
     weatherState: WeatherUiState = WeatherUiState(),
     weatherActions: WeatherActions = WeatherActions(),
+    profileState: ProfileUiState = ProfileUiState(),
+    profileActions: ProfileActions = ProfileActions(),
     calendarNavigationRequest: Int = 0,
     appZoom: AppZoom = AppZoom.STANDARD,
     onAppZoomChange: (AppZoom) -> Unit = {},
@@ -364,6 +375,7 @@ fun MiGuardiaApp(
 
             MainDestination.SETTINGS -> SettingsScreen(
                 contentPadding = innerPadding,
+                onOpenProfile = profileActions.open,
                 onOpenObjectives = managementActions.openSettings,
                 onOpenHolidays = { exceptionsActions.openHolidays(calendarState.visibleMonth) },
                 onOpenVacations = { vacationActions.openList(calendarState.visibleMonth) },
@@ -385,7 +397,8 @@ fun MiGuardiaApp(
         vacationState.surface != VacationSurface.NONE ||
         photosState.surface != PhotosSurface.NONE ||
         notificationState.surface != NotificationSurface.NONE ||
-        weatherState.surface != WeatherSurface.NONE
+        weatherState.surface != WeatherSurface.NONE ||
+        profileState.surface != ProfileSurface.NONE
     BackHandler(
         enabled = destination == MainDestination.CALENDAR &&
             calendarState.interactionMode == CalendarInteractionMode.EDIT &&
@@ -451,6 +464,12 @@ fun MiGuardiaApp(
         }
     }
 
+    if (profileState.surface != ProfileSurface.NONE) {
+        ProfileSurfaceHost(
+            state = profileState,
+            actions = profileActions.copy(openObjectives = managementActions.openSettings),
+        )
+    }
     if (managementState.surface != ManagementSurface.NONE) {
         ManagementSurfaceHost(
             state = managementState,
@@ -1194,6 +1213,7 @@ private fun ShiftWeatherBriefCard(
 @Composable
 private fun SettingsScreen(
     contentPadding: PaddingValues,
+    onOpenProfile: () -> Unit,
     onOpenObjectives: () -> Unit,
     onOpenHolidays: () -> Unit,
     onOpenVacations: () -> Unit,
@@ -1214,9 +1234,15 @@ private fun SettingsScreen(
     ) {
         ScreenHeading("Configuración", supportingText = stringResource(R.string.settings_intro))
         SectionCard(
-            title = "Organización",
-            supportingText = "Primero, las herramientas que definen tu calendario.",
+            title = "Trabajo",
+            supportingText = "Tu información laboral y las herramientas que definen el calendario.",
         ) {
+            NavigationRow(
+                title = "Perfil laboral",
+                description = "Nombre opcional, profesión y empresa actual.",
+                onClick = onOpenProfile,
+            )
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             NavigationRow(
                 title = "Objetivos y horarios",
                 description = "Plantillas, colores y horarios para nuevas guardias.",

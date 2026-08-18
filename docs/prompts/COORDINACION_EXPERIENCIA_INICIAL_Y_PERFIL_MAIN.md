@@ -1,12 +1,12 @@
 # MAIN — coordinación de experiencia inicial y Perfil laboral
 
-> Estado: traspaso vigente para MAIN
+> Estado: continuidad actualizada para MAIN
 >
 > Fecha: 2026-08-17
 >
 > Alcance: MiGuardia para vigiladores
 >
-> Reanudación actualizada el 18 de agosto de 2026: Calendario ya está integrado, `main` es la base canónica y la brecha acotada de ocultar/restaurar Notificaciones quedó implementada y validada. Perfil laboral y la reorganización de Configuración son el próximo incremento habilitado.
+> Reanudación actualizada el 18 de agosto de 2026: Calendario y la brecha acotada de ocultar/restaurar Notificaciones están integrados en `main`. Perfil laboral y la reorganización de Configuración quedaron implementados y auditados en `codex/guard-profile-settings`; resta su commit y promoción autorizados. Onboarding es el próximo incremento sólo después de consolidar esa nueva base.
 
 ## 0. Rol y misión
 
@@ -98,9 +98,11 @@ Debe nacer del `HEAD` posterior a Calendario e implementar un perfil local, no u
 
 MAIN debe decidir y documentar DataStore o Room. Toda persistencia requiere estrategia no destructiva y pruebas de valor inicial, edición, reapertura, nombre vacío, proyecciones sin duplicados e historia intacta.
 
+Estado verificado el 18 de agosto de 2026: se eligió un DataStore Preferences exclusivo mediante `docs/adr/0013-perfil-laboral-local-en-datastore.md`. La implementación y el QA por impacto están completos en la rama candidata; la evidencia está en `docs/audits/2026-08-18-perfil-laboral.md`.
+
 ## 5. Dependencia 3 — Notificaciones Vigilia y control de visibilidad
 
-Prompt a preparar después de integrar Perfil: `docs/prompts/NOTIFICACIONES_VIGILIA_Y_VISIBILIDAD.md`.
+Contrato histórico: `docs/prompts/NOTIFICACIONES_VIGILIA_Y_VISIBILIDAD.md`.
 
 Rama sugerida: `codex/notification-vigilia-visibility`.
 
@@ -117,13 +119,15 @@ Debe nacer del `HEAD` posterior a Perfil y conservar Android 8/API 26, Room v5/1
 
 La implementación se valida por impacto sobre presenter, `RemoteViews`, receiver, preferencias, reconciliación, Configuración y navegación. MAIN debe auditarla e integrarla antes de abrir Onboarding.
 
+Estado verificado el 18 de agosto de 2026: este cierre fue implementado, auditado e integrado antes de Perfil por la corrección de secuencia documentada en el prompt maestro. No debe reabrirse para comenzar Onboarding.
+
 ## 6. Dependencia 4 — Bienvenida, onboarding y primera carga
 
 Prompt: `docs/prompts/ONBOARDING_Y_PRIMERA_CARGA.md`.
 
 Rama sugerida: `codex/onboarding-first-shift`.
 
-Debe nacer del `HEAD` posterior a Notificaciones e implementar:
+Debe nacer del `HEAD` canónico posterior a Perfil e implementar:
 
 - splash técnico sólo si aporta, sin demora artificial;
 - bienvenida clara para vigiladores;
@@ -172,4 +176,4 @@ La evidencia del especialista no sustituye la verificación de MAIN.
 
 ## 8. Entregables y cierre
 
-MAIN informa en cada etapa qué funciona, archivos y contratos cambiados, pruebas reales, recorrido físico, pendientes y nuevo SHA base. No avanzar a pagos ni otras profesiones hasta terminar estas tres superficies para vigiladores.
+MAIN informa en cada etapa qué funciona, archivos y contratos cambiados, pruebas reales, recorrido físico, pendientes y nuevo SHA base. No avanzar a pagos ni otras profesiones hasta terminar estas superficies para vigiladores.

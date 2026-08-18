@@ -1,6 +1,6 @@
 # MiGuardia — dependencia especializada Perfil laboral y Configuración
 
-> Estado: contrato listo para implementación y auditoría de MAIN
+> Estado: implementación y auditoría de MAIN completadas en `codex/guard-profile-settings`; pendiente de commit y promoción autorizados
 >
 > Fecha: 2026-08-18
 >

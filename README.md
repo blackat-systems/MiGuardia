@@ -17,11 +17,12 @@ La base canónica contiene:
 - estimación bruta SUVICO limitada a las escalas verificadas de julio a diciembre de 2026;
 - identidad Vigilia clara, oscura o siguiendo el sistema;
 - zoom interno persistente de 100 %, 150 % y 200 %;
-- calendario con modos explícitos de consulta y edición.
+- calendario con modos explícitos de consulta y edición;
+- Perfil laboral local con nombre opcional, profesión fija, empresa editable y proyección de objetivos y horarios activos sin duplicarlos.
 
 El cierre de visibilidad de Notificaciones está implementado y validado por impacto: `Eliminar notificación` oculta únicamente el aviso elegido, el reconciliador respeta y depura ese estado, y Configuración permite restaurar individualmente o en conjunto los avisos todavía elegibles.
 
-Perfil laboral, bienvenida/onboarding, widgets, informes PDF/XLSX, copias/restauración, bloqueo local y preparación de publicación están diseñados o planificados, pero no implementados.
+Perfil laboral está implementado y validado por impacto en su rama candidata. Bienvenida/onboarding, widgets, informes PDF/XLSX, copias/restauración, bloqueo local y preparación de publicación continúan diseñados o planificados, pero no implementados.
 
 ## Requisitos de desarrollo
 
@@ -53,5 +54,6 @@ Los datos laborales permanecen locales. No hay cuentas, nube, sincronización, a
 - Auditoría original de Puerta 0: `docs/audits/2026-08-17-puerta-0-consolidacion.md`.
 - Cierre de la promoción canónica: `docs/audits/2026-08-18-base-canonica.md`.
 - Cierre de visibilidad de Notificaciones: `docs/audits/2026-08-18-notificaciones-visibilidad.md`.
+- Implementación y QA de Perfil laboral: `docs/audits/2026-08-18-perfil-laboral.md`.
 - Decisiones técnicas: `docs/adr/`.
 - Contratos históricos y prompts de dependencias: `docs/prompts/`.
