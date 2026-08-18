@@ -18,17 +18,25 @@ import org.junit.Test
 
 class MiGuardiaAppTest {
     @Test
-    fun initialScreenShowsCalendarAndMainDestinations() {
+    fun initialScreenShowsCalendarAndDrawerEntryWithoutPermanentBottomDestinations() {
         val (context, device) = launchApp()
 
         listOf(
             R.string.app_name,
             R.string.next_guard,
-            R.string.calendar,
-            R.string.summary,
-            R.string.settings,
         ).forEach { expectedText ->
             device.assertTextVisible(context.getString(expectedText))
+        }
+        device.assertTextGone(context.getString(R.string.summary))
+        device.assertTextGone(context.getString(R.string.appearance))
+        device.tapDescription(context.getString(R.string.open_menu))
+        listOf(
+            R.string.calendar,
+            R.string.summary,
+            R.string.profile,
+            R.string.objectives_and_schedules,
+        ).forEach { destination ->
+            device.assertTextVisible(context.getString(destination))
         }
     }
 
@@ -36,14 +44,34 @@ class MiGuardiaAppTest {
     fun mainDestinationsOpenTheirEmptyStates() {
         val (context, device) = launchApp()
 
-        device.tapText(context.getString(R.string.summary))
+        device.openDestination(context, R.string.summary)
         device.assertTextVisible(context.getString(R.string.summary_hours_title))
         device.assertTextVisible(context.getString(R.string.summary_planned))
 
-        device.tapText(context.getString(R.string.settings))
-        device.assertTextVisible(context.getString(R.string.settings_intro))
+        device.openDestination(context, R.string.appearance)
+        device.assertTextVisible(context.getString(R.string.appearance_intro))
 
-        device.tapText(context.getString(R.string.calendar))
+        device.openDestination(context, R.string.calendar)
+        device.assertTextVisible(context.getString(R.string.next_guard))
+    }
+
+    @Test
+    fun backClosesDrawerBeforeReturningSummaryAndAppearanceToCalendar() {
+        val (context, device) = launchApp()
+
+        device.openDestination(context, R.string.summary)
+        device.assertTextVisible(context.getString(R.string.summary_hours_title))
+        device.tapDescription(context.getString(R.string.open_menu))
+        device.pressBack()
+        device.assertTextGone(context.getString(R.string.calendar))
+        device.assertTextVisible(context.getString(R.string.summary_hours_title))
+
+        device.pressBack()
+        device.assertTextVisible(context.getString(R.string.next_guard))
+
+        device.openDestination(context, R.string.appearance)
+        device.assertTextVisible(context.getString(R.string.appearance_intro))
+        device.pressBack()
         device.assertTextVisible(context.getString(R.string.next_guard))
     }
 
@@ -60,14 +88,18 @@ class MiGuardiaAppTest {
                 "MiGuardia no se hizo visible dentro del tiempo esperado.",
                 device.wait(Until.hasObject(By.pkg(context.packageName).depth(0)), WAIT_TIMEOUT_MILLIS),
             )
-            device.tapText(context.getString(R.string.summary))
+            device.openDestination(context, R.string.summary)
             device.tapDescription(context.getString(R.string.summary_previous_month))
             device.assertTextVisible(currentMonth.minusMonths(1).displayName())
+            device.tapDescription(context.getString(R.string.open_menu))
+            device.assertTextVisible(context.getString(R.string.calendar))
 
             scenario.recreate()
 
             device.assertTextVisible(currentMonth.minusMonths(1).displayName())
             device.assertTextVisible(context.getString(R.string.summary_hours_title))
+            device.pressBack()
+            device.assertTextVisible(context.getString(R.string.next_guard))
         }
     }
 
@@ -207,6 +239,18 @@ class MiGuardiaAppTest {
             wait(Until.hasObject(By.desc(description)), WAIT_TIMEOUT_MILLIS),
         )
         findObject(By.desc(description)).click()
+    }
+
+    private fun UiDevice.openDestination(context: Context, destination: Int) {
+        tapDescription(context.getString(R.string.open_menu))
+        tapText(context.getString(destination))
+    }
+
+    private fun UiDevice.assertTextGone(text: String) {
+        assertTrue(
+            "El texto debía dejar de estar visible: $text",
+            wait(Until.gone(By.text(text)), WAIT_TIMEOUT_MILLIS),
+        )
     }
 
     private fun UiDevice.scrollUntilText(text: String): Boolean {

@@ -6,6 +6,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -25,7 +27,7 @@ class AppearanceComposeTest {
     @get:Rule val composeRule = createComposeRule()
 
     @Test
-    fun settingsOffersStandardLargeAndExtraLargeInternalZoom() {
+    fun appearanceOffersStandardLargeAndExtraLargeInternalZoom() {
         var zoom by mutableStateOf(AppZoom.STANDARD)
         composeRule.setContent {
             MaterialTheme {
@@ -47,7 +49,11 @@ class AppearanceComposeTest {
             }
         }
 
-        composeRule.onNodeWithText("Configuración").performClick()
+        composeRule.onNodeWithContentDescription("Abrir menú").performClick()
+        composeRule.onNodeWithTag("main-destination-appearance").performScrollTo().performClick()
+        composeRule.waitUntil(5_000L) {
+            composeRule.onAllNodesWithText("Zoom de MiGuardia").fetchSemanticsNodes().isNotEmpty()
+        }
         composeRule.onNodeWithText("Zoom de MiGuardia").assertExists()
         composeRule.onNodeWithText("150 %").performScrollTo().performClick()
 
@@ -55,7 +61,7 @@ class AppearanceComposeTest {
     }
 
     @Test
-    fun settingsOffersCompactLightDarkToggleAndSystemOption() {
+    fun appearanceOffersCompactLightDarkToggleAndSystemOption() {
         var mode by mutableStateOf(AppThemeMode.DARK)
         composeRule.setContent {
             MaterialTheme {
@@ -77,7 +83,11 @@ class AppearanceComposeTest {
             }
         }
 
-        composeRule.onNodeWithText("Configuración").performClick()
+        composeRule.onNodeWithContentDescription("Abrir menú").performClick()
+        composeRule.onNodeWithTag("main-destination-appearance").performScrollTo().performClick()
+        composeRule.waitUntil(5_000L) {
+            composeRule.onAllNodesWithText("Tema de MiGuardia").fetchSemanticsNodes().isNotEmpty()
+        }
         composeRule.onNodeWithText("Tema de MiGuardia").assertExists()
         composeRule.onNodeWithTag("theme-mode-toggle").performScrollTo().performClick()
 

@@ -7,6 +7,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -44,7 +45,7 @@ class VisualPolishComposeTest {
     val compose = createComposeRule()
 
     @Test
-    fun settingsRemainNavigableAcrossEveryInternalZoom() {
+    fun appearanceAndDrawerRemainNavigableAcrossEveryInternalZoom() {
         var zoom by mutableStateOf(AppZoom.STANDARD)
         compose.setContent {
             MiGuardiaTheme(appZoom = zoom) {
@@ -62,16 +63,17 @@ class VisualPolishComposeTest {
             }
         }
 
-        compose.onNodeWithText("Configuración").performClick()
+        compose.onNodeWithContentDescription("Abrir menú").performClick()
+        compose.onNodeWithText("Apariencia").performClick()
         compose.onNodeWithText("150 %").performScrollTo().performClick()
         compose.runOnIdle { assertEquals(AppZoom.LARGE, zoom) }
         compose.onNodeWithText("200 %").performScrollTo().performClick()
         compose.runOnIdle { assertEquals(AppZoom.EXTRA_LARGE, zoom) }
-        compose.onNodeWithContentDescription("Calendario").assertExists()
-        compose.onNodeWithText("Calendario").assertDoesNotExist()
-        compose.onNodeWithContentDescription(
-            "Vacaciones. Períodos inclusivos y su efecto en el calendario.",
-        ).performScrollTo().assertIsDisplayed()
+        compose.onNodeWithContentDescription("Abrir menú").assertExists()
+        compose.onNodeWithContentDescription("Abrir menú").performClick()
+        compose.onNodeWithTag("drawer-action-vacations")
+            .performScrollTo()
+            .assertIsDisplayed()
     }
 
     @Test

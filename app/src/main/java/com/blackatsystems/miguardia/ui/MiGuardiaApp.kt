@@ -18,9 +18,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.AlertDialog
@@ -28,13 +30,17 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DrawerState
+import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.NavigationDrawerItem
+import androidx.compose.material3.NavigationDrawerItemDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -45,6 +51,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -86,7 +93,6 @@ import com.blackatsystems.miguardia.ui.calendar.CalendarInteractionMode
 import com.blackatsystems.miguardia.ui.calendar.CalendarUiState
 import com.blackatsystems.miguardia.ui.calendar.CalendarViewModel
 import com.blackatsystems.miguardia.ui.calendar.firstShiftDate
-import com.blackatsystems.miguardia.ui.components.NavigationRow
 import com.blackatsystems.miguardia.ui.components.PersistentMessage
 import com.blackatsystems.miguardia.ui.components.ScreenHeading
 import com.blackatsystems.miguardia.ui.components.SectionCard
@@ -142,17 +148,187 @@ import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
+import kotlinx.coroutines.launch
 
 private val SpanishArgentina = Locale.forLanguageTag("es-AR")
 private val FullDateFormatter = DateTimeFormatter.ofPattern("EEEE d 'de' MMMM 'de' yyyy", SpanishArgentina)
 private val ShiftTimeFormatter = DateTimeFormatter.ofPattern("HH:mm", SpanishArgentina)
 private enum class MainDestination(
     @param:StringRes val labelRes: Int,
+    @param:StringRes val descriptionRes: Int,
     val glyph: String,
 ) {
-    CALENDAR(R.string.calendar, "▦"),
-    SUMMARY(R.string.summary, "≡"),
-    SETTINGS(R.string.settings, "⚙"),
+    CALENDAR(R.string.calendar, R.string.drawer_calendar_description, "▦"),
+    SUMMARY(R.string.summary, R.string.drawer_summary_description, "≡"),
+    APPEARANCE(R.string.appearance, R.string.drawer_appearance_description, "◐"),
+}
+
+private enum class DrawerAction(
+    @param:StringRes val labelRes: Int,
+    @param:StringRes val descriptionRes: Int,
+    val glyph: String,
+    val testTag: String,
+) {
+    PROFILE(R.string.profile, R.string.drawer_profile_description, "◎", "drawer-action-profile"),
+    OBJECTIVES(R.string.objectives_and_schedules, R.string.drawer_objectives_description, "⌖", "drawer-action-objectives"),
+    HOLIDAYS(R.string.holidays, R.string.drawer_holidays_description, "✦", "drawer-action-holidays"),
+    VACATIONS(R.string.vacations, R.string.drawer_vacations_description, "∿", "drawer-action-vacations"),
+    NOTIFICATIONS(R.string.notifications, R.string.drawer_notifications_description, "◌", "drawer-action-notifications"),
+    WEATHER(R.string.weather, R.string.drawer_weather_description, "☁", "drawer-action-weather"),
+}
+
+private val WorkDrawerActions = listOf(
+    DrawerAction.PROFILE,
+    DrawerAction.OBJECTIVES,
+    DrawerAction.HOLIDAYS,
+    DrawerAction.VACATIONS,
+)
+private val ContextDrawerActions = listOf(
+    DrawerAction.NOTIFICATIONS,
+    DrawerAction.WEATHER,
+)
+
+@Composable
+private fun DrawerHeader() {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.vigiliaColors.active.copy(alpha = 0.18f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = "M",
+                color = MaterialTheme.vigiliaColors.active,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.app_name),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(
+                text = stringResource(R.string.drawer_tagline),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.vigiliaColors.onSurfaceMuted,
+            )
+        }
+    }
+}
+
+@Composable
+private fun DrawerSectionTitle(@StringRes labelRes: Int) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 8.dp),
+    ) {
+        HorizontalDivider(
+            modifier = Modifier.padding(horizontal = 20.dp),
+            color = MaterialTheme.colorScheme.outlineVariant,
+        )
+        Text(
+            text = stringResource(labelRes).uppercase(SpanishArgentina),
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 10.dp),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.vigiliaColors.active,
+            fontWeight = FontWeight.Bold,
+        )
+    }
+}
+
+@Composable
+private fun DrawerDestinationItem(
+    item: MainDestination,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    NavigationDrawerItem(
+        label = { DrawerItemLabel(item.labelRes, item.descriptionRes, selected) },
+        selected = selected,
+        onClick = onClick,
+        icon = { DrawerGlyph(item.glyph) },
+        modifier = Modifier
+            .padding(horizontal = 12.dp)
+            .testTag("main-destination-${item.name.lowercase()}")
+            .semantics { this.selected = selected },
+        shape = MaterialTheme.shapes.medium,
+        colors = NavigationDrawerItemDefaults.colors(
+            selectedIconColor = MaterialTheme.vigiliaColors.active,
+            selectedTextColor = MaterialTheme.vigiliaColors.active,
+            selectedContainerColor = MaterialTheme.vigiliaColors.active.copy(alpha = 0.18f),
+            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            unselectedContainerColor = Color.Transparent,
+        ),
+    )
+}
+
+@Composable
+private fun DrawerActionItem(
+    action: DrawerAction,
+    onClick: () -> Unit,
+) {
+    NavigationDrawerItem(
+        label = { DrawerItemLabel(action.labelRes, action.descriptionRes, selected = false) },
+        selected = false,
+        onClick = onClick,
+        icon = { DrawerGlyph(action.glyph) },
+        modifier = Modifier
+            .padding(horizontal = 12.dp)
+            .testTag(action.testTag),
+        shape = MaterialTheme.shapes.medium,
+        colors = NavigationDrawerItemDefaults.colors(
+            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            unselectedContainerColor = Color.Transparent,
+        ),
+    )
+}
+
+@Composable
+private fun DrawerItemLabel(
+    @StringRes labelRes: Int,
+    @StringRes descriptionRes: Int,
+    selected: Boolean,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+        Text(
+            text = stringResource(labelRes),
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+        )
+        Text(
+            text = stringResource(descriptionRes),
+            style = MaterialTheme.typography.bodySmall,
+            color = if (selected) {
+                MaterialTheme.vigiliaColors.active
+            } else {
+                MaterialTheme.vigiliaColors.onSurfaceMuted
+            },
+        )
+    }
+}
+
+@Composable
+private fun DrawerGlyph(glyph: String) {
+    Text(
+        text = glyph,
+        modifier = Modifier.clearAndSetSemantics {},
+        fontWeight = FontWeight.Bold,
+    )
 }
 
 @Composable
@@ -272,123 +448,8 @@ fun MiGuardiaApp(
     onAppThemeModeChange: (AppThemeMode) -> Unit = {},
 ) {
     var destination by rememberSaveable { androidx.compose.runtime.mutableStateOf(MainDestination.CALENDAR) }
-    LaunchedEffect(calendarNavigationRequest) {
-        if (calendarNavigationRequest > 0) destination = MainDestination.CALENDAR
-    }
-
-    Scaffold(
-        modifier = modifier.fillMaxSize(),
-        topBar = {
-            CenterAlignedTopAppBar(
-                colors = androidx.compose.material3.TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                    titleContentColor = MaterialTheme.colorScheme.onBackground,
-                ),
-                title = {
-                    Text(
-                        stringResource(R.string.app_name),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                    )
-                },
-            )
-        },
-        bottomBar = {
-            NavigationBar(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                tonalElevation = 0.dp,
-            ) {
-                MainDestination.entries.forEach { item ->
-                    val label = stringResource(item.labelRes)
-                    val showLabel = appZoom == AppZoom.STANDARD
-                    NavigationBarItem(
-                        modifier = if (showLabel) {
-                            Modifier
-                        } else {
-                            Modifier.semantics { contentDescription = label }
-                        },
-                        selected = destination == item,
-                        onClick = { destination = item },
-                        icon = {
-                            Text(
-                                text = item.glyph,
-                                modifier = Modifier.clearAndSetSemantics {},
-                                fontWeight = FontWeight.Bold,
-                            )
-                        },
-                        label = if (showLabel) {
-                            {
-                                Text(
-                                    text = label,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                            }
-                        } else {
-                            null
-                        },
-                        alwaysShowLabel = showLabel,
-                        colors = androidx.compose.material3.NavigationBarItemDefaults.colors(
-                            selectedIconColor = MaterialTheme.vigiliaColors.active,
-                            selectedTextColor = MaterialTheme.vigiliaColors.active,
-                            indicatorColor = MaterialTheme.vigiliaColors.active.copy(alpha = 0.18f),
-                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        ),
-                    )
-                }
-            }
-        },
-    ) { innerPadding ->
-        when (destination) {
-            MainDestination.CALENDAR -> CalendarScreen(
-                state = calendarState,
-                nextEventState = nextEventState,
-                contentPadding = innerPadding,
-                onPreviousMonth = onPreviousMonth,
-                onNextMonth = onNextMonth,
-                onToday = onToday,
-                onSelectDate = onSelectDate,
-                onRetry = onRetry,
-                onNextEventRetry = onNextEventRetry,
-                onEnterEditMode = { onEnterCalendarEditMode(null) },
-                onFinishEditMode = onFinishCalendarEditMode,
-                onLoadFirstShift = {
-                    val today = calendarState.referenceInstant.atZone(AppDefaults.zoneId()).toLocalDate()
-                    val selectedDate = firstShiftDate(calendarState.visibleMonth, today)
-                    onEnterCalendarEditMode(selectedDate)
-                    managementActions.openAddShift(calendarState.visibleMonth, selectedDate)
-                },
-                onOpenPhotos = { photosActions.open(calendarState.visibleMonth) },
-                appZoom = appZoom,
-            )
-
-            MainDestination.SUMMARY -> SummaryScreen(
-                state = summaryState,
-                contentPadding = innerPadding,
-                onPreviousMonth = onSummaryPreviousMonth,
-                onNextMonth = onSummaryNextMonth,
-                onToday = onSummaryToday,
-                onRetry = onSummaryRetry,
-                onSeniorityYearsChange = onSeniorityYearsChange,
-            )
-
-            MainDestination.SETTINGS -> SettingsScreen(
-                contentPadding = innerPadding,
-                onOpenProfile = profileActions.open,
-                onOpenObjectives = managementActions.openSettings,
-                onOpenHolidays = { exceptionsActions.openHolidays(calendarState.visibleMonth) },
-                onOpenVacations = { vacationActions.openList(calendarState.visibleMonth) },
-                onOpenNotifications = notificationActions.openGlobal,
-                onOpenWeather = weatherActions.openGlobal,
-                appZoom = appZoom,
-                onAppZoomChange = onAppZoomChange,
-                appThemeMode = appThemeMode,
-                onAppThemeModeChange = onAppThemeModeChange,
-            )
-        }
-    }
-
+    val drawerState = remember { DrawerState(initialValue = DrawerValue.Closed) }
+    val coroutineScope = rememberCoroutineScope()
     val selectedDay = calendarState.selectedDate?.let { selectedDate ->
         calendarState.days.firstOrNull { it.date == selectedDate }
     }
@@ -399,12 +460,174 @@ fun MiGuardiaApp(
         notificationState.surface != NotificationSurface.NONE ||
         weatherState.surface != WeatherSurface.NONE ||
         profileState.surface != ProfileSurface.NONE
+    val canOpenDrawer = !hasBlockingSurface && selectedDay == null
+    LaunchedEffect(calendarNavigationRequest) {
+        if (calendarNavigationRequest > 0) {
+            drawerState.snapTo(DrawerValue.Closed)
+            destination = MainDestination.CALENDAR
+        }
+    }
+    LaunchedEffect(hasBlockingSurface) {
+        if (hasBlockingSurface) drawerState.snapTo(DrawerValue.Closed)
+    }
+    val selectDestination: (MainDestination) -> Unit = { selectedDestination ->
+        coroutineScope.launch {
+            drawerState.close()
+            destination = selectedDestination
+        }
+    }
+    val openDrawerAction: (DrawerAction) -> Unit = { action ->
+        coroutineScope.launch {
+            drawerState.close()
+            when (action) {
+                DrawerAction.PROFILE -> profileActions.open()
+                DrawerAction.OBJECTIVES -> managementActions.openSettings()
+                DrawerAction.HOLIDAYS -> exceptionsActions.openHolidays(calendarState.visibleMonth)
+                DrawerAction.VACATIONS -> vacationActions.openList(calendarState.visibleMonth)
+                DrawerAction.NOTIFICATIONS -> notificationActions.openGlobal()
+                DrawerAction.WEATHER -> weatherActions.openGlobal()
+            }
+        }
+    }
+
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        gesturesEnabled = false,
+        drawerContent = {
+            ModalDrawerSheet(
+                modifier = Modifier.testTag("main-navigation-drawer"),
+                drawerContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
+                        .padding(vertical = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    DrawerHeader()
+                    DrawerDestinationItem(
+                        item = MainDestination.CALENDAR,
+                        selected = destination == MainDestination.CALENDAR,
+                        onClick = { selectDestination(MainDestination.CALENDAR) },
+                    )
+                    DrawerDestinationItem(
+                        item = MainDestination.SUMMARY,
+                        selected = destination == MainDestination.SUMMARY,
+                        onClick = { selectDestination(MainDestination.SUMMARY) },
+                    )
+                    DrawerSectionTitle(R.string.drawer_section_work)
+                    WorkDrawerActions.forEach { action ->
+                        DrawerActionItem(action = action, onClick = { openDrawerAction(action) })
+                    }
+                    DrawerSectionTitle(R.string.drawer_section_context)
+                    ContextDrawerActions.forEach { action ->
+                        DrawerActionItem(action = action, onClick = { openDrawerAction(action) })
+                    }
+                    DrawerSectionTitle(R.string.drawer_section_application)
+                    DrawerDestinationItem(
+                        item = MainDestination.APPEARANCE,
+                        selected = destination == MainDestination.APPEARANCE,
+                        onClick = { selectDestination(MainDestination.APPEARANCE) },
+                    )
+                    Spacer(Modifier.height(8.dp))
+                }
+            }
+        },
+    ) {
+        Scaffold(
+            modifier = modifier.fillMaxSize(),
+            topBar = {
+                val openMenuDescription = stringResource(R.string.open_menu)
+                CenterAlignedTopAppBar(
+                    colors = androidx.compose.material3.TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.background,
+                        titleContentColor = MaterialTheme.colorScheme.onBackground,
+                    ),
+                    navigationIcon = {
+                        IconButton(
+                            enabled = canOpenDrawer,
+                            onClick = { coroutineScope.launch { drawerState.open() } },
+                            modifier = Modifier
+                                .testTag("main-menu-button")
+                                .semantics { contentDescription = openMenuDescription },
+                        ) {
+                            Text(
+                                text = "☰",
+                                modifier = Modifier.clearAndSetSemantics {},
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
+                    },
+                    title = {
+                        Text(
+                            stringResource(R.string.app_name),
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    },
+                )
+            },
+        ) { innerPadding ->
+            when (destination) {
+                MainDestination.CALENDAR -> CalendarScreen(
+                    state = calendarState,
+                    nextEventState = nextEventState,
+                    contentPadding = innerPadding,
+                    onPreviousMonth = onPreviousMonth,
+                    onNextMonth = onNextMonth,
+                    onToday = onToday,
+                    onSelectDate = onSelectDate,
+                    onRetry = onRetry,
+                    onNextEventRetry = onNextEventRetry,
+                    onEnterEditMode = { onEnterCalendarEditMode(null) },
+                    onFinishEditMode = onFinishCalendarEditMode,
+                    onLoadFirstShift = {
+                        val today = calendarState.referenceInstant.atZone(AppDefaults.zoneId()).toLocalDate()
+                        val selectedDate = firstShiftDate(calendarState.visibleMonth, today)
+                        onEnterCalendarEditMode(selectedDate)
+                        managementActions.openAddShift(calendarState.visibleMonth, selectedDate)
+                    },
+                    onOpenPhotos = { photosActions.open(calendarState.visibleMonth) },
+                    appZoom = appZoom,
+                )
+
+                MainDestination.SUMMARY -> SummaryScreen(
+                    state = summaryState,
+                    contentPadding = innerPadding,
+                    onPreviousMonth = onSummaryPreviousMonth,
+                    onNextMonth = onSummaryNextMonth,
+                    onToday = onSummaryToday,
+                    onRetry = onSummaryRetry,
+                    onSeniorityYearsChange = onSeniorityYearsChange,
+                )
+
+                MainDestination.APPEARANCE -> AppearanceScreen(
+                    contentPadding = innerPadding,
+                    appZoom = appZoom,
+                    onAppZoomChange = onAppZoomChange,
+                    appThemeMode = appThemeMode,
+                    onAppThemeModeChange = onAppThemeModeChange,
+                )
+            }
+        }
+    }
+
+    BackHandler(
+        enabled = destination != MainDestination.CALENDAR && !hasBlockingSurface,
+        onBack = { destination = MainDestination.CALENDAR },
+    )
     BackHandler(
         enabled = destination == MainDestination.CALENDAR &&
             calendarState.interactionMode == CalendarInteractionMode.EDIT &&
             selectedDay == null &&
             !hasBlockingSurface,
         onBack = onFinishCalendarEditMode,
+    )
+    BackHandler(
+        enabled = drawerState.isOpen && !hasBlockingSurface,
+        onBack = { coroutineScope.launch { drawerState.close() } },
     )
     val weatherBriefIds = selectedDay
         ?.shifts
@@ -1160,7 +1383,7 @@ private fun ShiftWeatherBriefCard(
         ) {
             Text("Clima durante la guardia", fontWeight = FontWeight.Bold)
             when {
-                !enabled -> Text("Clima está desactivado en Configuración.")
+                !enabled -> Text("Clima está desactivado. Podés activarlo desde el menú Clima.")
                 brief != null -> {
                     val summary = brief.summary
                     val minimumTemperature = summary.minimumTemperatureCelsius
@@ -1211,14 +1434,8 @@ private fun ShiftWeatherBriefCard(
 }
 
 @Composable
-private fun SettingsScreen(
+private fun AppearanceScreen(
     contentPadding: PaddingValues,
-    onOpenProfile: () -> Unit,
-    onOpenObjectives: () -> Unit,
-    onOpenHolidays: () -> Unit,
-    onOpenVacations: () -> Unit,
-    onOpenNotifications: () -> Unit,
-    onOpenWeather: () -> Unit,
     appZoom: AppZoom,
     onAppZoomChange: (AppZoom) -> Unit,
     appThemeMode: AppThemeMode,
@@ -1232,51 +1449,7 @@ private fun SettingsScreen(
             .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        ScreenHeading("Configuración", supportingText = stringResource(R.string.settings_intro))
-        SectionCard(
-            title = "Trabajo",
-            supportingText = "Tu información laboral y las herramientas que definen el calendario.",
-        ) {
-            NavigationRow(
-                title = "Perfil laboral",
-                description = "Nombre opcional, profesión y empresa actual.",
-                onClick = onOpenProfile,
-            )
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-            NavigationRow(
-                title = "Objetivos y horarios",
-                description = "Plantillas, colores y horarios para nuevas guardias.",
-                onClick = onOpenObjectives,
-            )
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-            NavigationRow(
-                title = "Feriados",
-                description = "Elegí fechas en un calendario y agregá un nombre opcional.",
-                onClick = onOpenHolidays,
-            )
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-            NavigationRow(
-                title = "Vacaciones",
-                description = "Períodos inclusivos y su efecto en el calendario.",
-                onClick = onOpenVacations,
-            )
-        }
-        SectionCard(
-            title = "Avisos y contexto",
-            supportingText = "Configurá señales útiles sin mezclar la lógica del calendario.",
-        ) {
-            NavigationRow(
-                title = "Notificaciones",
-                description = "Recordatorios, permisos, privacidad y sonido.",
-                onClick = onOpenNotifications,
-            )
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-            NavigationRow(
-                title = "Clima",
-                description = "Pronóstico de Córdoba, unidades, caché y atribución.",
-                onClick = onOpenWeather,
-            )
-        }
+        ScreenHeading("Apariencia", supportingText = stringResource(R.string.appearance_intro))
         SectionCard(
             title = "Tema de MiGuardia",
             supportingText = "Alterná entre claro y oscuro, o dejá que Android elija.",

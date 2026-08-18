@@ -41,7 +41,7 @@ import org.junit.Test
 class VacationComposeTest {
     @get:Rule val composeRule = createComposeRule()
 
-    @Test fun settingsOffersVacationsForVisibleMonth() {
+    @Test fun drawerOffersVacationsForVisibleMonth() {
         var requestedMonth: YearMonth? = null
         composeRule.setContent {
             MaterialTheme {
@@ -60,7 +60,7 @@ class VacationComposeTest {
             }
         }
 
-        composeRule.onNodeWithText("Configuración").performClick()
+        composeRule.onNodeWithContentDescription("Abrir menú").performClick()
         composeRule.onNodeWithText("Vacaciones").performClick()
         composeRule.runOnIdle { assertEquals(YearMonth.of(2026, 8), requestedMonth) }
     }

@@ -40,7 +40,7 @@ Un worktree creado desde un commit viejo no recibe cambios sin confirmar. No der
 Este bloque termina la experiencia actual para vigiladores mediante:
 
 1. Calendario con consulta y edición explícita;
-2. Perfil laboral del vigilador y organización de Configuración;
+2. Perfil laboral del vigilador y organización de sus accesos principales;
 3. Notificaciones con presentación Vigilia y control de visibilidad;
 4. corrección de orientación visual de Fotos;
 5. reemplazo de navegación inferior por menú lateral;
@@ -67,7 +67,7 @@ Debe reutilizar el calendario, la proyección y las fuentes actuales. Abre en co
 
 El modo edición conserva mes y posición, se identifica con `Editando calendario` y permite seleccionar uno o varios días sobre la misma grilla completa. La bandeja usa esa selección para guardias o francos; los formularios no vuelven a mostrar otro calendario. `Terminar` y Atrás salen de edición de manera segura y los formularios conservan su protección de cambios sin confirmar.
 
-No reintroducir Vacaciones desde Calendario, duplicación ni limpieza general. Vacaciones sigue en Configuración. `Editar día` sólo cambia de modo y selección; la escritura ocurre dentro de acciones confirmadas. Las guardias conservan acciones individuales y eliminación confirmada.
+No reintroducir Vacaciones desde Calendario, duplicación ni limpieza general. Vacaciones conserva su acceso directo en el menú lateral. `Editar día` sólo cambia de modo y selección; la escritura ocurre dentro de acciones confirmadas. Las guardias conservan acciones individuales y eliminación confirmada.
 
 Pruebas mínimas:
 
@@ -94,7 +94,7 @@ Debe nacer del `HEAD` posterior a Calendario e implementar un perfil local, no u
 - empresa inicial `Inforce`, editable y persistida;
 - objetivos y horarios activos como proyecciones de repositorios existentes, sin duplicarlos;
 - Puesto asociado a cada carga;
-- Configuración organizada sin repetir Perfil, Objetivos, Notificaciones, Clima, Apariencia, Privacidad u otros valores;
+- accesos organizados sin repetir Perfil, Objetivos, Notificaciones, Clima, Apariencia, Privacidad u otros valores;
 - fuente local única para que informes futuros usen la empresa configurada;
 - sin DNI, email, teléfono, domicilio ni identificadores innecesarios;
 - editar Perfil no reescribe instantáneas históricas.
@@ -102,6 +102,8 @@ Debe nacer del `HEAD` posterior a Calendario e implementar un perfil local, no u
 MAIN debe decidir y documentar DataStore o Room. Toda persistencia requiere estrategia no destructiva y pruebas de valor inicial, edición, reapertura, nombre vacío, proyecciones sin duplicados e historia intacta.
 
 Estado verificado el 18 de agosto de 2026: se eligió un DataStore Preferences exclusivo mediante `docs/adr/0013-perfil-laboral-local-en-datastore.md`. La implementación y el QA por impacto están integrados y publicados en `main` mediante `32767084ae96c399ab4af40cae35eaa40b1ae925`; la evidencia está en `docs/audits/2026-08-18-perfil-laboral.md`.
+
+La navegación posterior reemplaza el contenedor `Configuración` por accesos directos agrupados en el menú lateral; `Apariencia` conserva únicamente tema y zoom. Esta corrección no modifica los flujos ni la persistencia integrados por esta dependencia.
 
 ## 5. Dependencia 3 — Notificaciones Vigilia y control de visibilidad
 
@@ -115,12 +117,12 @@ Debe nacer del `HEAD` posterior a Perfil y conservar Android 8/API 26, Room v5/1
 - mantener estado, abreviatura, horario completo y cronómetro dentro del cuerpo;
 - agregar `Eliminar notificación` como control explícito del contenido expandido;
 - registrar el ocultamiento por guardia en el DataStore existente;
-- ofrecer `Mostrar notificación nuevamente` en Configuración mientras el aviso siga siendo elegible;
+- ofrecer `Mostrar notificación nuevamente` en la superficie directa de Notificaciones mientras el aviso siga siendo elegible;
 - reconocer el descarte por gesto que Android 14 o superior puede permitir, sin prometer persistencia absoluta;
 - conservar privacidad, clima elegible, agrupación, sonidos, vibración y las tres acciones actuales;
 - no agregar widget real, Live Update promovida, servicio en primer plano, polling, permisos, dependencias ni cambios de Room.
 
-La implementación se valida por impacto sobre presenter, `RemoteViews`, receiver, preferencias, reconciliación, Configuración y navegación. MAIN debe auditarla e integrarla antes de abrir Onboarding.
+La implementación se valida por impacto sobre presenter, `RemoteViews`, receiver, preferencias, reconciliación, la superficie de Notificaciones y navegación. MAIN debe auditarla e integrarla antes de abrir Onboarding.
 
 Estado verificado el 18 de agosto de 2026: este cierre fue implementado, auditado e integrado antes de Perfil por la corrección de secuencia documentada en el prompt maestro. No debe reabrirse para comenzar Onboarding.
 
@@ -149,7 +151,7 @@ Debe nacer del `HEAD` canónico posterior a Fotos, menú lateral y selección di
 - splash técnico sólo si aporta, sin demora artificial;
 - bienvenida clara para vigiladores;
 - tres pasos: organizar guardias, conocer horas/próximos eventos y privacidad local;
-- recorrido contextual sobre menú, Calendario, detalle, edición directa, Fotos, Resumen y Configuración;
+- recorrido contextual sobre menú, Calendario, detalle, edición directa, Fotos, Resumen y los accesos agrupados vigentes;
 - omitir y repetir desde Ayuda;
 - finalización persistida localmente;
 - permisos solicitados únicamente en contexto;

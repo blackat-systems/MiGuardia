@@ -225,7 +225,7 @@ class ProfileComposeTest {
     }
 
     @Test
-    fun settingsExposeOneProfileEntryAtTwoHundredPercent() {
+    fun drawerExposesOneProfileEntryAtTwoHundredPercent() {
         var opened = 0
         compose.setContent {
             MiGuardiaTheme(appZoom = AppZoom.EXTRA_LARGE) {
@@ -247,7 +247,7 @@ class ProfileComposeTest {
             }
         }
 
-        compose.onNodeWithContentDescription("Configuración").performClick()
+        compose.onNodeWithContentDescription("Abrir menú").performClick()
         compose.onAllNodesWithText("Perfil laboral").assertCountEquals(1)
         listOf(
             "Objetivos y horarios",
@@ -258,13 +258,10 @@ class ProfileComposeTest {
         ).forEach { entry ->
             compose.onAllNodesWithText(entry).assertCountEquals(1)
         }
-        compose.onNodeWithText("Seguir el sistema").performScrollTo().assertIsDisplayed()
-        listOf("100 %", "150 %", "200 %").forEach { option ->
-            compose.onNodeWithText(option).performScrollTo().assertIsDisplayed()
-        }
-        compose.onNodeWithContentDescription(
-            "Perfil laboral. Nombre opcional, profesión y empresa actual.",
-        ).performScrollTo().assertIsDisplayed().performClick()
+        compose.onNodeWithTag("drawer-action-profile")
+            .performScrollTo()
+            .assertIsDisplayed()
+            .performClick()
         compose.runOnIdle { assertEquals(1, opened) }
     }
 

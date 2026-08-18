@@ -3,6 +3,7 @@ package com.blackatsystems.miguardia
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
@@ -39,7 +40,7 @@ class WeatherComposeTest {
     @get:Rule val compose = createComposeRule()
 
     @Test
-    fun settingsPlacesWeatherAfterNotificationsAndBeforeZoom() {
+    fun drawerGroupsWeatherWithNotificationsAndOffersAppearance() {
         compose.setContent {
             MaterialTheme {
                 MiGuardiaApp(
@@ -52,10 +53,10 @@ class WeatherComposeTest {
                 )
             }
         }
-        compose.onNodeWithText("Configuración").performClick()
+        compose.onNodeWithContentDescription("Abrir menú").performClick()
         compose.onNodeWithText("Notificaciones").performScrollTo().assertExists()
         compose.onNodeWithText("Clima").performScrollTo().assertExists()
-        compose.onNodeWithText("Zoom de MiGuardia").performScrollTo().assertExists()
+        compose.onNodeWithText("Apariencia").performScrollTo().assertExists()
     }
 
     @Test

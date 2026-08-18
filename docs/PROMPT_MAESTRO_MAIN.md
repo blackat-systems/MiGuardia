@@ -132,13 +132,14 @@ MAIN debe decidir y documentar `minSdk`, `targetSdk`, versiones, navegación, ma
 
 Al abrir la aplicación después del onboarding se muestra el mes actual del calendario y, arriba, un resumen de la próxima guardia.
 
-La navegación principal no usa barra inferior. La barra superior muestra a la izquierda un botón de menú de tres líneas que abre un panel lateral con sólo tres destinos:
+La navegación principal no usa barra inferior. La barra superior muestra a la izquierda un botón de menú de tres líneas que abre un panel lateral Vigilia desplazable. El panel es la jerarquía de acceso y no conserva una pantalla contenedora `Configuración`. Organiza solamente funciones implementadas:
 
-- **Calendario**;
-- **Resumen**;
-- **Configuración**.
+- destinos principales: **Calendario** y **Resumen**;
+- `Tu trabajo`: **Perfil laboral**, **Objetivos y horarios**, **Feriados** y **Vacaciones**;
+- `Avisos y contexto`: **Notificaciones** y **Clima**;
+- `Aplicación`: **Apariencia**, cuya pantalla concentra tema y zoom interno.
 
-El panel se abre mediante el botón, no mediante arrastre desde el borde, para no competir con el gesto horizontal del Calendario. `Configuración` abre su pantalla agrupada actual; no duplicar ni desplegar dentro del panel todos sus apartados internos. Atrás cierra primero el panel. Desde Resumen o Configuración, Atrás vuelve al Calendario antes de salir de la aplicación.
+Los apartados futuros de widgets, remuneración, privacidad, copias de seguridad y Ayuda se incorporan a la sección coherente del panel únicamente cuando existan; no mostrar placeholders. El panel se abre mediante el botón, no mediante arrastre desde el borde, para no competir con el gesto horizontal del Calendario. Atrás cierra primero el panel. Desde Resumen o Apariencia, Atrás vuelve al Calendario antes de salir de la aplicación. Las superficies directas de trabajo o avisos conservan su propio contrato de cierre y regresan al destino que estaba debajo.
 
 Calendario, barra superior:
 
@@ -166,7 +167,7 @@ Resumen:
 - estimación bruta SUVICO al final, con antigüedad persistida;
 - acción Generar informe.
 
-Configuración agrupa: perfil laboral y valores predeterminados; objetivos y horarios; notificaciones; widgets; clima; feriados; remuneración; privacidad y bloqueo; copias de seguridad; apariencia; ayuda. La información profesional se concentra en Perfil y las preferencias funcionales permanecen en sus apartados; no duplicar datos ni ajustes entre ambas superficies.
+El panel lateral agrupa accesos a perfil laboral y valores predeterminados; objetivos y horarios; notificaciones; widgets; clima; feriados; remuneración; privacidad y bloqueo; copias de seguridad; apariencia; ayuda, mostrando sólo los apartados ya implementados. La información profesional se concentra en Perfil y las preferencias funcionales permanecen en sus superficies dueñas; no duplicar datos ni ajustes.
 
 El Perfil laboral V1 persiste en un DataStore Preferences exclusivo únicamente el nombre o apodo opcional y la empresa, inicialmente `Inforce` y editable. La profesión `Vigilancia y seguridad` es fija y no se persiste. Objetivos y horarios activos se proyectan desde Room sin duplicarlos, y el puesto continúa perteneciendo a cada carga. Esta decisión no modifica Room v5 ni las instantáneas históricas y se registra en `docs/adr/0013-perfil-laboral-local-en-datastore.md`.
 
@@ -201,7 +202,7 @@ El calendario usa una sola proyección y una sola pantalla con dos estados de in
    - tocar celdas de la grilla principal selecciona o deselecciona una o varias fechas del mismo mes;
    - una bandeja de herramientas usa esa selección para `Agregar guardia`, `Agregar francos` y las acciones individuales compatibles;
    - los formularios reciben las fechas seleccionadas y no muestran un segundo calendario para volver a elegirlas;
-   - no agrega Vacaciones al calendario: siguen administrándose únicamente desde Configuración;
+   - no agrega Vacaciones al calendario: siguen administrándose únicamente desde el acceso `Vacaciones` del panel lateral;
    - la acción inferior cambia a `Terminar`; Atrás sale primero de edición y protege cualquier formulario sin confirmar.
 
 En consulta, tocar cualquier día abre sus detalles y al final ofrece un único botón consciente `Editar día`. Ese botón no modifica datos: cierra el detalle, entra al mismo modo edición y preselecciona exactamente esa fecha. En edición, cada guardia conserva `Informar novedad / notas`, `Editar`, `Agregar una segunda guardia` cuando corresponde y `Eliminar`; eliminar exige confirmación. La configuración particular de avisos vive dentro de `Editar`. Una guardia futura elegible muestra un resumen meteorológico de todo su horario y permite abrir el detalle hora por hora. No reintroducir duplicación ni limpieza general si no existe un flujo vigente y probado.
@@ -487,7 +488,7 @@ Contenido:
 
 Vista expandida: Ver detalles, Cómo llegar e Informar novedad. Evaluar cuáles acciones permanecen visibles según límites Android, sin perder las tres funciones.
 
-La vista expandida ofrece además un control explícito `Eliminar notificación`. No constituye una cuarta acción estándar: vive dentro del contenido personalizado compatible y oculta solamente el aviso de esa guardia, sin desactivar Notificaciones, cancelar futuros avisos ni modificar la guardia. Configuración muestra `Mostrar notificación nuevamente` cuando exista una guardia todavía elegible cuyo aviso fue ocultado; si hay varias, permite restaurarlas individualmente y puede ofrecer restaurarlas todas. La restauración revalida guardia, vacaciones, estado, preferencias y permiso, y vuelve a publicar silenciosamente la misma identidad estable.
+La vista expandida ofrece además un control explícito `Eliminar notificación`. No constituye una cuarta acción estándar: vive dentro del contenido personalizado compatible y oculta solamente el aviso de esa guardia, sin desactivar Notificaciones, cancelar futuros avisos ni modificar la guardia. La superficie `Notificaciones`, abierta directamente desde el panel, muestra `Mostrar notificación nuevamente` cuando exista una guardia todavía elegible cuyo aviso fue ocultado; si hay varias, permite restaurarlas individualmente y puede ofrecer restaurarlas todas. La restauración revalida guardia, vacaciones, estado, preferencias y permiso, y vuelve a publicar silenciosamente la misma identidad estable.
 
 La intención de producto es que el aviso permanezca visible hasta que el usuario elija eliminarlo o termine la guardia. Android 14 y posteriores pueden permitir que el usuario descarte incluso una notificación marcada como permanente; MiGuardia no promete impedir ese gesto. Cuando Android informe el descarte, se trata como ocultamiento consciente y se ofrece la misma restauración desde la aplicación.
 
@@ -569,10 +570,10 @@ Primera apertura:
 - una presentación técnica o splash, si se utiliza, es breve y no agrega demora artificial;
 - una bienvenida comunica directamente el valor de organizar guardias y conocer horas y próximos eventos;
 - tres pantallas introductorias: organizar guardias; conocer horas y próximas guardias; datos guardados en el teléfono;
-- recorrido contextual y omisible sobre la interfaz real ya estabilizada: menú principal, mes y calendario, detalle de día, `Editar calendario`, selección simple/múltiple, fotos, Resumen y Configuración;
+- recorrido contextual y omisible sobre la interfaz real ya estabilizada: menú principal y sus secciones, mes y calendario, detalle de día, `Editar calendario`, selección simple/múltiple, fotos, Resumen y Apariencia;
 - se puede omitir y repetir desde Ayuda.
 
-La guía contextual señala controles principales y explica dónde están, para qué sirven y cómo comenzar a usarlos. No simula funciones futuras, no escribe datos, no solicita permisos y no bloquea la salida. Notificaciones, clima y los apartados internos se explican desde Ayuda o Configuración sin convertir la primera apertura en un recorrido exhaustivo. El tutorial se implementa únicamente después de consolidar la orientación de Fotos, la edición directa sobre la grilla principal y el menú lateral.
+La guía contextual señala controles principales y explica dónde están, para qué sirven y cómo comenzar a usarlos. No simula funciones futuras, no escribe datos, no solicita permisos y no bloquea la salida. Notificaciones, clima y los demás apartados directos se explican desde Ayuda o desde su propia superficie sin convertir la primera apertura en un recorrido exhaustivo. El tutorial se implementa únicamente después de consolidar la orientación de Fotos, la edición directa sobre la grilla principal y el menú lateral.
 
 Al finalizar, la aplicación lleva al calendario. Si está vacío, `Cargar mi primera guardia` acompaña la creación del primer objetivo, su horario y la primera carga reutilizando los flujos reales.
 
@@ -655,14 +656,14 @@ Permitir guardar, compartir y regenerar. Comprobar legibilidad, saltos de págin
 ## 22. Diseño y accesibilidad
 
 - La identidad visual definitiva se llama **Vigilia**: nocturna, precisa y humana. Su regla rectora es “Vigilia no grita. Señala.”
-- Vigilia ofrece tres opciones persistidas: `Seguir el sistema`, `Claro` y `Oscuro`. Configuración usa un botón compacto para alternar claro/oscuro y conserva `Seguir el sistema` como opción secundaria; no existe una tercera dirección visual.
+- Vigilia ofrece tres opciones persistidas: `Seguir el sistema`, `Claro` y `Oscuro`. Apariencia usa un botón compacto para alternar claro/oscuro y conserva `Seguir el sistema` como opción secundaria; no existe una tercera dirección visual.
 - La paleta se traduce centralmente a Material 3 y agrega roles semánticos `active`, `success`, `warning`, `info` y `vacation`; el magenta activo señala selección y no debe cubrir indiscriminadamente la interfaz.
 - Debe haber una sola acción primaria luminosa por superficie. Los niveles de fondo, superficie y tarjeta construyen jerarquía sin anidar contenedores innecesarios.
 - Nunca comunicar estado solo mediante color: conservar abreviatura, horario o símbolo.
 - Contraste automático de texto sobre colores elegidos.
 - Advertir colores demasiado similares, pero permitir continuar.
 - MiGuardia mantiene su tamaño tipográfico, escala visual y distribución predeterminados en el ajuste interno 100 %; no adapta ni redistribuye la interfaz según `font_scale`.
-- Configuración ofrece zoom interno explícito de MiGuardia en 100 %, 150 % y 200 %. La elección se persiste localmente y escala la aplicación sin leer ni modificar el zoom, tamaño de visualización, fuente o densidad de Android.
+- Apariencia ofrece zoom interno explícito de MiGuardia en 100 %, 150 % y 200 %. La elección se persiste localmente y escala la aplicación sin leer ni modificar el zoom, tamaño de visualización, fuente o densidad de Android.
 - MiGuardia usa la densidad estable del dispositivo como referencia y nunca activa automáticamente una variante a partir de ajustes del sistema.
 - Con zoom interno 150 % o 200 %, las superficies deben seguir siendo utilizables mediante desplazamiento. El calendario puede desplazarse horizontalmente para conservar celdas suficientemente anchas; abreviatura y horario deben permanecer completos y ajustar su texto al mayor tamaño que quepa.
 - Las verificaciones pueden recorrer el zoom interno de la aplicación, pero no deben consultar ni modificar `font_scale`, zoom, tamaño de visualización ni densidad del dispositivo.
@@ -742,6 +743,8 @@ Decisión posterior del 17 de agosto de 2026: la experiencia inicial se implemen
 Decisión posterior del 17 de agosto de 2026: Notificaciones debe conservar Android 8/API 26 como mínimo compatible. Su contenido se refina como tarjeta de estado Vigilia dentro de los límites visuales del panel de Android, con degradación equivalente en versiones antiguas. `Eliminar notificación` oculta sólo el aviso de esa guardia y `Mostrar notificación nuevamente` permite restaurarlo desde Configuración mientras siga siendo elegible. En Android 14 o superior el sistema puede permitir también el descarte por gesto, aun cuando MiGuardia solicite persistencia; la aplicación debe reconocer esa limitación sin prometer un bloqueo imposible.
 
 Corrección de secuencia actualizada el 18 de agosto de 2026: el Calendario en consulta/edición, los controles explícitos de visibilidad de Notificaciones y Perfil laboral con la reorganización acotada de Configuración están integrados y publicados en `main`. Perfil quedó consolidado en `32767084ae96c399ab4af40cae35eaa40b1ae925`, conservando `codex/guard-profile-settings` como referencia en el mismo SHA. La orientación visual de Fotos quedó implementada, auditada y publicada en `84d2fafc3ed4abcaa648e23ab75dcb8878e1dbba`, sin migrar archivos ni modificar Room, permisos o datos. La puerta correctiva continúa secuencialmente con la sustitución de la barra inferior por menú lateral y, después, con la selección simple/múltiple sobre la grilla principal del Calendario y `Editar día` desde el detalle. Recién después se construyen el recorrido contextual, la primera carga y Ayuda sobre la interfaz definitiva. No se reabre ni amplía Notificaciones.
+
+Decisión posterior del 18 de agosto de 2026: Joa rechazó el panel lateral desnudo de tres destinos y decidió que sea la jerarquía completa de acceso. Se elimina `Configuración` como pantalla contenedora; el panel desplazable agrupa Calendario, Resumen y los apartados implementados de trabajo, avisos y aplicación. Perfil, Objetivos y horarios, Feriados, Vacaciones, Notificaciones y Clima abren directamente sus superficies existentes. `Apariencia` concentra tema y zoom. No se agregan placeholders de funciones futuras ni se duplican controles.
 
 La primera versión utilizable debe alcanzar almacenamiento local, calendario, carga individual/múltiple, objetivos/horarios, fotos y horas básicas antes de sumar capas más complejas.
 

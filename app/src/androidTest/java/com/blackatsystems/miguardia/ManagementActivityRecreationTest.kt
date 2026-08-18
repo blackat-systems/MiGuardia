@@ -1,6 +1,7 @@
 package com.blackatsystems.miguardia
 
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
@@ -26,7 +27,7 @@ class ManagementActivityRecreationTest {
 
     @Test
     fun objectiveDraftSurvivesActivityRecreation() {
-        composeRule.onNodeWithText("Configuración").performClick()
+        composeRule.onNodeWithContentDescription("Abrir menú").performClick()
         composeRule.onNodeWithText("Objetivos y horarios").performClick()
         composeRule.onNodeWithText("Crear objetivo").performClick()
         composeRule.onNodeWithText("Nombre completo").performTextInput("Objetivo de recreación")
