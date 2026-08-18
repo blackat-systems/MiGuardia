@@ -200,8 +200,11 @@ El calendario usa una sola proyección y una sola pantalla con dos estados de in
    - conserva el mes, la posición y el mismo componente visual;
    - se identifica con texto visible `Editando calendario`, no sólo mediante color;
    - tocar celdas de la grilla principal selecciona o deselecciona una o varias fechas del mismo mes;
-   - una bandeja de herramientas usa esa selección para `Agregar guardia`, `Agregar francos` y las acciones individuales compatibles;
-   - los formularios reciben las fechas seleccionadas y no muestran un segundo calendario para volver a elegirlas;
+   - una bandeja ubicada inmediatamente debajo de esa misma grilla usa la selección para `Agregar guardia`, `Agregar francos` y las acciones individuales compatibles;
+   - al elegir guardia o franco, objetivo, horario, puesto, vista previa y confirmación se despliegan debajo de la grilla principal; no se reemplaza la pantalla ni se navega a otro estilo de calendario;
+   - los formularios reciben las fechas seleccionadas y no muestran un segundo calendario, selector `Una fecha`/`Varias fechas` ni otra cuadrícula para volver a elegirlas;
+   - la selección permanece visible y semánticamente distinguible sin tapar abreviatura, horario, estados o marcadores del día;
+   - cambiar de mes con una selección activa exige una confirmación explícita que informa que esa selección se limpiará; nunca se mezclan silenciosamente fechas de meses distintos;
    - no agrega Vacaciones al calendario: siguen administrándose únicamente desde el acceso `Vacaciones` del panel lateral;
    - la acción inferior cambia a `Terminar`; Atrás sale primero de edición y protege cualquier formulario sin confirmar.
 
@@ -213,6 +216,8 @@ Agregar guardia recibe uno o varios días seleccionados directamente en la grill
 2. agregar sólo en días libres;
 3. agregar una segunda guardia en las ocupadas;
 4. cancelar.
+
+Agregar varios francos usa exactamente el conjunto ya resuelto por la grilla y debe persistirlo como un único lote atómico: si falla una fecha, no puede quedar aplicado sólo un subconjunto. Esta garantía puede ampliar el contrato de repositorio y la transacción DAO sin modificar tablas, entidades, versión Room, esquemas ni migraciones.
 
 La copia de un mes o conjunto reemplaza únicamente las fechas objetivo seleccionadas/incluidas; nunca borra por accidente datos de otro mes. La copia entre meses es opcional y debe mostrar vista previa y confirmación.
 
@@ -745,6 +750,8 @@ Decisión posterior del 17 de agosto de 2026: Notificaciones debe conservar Andr
 Corrección de secuencia actualizada el 18 de agosto de 2026: el Calendario en consulta/edición, los controles explícitos de visibilidad de Notificaciones y Perfil laboral con la reorganización acotada de Configuración están integrados y publicados en `main`. Perfil quedó consolidado en `32767084ae96c399ab4af40cae35eaa40b1ae925`, conservando `codex/guard-profile-settings` como referencia en el mismo SHA. La orientación visual de Fotos quedó implementada, auditada y publicada en `84d2fafc3ed4abcaa648e23ab75dcb8878e1dbba`, sin migrar archivos ni modificar Room, permisos o datos. La puerta correctiva continúa secuencialmente con la sustitución de la barra inferior por menú lateral y, después, con la selección simple/múltiple sobre la grilla principal del Calendario y `Editar día` desde el detalle. Recién después se construyen el recorrido contextual, la primera carga y Ayuda sobre la interfaz definitiva. No se reabre ni amplía Notificaciones.
 
 Decisión posterior del 18 de agosto de 2026: Joa rechazó el panel lateral desnudo de tres destinos y decidió que sea la jerarquía completa de acceso. Se elimina `Configuración` como pantalla contenedora; el panel desplazable agrupa Calendario, Resumen y los apartados implementados de trabajo, avisos y aplicación. Perfil, Objetivos y horarios, Feriados, Vacaciones, Notificaciones y Clima abren directamente sus superficies existentes. `Apariencia` concentra tema y zoom. No se agregan placeholders de funciones futuras ni se duplican controles.
+
+Decisión posterior del 18 de agosto de 2026: Joa rechazó que la edición simple o masiva reemplace el Calendario por una pantalla secundaria con otra grilla pequeña o circular. La grilla mensual principal es el único selector de fechas. En consulta, el detalle termina en `Editar día`; en edición, la misma grilla selecciona días y conserva su representación completa, mientras la bandeja y los controles reales de guardia o franco aparecen debajo. `Editar calendario` comienza vacío, `Editar día` preselecciona sólo esa fecha y ninguno escribe por sí solo. Los calendarios internos y el selector `Una fecha`/`Varias fechas` desaparecen de Guardia y Francos. El lote de varios francos debe ser atómico sin cambiar Room v5 ni sus esquemas.
 
 La primera versión utilizable debe alcanzar almacenamiento local, calendario, carga individual/múltiple, objetivos/horarios, fotos y horas básicas antes de sumar capas más complejas.
 

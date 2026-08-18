@@ -30,7 +30,6 @@ import com.blackatsystems.miguardia.ui.management.ObjectiveDraft
 import com.blackatsystems.miguardia.ui.management.ScheduleDraft
 import com.blackatsystems.miguardia.ui.management.ScheduleOption
 import com.blackatsystems.miguardia.ui.management.ShiftDraft
-import com.blackatsystems.miguardia.ui.management.ShiftEntryMode
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
@@ -202,7 +201,6 @@ class ManagementComposeTest {
                         surface = ManagementSurface.SHIFT_FORM,
                         scheduleOptions = listOf(ScheduleOption(ACTIVE_OBJECTIVE, SCHEDULE)),
                         shiftDraft = ShiftDraft(
-                            mode = ShiftEntryMode.MULTIPLE,
                             month = month,
                             selectedDates = setOf(month.atDay(2), month.atDay(9)),
                             combinationId = SCHEDULE.id,
@@ -213,8 +211,10 @@ class ManagementComposeTest {
             }
         }
 
-        composeRule.onNodeWithText("2D").assertExists()
-        composeRule.onNodeWithText("9D").assertExists()
+        composeRule.onNodeWithTag("shift-date-selector").assertDoesNotExist()
+        composeRule.onNodeWithText("Una fecha").assertDoesNotExist()
+        composeRule.onNodeWithText("Varias fechas").assertDoesNotExist()
+        composeRule.onNodeWithText("2 fechas elegidas arriba: 2, 9").assertExists()
         composeRule.onNodeWithText("2 fechas seleccionadas: 2, 9").assertExists()
         composeRule.onNodeWithText("Termina al día siguiente").assertExists()
         composeRule.onNodeWithText("Revisar y guardar").performScrollTo().performSemanticsAction(SemanticsActions.OnClick)
@@ -243,8 +243,7 @@ class ManagementComposeTest {
         }
 
         composeRule.onAllNodesWithText("Agregar francos").assertCountEquals(2)
-        composeRule.onNodeWithText("3L").assertExists()
-        composeRule.onNodeWithText("7V").assertExists()
+        composeRule.onNodeWithTag("day-off-date-selector").assertDoesNotExist()
         composeRule.onNodeWithText("2 fechas seleccionadas.").assertExists()
         composeRule.onAllNodesWithText("Agregar francos")[1].performScrollTo()
             .performSemanticsAction(SemanticsActions.OnClick)

@@ -192,7 +192,7 @@ class NavigationDrawerComposeTest {
         val month = YearMonth.of(2026, 8)
         val selectedDate = LocalDate.of(2026, 8, 14)
         var request by mutableIntStateOf(0)
-        var calendarState by mutableStateOf(calendarState(month).copy(selectedDate = null))
+        var calendarState by mutableStateOf(calendarState(month).copy(detailDate = null))
         compose.setContent {
             MiGuardiaTheme {
                 MiGuardiaApp(
@@ -214,7 +214,7 @@ class NavigationDrawerComposeTest {
         compose.onNodeWithContentDescription("Abrir menú").performClick()
 
         compose.runOnIdle {
-            calendarState = calendarState.copy(selectedDate = selectedDate)
+            calendarState = calendarState.copy(detailDate = selectedDate)
             request++
         }
 

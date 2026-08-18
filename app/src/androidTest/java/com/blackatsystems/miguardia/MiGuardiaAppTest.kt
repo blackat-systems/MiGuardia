@@ -167,10 +167,12 @@ class MiGuardiaAppTest {
             }
             device.tapText(entry)
             if (entry == firstShift) {
-                device.assertTextVisible("Guardias")
+                assertTrue(
+                    "La primera carga no mostró el formulario debajo de la grilla principal.",
+                    device.scrollUntilText("Agregar guardia"),
+                )
                 device.pressBack()
                 device.tapText("Descartar")
-                device.pressBack()
             }
 
             assertTrue("No apareció Terminar en modo edición.", device.scrollUntilText("Terminar"))

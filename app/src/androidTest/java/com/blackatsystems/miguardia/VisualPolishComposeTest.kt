@@ -137,7 +137,7 @@ class VisualPolishComposeTest {
     }
 
     @Test
-    fun longDateSelectorAndPrimaryActionStayReachableAtTwoHundredPercent() {
+    fun fixedCalendarSelectionAndPrimaryActionStayReachableAtTwoHundredPercent() {
         val date = LocalDate.of(2026, 8, 14)
         compose.setContent {
             MiGuardiaTheme(appZoom = AppZoom.EXTRA_LARGE) {
@@ -154,7 +154,8 @@ class VisualPolishComposeTest {
             }
         }
 
-        compose.onNodeWithContentDescription("viernes 14 Agosto de 2026, seleccionado").assertExists()
+        compose.onNodeWithTag("shift-date-selector").assertDoesNotExist()
+        compose.onNodeWithText("1 fecha elegida arriba: 14").assertExists()
         compose.onNodeWithText("Revisar y guardar").performScrollTo().assertIsDisplayed()
     }
 

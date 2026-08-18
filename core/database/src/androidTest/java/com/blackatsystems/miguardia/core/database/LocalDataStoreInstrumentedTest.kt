@@ -215,6 +215,35 @@ class LocalDataStoreInstrumentedTest {
     }
 
     @Test
+    fun dayOffBatchPersistsEverySelectedDate() = runBlocking {
+        val dates = linkedSetOf(LocalDate.of(2026, 8, 13), LocalDate.of(2026, 8, 14))
+
+        store.explicitDayStatuses.setAll(dates, ExplicitDayStatusType.DAY_OFF)
+
+        val stored = store.explicitDayStatuses.observeBetween(dates.first(), dates.last()).first()
+        assertEquals(dates, stored.mapTo(linkedSetOf()) { it.date })
+        assertTrue(stored.all { it.type == ExplicitDayStatusType.DAY_OFF })
+    }
+
+    @Test
+    fun dayOffBatchFailureRollsBackEveryDate() = runBlocking {
+        val firstDate = LocalDate.of(2026, 8, 13)
+        val rejectedDate = firstDate.plusDays(1)
+        database.openHelper.writableDatabase.execSQL(
+            """CREATE TRIGGER reject_second_day_off
+                BEFORE INSERT ON explicit_day_statuses
+                WHEN NEW.localDate = '$rejectedDate'
+                BEGIN SELECT RAISE(ABORT, 'forced batch failure'); END""".trimIndent(),
+        )
+
+        assertSuspendThrows<Exception> {
+            store.explicitDayStatuses.setAll(linkedSetOf(firstDate, rejectedDate), ExplicitDayStatusType.DAY_OFF)
+        }
+
+        assertTrue(store.explicitDayStatuses.observeBetween(firstDate, rejectedDate).first().isEmpty())
+    }
+
+    @Test
     fun medicalLeaveIntersectsBothMonthsAndInvalidRangeIsRejected() = runBlocking {
         val leave = MedicalLeave(
             id = MEDICAL_LEAVE_ID,

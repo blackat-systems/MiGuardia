@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import com.blackatsystems.miguardia.core.database.entity.ExplicitDayStatusEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -28,6 +29,11 @@ internal interface ExplicitDayStatusDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun set(entity: ExplicitDayStatusEntity)
+
+    @Transaction
+    suspend fun setAll(entities: List<ExplicitDayStatusEntity>) {
+        entities.forEach { set(it) }
+    }
 
     @Query("DELETE FROM explicit_day_statuses WHERE localDate = :localDate")
     suspend fun clear(localDate: String): Int

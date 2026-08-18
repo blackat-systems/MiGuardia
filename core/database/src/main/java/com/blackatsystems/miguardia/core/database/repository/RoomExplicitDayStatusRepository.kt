@@ -31,6 +31,10 @@ internal class RoomExplicitDayStatusRepository(
         dao.set(ExplicitDayStatus(date, type).toEntity())
     }
 
+    override suspend fun setAll(dates: Set<LocalDate>, type: ExplicitDayStatusType) {
+        dao.setAll(dates.sorted().map { date -> ExplicitDayStatus(date, type).toEntity() })
+    }
+
     override suspend fun clear(date: LocalDate) {
         dao.clear(date.toString())
     }

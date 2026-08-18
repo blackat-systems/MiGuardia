@@ -24,7 +24,6 @@ import com.blackatsystems.miguardia.core.domain.shift.OccupiedDatePolicy
 import com.blackatsystems.miguardia.core.domain.shift.ShiftPlanningWarning
 import com.blackatsystems.miguardia.core.domain.shift.areColorsTooSimilar
 import com.blackatsystems.miguardia.core.domain.shift.buildShift
-import com.blackatsystems.miguardia.core.domain.shift.duplicateShift
 import com.blackatsystems.miguardia.core.domain.shift.editShift
 import com.blackatsystems.miguardia.core.domain.shift.planShiftBatch
 import java.time.Clock
@@ -298,11 +297,20 @@ class ManagementViewModel(
 
     fun openAddShift(month: YearMonth, date: LocalDate? = null) {
         val initialDate = date?.takeIf { YearMonth.from(it) == month } ?: month.atDay(1)
+        openAddShift(month, setOf(initialDate))
+    }
+
+    fun openAddShift(month: YearMonth, dates: Set<LocalDate>) {
+        val selectedDates = dates.filterTo(linkedSetOf()) { YearMonth.from(it) == month }
+        if (selectedDates.isEmpty()) return showError("Elegí al menos una fecha del mes visible.")
         _uiState.update {
             it.copy(
                 surface = ManagementSurface.SHIFT_FORM,
                 formReturnSurface = ManagementSurface.NONE,
-                shiftDraft = ShiftDraft(month = month, selectedDates = setOf(initialDate)),
+                shiftDraft = ShiftDraft(
+                    month = month,
+                    selectedDates = selectedDates,
+                ),
                 errorMessage = null,
             )
         }
@@ -311,13 +319,19 @@ class ManagementViewModel(
 
     fun openDayOffs(month: YearMonth, date: LocalDate? = null) {
         val initialDate = date?.takeIf { YearMonth.from(it) == month }
+        openDayOffs(month, setOfNotNull(initialDate))
+    }
+
+    fun openDayOffs(month: YearMonth, dates: Set<LocalDate>) {
+        val selectedDates = dates.filterTo(linkedSetOf()) { YearMonth.from(it) == month }
+        if (selectedDates.isEmpty()) return showError("Elegí al menos una fecha del mes visible.")
         _uiState.update {
             it.copy(
                 surface = ManagementSurface.DAY_OFF_FORM,
                 formReturnSurface = ManagementSurface.NONE,
                 dayOffDraft = DayOffDraft(
                     month = month,
-                    selectedDates = setOfNotNull(initialDate),
+                    selectedDates = selectedDates,
                 ),
                 errorMessage = null,
             )
@@ -325,20 +339,29 @@ class ManagementViewModel(
         persistSurface(ManagementSurface.DAY_OFF_FORM)
     }
 
-    fun toggleDayOffDate(date: LocalDate) {
+    fun updateCalendarSelection(dates: Set<LocalDate>) {
         _uiState.update { state ->
-            val draft = state.dayOffDraft ?: return@update state
-            if (YearMonth.from(date) != draft.month) return@update state
-            state.copy(
-                dayOffDraft = draft.copy(
-                    selectedDates = if (date in draft.selectedDates) {
-                        draft.selectedDates - date
-                    } else {
-                        draft.selectedDates + date
-                    },
-                ),
-                errorMessage = null,
-            )
+            when (state.surface) {
+                ManagementSurface.SHIFT_FORM -> {
+                    val draft = state.shiftDraft ?: return@update state
+                    if (dates.isEmpty() || dates.any { YearMonth.from(it) != draft.month }) return@update state
+                    state.copy(
+                        shiftDraft = draft.copy(
+                            selectedDates = dates,
+                            occupiedDates = emptySet(),
+                            warnings = emptyList(),
+                            pendingPolicy = null,
+                        ),
+                        errorMessage = null,
+                    )
+                }
+                ManagementSurface.DAY_OFF_FORM -> {
+                    val draft = state.dayOffDraft ?: return@update state
+                    if (dates.isEmpty() || dates.any { YearMonth.from(it) != draft.month }) return@update state
+                    state.copy(dayOffDraft = draft.copy(selectedDates = dates), errorMessage = null)
+                }
+                else -> state
+            }
         }
     }
 
@@ -348,9 +371,7 @@ class ManagementViewModel(
         if (draft.selectedDates.isEmpty()) return showError("Elegí al menos una fecha para marcar como franco.")
         viewModelScope.launch {
             saving {
-                draft.selectedDates.sorted().forEach { date ->
-                    explicitDayStatusRepository.set(date, ExplicitDayStatusType.DAY_OFF)
-                }
+                explicitDayStatusRepository.setAll(draft.selectedDates, ExplicitDayStatusType.DAY_OFF)
                 _uiState.update {
                     it.copy(
                         surface = ManagementSurface.NONE,
@@ -385,40 +406,6 @@ class ManagementViewModel(
         persistSurface(ManagementSurface.SHIFT_FORM)
     }
 
-    fun openDuplicateShift(shift: Shift) {
-        _uiState.update {
-            it.copy(
-                surface = ManagementSurface.SHIFT_FORM,
-                formReturnSurface = ManagementSurface.NONE,
-                shiftDraft = ShiftDraft(
-                    mode = ShiftEntryMode.MULTIPLE,
-                    month = YearMonth.from(shift.localStartDate),
-                    selectedDates = emptySet(),
-                    position = shift.position.orEmpty(),
-                    duplicateSource = shift,
-                ),
-                errorMessage = null,
-            )
-        }
-        persistSurface(ManagementSurface.SHIFT_FORM)
-    }
-
-    fun updateShiftMode(mode: ShiftEntryMode) = updateShiftDraft {
-        it.copy(mode = mode, selectedDates = it.selectedDates.take(if (mode == ShiftEntryMode.SINGLE) 1 else Int.MAX_VALUE).toSet())
-    }
-
-    fun toggleShiftDate(date: LocalDate) = updateShiftDraft { draft ->
-        if (YearMonth.from(date) != draft.month) return@updateShiftDraft draft
-        val selected = if (draft.mode == ShiftEntryMode.SINGLE) {
-            setOf(date)
-        } else if (date in draft.selectedDates) {
-            draft.selectedDates - date
-        } else {
-            draft.selectedDates + date
-        }
-        draft.copy(selectedDates = selected, occupiedDates = emptySet(), warnings = emptyList(), pendingPolicy = null)
-    }
-
     fun chooseShiftCombination(id: UUID) = updateShiftDraft { it.copy(combinationId = id) }
     fun updateShiftPosition(value: String) = updateShiftDraft { it.copy(position = value) }
 
@@ -444,31 +431,22 @@ class ManagementViewModel(
                 val medical = medicalLeaveRepository.observeIntersecting(first, last).first()
                     .filter { leave -> draft.selectedDates.any { it in leave.startDate..leave.endDateInclusive } }
                 val now = clock.instant()
-                val candidates = when {
-                    draft.duplicateSource != null -> dates.map { date ->
-                        duplicateShift(draft.duplicateSource, uuidProvider.newUuid(), date, now).copy(
-                            position = draft.position.trim().takeIf(String::isNotEmpty),
+                val option = _uiState.value.scheduleOptions.firstOrNull {
+                    it.combination.id == draft.combinationId && it.objective.isActive && it.combination.isActive
+                } ?: throw InvalidLocalDataException("Elegí un objetivo y horario activos.")
+                val candidates = dates.map { date ->
+                    if (draft.editingShift != null) {
+                        editShift(draft.editingShift, date, option.objective, option.combination, draft.position, now)
+                    } else {
+                        buildShift(
+                            id = uuidProvider.newUuid(),
+                            date = date,
+                            objective = option.objective,
+                            combination = option.combination,
+                            position = draft.position,
+                            timestamp = now,
+                            zoneId = zone,
                         )
-                    }
-                    else -> {
-                        val option = _uiState.value.scheduleOptions.firstOrNull {
-                            it.combination.id == draft.combinationId && it.objective.isActive && it.combination.isActive
-                        } ?: throw InvalidLocalDataException("Elegí un objetivo y horario activos.")
-                        dates.map { date ->
-                            if (draft.editingShift != null) {
-                                editShift(draft.editingShift, date, option.objective, option.combination, draft.position, now)
-                            } else {
-                                buildShift(
-                                    id = uuidProvider.newUuid(),
-                                    date = date,
-                                    objective = option.objective,
-                                    combination = option.combination,
-                                    position = draft.position,
-                                    timestamp = now,
-                                    zoneId = zone,
-                                )
-                            }
-                        }
                     }
                 }
                 val occupied = existing

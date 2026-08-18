@@ -15,25 +15,37 @@ class CalendarInteractionStateTest {
     }
 
     @Test
-    fun editTransitionsChangeOnlyModeAndKeepMonthAndSelection() {
+    fun detailAndEditSelectionHaveSeparateResponsibilities() {
         val original = CalendarUiState(
             visibleMonth = MONTH,
             referenceInstant = Instant.EPOCH,
-            selectedDate = SELECTED_DATE,
+            detailDate = SELECTED_DATE,
             hasAnyShifts = false,
             loadState = CalendarLoadState.CONTENT,
         )
 
-        val editing = original.enterEditing()
+        val editing = original.enterEditing(SELECTED_DATE)
+        val withSecondDate = editing.toggleEditDate(SECOND_DATE)
         val viewingAgain = editing.finishEditing()
 
         assertEquals(CalendarInteractionMode.EDIT, editing.interactionMode)
         assertEquals(MONTH, editing.visibleMonth)
-        assertEquals(SELECTED_DATE, editing.selectedDate)
+        assertEquals(null, editing.detailDate)
+        assertEquals(setOf(SELECTED_DATE), editing.editSelectedDates)
+        assertEquals(setOf(SELECTED_DATE, SECOND_DATE), withSecondDate.editSelectedDates)
         assertEquals(false, editing.hasAnyShifts)
         assertEquals(CalendarInteractionMode.VIEW, viewingAgain.interactionMode)
         assertEquals(MONTH, viewingAgain.visibleMonth)
-        assertEquals(SELECTED_DATE, viewingAgain.selectedDate)
+        assertEquals(null, viewingAgain.detailDate)
+        assertEquals(emptySet<LocalDate>(), viewingAgain.editSelectedDates)
+    }
+
+    @Test
+    fun editCalendarStartsEmptyAndRejectsDatesOutsideVisibleMonth() {
+        val editing = CalendarUiState(MONTH, Instant.EPOCH).enterEditing()
+
+        assertEquals(emptySet<LocalDate>(), editing.editSelectedDates)
+        assertEquals(editing, editing.toggleEditDate(LocalDate.of(2026, 9, 1)))
     }
 
     @Test
@@ -46,5 +58,6 @@ class CalendarInteractionStateTest {
     private companion object {
         val MONTH: YearMonth = YearMonth.of(2026, 8)
         val SELECTED_DATE: LocalDate = LocalDate.of(2026, 8, 17)
+        val SECOND_DATE: LocalDate = LocalDate.of(2026, 8, 18)
     }
 }

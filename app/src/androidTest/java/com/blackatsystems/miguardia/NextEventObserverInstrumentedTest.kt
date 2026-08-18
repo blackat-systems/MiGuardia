@@ -267,6 +267,7 @@ class NextEventObserverInstrumentedTest {
             endDateInclusive: LocalDate,
         ): Flow<List<ExplicitDayStatus>> = values
         override suspend fun set(date: LocalDate, type: ExplicitDayStatusType) = Unit
+        override suspend fun setAll(dates: Set<LocalDate>, type: ExplicitDayStatusType) = Unit
         override suspend fun clear(date: LocalDate) = Unit
     }
 

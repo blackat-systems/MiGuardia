@@ -18,11 +18,6 @@ enum class ManagementSurface {
     DAY_OFF_FORM,
 }
 
-enum class ShiftEntryMode {
-    SINGLE,
-    MULTIPLE,
-}
-
 data class ScheduleOption(
     val objective: Objective,
     val combination: ScheduleCombination,
@@ -45,13 +40,11 @@ data class ScheduleDraft(
 )
 
 data class ShiftDraft(
-    val mode: ShiftEntryMode = ShiftEntryMode.SINGLE,
     val month: YearMonth,
     val selectedDates: Set<LocalDate>,
     val combinationId: UUID? = null,
     val position: String = "",
     val editingShift: Shift? = null,
-    val duplicateSource: Shift? = null,
     val pendingPolicy: OccupiedDatePolicy? = null,
     val occupiedDates: Set<LocalDate> = emptySet(),
     val warnings: List<String> = emptyList(),

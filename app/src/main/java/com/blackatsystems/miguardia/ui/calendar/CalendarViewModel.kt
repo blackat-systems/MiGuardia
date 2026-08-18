@@ -50,14 +50,24 @@ class CalendarViewModel(
         ?: YearMonth.now(clock.withZone(zone))
     private val initialInteractionMode = savedStateHandle.get<String>(INTERACTION_MODE_KEY)
         .let(::calendarInteractionModeFromSaved)
-    private val initialSelectedDate = savedStateHandle.get<String>(SELECTED_DATE_KEY)
+    private val initialDetailDate = savedStateHandle.get<String>(DETAIL_DATE_KEY)
+        ?: savedStateHandle.get<String>(LEGACY_SELECTED_DATE_KEY)
+    private val parsedInitialDetailDate = initialDetailDate
         ?.let(LocalDate::parse)
+    private val initialEditSelectedDates = savedStateHandle.get<ArrayList<String>>(EDIT_SELECTED_DATES_KEY)
+        .orEmpty()
+        .mapNotNull { runCatching { LocalDate.parse(it) }.getOrNull() }
+        .filterTo(linkedSetOf()) { YearMonth.from(it) == initialMonth }
 
     private val _uiState = kotlinx.coroutines.flow.MutableStateFlow(
         CalendarUiState(
             visibleMonth = initialMonth,
             referenceInstant = clock.instant(),
-            selectedDate = initialSelectedDate?.takeIf { YearMonth.from(it) == initialMonth },
+            detailDate = parsedInitialDetailDate
+                ?.takeIf { initialInteractionMode == CalendarInteractionMode.VIEW && YearMonth.from(it) == initialMonth },
+            editSelectedDates = initialEditSelectedDates.takeIf {
+                initialInteractionMode == CalendarInteractionMode.EDIT
+            }.orEmpty(),
             interactionMode = initialInteractionMode,
         ),
     )
@@ -78,32 +88,67 @@ class CalendarViewModel(
     fun showCurrentMonth() = setVisibleMonth(YearMonth.now(clock.withZone(zone)))
 
     fun selectDate(date: LocalDate) {
-        if (YearMonth.from(date) == _uiState.value.visibleMonth) {
-            savedStateHandle[SELECTED_DATE_KEY] = date.toString()
-            _uiState.update { it.copy(selectedDate = date) }
+        if (
+            _uiState.value.interactionMode == CalendarInteractionMode.VIEW &&
+            YearMonth.from(date) == _uiState.value.visibleMonth
+        ) {
+            savedStateHandle[DETAIL_DATE_KEY] = date.toString()
+            _uiState.update { it.copy(detailDate = date) }
         }
     }
 
     fun openDate(date: LocalDate) {
         val month = YearMonth.from(date)
         if (month != _uiState.value.visibleMonth) setVisibleMonth(month)
-        savedStateHandle[SELECTED_DATE_KEY] = date.toString()
-        _uiState.update { it.copy(selectedDate = date) }
+        savedStateHandle[INTERACTION_MODE_KEY] = CalendarInteractionMode.VIEW.name
+        savedStateHandle[DETAIL_DATE_KEY] = date.toString()
+        savedStateHandle.remove<ArrayList<String>>(EDIT_SELECTED_DATES_KEY)
+        _uiState.update {
+            it.copy(
+                detailDate = date,
+                editSelectedDates = emptySet(),
+                interactionMode = CalendarInteractionMode.VIEW,
+            )
+        }
     }
 
     fun clearSelectedDate() {
-        savedStateHandle.remove<String>(SELECTED_DATE_KEY)
-        _uiState.update { it.copy(selectedDate = null) }
+        savedStateHandle.remove<String>(DETAIL_DATE_KEY)
+        savedStateHandle.remove<String>(LEGACY_SELECTED_DATE_KEY)
+        _uiState.update { it.copy(detailDate = null) }
     }
 
-    fun enterEditMode(selectedDate: LocalDate? = _uiState.value.selectedDate) {
+    fun enterEditMode(selectedDate: LocalDate? = null) {
         savedStateHandle[INTERACTION_MODE_KEY] = CalendarInteractionMode.EDIT.name
-        selectedDate?.let { savedStateHandle[SELECTED_DATE_KEY] = it.toString() }
+        savedStateHandle.remove<String>(DETAIL_DATE_KEY)
+        savedStateHandle.remove<String>(LEGACY_SELECTED_DATE_KEY)
+        persistEditSelection(selectedDate?.let(::setOf).orEmpty())
         _uiState.update { it.enterEditing(selectedDate) }
     }
 
+    fun toggleEditDate(date: LocalDate) {
+        val current = _uiState.value
+        val updated = current.toggleEditDate(date)
+        if (updated == current) return
+        persistEditSelection(updated.editSelectedDates)
+        _uiState.value = updated
+    }
+
+    fun setEditSelectedDates(dates: Set<LocalDate>) {
+        val current = _uiState.value
+        if (
+            current.interactionMode != CalendarInteractionMode.EDIT ||
+            dates.any { YearMonth.from(it) != current.visibleMonth }
+        ) return
+        persistEditSelection(dates)
+        _uiState.update { it.copy(editSelectedDates = dates) }
+    }
+
+    fun clearEditSelection() = setEditSelectedDates(emptySet())
+
     fun finishEditMode() {
         savedStateHandle[INTERACTION_MODE_KEY] = CalendarInteractionMode.VIEW.name
+        savedStateHandle.remove<ArrayList<String>>(EDIT_SELECTED_DATES_KEY)
         _uiState.update(CalendarUiState::finishEditing)
     }
 
@@ -114,18 +159,29 @@ class CalendarViewModel(
     private fun setVisibleMonth(month: YearMonth) {
         if (month == _uiState.value.visibleMonth) return
         savedStateHandle[VISIBLE_MONTH_KEY] = month.toString()
-        savedStateHandle.remove<String>(SELECTED_DATE_KEY)
+        savedStateHandle.remove<String>(DETAIL_DATE_KEY)
+        savedStateHandle.remove<String>(LEGACY_SELECTED_DATE_KEY)
+        savedStateHandle.remove<ArrayList<String>>(EDIT_SELECTED_DATES_KEY)
         _uiState.update {
             it.copy(
                 visibleMonth = month,
                 referenceInstant = clock.instant(),
                 days = emptyList(),
-                selectedDate = null,
+                detailDate = null,
+                editSelectedDates = emptySet(),
                 loadState = CalendarLoadState.LOADING,
                 errorMessage = null,
             )
         }
         observeMonth(month)
+    }
+
+    private fun persistEditSelection(dates: Set<LocalDate>) {
+        if (dates.isEmpty()) {
+            savedStateHandle.remove<ArrayList<String>>(EDIT_SELECTED_DATES_KEY)
+        } else {
+            savedStateHandle[EDIT_SELECTED_DATES_KEY] = ArrayList(dates.sorted().map(LocalDate::toString))
+        }
     }
 
     private fun observeGlobalShiftPresence() {
@@ -243,6 +299,8 @@ class CalendarViewModel(
     private companion object {
         const val VISIBLE_MONTH_KEY = "calendar.visibleMonth"
         const val INTERACTION_MODE_KEY = "calendar.interactionMode"
-        const val SELECTED_DATE_KEY = "calendar.selectedDate"
+        const val DETAIL_DATE_KEY = "calendar.detailDate"
+        const val EDIT_SELECTED_DATES_KEY = "calendar.editSelectedDates"
+        const val LEGACY_SELECTED_DATE_KEY = "calendar.selectedDate"
     }
 }

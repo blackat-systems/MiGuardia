@@ -8,6 +8,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -171,12 +173,19 @@ class CalendarComposeTest {
                     onPreviousMonth = {},
                     onNextMonth = {},
                     onToday = {},
-                    onSelectDate = { calendarState = calendarState.copy(selectedDate = it) },
-                    onDismissDate = { calendarState = calendarState.copy(selectedDate = null) },
+                    onSelectDate = { calendarState = calendarState.copy(detailDate = it) },
+                    onDismissDate = { calendarState = calendarState.copy(detailDate = null) },
+                    onEnterCalendarEditMode = { date ->
+                        calendarState = calendarState.copy(
+                            detailDate = null,
+                            interactionMode = CalendarInteractionMode.EDIT,
+                            editSelectedDates = setOfNotNull(date),
+                        )
+                    },
                     onRetry = {},
                     managementActions = ManagementActions(
-                        openAddShift = { _, _ -> writes += 1 },
-                        openDayOffs = { _, _ -> writes += 1 },
+                        openAddShiftForDates = { _, _ -> writes += 1 },
+                        openDayOffsForDates = { _, _ -> writes += 1 },
                         openEditShift = { writes += 1 },
                         deleteShift = { writes += 1 },
                     ),
@@ -194,6 +203,11 @@ class CalendarComposeTest {
         composeRule.onNodeWithText("Eliminar").assertDoesNotExist()
         composeRule.onNodeWithText("Agregar guardia").assertDoesNotExist()
         composeRule.onNodeWithText("Agregar francos").assertDoesNotExist()
+        composeRule.onNodeWithText("Editar día").assertExists()
+        composeRule.onNodeWithTag("edit-day-action").performScrollTo().assertIsDisplayed()
+        composeRule.runOnIdle { assertEquals(0, writes) }
+        composeRule.onNodeWithText("Editar día").performSemanticsAction(SemanticsActions.OnClick)
+        composeRule.onNodeWithText("1 día seleccionado").assertExists()
         composeRule.runOnIdle { assertEquals(0, writes) }
     }
 
@@ -203,7 +217,7 @@ class CalendarComposeTest {
             contentState(YearMonth.of(2026, 9)).copy(hasAnyShifts = false),
         )
         var managementState by mutableStateOf(ManagementUiState())
-        var requestedDate: LocalDate? = null
+        var requestedDates: Set<LocalDate> = emptySet()
         composeRule.setContent {
             MaterialTheme {
                 MiGuardiaApp(
@@ -216,19 +230,20 @@ class CalendarComposeTest {
                     onEnterCalendarEditMode = { date ->
                         calendarState = calendarState.copy(
                             interactionMode = CalendarInteractionMode.EDIT,
-                            selectedDate = date,
+                            detailDate = null,
+                            editSelectedDates = setOfNotNull(date),
                         )
                     },
                     onRetry = {},
                     managementState = managementState,
                     managementActions = ManagementActions(
-                        openAddShift = { month, date ->
-                            requestedDate = date
+                        openAddShiftForDates = { month, dates ->
+                            requestedDates = dates
                             managementState = managementState.copy(
                                 surface = ManagementSurface.SHIFT_FORM,
                                 shiftDraft = ShiftDraft(
                                     month = month,
-                                    selectedDates = setOfNotNull(date),
+                                    selectedDates = dates,
                                 ),
                             )
                         },
@@ -239,10 +254,11 @@ class CalendarComposeTest {
 
         composeRule.onNodeWithText("Cargar mi primera guardia").performScrollTo()
             .performSemanticsAction(SemanticsActions.OnClick)
-        composeRule.onNodeWithText("Guardias").assertExists()
+        composeRule.onNodeWithTag("month-grid").assertExists()
+        composeRule.onNodeWithTag("calendar-inline-management").assertExists()
         composeRule.runOnIdle {
             assertEquals(CalendarInteractionMode.EDIT, calendarState.interactionMode)
-            assertEquals(LocalDate.of(2026, 9, 1), requestedDate)
+            assertEquals(setOf(LocalDate.of(2026, 9, 1)), requestedDates)
         }
     }
 
@@ -290,6 +306,51 @@ class CalendarComposeTest {
     }
 
     @Test
+    fun changingMonthWithSelectionRequiresExplicitClearance() {
+        composeRule.setContent { CalendarHarness(contentState()) }
+
+        composeRule.onNodeWithText("Editar calendario").performScrollTo()
+            .performSemanticsAction(SemanticsActions.OnClick)
+        composeRule.onNodeWithContentDescription("Jueves 20 de agosto de 2026, sin definir")
+            .performSemanticsAction(SemanticsActions.OnClick)
+        composeRule.onNodeWithContentDescription("Mes anterior")
+            .performSemanticsAction(SemanticsActions.OnClick)
+        composeRule.onAllNodesWithText("Cambiar de mes").assertCountEquals(2)
+        composeRule.onNodeWithText("Conservar selección").performSemanticsAction(SemanticsActions.OnClick)
+        composeRule.onNodeWithText("Agosto de 2026").assertExists()
+        composeRule.onNodeWithText("1 día seleccionado").assertExists()
+
+        composeRule.onNodeWithContentDescription("Mes anterior")
+            .performSemanticsAction(SemanticsActions.OnClick)
+        composeRule.onAllNodesWithText("Cambiar de mes")[1]
+            .performSemanticsAction(SemanticsActions.OnClick)
+        composeRule.onNodeWithText("Julio de 2026").assertExists()
+        composeRule.onNodeWithText("Todavía no seleccionaste días.", substring = true).assertExists()
+    }
+
+    @Test
+    fun horizontalGestureUsesTheSameSelectionClearanceConfirmation() {
+        composeRule.setContent { CalendarHarness(contentState()) }
+
+        composeRule.onNodeWithText("Editar calendario").performScrollTo()
+            .performSemanticsAction(SemanticsActions.OnClick)
+        composeRule.onNodeWithContentDescription("Jueves 20 de agosto de 2026, sin definir")
+            .performSemanticsAction(SemanticsActions.OnClick)
+
+        composeRule.onNodeWithTag("month-grid").performTouchInput { swipeLeft() }
+        composeRule.onAllNodesWithText("Cambiar de mes").assertCountEquals(2)
+        composeRule.onNodeWithText("Conservar selección").performSemanticsAction(SemanticsActions.OnClick)
+        composeRule.onNodeWithText("Agosto de 2026").assertExists()
+        composeRule.onNodeWithText("1 día seleccionado").assertExists()
+
+        composeRule.onNodeWithTag("month-grid").performTouchInput { swipeLeft() }
+        composeRule.onAllNodesWithText("Cambiar de mes")[1]
+            .performSemanticsAction(SemanticsActions.OnClick)
+        composeRule.onNodeWithText("Septiembre de 2026").assertExists()
+        composeRule.onNodeWithText("Todavía no seleccionaste días.", substring = true).assertExists()
+    }
+
+    @Test
     fun backProtectsManagementDraftBeforeLeavingCalendarEditMode() {
         var calendarState by mutableStateOf(
             contentState().copy(interactionMode = CalendarInteractionMode.EDIT),
@@ -328,7 +389,7 @@ class CalendarComposeTest {
         device.pressBack()
         composeRule.onNodeWithText("Descartar cambios").assertExists()
         composeRule.onNodeWithText("Seguir editando").performSemanticsAction(SemanticsActions.OnClick)
-        composeRule.onNodeWithText("Guardias").assertExists()
+        composeRule.onNodeWithTag("calendar-inline-management").assertExists()
 
         device.pressBack()
         composeRule.onNodeWithText("Descartar").performSemanticsAction(SemanticsActions.OnClick)
@@ -370,7 +431,7 @@ class CalendarComposeTest {
         var calendarState by mutableStateOf(contentState())
         var managementState by mutableStateOf(ManagementUiState())
         var requestedMonth: YearMonth? = null
-        var requestedDate: LocalDate? = null
+        var requestedDates: Set<LocalDate> = emptySet()
         composeRule.setContent {
             MaterialTheme {
                 MiGuardiaApp(
@@ -378,10 +439,15 @@ class CalendarComposeTest {
                     onPreviousMonth = {},
                     onNextMonth = {},
                     onToday = {},
-                    onSelectDate = { calendarState = calendarState.copy(selectedDate = it) },
-                    onDismissDate = { calendarState = calendarState.copy(selectedDate = null) },
+                    onSelectDate = { calendarState = calendarState.copy(detailDate = it) },
+                    onDismissDate = { calendarState = calendarState.copy(detailDate = null) },
+                    onEditSelectionChange = { calendarState = calendarState.copy(editSelectedDates = it) },
                     onEnterCalendarEditMode = {
-                        calendarState = calendarState.copy(interactionMode = CalendarInteractionMode.EDIT)
+                        calendarState = calendarState.copy(
+                            interactionMode = CalendarInteractionMode.EDIT,
+                            detailDate = null,
+                            editSelectedDates = setOfNotNull(it),
+                        )
                     },
                     onFinishCalendarEditMode = {
                         calendarState = calendarState.copy(interactionMode = CalendarInteractionMode.VIEW)
@@ -389,14 +455,14 @@ class CalendarComposeTest {
                     onRetry = {},
                     managementState = managementState,
                     managementActions = ManagementActions(
-                        openAddShift = { month, date ->
+                        openAddShiftForDates = { month, dates ->
                             requestedMonth = month
-                            requestedDate = date
+                            requestedDates = dates
                             managementState = managementState.copy(
                                 surface = ManagementSurface.SHIFT_FORM,
                                 shiftDraft = ShiftDraft(
                                     month = month,
-                                    selectedDates = setOf(date ?: month.atDay(1)),
+                                    selectedDates = dates,
                                 ),
                             )
                         },
@@ -411,12 +477,31 @@ class CalendarComposeTest {
         composeRule.onNodeWithText("Terminar").assertExists()
         composeRule.onNodeWithContentDescription("Jueves 20 de agosto de 2026, sin definir")
             .performSemanticsAction(SemanticsActions.OnClick)
+        composeRule.onNodeWithContentDescription(
+            "Jueves 20 de agosto de 2026, sin definir, seleccionado para editar",
+        ).assertIsSelected()
+        composeRule.onNodeWithText("20J", useUnmergedTree = true).assertExists()
+        composeRule.onNodeWithText("1 día seleccionado").assertExists()
+        composeRule.onNodeWithContentDescription(
+            "Jueves 20 de agosto de 2026, sin definir, seleccionado para editar",
+        ).performSemanticsAction(SemanticsActions.OnClick)
+        composeRule.onNodeWithText("Todavía no seleccionaste días.", substring = true).assertExists()
+        composeRule.onNodeWithContentDescription("Jueves 20 de agosto de 2026, sin definir")
+            .performSemanticsAction(SemanticsActions.OnClick)
+        composeRule.onNodeWithContentDescription("Viernes 21 de agosto de 2026, sin definir")
+            .performSemanticsAction(SemanticsActions.OnClick)
+        composeRule.onNodeWithText("2 días seleccionados").assertExists()
         composeRule.onNodeWithText("Agregar guardia").performSemanticsAction(SemanticsActions.OnClick)
-        composeRule.onNodeWithText("Guardias").assertExists()
+        composeRule.onNodeWithTag("month-grid").assertExists()
+        composeRule.onNodeWithTag("calendar-inline-management").assertExists()
+        composeRule.onNodeWithTag("shift-date-selector").assertDoesNotExist()
         composeRule.onNodeWithText("Revisar y guardar").assertExists()
         composeRule.runOnIdle {
             assertEquals(YearMonth.of(2026, 8), requestedMonth)
-            assertEquals(LocalDate.of(2026, 8, 20), requestedDate)
+            assertEquals(
+                setOf(LocalDate.of(2026, 8, 20), LocalDate.of(2026, 8, 21)),
+                requestedDates,
+            )
         }
     }
 
@@ -429,8 +514,8 @@ class CalendarComposeTest {
             MaterialTheme {
                 MiGuardiaApp(
                     calendarState = contentState().copy(
-                        selectedDate = selectedDate,
                         interactionMode = CalendarInteractionMode.EDIT,
+                        editSelectedDates = setOf(selectedDate),
                     ),
                     onPreviousMonth = {},
                     onNextMonth = {},
@@ -440,20 +525,20 @@ class CalendarComposeTest {
                     onRetry = {},
                     managementState = managementState,
                     managementActions = ManagementActions(
-                        openAddShift = { month, date ->
+                        openAddShiftForDates = { month, dates ->
                             managementState = managementState.copy(
                                 surface = ManagementSurface.SHIFT_FORM,
                                 shiftDraft = ShiftDraft(
                                     month = month,
-                                    selectedDates = setOf(date ?: month.atDay(1)),
+                                    selectedDates = dates,
                                 ),
                             )
                         },
-                        openDayOffs = { month, date ->
+                        openDayOffsForDates = { month, dates ->
                             requestedDayOffMonth = month
                             managementState = managementState.copy(
                                 surface = ManagementSurface.DAY_OFF_FORM,
-                                dayOffDraft = DayOffDraft(month, setOfNotNull(date)),
+                                dayOffDraft = DayOffDraft(month, dates),
                             )
                         },
                     ),
@@ -466,21 +551,48 @@ class CalendarComposeTest {
         composeRule.onNodeWithText("Agregar guardia").assertExists()
         composeRule.onNodeWithText("Agregar francos").performSemanticsAction(SemanticsActions.OnClick)
         composeRule.onNodeWithText("Agregar vacaciones").assertDoesNotExist()
-        composeRule.onNodeWithText("Francos").assertExists()
+        composeRule.onNodeWithTag("month-grid").assertExists()
+        composeRule.onNodeWithTag("calendar-inline-management").assertExists()
+        composeRule.onNodeWithTag("day-off-date-selector").assertDoesNotExist()
         composeRule.runOnIdle { assertEquals(YearMonth.of(2026, 8), requestedDayOffMonth) }
+    }
+
+    @Test
+    fun completedInlineOperationKeepsSuccessFeedbackVisibleOnCalendar() {
+        var infoMessage by mutableStateOf<String?>("Guardias guardadas.")
+        composeRule.setContent {
+            MaterialTheme {
+                MiGuardiaApp(
+                    calendarState = contentState().copy(
+                        interactionMode = CalendarInteractionMode.EDIT,
+                        editSelectedDates = setOf(LocalDate.of(2026, 8, 20)),
+                    ),
+                    onPreviousMonth = {},
+                    onNextMonth = {},
+                    onToday = {},
+                    onSelectDate = {},
+                    onDismissDate = {},
+                    onRetry = {},
+                    managementState = ManagementUiState(infoMessage = infoMessage),
+                    managementActions = ManagementActions(clearMessage = { infoMessage = null }),
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Guardias guardadas.").assertExists()
+        composeRule.onNodeWithTag("month-grid").assertExists()
     }
 
     @Test
     fun occupiedShiftDetailOrdersEditAddSecondAndConfirmedDelete() {
         val state = contentState().copy(
-            selectedDate = LocalDate.of(2026, 8, 2),
             interactionMode = CalendarInteractionMode.EDIT,
+            editSelectedDates = setOf(LocalDate.of(2026, 8, 2)),
         )
         var edited: UUID? = null
         var addedSecond: LocalDate? = null
         var deleted: UUID? = null
         var openedExceptions: UUID? = null
-        var dismissed = 0
         composeRule.setContent {
             MaterialTheme {
                 MiGuardiaApp(
@@ -489,11 +601,11 @@ class CalendarComposeTest {
                     onNextMonth = {},
                     onToday = {},
                     onSelectDate = {},
-                    onDismissDate = { dismissed += 1 },
+                    onDismissDate = {},
                     onRetry = {},
                     managementActions = ManagementActions(
                         openEditShift = { edited = it.id },
-                        openAddShift = { _, date -> addedSecond = date },
+                        openAddShiftForDates = { _, dates -> addedSecond = dates.singleOrNull() },
                         deleteShift = { deleted = it },
                     ),
                     exceptionsActions = ExceptionsActions(
@@ -506,7 +618,7 @@ class CalendarComposeTest {
         composeRule.onNodeWithText("Agregar una segunda guardia").assertExists()
             .performSemanticsAction(SemanticsActions.OnClick)
         composeRule.runOnIdle { assertEquals(LocalDate.of(2026, 8, 2), addedSecond) }
-        composeRule.onNodeWithText("Agregar guardia").assertDoesNotExist()
+        composeRule.onNodeWithText("Agregar guardia").assertExists()
         composeRule.onNodeWithText("Agregar francos").assertDoesNotExist()
         composeRule.onAllNodesWithText("Editar")[0].performSemanticsAction(SemanticsActions.OnClick)
         composeRule.runOnIdle {
@@ -518,7 +630,6 @@ class CalendarComposeTest {
             .performSemanticsAction(SemanticsActions.OnClick)
         composeRule.runOnIdle {
             assertTrue(openedExceptions != null)
-            assertTrue(dismissed >= 2)
         }
         composeRule.onNodeWithText("Agregar vacaciones").assertDoesNotExist()
         composeRule.onAllNodesWithText("Eliminar")[0].performSemanticsAction(SemanticsActions.OnClick)
@@ -530,7 +641,7 @@ class CalendarComposeTest {
     @Test
     fun upcomingShiftDetailShowsWeatherBriefForItsFullSchedule() {
         val selectedDate = LocalDate.of(2026, 8, 14)
-        val state = contentState().copy(selectedDate = selectedDate)
+        val state = contentState().copy(detailDate = selectedDate)
         val shift = requireNotNull(state.days.first { it.date == selectedDate }.shifts.single().shift)
         val summary = ShiftWeatherSummary(
             shiftStart = shift.startAt,
@@ -578,7 +689,8 @@ class CalendarComposeTest {
         var state by remember { mutableStateOf(initialState) }
         fun moveTo(month: YearMonth) {
             state = contentState(month = month).copy(
-                selectedDate = null,
+                detailDate = null,
+                editSelectedDates = emptySet(),
                 interactionMode = state.interactionMode,
                 hasAnyShifts = state.hasAnyShifts,
             )
@@ -589,16 +701,21 @@ class CalendarComposeTest {
                 onPreviousMonth = { moveTo(state.visibleMonth.minusMonths(1)) },
                 onNextMonth = { moveTo(state.visibleMonth.plusMonths(1)) },
                 onToday = { moveTo(YearMonth.of(2026, 8)) },
-                onSelectDate = { state = state.copy(selectedDate = it) },
-                onDismissDate = { state = state.copy(selectedDate = null) },
+                onSelectDate = { state = state.copy(detailDate = it) },
+                onDismissDate = { state = state.copy(detailDate = null) },
+                onEditSelectionChange = { state = state.copy(editSelectedDates = it) },
                 onEnterCalendarEditMode = {
                     state = state.copy(
                         interactionMode = CalendarInteractionMode.EDIT,
-                        selectedDate = it ?: state.selectedDate,
+                        detailDate = null,
+                        editSelectedDates = setOfNotNull(it),
                     )
                 },
                 onFinishCalendarEditMode = {
-                    state = state.copy(interactionMode = CalendarInteractionMode.VIEW)
+                    state = state.copy(
+                        interactionMode = CalendarInteractionMode.VIEW,
+                        editSelectedDates = emptySet(),
+                    )
                 },
                 onRetry = {},
             )

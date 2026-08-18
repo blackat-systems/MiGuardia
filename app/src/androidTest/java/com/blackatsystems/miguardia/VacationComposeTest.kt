@@ -195,7 +195,7 @@ class VacationComposeTest {
         composeRule.setContent {
             MaterialTheme {
                 MiGuardiaApp(
-                    calendarState = calendarState().copy(days = days, selectedDate = vacation.startDate),
+                    calendarState = calendarState().copy(days = days, detailDate = vacation.startDate),
                     onPreviousMonth = {},
                     onNextMonth = {},
                     onToday = {},
