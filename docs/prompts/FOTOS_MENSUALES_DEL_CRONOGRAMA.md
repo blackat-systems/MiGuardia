@@ -91,7 +91,7 @@ Copiá cada imagen seleccionada mediante `ContentResolver` a `filesDir/schedule_
 7. cerrar streams y descriptores;
 8. no guardar rutas absolutas ni depender del URI original.
 
-No usar nombres originales, personas, objetivos o fechas laborales en rutas. No extraer ni guardar EXIF, ubicación, autor o dispositivo. No registrar URI, rutas o contenido privado.
+No usar nombres originales, personas, objetivos o fechas laborales en rutas. La única etiqueta EXIF que puede interpretarse es orientación, de forma local y transitoria durante la decodificación, para mostrar correctamente fotos verticales, horizontales y reflejadas. No persistir esa lectura por separado, modificar el original por ella ni extraer, exponer, registrar o transmitir ubicación, autor, dispositivo u otros metadatos. No registrar URI, rutas o contenido privado.
 
 Room y archivos no comparten transacción. Implementá compensación y reconciliación:
 
@@ -256,7 +256,7 @@ Ejecutá:
 
 Obtené desde XML conteos JVM, aplicación instrumentada, Room instrumentada, total, fallos, errores y omitidas.
 
-Confirmá además: sin red, nube, telemetría, permisos amplios, rutas/URI en logs, datos reales, imágenes en Git, secretos, temporales huérfanos, EXIF leído, configuraciones Room prohibidas o cambios no autorizados.
+Confirmá además: sin red, nube, telemetría, permisos amplios, rutas/URI en logs, datos reales, imágenes en Git, secretos, temporales huérfanos, metadatos EXIF distintos de orientación interpretados, configuraciones Room prohibidas o cambios no autorizados.
 
 ## 14. Documentación y entrega
 

@@ -1,6 +1,6 @@
 # MiGuardia — dependencia CALENDARIO: modo consulta y edición explícita
 
-> Estado: contrato histórico; módulo integrado en `main` mediante `9ea42db` y verificado por MAIN
+> Estado: contrato histórico; módulo integrado en `main` mediante `9ea42db` y verificado por MAIN. La prohibición de `Editar día` en consulta y la selección de fechas dentro de formularios quedan reemplazadas por `docs/prompts/CALENDARIO_SELECCION_DIRECTA.md` desde el 18 de agosto de 2026.
 >
 > Fecha: 2026-08-17
 >

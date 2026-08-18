@@ -2,7 +2,7 @@
 
 > Versión inicial: 2026-08-13
 >
-> Última actualización funcional: 2026-08-17
+> Última actualización funcional: 2026-08-18
 >
 > Estado: decisiones funcionales aprobadas en PLANIFICACIÓN
 >
@@ -64,7 +64,7 @@ La lista describe responsabilidades, no exige una estructura rígida de módulos
 
 ## 2. Usuario, problema y principios
 
-MiGuardia está pensada inicialmente para vigiladores de la empresa Inforce que trabajan en objetivos como Hospital Rawson, Dinosaurio Mall, Hospital San Roque u otros. Los supervisores suelen entregar cronogramas como fotos de una planilla de Excel, no como el archivo Excel. Cada vigilador cargará manualmente sus guardias.
+MiGuardia está pensada inicialmente para vigiladores de la empresa Inforce que trabajan en objetivos como Hospital Rawson, Dinosaurio Mall, Hospital San Roque u otros. Los supervisores suelen entregar cronogramas como fotos de una planilla de Excel, no como el archivo Excel. Cada vigilador cargará manualmente sus guardias. Esta primera especialización permite terminar y validar el producto; no limita su dirección posterior.
 
 Principios del producto:
 
@@ -80,7 +80,7 @@ Principios del producto:
 
 La primera versión es Android, en español y se prueba en Córdoba Capital. No hay cuentas ni servicios de MiGuardia en la nube.
 
-Decisión de alcance del 17 de agosto de 2026: completar primero una MiGuardia coherente para vigiladores. La adaptación futura a salud, policía, bomberos u otras profesiones queda pospuesta y no debe generalizar ni complicar la V1.
+Decisión de alcance actualizada el 18 de agosto de 2026: completar primero una MiGuardia coherente para vigiladores. Después, MiGuardia se ampliará de forma explícita para médicos, enfermeros, policías y vigiladores de seguridad que trabajan en distintos lugares, días y horarios. Esa dirección futura está confirmada, pero su vocabulario común, reglas específicas, selección de profesión y tratamiento de remuneración deben diseñarse en un incremento posterior; no generalizar ni complicar silenciosamente la V1 actual.
 
 ## 3. Plataforma y entorno ya preparado
 
@@ -132,11 +132,13 @@ MAIN debe decidir y documentar `minSdk`, `targetSdk`, versiones, navegación, ma
 
 Al abrir la aplicación después del onboarding se muestra el mes actual del calendario y, arriba, un resumen de la próxima guardia.
 
-Navegación inferior con solo tres destinos:
+La navegación principal no usa barra inferior. La barra superior muestra a la izquierda un botón de menú de tres líneas que abre un panel lateral con sólo tres destinos:
 
 - **Calendario**;
 - **Resumen**;
 - **Configuración**.
+
+El panel se abre mediante el botón, no mediante arrastre desde el borde, para no competir con el gesto horizontal del Calendario. `Configuración` abre su pantalla agrupada actual; no duplicar ni desplegar dentro del panel todos sus apartados internos. Atrás cierra primero el panel. Desde Resumen o Configuración, Atrás vuelve al Calendario antes de salir de la aplicación.
 
 Calendario, barra superior:
 
@@ -190,19 +192,21 @@ El calendario usa una sola proyección y una sola pantalla con dos estados de in
 
 1. **Modo consulta**, predeterminado:
    - permite cambiar mes, volver a Hoy, abrir fotos, consultar resúmenes, clima y detalles informativos;
-   - ninguna interacción agrega, edita, reemplaza, limpia o elimina datos;
+   - ninguna interacción escribe datos por sí sola;
    - muestra abajo `Editar calendario` sin tapar fechas ni competir con la navegación;
    - si todavía no existe ninguna carga, puede mostrar `Cargar mi primera guardia`, que entra al mismo modo de edición guiado.
 2. **Modo edición**, iniciado conscientemente:
    - conserva el mes, la posición y el mismo componente visual;
    - se identifica con texto visible `Editando calendario`, no sólo mediante color;
-   - habilita los flujos vigentes de `Agregar guardia`, `Agregar francos`, edición, segunda guardia y eliminación confirmada;
+   - tocar celdas de la grilla principal selecciona o deselecciona una o varias fechas del mismo mes;
+   - una bandeja de herramientas usa esa selección para `Agregar guardia`, `Agregar francos` y las acciones individuales compatibles;
+   - los formularios reciben las fechas seleccionadas y no muestran un segundo calendario para volver a elegirlas;
    - no agrega Vacaciones al calendario: siguen administrándose únicamente desde Configuración;
    - la acción inferior cambia a `Terminar`; Atrás sale primero de edición y protege cualquier formulario sin confirmar.
 
-En consulta, tocar un día ocupado abre detalles sin acciones de mutación. En edición, cada guardia conserva `Informar novedad / notas`, `Editar`, `Agregar una segunda guardia` cuando corresponde y `Eliminar`; eliminar exige confirmación. La configuración particular de avisos vive dentro de `Editar`. Una guardia futura elegible muestra un resumen meteorológico de todo su horario y permite abrir el detalle hora por hora. No reintroducir duplicación ni limpieza general si no existe un flujo vigente y probado.
+En consulta, tocar cualquier día abre sus detalles y al final ofrece un único botón consciente `Editar día`. Ese botón no modifica datos: cierra el detalle, entra al mismo modo edición y preselecciona exactamente esa fecha. En edición, cada guardia conserva `Informar novedad / notas`, `Editar`, `Agregar una segunda guardia` cuando corresponde y `Eliminar`; eliminar exige confirmación. La configuración particular de avisos vive dentro de `Editar`. Una guardia futura elegible muestra un resumen meteorológico de todo su horario y permite abrir el detalle hora por hora. No reintroducir duplicación ni limpieza general si no existe un flujo vigente y probado.
 
-Agregar guardia permite elegir “un solo día” o “varios días”. La selección múltiple trabaja sobre un mes por operación. Si una única fecha está ocupada, ofrecer en este orden `Reemplazar`, `Agregar segunda guardia` y `Cancelar`. Si hay varias fechas ocupadas, mostrar cuáles y ofrecer:
+Agregar guardia recibe uno o varios días seleccionados directamente en la grilla principal. La selección trabaja sobre un mes por operación y el formulario no vuelve a pedir fechas. Si una única fecha está ocupada, ofrecer en este orden `Reemplazar`, `Agregar segunda guardia` y `Cancelar`. Si hay varias fechas ocupadas, mostrar cuáles y ofrecer:
 
 1. reemplazar/sobrescribir las seleccionadas;
 2. agregar sólo en días libres;
@@ -312,7 +316,7 @@ Vacaciones se registra manualmente como un período inclusivo de días corridos,
 
 El usuario puede asociar una o varias fotos del cronograma a un mes/año concreto y, si corresponde, identificarlas por objetivo. El botón superior permite consultarlas sin alternar con la galería mientras carga su calendario.
 
-Funciones: visualizar, desplazarse y hacer zoom. No recortar, no OCR, no leer automáticamente, no importar Excel. Las imágenes se mantienen locales, se conservan con una referencia segura y no se suben al repositorio ni a servicios externos.
+Funciones: visualizar, desplazarse y hacer zoom. No recortar, no OCR, no leer automáticamente, no importar Excel. Las imágenes se mantienen locales, se conservan con una referencia segura y no se suben al repositorio ni a servicios externos. Miniatura y visor respetan la orientación visual de fotos verticales y horizontales, incluidas las que dependen de la etiqueta EXIF de orientación. Sólo puede interpretarse local y transitoriamente esa etiqueta para dibujar la imagen; no extraer, persistir, exponer, registrar ni transmitir ubicación, autor, dispositivo u otros metadatos.
 
 Tocar la tarjeta o la imagen abre el visor; no existe un botón redundante `Abrir foto`. Eliminar o reemplazar una foto requiere intención clara y se hace individualmente desde `Acciones`; no se ofrece borrado masivo del mes para evitar toques accidentales. Las copias de seguridad pueden incluirlas si el usuario elige esa modalidad.
 
@@ -565,8 +569,10 @@ Primera apertura:
 - una presentación técnica o splash, si se utiliza, es breve y no agrega demora artificial;
 - una bienvenida comunica directamente el valor de organizar guardias y conocer horas y próximos eventos;
 - tres pantallas introductorias: organizar guardias; conocer horas y próximas guardias; datos guardados en el teléfono;
-- guía interactiva de calendario, `Editar calendario`, carga simple/múltiple, fotos, plantillas, resumen, notificaciones, widget, clima y configuración;
+- recorrido contextual y omisible sobre la interfaz real ya estabilizada: menú principal, mes y calendario, detalle de día, `Editar calendario`, selección simple/múltiple, fotos, Resumen y Configuración;
 - se puede omitir y repetir desde Ayuda.
+
+La guía contextual señala controles principales y explica dónde están, para qué sirven y cómo comenzar a usarlos. No simula funciones futuras, no escribe datos, no solicita permisos y no bloquea la salida. Notificaciones, clima y los apartados internos se explican desde Ayuda o Configuración sin convertir la primera apertura en un recorrido exhaustivo. El tutorial se implementa únicamente después de consolidar la orientación de Fotos, la edición directa sobre la grilla principal y el menú lateral.
 
 Al finalizar, la aplicación lleva al calendario. Si está vacío, `Cargar mi primera guardia` acompaña la creación del primer objetivo, su horario y la primera carga reutilizando los flujos reales.
 
@@ -578,6 +584,8 @@ Valores predeterminados V1:
 - 204 horas mensuales.
 
 El Perfil laboral es local y no representa una cuenta. Incluye nombre o apodo opcional, profesión, empresa y resúmenes de objetivos y horarios activos obtenidos desde sus repositorios existentes. No guarda copias paralelas, no altera instantáneas históricas y no pide DNI, email, teléfono, domicilio ni otros identificadores innecesarios. Puesto continúa perteneciendo a cada carga.
+
+El estado de la introducción se persiste localmente y versionado en un DataStore Preferences exclusivo, según `docs/adr/0014-onboarding-local-versionado-y-primera-carga-guiada.md`. Completar u omitir evita repetirla automáticamente; Ayuda puede abrirla de nuevo sin borrar esa marca. La primera carga no guarda progreso paralelo: deriva objetivos, horarios y guardias de sus repositorios reales y abre los flujos existentes, sin formularios duplicados ni filas parciales.
 
 ### Comercialización futura
 
@@ -690,7 +698,7 @@ No implementar en V1 sin nueva decisión de Joaquin:
 - búsqueda global;
 - integración directa con Inforce o SUVICO;
 - cálculo neto oficial, prorrateos o deducciones personales no confirmadas por las escalas disponibles.
-- perfiles para salud, policía, bomberos u otras profesiones;
+- implementación de perfiles para médicos, enfermeros y policías, y generalización del perfil de vigilancia; su dirección futura está confirmada pero permanece fuera del incremento actual;
 - compras, suscripciones, planes Premium o bloqueos sin una matriz de valor aprobada.
 
 ## 25. Orden de construcción aprobado
@@ -727,13 +735,13 @@ Decisión posterior del 17 de agosto de 2026: al guardar o editar una guardia, c
 
 Decisión posterior del 17 de agosto de 2026: MiGuardia adopta **Vigilia** como identidad visual definitiva en variantes oscura y clara, con selección persistida `Seguir el sistema`, `Claro` y `Oscuro`. Conserva superficies profundas, acentos magenta/violeta usados con moderación, tokens semánticos y una acción dominante por bloque. La navegación y Configuración aplican divulgación progresiva. Regla rectora: “Vigilia no grita. Señala.”
 
-Decisión de hoja de ruta del 17 de agosto de 2026: después de cerrar la experiencia actual se evaluará distribución comercial en Google Play con suscripción y una organización del calendario para tres perfiles: seguridad privada, salud y policía. No forma parte del incremento actual. Antes de implementarlo se deben definir alcance compartido y específico, Google Play Billing, restauración de compras, privacidad, soporte, términos y un proveedor meteorológico compatible con uso comercial. Esta decisión no autoriza cuentas, servidor, nube ni sincronización.
+Decisión de hoja de ruta actualizada el 18 de agosto de 2026: después de cerrar la experiencia actual, MiGuardia se ampliará para cuatro grupos explícitos: médicos, enfermeros, policías y vigiladores de seguridad que trabajan en distintos lugares, días y horarios. No forma parte del incremento actual. Antes de implementarlo se deben definir el vocabulario compartido y específico, la configuración por profesión, qué módulos aplican a cada grupo y cómo se oculta SUVICO fuera de vigilancia. La futura distribución o monetización se decide por separado y esta dirección no autoriza cuentas, servidor, nube ni sincronización.
 
 Decisión posterior del 17 de agosto de 2026: la experiencia inicial se implementa secuencialmente: primero un calendario en modo consulta con `Editar calendario`; luego Perfil laboral y reorganización de Configuración; después el rediseño Vigilia y control de visibilidad de Notificaciones; por último bienvenida, onboarding y primera carga guiada. Cada dependencia nace del `HEAD` verificado de MAIN después de integrar la anterior.
 
 Decisión posterior del 17 de agosto de 2026: Notificaciones debe conservar Android 8/API 26 como mínimo compatible. Su contenido se refina como tarjeta de estado Vigilia dentro de los límites visuales del panel de Android, con degradación equivalente en versiones antiguas. `Eliminar notificación` oculta sólo el aviso de esa guardia y `Mostrar notificación nuevamente` permite restaurarlo desde Configuración mientras siga siendo elegible. En Android 14 o superior el sistema puede permitir también el descarte por gesto, aun cuando MiGuardia solicite persistencia; la aplicación debe reconocer esa limitación sin prometer un bloqueo imposible.
 
-Corrección de secuencia actualizada el 18 de agosto de 2026: el Calendario en consulta/edición, los controles explícitos de visibilidad de Notificaciones y Perfil laboral con la reorganización acotada de Configuración están integrados y publicados en `main`. Perfil quedó consolidado en `32767084ae96c399ab4af40cae35eaa40b1ae925`, conservando `codex/guard-profile-settings` como referencia en el mismo SHA. El siguiente incremento habilitado es bienvenida, onboarding, primera carga y Ayuda. No se reabre ni amplía Notificaciones.
+Corrección de secuencia actualizada el 18 de agosto de 2026: el Calendario en consulta/edición, los controles explícitos de visibilidad de Notificaciones y Perfil laboral con la reorganización acotada de Configuración están integrados y publicados en `main`. Perfil quedó consolidado en `32767084ae96c399ab4af40cae35eaa40b1ae925`, conservando `codex/guard-profile-settings` como referencia en el mismo SHA. Antes de implementar bienvenida y onboarding se abre una puerta correctiva: respetar orientación visual de Fotos; sustituir la barra inferior por menú lateral; y mover la selección simple/múltiple a la grilla principal del Calendario, con `Editar día` desde el detalle. Cada corrección se integra secuencialmente sobre una base limpia. Recién después se construyen el recorrido contextual, la primera carga y Ayuda sobre la interfaz definitiva. No se reabre ni amplía Notificaciones.
 
 La primera versión utilizable debe alcanzar almacenamiento local, calendario, carga individual/múltiple, objetivos/horarios, fotos y horas básicas antes de sumar capas más complejas.
 

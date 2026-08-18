@@ -18,11 +18,12 @@ MiGuardia necesita conservar una o varias imágenes de referencia por mes sin ac
 - `MIGRATION_3_4` crea la tabla y los índices. Los esquemas v1, v2 y v3 permanecen inmutables y la cadena 1→2→3→4 es obligatoria.
 - La importación usa temporal y compensación si Room falla. Eliminación y reemplazo conservan el archivo anterior hasta que la escritura relacional pueda confirmarse.
 - El visor decodifica con muestreo y ofrece zoom interno/paneo; no consulta zoom, fuente o densidad del sistema.
+- Miniatura y visor comparten un decodificador que respeta las ocho orientaciones visuales de EXIF sin reescribir la copia privada. La lectura se limita a orientación y no se persiste por separado.
 - Tocar una tarjeta abre directamente el visor. Las acciones individuales conservan asociación, reemplazo y eliminación confirmada; no existe un botón redundante para abrir ni una acción de borrado masivo del mes.
 
 ## Privacidad y límites
 
-No hay red, nube, telemetría, EXIF, OCR, recorte, importación Excel, cámara propia, exportación ni copia de seguridad en este incremento. No se admiten imágenes de certificados médicos. Las futuras copias deberán tratar metadatos y archivos como una unidad consistente y consciente del usuario.
+No hay red, nube, telemetría, extracción general de EXIF, OCR, recorte, importación Excel, cámara propia, exportación ni copia de seguridad en este incremento. Sólo se interpreta local y transitoriamente la orientación necesaria para dibujar la imagen; no se leen para uso de producto ni se exponen ubicación, autor, dispositivo u otros metadatos. No se admiten imágenes de certificados médicos. Las futuras copias deberán tratar metadatos y archivos como una unidad consistente y consciente del usuario.
 
 ## Consecuencias
 

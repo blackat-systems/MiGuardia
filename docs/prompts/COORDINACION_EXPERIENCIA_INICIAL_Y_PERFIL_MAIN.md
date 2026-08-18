@@ -2,11 +2,11 @@
 
 > Estado: continuidad actualizada para MAIN
 >
-> Fecha: 2026-08-17
+> Fecha: 2026-08-18
 >
-> Alcance: MiGuardia para vigiladores
+> Alcance actual: MiGuardia para vigiladores; expansión futura confirmada para médicos, enfermeros y policías sin implementación en este bloque
 >
-> Reanudación actualizada el 18 de agosto de 2026: Calendario, la brecha acotada de ocultar/restaurar Notificaciones y Perfil laboral con la reorganización de Configuración están integrados y publicados en `main`. La nueva base canónica es `32767084ae96c399ab4af40cae35eaa40b1ae925`. Bienvenida, onboarding, primera carga y Ayuda son el próximo incremento habilitado.
+> Reanudación actualizada el 18 de agosto de 2026: Calendario, la brecha acotada de ocultar/restaurar Notificaciones y Perfil laboral están integrados y publicados. `main` y `origin/main` alcanzaron `bee79d54d563ca61bf1e75bfa08d95d22a563c39`. Antes de Onboarding se abre una puerta correctiva secuencial para orientación de Fotos, menú lateral y selección directa sobre la grilla principal.
 
 ## 0. Rol y misión
 
@@ -37,16 +37,19 @@ Un worktree creado desde un commit viejo no recibe cambios sin confirmar. No der
 
 ## 2. Alcance congelado
 
-Este bloque termina la experiencia para vigiladores mediante:
+Este bloque termina la experiencia actual para vigiladores mediante:
 
 1. Calendario con consulta y edición explícita;
 2. Perfil laboral del vigilador y organización de Configuración;
 3. Notificaciones con presentación Vigilia y control de visibilidad;
-4. bienvenida, onboarding y primera carga guiada.
+4. corrección de orientación visual de Fotos;
+5. reemplazo de navegación inferior por menú lateral;
+6. selección simple/múltiple directamente sobre la grilla principal;
+7. bienvenida, recorrido contextual, onboarding y primera carga guiada.
 
 Quedan fuera:
 
-- salud, policía, medicina, bomberos u otras profesiones;
+- implementación de perfiles para médicos, enfermeros y policías; la dirección futura queda registrada pero no se generaliza ahora;
 - login, cuentas, backend, nube o sincronización;
 - compras, suscripciones, Premium o bloqueo de funciones;
 - reglas salariales todavía abiertas;
@@ -60,11 +63,11 @@ Prompt: `docs/prompts/CALENDARIO_MODO_CONSULTA_Y_EDICION.md`.
 
 Rama sugerida: `codex/calendar-edit-mode`.
 
-Debe reutilizar el calendario, la proyección y las fuentes actuales. Abre en consulta; permite navegar, ver Hoy, fotos, clima y detalles informativos, pero no mutar. La entrada inferior es `Editar calendario`; si todavía no hay cargas puede aparecer `Cargar mi primera guardia`.
+Debe reutilizar el calendario, la proyección y las fuentes actuales. Abre en consulta; permite navegar, ver Hoy, fotos, clima y detalles informativos. Tocar un día abre su detalle y un único `Editar día` entra conscientemente en edición con esa fecha preseleccionada, sin escribir por sí solo. El botón grande es `Editar calendario`; si todavía no hay cargas puede aparecer `Cargar mi primera guardia`.
 
-El modo edición conserva mes y posición, se identifica con `Editando calendario`, expone sólo las mutaciones vigentes y cambia la acción inferior a `Terminar`. Atrás sale primero de edición y los formularios existentes conservan su protección de cambios sin confirmar.
+El modo edición conserva mes y posición, se identifica con `Editando calendario` y permite seleccionar uno o varios días sobre la misma grilla completa. La bandeja usa esa selección para guardias o francos; los formularios no vuelven a mostrar otro calendario. `Terminar` y Atrás salen de edición de manera segura y los formularios conservan su protección de cambios sin confirmar.
 
-No reintroducir Vacaciones desde Calendario, duplicación ni limpieza general. Vacaciones sigue en Configuración. El detalle en consulta no muta; el detalle en edición conserva las acciones aprobadas y la eliminación confirmada.
+No reintroducir Vacaciones desde Calendario, duplicación ni limpieza general. Vacaciones sigue en Configuración. `Editar día` sólo cambia de modo y selección; la escritura ocurre dentro de acciones confirmadas. Las guardias conservan acciones individuales y eliminación confirmada.
 
 Pruebas mínimas:
 
@@ -121,17 +124,32 @@ La implementación se valida por impacto sobre presenter, `RemoteViews`, receive
 
 Estado verificado el 18 de agosto de 2026: este cierre fue implementado, auditado e integrado antes de Perfil por la corrección de secuencia documentada en el prompt maestro. No debe reabrirse para comenzar Onboarding.
 
+## 5.1 Puerta correctiva previa a Onboarding
+
+Las observaciones físicas de Joa del 18 de agosto invalidan parte de la evidencia visual anterior y deben resolverse secuencialmente:
+
+1. `docs/prompts/CORRECCION_ORIENTACION_FOTOS.md` en `codex/photo-orientation-fix`;
+2. `docs/prompts/NAVEGACION_MENU_LATERAL.md` y ADR 0015 en `codex/navigation-drawer`;
+3. `docs/prompts/CALENDARIO_SELECCION_DIRECTA.md` en `codex/calendar-direct-selection`.
+
+Cada rama nace del `main` limpio que resulte de integrar y publicar la anterior. Navegación y Calendario no se desarrollan en paralelo porque ambas modifican la composición raíz. La corrección de Fotos puede usar únicamente AndroidX ExifInterface, fijada y justificada, para interpretar localmente orientación; no habilita lectura general de metadatos. La selección directa no cambia el esquema Room y debe volver atómico el lote de francos si el contrato vigente permite aplicación parcial.
+
+No iniciar la guía contextual hasta que las tres correcciones estén físicamente verificadas en QA: de otro modo enseñaría controles que van a desaparecer.
+
 ## 6. Dependencia 4 — Bienvenida, onboarding y primera carga
 
 Prompt: `docs/prompts/ONBOARDING_Y_PRIMERA_CARGA.md`.
 
-Rama sugerida: `codex/onboarding-first-shift`.
+Estado documental actualizado el 18 de agosto de 2026: el contrato y ADR quedaron preparados pero no confirmados, y ahora dependen de completar primero la puerta correctiva. La implementación no comenzó.
 
-Debe nacer del `HEAD` canónico posterior a Perfil e implementar:
+Rama sugerida: `codex/onboarding-guided-tour`.
+
+Debe nacer del `HEAD` canónico posterior a Fotos, menú lateral y selección directa, e implementar:
 
 - splash técnico sólo si aporta, sin demora artificial;
 - bienvenida clara para vigiladores;
 - tres pasos: organizar guardias, conocer horas/próximos eventos y privacidad local;
+- recorrido contextual sobre menú, Calendario, detalle, edición directa, Fotos, Resumen y Configuración;
 - omitir y repetir desde Ayuda;
 - finalización persistida localmente;
 - permisos solicitados únicamente en contexto;
@@ -176,4 +194,4 @@ La evidencia del especialista no sustituye la verificación de MAIN.
 
 ## 8. Entregables y cierre
 
-MAIN informa en cada etapa qué funciona, archivos y contratos cambiados, pruebas reales, recorrido físico, pendientes y nuevo SHA base. No avanzar a pagos ni otras profesiones hasta terminar estas superficies para vigiladores.
+MAIN informa en cada etapa qué funciona, archivos y contratos cambiados, pruebas reales, recorrido físico, pendientes y nuevo SHA base. La expansión a médicos, enfermeros y policías queda confirmada en la hoja de ruta, pero no se implementa hasta terminar y auditar estas superficies de la versión actual.
