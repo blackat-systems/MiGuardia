@@ -1,6 +1,6 @@
 # ADR 0010: Notificaciones y alarmas locales
 
-- Estado: aceptada e integrada por MAIN
+- Estado: aceptada; base integrada por MAIN; controles explícitos de ocultar/restaurar pendientes
 - Fecha: 2026-08-15
 
 ## Contexto
@@ -46,9 +46,11 @@ Se usa `NotificationCompat.DecoratedCustomViewStyle` con `RemoteViews` acotadas 
 
 La presentación adopta la jerarquía de Vigilia como una tarjeta de estado compacta: acento moderado, estado, abreviatura, horario completo y cuenta regresiva claramente priorizados. No intenta imponer un fondo propio ni reemplazar la superficie del sistema. La implementación conserva `minSdk 26`; cualquier recurso visual más moderno debe degradar a una variante equivalente en Android 8 y posteriores sin perder contenido esencial.
 
-La vista expandida incorpora `Eliminar notificación` como control interno de las `RemoteViews`, sin desplazar las tres acciones estándar. La acción cancela solamente el aviso de esa guardia y registra su identidad opaca como ocultada en el DataStore existente. El reconciliador no la vuelve a publicar mientras siga ocultada. Configuración ofrece `Mostrar notificación nuevamente` para cada aviso todavía elegible y restaura silenciosamente la misma identidad sólo después de revalidar guardia, vacaciones, excepción, preferencias y permiso. El registro se limpia al restaurar o cuando la guardia finaliza, se elimina o pierde elegibilidad.
+El contrato aprobado requiere que la vista expandida incorpore `Eliminar notificación` como control interno de las `RemoteViews`, sin desplazar las tres acciones estándar. La acción debe cancelar solamente el aviso de esa guardia y registrar su identidad opaca como ocultada en el DataStore existente. El reconciliador no debe volver a publicarla mientras siga ocultada. Configuración debe ofrecer `Mostrar notificación nuevamente` para cada aviso todavía elegible y restaurar silenciosamente la misma identidad sólo después de revalidar guardia, vacaciones, excepción, preferencias y permiso. El registro debe limpiarse al restaurar o cuando la guardia finaliza, se elimina o pierde elegibilidad.
 
-`setOngoing(true)` expresa la intención de mantener el aviso visible, pero Android 14 y posteriores permiten que el usuario descarte determinadas notificaciones continuas. Cuando el sistema entrega `deleteIntent`, MiGuardia trata ese gesto como ocultamiento consciente y habilita la misma restauración. La interfaz no promete que el botón sea la única vía física de descarte en versiones donde Android conserva ese control.
+Estado de implementación auditado el 17 de agosto de 2026: DataStore, `deleteIntent` y reconciliación ya reconocen el descarte informado por Android. El control interno `Eliminar notificación` y la restauración desde Configuración todavía no existen en código ni tienen sus pruebas de recorrido; por eso esta parte de la decisión permanece pendiente.
+
+`setOngoing(true)` expresa la intención de mantener el aviso visible, pero Android 14 y posteriores permiten que el usuario descarte determinadas notificaciones continuas. Cuando el sistema entrega `deleteIntent`, MiGuardia trata ese gesto como ocultamiento consciente; la corrección pendiente debe habilitar su restauración. La interfaz no promete que el botón sea la única vía física de descarte en versiones donde Android conserva ese control.
 
 La configuración aplica divulgación progresiva: apagado/encendido, permiso, momento del aviso y comportamiento. Recordatorios múltiples, puntualidad exacta, privacidad y sonido permanecen disponibles como opciones avanzadas, sin enfrentar al usuario con todos los controles al mismo tiempo.
 
@@ -58,7 +60,7 @@ Las acciones son explícitas, inmutables y únicas por acción, UUID y frontera 
 
 ### Permisos y QA
 
-El manifiesto queda limitado a `POST_NOTIFICATIONS`, `SCHEDULE_EXACT_ALARM` y `RECEIVE_BOOT_COMPLETED`. Los receptores son no exportados y `MainActivity` procesa tanto el intent inicial como `onNewIntent`.
+Notificaciones agrega únicamente `POST_NOTIFICATIONS`, `SCHEDULE_EXACT_ALARM` y `RECEIVE_BOOT_COMPLETED`. El manifiesto actual también declara `INTERNET`, incorporado posteriormente y utilizado sólo por Clima opcional. Los receptores son no exportados y `MainActivity` procesa tanto el intent inicial como `onNewIntent`.
 
 El build type `qa` hereda de `debug`, agrega `.qa` al `applicationId` y conserva simultáneamente las variantes instrumentadas debug y QA mediante Android Components. Ninguna prueba debe borrar datos, modificar permisos, canales o alarmas de `com.blackatsystems.miguardia`.
 
@@ -76,7 +78,7 @@ El build type `qa` hereda de `debug`, agrega `.qa` al `applicationId` y conserva
 - Sin acceso exacto el producto sigue funcionando, aunque Android puede demorar las fronteras.
 - Tras force-stop Android no garantiza alarmas hasta que el usuario vuelva a abrir la aplicación; es una restricción de plataforma que no se intenta eludir.
 - La apariencia exacta cambia entre fabricantes y versiones; Vigilia se expresa dentro del contrato de notificaciones y conserva una presentación equivalente desde Android 8.
-- En Android 14 o superior una notificación continua puede ser descartable por gesto; la restauración desde Configuración evita convertir ese límite de plataforma en una pérdida irreversible del estado visible.
+- En Android 14 o superior una notificación continua puede ser descartable por gesto; la restauración pendiente desde Configuración deberá evitar que ese límite de plataforma se convierta en una pérdida irreversible del estado visible.
 - Cambiar el sonido puede reemplazar el canal gestionado por MiGuardia y restablecer personalizaciones previas de ese canal; el usuario sigue pudiendo configurarlo desde Android.
 - El recorrido de reinicio físico queda sujeto a autorización explícita inmediatamente anterior.
 

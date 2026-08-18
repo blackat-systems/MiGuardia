@@ -5,6 +5,8 @@
 > Fecha: 2026-08-17
 >
 > Alcance: MiGuardia para vigiladores
+>
+> Reanudación del 17 de agosto de 2026: Calendario ya está integrado. La Puerta 0 detectó que el contrato de ocultar/restaurar Notificaciones quedó parcialmente implementado. Después de consolidar la base canónica se cerrará primero esa brecha acotada y recién luego se iniciará Perfil; no se abre una nueva decisión funcional ni se amplía el alcance.
 
 ## 0. Rol y misión
 

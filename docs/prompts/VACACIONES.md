@@ -1,6 +1,6 @@
 # Prompt especializado: VACACIONES
 
-> Estado: listo para ejecutar en un worktree especializado
+> Estado: contrato histórico; módulo implementado, integrado y verificado por MAIN
 >
 > Fecha: 2026-08-14
 >

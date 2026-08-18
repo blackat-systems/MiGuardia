@@ -1,6 +1,6 @@
 # Prompt maestro de dependencia — CLIMA
 
-> Estado: preparado por MAIN; autorizado por Joa para ejecución separada
+> Estado: contrato histórico; módulo integrado en `codex/main-3` mediante `735d6a6` y verificado por MAIN
 >
 > Proyecto: MiGuardia
 >

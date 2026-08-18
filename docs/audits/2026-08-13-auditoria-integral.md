@@ -1,5 +1,7 @@
 # Auditoría integral — 2026-08-13
 
+> Documento histórico: certifica la base DATA LOCAL examinada el 13 de agosto de 2026, no el estado actual del producto. La consolidación vigente está en `docs/audits/2026-08-17-puerta-0-consolidacion.md`.
+
 ## Resultado
 
 La base técnica y el incremento DATA LOCAL quedan aprobados para formar una línea base de desarrollo. No se encontraron defectos funcionales abiertos dentro del alcance ya implementado.

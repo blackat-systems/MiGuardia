@@ -6,6 +6,8 @@
 >
 > Estado: decisiones funcionales aprobadas en PLANIFICACIÓN
 >
+> Estado de implementación auditado el 17 de agosto de 2026: este documento conserva la autoridad funcional, pero no todo lo decidido está construido. La fotografía técnica vigente se registra en `docs/audits/2026-08-17-puerta-0-consolidacion.md`.
+>
 > Destinatario: chat/tarea MAIN
 >
 > Propietario del producto: Joaquin
@@ -495,6 +497,8 @@ La experiencia visible es siempre una notificación común, nunca una alarma tip
 
 El ocultamiento se persiste en el DataStore exclusivo de Notificaciones con identificadores opacos y caduca cuando la guardia finaliza, deja de ser elegible, se elimina o el usuario restaura el aviso. No requiere cambios en Room, permisos, dependencias, servicios ni red.
 
+Estado verificado durante la Puerta 0 del 17 de agosto de 2026: la base de Notificaciones y el registro de descartes informados por Android están implementados. Los controles explícitos `Eliminar notificación` dentro de la vista expandida y `Mostrar notificación nuevamente` desde Configuración siguen pendientes de una corrección acotada. Los párrafos anteriores son el contrato aprobado, no evidencia de que esos dos recorridos ya existan.
+
 ## 15. Motor de próximo evento
 
 Crear una única fuente de verdad reutilizable por pantalla inicial, notificaciones y widgets. Debe determinar:
@@ -726,6 +730,8 @@ Decisión de hoja de ruta del 17 de agosto de 2026: después de cerrar la experi
 Decisión posterior del 17 de agosto de 2026: la experiencia inicial se implementa secuencialmente: primero un calendario en modo consulta con `Editar calendario`; luego Perfil laboral y reorganización de Configuración; después el rediseño Vigilia y control de visibilidad de Notificaciones; por último bienvenida, onboarding y primera carga guiada. Cada dependencia nace del `HEAD` verificado de MAIN después de integrar la anterior.
 
 Decisión posterior del 17 de agosto de 2026: Notificaciones debe conservar Android 8/API 26 como mínimo compatible. Su contenido se refina como tarjeta de estado Vigilia dentro de los límites visuales del panel de Android, con degradación equivalente en versiones antiguas. `Eliminar notificación` oculta sólo el aviso de esa guardia y `Mostrar notificación nuevamente` permite restaurarlo desde Configuración mientras siga siendo elegible. En Android 14 o superior el sistema puede permitir también el descarte por gesto, aun cuando MiGuardia solicite persistencia; la aplicación debe reconocer esa limitación sin prometer un bloqueo imposible.
+
+Corrección de secuencia al reanudar el 17 de agosto de 2026: el Calendario en consulta/edición ya está integrado en la línea candidata. La Puerta 0 comprobó que los dos controles explícitos de visibilidad de Notificaciones todavía no están implementados aunque su contrato sí fue documentado. Como es el cierre de una función existente y no una función nueva, debe corregirse y validarse inmediatamente después de consolidar la base canónica, antes de comenzar Perfil laboral. Esto no reabre la decisión funcional ni amplía Notificaciones.
 
 La primera versión utilizable debe alcanzar almacenamiento local, calendario, carga individual/múltiple, objetivos/horarios, fotos y horas básicas antes de sumar capas más complejas.
 

@@ -1,48 +1,55 @@
 # MiGuardia
 
-Aplicación Android local y privada para registrar y consultar guardias. El producto está orientado inicialmente a vigiladores de Inforce en Córdoba Capital, Argentina.
+Aplicación Android local y privada para que vigiladores registren y consulten guardias, francos, días sin definir, carpetas médicas, novedades, horas, próximos eventos, clima y una estimación remunerativa orientativa.
 
-## Estado actual
+## Estado de consolidación
 
-La base técnica y DATA LOCAL están implementadas y auditadas:
+La línea funcional más avanzada está en `codex/main-3`. Durante la Puerta 0 se verificó como candidata a continuidad oficial, pero todavía no fue promovida a `main`: esa operación requiere la autorización explícita de Joa.
 
-- aplicación Android en Kotlin y Jetpack Compose;
-- módulos `app`, `core:domain` y `core:database`;
-- Room con esquema versión 1 y cinco tablas;
-- contratos reactivos con `Flow` y escrituras `suspend`;
-- calendario visual inicial, resumen y configuración como superficies base;
-- pruebas JVM e instrumentadas sobre el Samsung Galaxy S25 Ultra.
+La candidata contiene:
 
-El calendario todavía no está conectado a los repositorios ni permite cargar datos. Objetivos, horarios, horas, notificaciones y las demás funciones se incorporarán en incrementos posteriores según `docs/PROMPT_MAESTRO_MAIN.md`.
+- Kotlin, Jetpack Compose y los módulos `app`, `core:domain` y `core:database`;
+- Room v5 con trece entidades, esquemas exportados v1 a v5 y migraciones explícitas `1→2→3→4→5`;
+- calendario mensual conectado a los repositorios, carga simple y múltiple, objetivos, horarios, francos, notas, novedades, feriados, carpeta médica, vacaciones y fotos mensuales;
+- motores de horas y próximo evento;
+- notificaciones locales, alarmas reconstruibles, cronómetro nativo, privacidad y registro del descarte informado por Android;
+- clima opcional para Córdoba Capital con caché privado y proveedor reemplazable;
+- estimación bruta SUVICO limitada a las escalas verificadas de julio a diciembre de 2026;
+- identidad Vigilia clara, oscura o siguiendo el sistema;
+- zoom interno persistente de 100 %, 150 % y 200 %;
+- calendario con modos explícitos de consulta y edición.
+
+Notificaciones conserva un cierre acotado pendiente: el contrato aprobado exige `Eliminar notificación` dentro de la vista expandida y `Mostrar notificación nuevamente` desde Configuración, pero esos dos controles todavía no están implementados. No se consideran terminados hasta agregar código, pruebas y QA por impacto.
+
+Perfil laboral, bienvenida/onboarding, widgets, informes PDF/XLSX, copias/restauración, bloqueo local y preparación de publicación están diseñados o planificados, pero no implementados.
 
 ## Requisitos de desarrollo
 
 - Android Studio con JDK/JBR compatible con Gradle 9.5;
 - Android SDK 37;
-- un archivo local `local.properties` con la ruta del SDK, generado normalmente por Android Studio.
+- `local.properties` local con la ruta del SDK, generado normalmente por Android Studio.
 
-No se necesita ningún secreto para compilar `debug`. Si existe `.local-signing/debug.keystore`, se usa solo en el equipo local; si no existe, se conserva la firma debug estándar de Android. También puede indicarse otra ruta local con la propiedad `miguardia.debugKeystore`.
+No se necesita ningún secreto para compilar `debug`. Si existe `.local-signing/debug.keystore`, se usa sólo en el equipo local; si no existe, se conserva la firma debug estándar de Android. También puede indicarse otra ruta local con la propiedad `miguardia.debugKeystore`.
 
 ## Comprobaciones principales
 
 En PowerShell, desde la raíz del repositorio:
 
 ```powershell
-.\gradlew.bat testDebugUnitTest lintDebug assembleDebug assembleRelease
+.\gradlew.bat --no-daemon --stacktrace --max-workers=1 testDebugUnitTest lintDebug assembleDebug assembleRelease
 ```
 
-Con un dispositivo Android conectado, autorizado y desbloqueado:
+La instrumentación física se elige por mapa de impacto. Debe usar el paquete QA cuando el recorrido pueda modificar datos, permisos, canales o alarmas. No se instala, desinstala ni borra el paquete productivo como parte de una auditoría documental.
 
-```powershell
-.\gradlew.bat connectedDebugAndroidTest
-```
+## Privacidad y red
+
+Los datos laborales permanecen locales. No hay cuentas, nube, sincronización, analítica, telemetría ni ubicación automática. El permiso de Internet se usa únicamente para Clima cuando el usuario lo habilita; nunca se envían guardias, objetivos, notas, identidad ni datos del teléfono al proveedor meteorológico.
 
 ## Documentación
 
 - Reglas permanentes: `AGENTS.md`.
 - Producto y decisiones aprobadas: `docs/PROMPT_MAESTRO_MAIN.md`.
+- Pausa y procedimiento de reanudación: `docs/PROMPT_MAESTRO_PAUSA_REVISION_Y_REANUDACION.md`.
+- Estado comprobado de la consolidación: `docs/audits/2026-08-17-puerta-0-consolidacion.md`.
 - Decisiones técnicas: `docs/adr/`.
-- Prompts de dependencias: `docs/prompts/`.
-- Auditorías: `docs/audits/`.
-
-Los datos son locales por defecto. El proyecto no declara acceso a internet, analítica, telemetría ni copias automáticas del contenido de la aplicación.
+- Contratos históricos y prompts de dependencias: `docs/prompts/`.

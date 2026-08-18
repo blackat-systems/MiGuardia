@@ -1,6 +1,6 @@
 # Prompt especializado: NOVEDADES, FERIADOS Y NOTAS
 
-> Estado: listo para ejecutar en un worktree especializado
+> Estado: contrato histórico; módulo implementado, integrado y verificado por MAIN
 > Fecha: 2026-08-13
 > Autoridad: MAIN
 > Padre funcional verificado: `a4d9dba` — `feat: add monthly hours summary`

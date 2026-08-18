@@ -1,6 +1,6 @@
 # Prompt maestro de dependencia — MOTOR BÁSICO DE HORAS, incremento 4
 
-> Estado: preparado por MAIN; pendiente de ejecución en una tarea separada autorizada por Joaquin
+> Estado: contrato histórico; módulo implementado, integrado y verificado por MAIN
 >
 > Proyecto: MiGuardia
 >

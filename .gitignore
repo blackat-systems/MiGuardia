@@ -28,6 +28,7 @@ google-services.json
 
 # Informes y copias generados localmente
 outputs/
+output/
 backups/
 
 # Material de referencia con datos laborales reales
