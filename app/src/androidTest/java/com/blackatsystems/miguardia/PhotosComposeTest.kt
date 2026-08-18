@@ -1,9 +1,15 @@
 package com.blackatsystems.miguardia
 
-import android.graphics.Bitmap
 import android.content.ContextWrapper
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color as AndroidColor
+import android.graphics.Paint
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -12,6 +18,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.pinch
 import androidx.compose.ui.test.swipe
+import androidx.exifinterface.media.ExifInterface
 import com.blackatsystems.miguardia.ui.photos.PhotosActions
 import com.blackatsystems.miguardia.ui.photos.PhotosSurface
 import com.blackatsystems.miguardia.ui.photos.PhotosSurfaceHost
@@ -28,6 +35,7 @@ import java.time.YearMonth
 import java.io.File
 import java.util.UUID
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -188,6 +196,135 @@ class PhotosComposeTest {
 
     }
 
+    @Test fun thumbnailAndViewerRenderTheSameExifOrientation() {
+        val baseContext = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val photoId = UUID.fromString("10000000-0000-0000-0000-000000000013")
+        val isolatedFilesDir = File(baseContext.cacheDir, "photos-compose-exif-$photoId")
+        val context = object : ContextWrapper(baseContext) {
+            override fun getFilesDir(): File = isolatedFilesDir
+        }
+        val fileStore = SchedulePhotoFileStore(context)
+        val photoFile = fileStore.file("$photoId.jpg")
+        photoFile.parentFile?.mkdirs()
+        createQuadrantJpeg(photoFile)
+        ExifInterface(photoFile).apply {
+            setAttribute(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_ROTATE_90.toString())
+            saveAttributes()
+        }
+        val photo = SchedulePhoto(
+            photoId,
+            YearMonth.of(2026, 8),
+            null,
+            null,
+            null,
+            photoFile.name,
+            "image/jpeg",
+            photoFile.length(),
+            160,
+            100,
+            Instant.EPOCH,
+            Instant.EPOCH,
+        )
+        val surface = mutableStateOf(PhotosSurface.LIST)
+
+        try {
+            compose.setContent {
+                MiGuardiaTheme {
+                    PhotosSurfaceHost(
+                        PhotosUiState(
+                            surface = surface.value,
+                            month = YearMonth.of(2026, 8),
+                            photos = listOf(photo),
+                            selectedId = photoId.takeIf { surface.value == PhotosSurface.VIEWER },
+                            isLoading = false,
+                        ),
+                        PhotosActions(),
+                        fileStore,
+                    )
+                }
+            }
+
+            val thumbnailOrder = renderedQuadrantOrder()
+            compose.runOnIdle { surface.value = PhotosSurface.VIEWER }
+            val viewerOrder = renderedQuadrantOrder()
+
+            assertEquals(listOf("B", "R", "Y", "G"), thumbnailOrder)
+            assertEquals(thumbnailOrder, viewerOrder)
+        } finally {
+            isolatedFilesDir.deleteRecursively()
+        }
+    }
+
+    @Test fun replacementAndReopenKeepTheExifCorrection() {
+        val baseContext = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val photoId = UUID.fromString("10000000-0000-0000-0000-000000000014")
+        val isolatedFilesDir = File(baseContext.cacheDir, "photos-compose-replace-$photoId")
+        val context = object : ContextWrapper(baseContext) {
+            override fun getFilesDir(): File = isolatedFilesDir
+        }
+        val fileStore = SchedulePhotoFileStore(context)
+        val original = fileStore.file("$photoId.jpg")
+        val replacement = fileStore.file("${photoId}_a1b2c3d4.jpg")
+        original.parentFile?.mkdirs()
+        createQuadrantJpeg(original)
+        createQuadrantJpeg(replacement)
+        ExifInterface(replacement).apply {
+            setAttribute(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_ROTATE_90.toString())
+            saveAttributes()
+        }
+        val initialPhoto = SchedulePhoto(
+            photoId,
+            YearMonth.of(2026, 8),
+            null,
+            null,
+            null,
+            original.name,
+            "image/jpeg",
+            original.length(),
+            160,
+            100,
+            Instant.EPOCH,
+            Instant.EPOCH,
+        )
+        val photo = mutableStateOf(initialPhoto)
+        val surface = mutableStateOf(PhotosSurface.VIEWER)
+
+        try {
+            compose.setContent {
+                MiGuardiaTheme {
+                    PhotosSurfaceHost(
+                        PhotosUiState(
+                            surface = surface.value,
+                            month = YearMonth.of(2026, 8),
+                            photos = listOf(photo.value),
+                            selectedId = photoId,
+                            isLoading = false,
+                        ),
+                        PhotosActions(),
+                        fileStore,
+                    )
+                }
+            }
+
+            assertEquals(listOf("R", "G", "B", "Y"), renderedQuadrantOrder())
+            compose.runOnIdle {
+                photo.value = initialPhoto.copy(
+                    storageKey = replacement.name,
+                    byteSize = replacement.length(),
+                    updatedAt = Instant.ofEpochMilli(1),
+                )
+            }
+            assertEquals(listOf("B", "R", "Y", "G"), renderedQuadrantOrder())
+
+            compose.runOnIdle { surface.value = PhotosSurface.LIST }
+            assertEquals(listOf("B", "R", "Y", "G"), renderedQuadrantOrder())
+            compose.runOnIdle { surface.value = PhotosSurface.VIEWER }
+            assertEquals(listOf("B", "R", "Y", "G"), renderedQuadrantOrder())
+        } finally {
+            isolatedFilesDir.deleteRecursively()
+        }
+    }
+
     @Test fun viewerDoesNotSubstituteAnotherPhotoWhenSelectionIsMissing() {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
         val existing = UUID.fromString("10000000-0000-0000-0000-000000000001")
@@ -212,5 +349,65 @@ class PhotosComposeTest {
 
         compose.onNodeWithText("Foto no disponible").assertIsDisplayed()
         compose.onNodeWithText("1 de 1").assertDoesNotExist()
+    }
+
+    private fun renderedQuadrantOrder(): List<String> {
+        compose.waitUntil(timeoutMillis = 5_000L) {
+            runCatching {
+                compose.onAllNodesWithContentDescription(
+                    "Foto del cronograma",
+                    useUnmergedTree = true,
+                ).fetchSemanticsNodes().size == 1
+            }.getOrDefault(false)
+        }
+        val pixels = compose.onNodeWithContentDescription(
+            "Foto del cronograma",
+            useUnmergedTree = true,
+        ).captureToImage().toPixelMap()
+        val centroids = mutableMapOf<String, Triple<Long, Long, Long>>()
+        for (y in 0 until pixels.height step 3) {
+            for (x in 0 until pixels.width step 3) {
+                val color = pixels[x, y]
+                val name = when {
+                    color.red > .6f && color.green < .4f && color.blue < .4f -> "R"
+                    color.red < .4f && color.green > .4f && color.blue < .4f -> "G"
+                    color.red < .4f && color.green < .4f && color.blue > .6f -> "B"
+                    color.red > .6f && color.green > .6f && color.blue < .4f -> "Y"
+                    else -> null
+                } ?: continue
+                val current = centroids[name] ?: Triple(0L, 0L, 0L)
+                centroids[name] = Triple(current.first + x, current.second + y, current.third + 1L)
+            }
+        }
+        assertEquals(setOf("R", "G", "B", "Y"), centroids.keys)
+        val ordered = centroids.mapValues { (_, sums) ->
+            (sums.first.toDouble() / sums.third) to (sums.second.toDouble() / sums.third)
+        }
+        val rows = ordered.entries.sortedBy { it.value.second }
+        val top = rows.take(2).sortedBy { it.value.first }
+        val bottom = rows.takeLast(2).sortedBy { it.value.first }
+        assertTrue(top.maxOf { it.value.second } < bottom.minOf { it.value.second })
+        return top.map { it.key } + bottom.map { it.key }
+    }
+
+    private fun createQuadrantJpeg(file: File) {
+        val bitmap = Bitmap.createBitmap(160, 100, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        val paint = Paint().apply { style = Paint.Style.FILL }
+        fun fill(color: Int, left: Float, top: Float, right: Float, bottom: Float) {
+            paint.color = color
+            canvas.drawRect(left, top, right, bottom, paint)
+        }
+        fill(AndroidColor.RED, 0f, 0f, 80f, 50f)
+        fill(AndroidColor.GREEN, 80f, 0f, 160f, 50f)
+        fill(AndroidColor.BLUE, 0f, 50f, 80f, 100f)
+        fill(AndroidColor.YELLOW, 80f, 50f, 160f, 100f)
+        try {
+            file.outputStream().use { output ->
+                assertTrue(bitmap.compress(Bitmap.CompressFormat.JPEG, 100, output))
+            }
+        } finally {
+            bitmap.recycle()
+        }
     }
 }

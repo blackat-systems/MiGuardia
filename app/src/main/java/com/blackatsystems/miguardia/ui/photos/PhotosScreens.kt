@@ -1,6 +1,5 @@
 package com.blackatsystems.miguardia.ui.photos
 
-import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -38,6 +37,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -67,6 +67,8 @@ import java.util.Locale
 import java.util.UUID
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+
+private val photoBitmapDecoder = SchedulePhotoBitmapDecoder()
 
 data class PhotosActions(
     val open: (YearMonth) -> Unit = {},
@@ -406,20 +408,13 @@ private fun PhotoImage(
 ) {
     val bitmap by produceState<android.graphics.Bitmap?>(null, photo.storageKey) {
         value = withContext(Dispatchers.IO) {
-            val sample = generateSequence(1) { it * 2 }
-                .takeWhile {
-                    photo.pixelWidth / it > maxDimension || photo.pixelHeight / it > maxDimension
-                }
-                .lastOrNull()
-                ?.times(2)
-                ?: 1
-            BitmapFactory.decodeFile(
-                fileStore.file(photo.storageKey).absolutePath,
-                BitmapFactory.Options().apply { inSampleSize = sample },
-            )
+            photoBitmapDecoder.decode(fileStore.file(photo.storageKey), maxDimension)?.bitmap
         }
     }
     val loadedBitmap = bitmap
+    DisposableEffect(loadedBitmap) {
+        onDispose { loadedBitmap?.recycle() }
+    }
     if (loadedBitmap != null) {
         Image(
             bitmap = loadedBitmap.asImageBitmap(),
