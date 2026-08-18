@@ -1,6 +1,6 @@
 # Prompt especializado definitivo - Aplicación de Vigilia a MiGuardia
 
-> Estado al 17 de agosto de 2026: contrato histórico preservado durante la Puerta 0. Vigilia clara, oscura y siguiendo el sistema está integrada en `codex/main-3` mediante `b62e4cc`; las referencias visuales locales continúan fuera de Git hasta resolver procedencia y licencia. La decisión vigente posterior conserva semántica accesible, pero prohíbe activar TalkBack o declarar recorridos específicos de TalkBack; esa decisión reemplaza cualquier instrucción histórica contraria de este prompt.
+> Estado actualizado el 18 de agosto de 2026: contrato histórico preservado durante la Puerta 0. Vigilia clara, oscura y siguiendo el sistema está integrada en `main` mediante `b62e4cc`; las referencias visuales locales continúan fuera de Git hasta resolver procedencia y licencia. La decisión vigente posterior conserva semántica accesible, pero prohíbe activar TalkBack o declarar recorridos específicos de TalkBack; esa decisión reemplaza cualquier instrucción histórica contraria de este prompt.
 
 ## 0. Rol, autoridad y forma de entrega
 

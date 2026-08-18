@@ -4,9 +4,9 @@ Aplicación Android local y privada para que vigiladores registren y consulten g
 
 ## Estado de consolidación
 
-La línea funcional más avanzada está en `codex/main-3`. Durante la Puerta 0 se verificó como candidata a continuidad oficial, pero todavía no fue promovida a `main`: esa operación requiere la autorización explícita de Joa.
+La base canónica y operativa es `main`, sincronizada con `origin/main`. La promoción se cerró sobre `e3caf6f4acba8af8a1ff27620b7c8c99a4ff176f`; la rama `codex/main-3` se conserva en ese punto como referencia de la línea de integración auditada y ya no es la base de trabajo. Los cambios posteriores continúan únicamente sobre `main`.
 
-La candidata contiene:
+La base canónica contiene:
 
 - Kotlin, Jetpack Compose y los módulos `app`, `core:domain` y `core:database`;
 - Room v5 con trece entidades, esquemas exportados v1 a v5 y migraciones explícitas `1→2→3→4→5`;
@@ -50,6 +50,7 @@ Los datos laborales permanecen locales. No hay cuentas, nube, sincronización, a
 - Reglas permanentes: `AGENTS.md`.
 - Producto y decisiones aprobadas: `docs/PROMPT_MAESTRO_MAIN.md`.
 - Pausa y procedimiento de reanudación: `docs/PROMPT_MAESTRO_PAUSA_REVISION_Y_REANUDACION.md`.
-- Estado comprobado de la consolidación: `docs/audits/2026-08-17-puerta-0-consolidacion.md`.
+- Auditoría original de Puerta 0: `docs/audits/2026-08-17-puerta-0-consolidacion.md`.
+- Cierre de la promoción canónica: `docs/audits/2026-08-18-base-canonica.md`.
 - Decisiones técnicas: `docs/adr/`.
 - Contratos históricos y prompts de dependencias: `docs/prompts/`.

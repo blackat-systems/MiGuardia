@@ -1,5 +1,7 @@
 # Puerta 0 — consolidación de Git y documentación — 2026-08-17
 
+> Estado posterior: la promoción recomendada en este informe fue autorizada y completada el 18 de agosto de 2026. Esta auditoría se conserva como fotografía anterior a la operación. El cierre y las referencias vigentes están en `docs/audits/2026-08-18-base-canonica.md`.
+
 ## Resultado ejecutivo
 
 `codex/main-3` es la candidata recomendada para la continuidad oficial de MiGuardia. Su código representa la línea funcional más avanzada y su historia es descendiente directa de la `main` local. Todavía no es la rama canónica: no se hizo merge, rebase, fast-forward, commit ni push durante esta etapa.

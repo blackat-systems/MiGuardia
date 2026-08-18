@@ -2,6 +2,8 @@
 
 > Reanudación auditada el 17 de agosto de 2026: este documento conserva la fotografía de pausa y sus instrucciones. La evidencia actual de la Puerta 0 está en `docs/audits/2026-08-17-puerta-0-consolidacion.md`. Cuando una descripción histórica contradiga esa auditoría, prevalece la evidencia nueva.
 
+> Cierre posterior del 18 de agosto de 2026: en la instantánea de promoción, `main`, `origin/main`, `codex/main-3` y `origin/codex/main-3` quedaron alineadas en `e3caf6f4acba8af8a1ff27620b7c8c99a4ff176f`. Este documento conserva la fotografía previa y no debe usarse para repetir la promoción. El estado canónico vigente está en `docs/audits/2026-08-18-base-canonica.md`.
+
 > Documento de continuidad integral
 >
 > Fotografía auditada: 17 de agosto de 2026

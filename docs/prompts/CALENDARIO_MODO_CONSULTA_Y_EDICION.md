@@ -1,6 +1,6 @@
 # MiGuardia — dependencia CALENDARIO: modo consulta y edición explícita
 
-> Estado: contrato histórico; módulo integrado en `codex/main-3` mediante `9ea42db` y verificado por MAIN
+> Estado: contrato histórico; módulo integrado en `main` mediante `9ea42db` y verificado por MAIN
 >
 > Fecha: 2026-08-17
 >

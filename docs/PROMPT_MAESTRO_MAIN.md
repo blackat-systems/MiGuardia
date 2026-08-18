@@ -6,7 +6,7 @@
 >
 > Estado: decisiones funcionales aprobadas en PLANIFICACIÓN
 >
-> Estado de implementación auditado el 17 de agosto de 2026: este documento conserva la autoridad funcional, pero no todo lo decidido está construido. La fotografía técnica vigente se registra en `docs/audits/2026-08-17-puerta-0-consolidacion.md`.
+> Estado de implementación auditado el 18 de agosto de 2026: este documento conserva la autoridad funcional, pero no todo lo decidido está construido. La Puerta 0 está en `docs/audits/2026-08-17-puerta-0-consolidacion.md` y su promoción canónica en `docs/audits/2026-08-18-base-canonica.md`.
 >
 > Destinatario: chat/tarea MAIN
 >
@@ -731,7 +731,7 @@ Decisión posterior del 17 de agosto de 2026: la experiencia inicial se implemen
 
 Decisión posterior del 17 de agosto de 2026: Notificaciones debe conservar Android 8/API 26 como mínimo compatible. Su contenido se refina como tarjeta de estado Vigilia dentro de los límites visuales del panel de Android, con degradación equivalente en versiones antiguas. `Eliminar notificación` oculta sólo el aviso de esa guardia y `Mostrar notificación nuevamente` permite restaurarlo desde Configuración mientras siga siendo elegible. En Android 14 o superior el sistema puede permitir también el descarte por gesto, aun cuando MiGuardia solicite persistencia; la aplicación debe reconocer esa limitación sin prometer un bloqueo imposible.
 
-Corrección de secuencia al reanudar el 17 de agosto de 2026: el Calendario en consulta/edición ya está integrado en la línea candidata. La Puerta 0 comprobó que los dos controles explícitos de visibilidad de Notificaciones todavía no están implementados aunque su contrato sí fue documentado. Como es el cierre de una función existente y no una función nueva, debe corregirse y validarse inmediatamente después de consolidar la base canónica, antes de comenzar Perfil laboral. Esto no reabre la decisión funcional ni amplía Notificaciones.
+Corrección de secuencia al reanudar, actualizada el 18 de agosto de 2026: el Calendario en consulta/edición ya está integrado en `main` y la base canónica quedó consolidada. La Puerta 0 comprobó que los dos controles explícitos de visibilidad de Notificaciones todavía no están implementados aunque su contrato sí fue documentado. Como es el cierre de una función existente y no una función nueva, debe corregirse y validarse ahora, antes de comenzar Perfil laboral. Esto no reabre la decisión funcional ni amplía Notificaciones.
 
 La primera versión utilizable debe alcanzar almacenamiento local, calendario, carga individual/múltiple, objetivos/horarios, fotos y horas básicas antes de sumar capas más complejas.
 
