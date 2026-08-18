@@ -60,4 +60,23 @@ La consolidación de base quedó cerrada. La brecha de Notificaciones que debía
 - `Eliminar notificación` dentro de la vista expandida;
 - `Mostrar notificación nuevamente` desde Configuración, con restauración individual y, si corresponde, total.
 
-El cierre técnico y su evidencia se registran en `docs/audits/2026-08-18-notificaciones-visibilidad.md`. Perfil laboral queda habilitado como próximo incremento funcional. La clasificación y eventual eliminación de worktrees históricos continúa siendo una operación separada que requiere inventario individual y autorización explícita de Joa.
+El cierre técnico y su evidencia se registran en `docs/audits/2026-08-18-notificaciones-visibilidad.md`. Perfil laboral queda habilitado como próximo incremento funcional.
+
+## Saneamiento posterior de worktrees
+
+Joa autorizó respaldar los estados locales y eliminar únicamente catorce worktrees históricos bajo `C:\Users\Joaquin\.codex\worktrees`: `1aa1`, `3e26`, `68d1`, `7081`, `72a0`, `9841`, `a72c`, `b11f`, `c1e7`, `d141`, `d3d4`, `e597`, `e6a6` y `ff8b`.
+
+Antes de borrar se verificó que todos sus HEAD fueran ancestros de `main`. Trece estados sucios se compararon archivo por archivo con su respaldo; `a72c` estaba limpio. La recuperación durable quedó en:
+
+`C:\Users\Joaquin\Desktop\chatgptprojects\MiGuardia_WORKTREES_RECOVERY_2026-08-18`
+
+Contiene catorce inventarios, parches binarios, 386 copias de archivos pendientes y un manifiesto maestro de 444 artefactos. La verificación independiente informó cero faltantes y cero divergencias. SHA-256 de `MASTER_SHA256.csv`:
+
+`07C618AB4C3FB30AD483C1BB65D21A6AE4BBEC10FC9A993CAF8257215D34D21D`
+
+Después de la limpieza quedaron registrados únicamente:
+
+- `C:\Users\Joaquin\.codex\worktrees\6883\MiGaurdia`, sobre `main` canónica;
+- `C:\Users\Joaquin\Desktop\chatgptprojects\MiGaurdia`, sobre `codex/recovery-main-pre-consolidation`.
+
+Las catorce rutas eliminadas dejaron de existir. No se eliminaron ramas, respaldos, la carpeta principal de recuperación ni el worktree `6883`. `main`, `origin/main` y `HEAD` continuaron alineados en `ef2daabd35e7e88b11e56879e50f2b383c63664f`, con diferencia `0/0` y árbol limpio. La operación no modificó código, datos de la aplicación ni el Samsung productivo.
