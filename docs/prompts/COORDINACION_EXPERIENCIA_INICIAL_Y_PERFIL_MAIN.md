@@ -6,7 +6,7 @@
 >
 > Alcance: MiGuardia para vigiladores
 >
-> Reanudación actualizada el 18 de agosto de 2026: Calendario y la brecha acotada de ocultar/restaurar Notificaciones están integrados en `main`. Perfil laboral y la reorganización de Configuración quedaron implementados y auditados en `codex/guard-profile-settings`; resta su commit y promoción autorizados. Onboarding es el próximo incremento sólo después de consolidar esa nueva base.
+> Reanudación actualizada el 18 de agosto de 2026: Calendario, la brecha acotada de ocultar/restaurar Notificaciones y Perfil laboral con la reorganización de Configuración están integrados y publicados en `main`. La nueva base canónica es `32767084ae96c399ab4af40cae35eaa40b1ae925`. Bienvenida, onboarding, primera carga y Ayuda son el próximo incremento habilitado.
 
 ## 0. Rol y misión
 
@@ -98,7 +98,7 @@ Debe nacer del `HEAD` posterior a Calendario e implementar un perfil local, no u
 
 MAIN debe decidir y documentar DataStore o Room. Toda persistencia requiere estrategia no destructiva y pruebas de valor inicial, edición, reapertura, nombre vacío, proyecciones sin duplicados e historia intacta.
 
-Estado verificado el 18 de agosto de 2026: se eligió un DataStore Preferences exclusivo mediante `docs/adr/0013-perfil-laboral-local-en-datastore.md`. La implementación y el QA por impacto están completos en la rama candidata; la evidencia está en `docs/audits/2026-08-18-perfil-laboral.md`.
+Estado verificado el 18 de agosto de 2026: se eligió un DataStore Preferences exclusivo mediante `docs/adr/0013-perfil-laboral-local-en-datastore.md`. La implementación y el QA por impacto están integrados y publicados en `main` mediante `32767084ae96c399ab4af40cae35eaa40b1ae925`; la evidencia está en `docs/audits/2026-08-18-perfil-laboral.md`.
 
 ## 5. Dependencia 3 — Notificaciones Vigilia y control de visibilidad
 

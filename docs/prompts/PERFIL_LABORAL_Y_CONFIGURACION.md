@@ -1,6 +1,6 @@
 # MiGuardia — dependencia especializada Perfil laboral y Configuración
 
-> Estado: implementación y auditoría de MAIN completadas en `codex/guard-profile-settings`; pendiente de commit y promoción autorizados
+> Estado: implementación auditada, integrada y publicada en `main` mediante `32767084ae96c399ab4af40cae35eaa40b1ae925`
 >
 > Fecha: 2026-08-18
 >

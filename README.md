@@ -22,7 +22,7 @@ La base canónica contiene:
 
 El cierre de visibilidad de Notificaciones está implementado y validado por impacto: `Eliminar notificación` oculta únicamente el aviso elegido, el reconciliador respeta y depura ese estado, y Configuración permite restaurar individualmente o en conjunto los avisos todavía elegibles.
 
-Perfil laboral está implementado y validado por impacto en su rama candidata. Bienvenida/onboarding, widgets, informes PDF/XLSX, copias/restauración, bloqueo local y preparación de publicación continúan diseñados o planificados, pero no implementados.
+Perfil laboral está implementado, validado por impacto e integrado en `main`. Bienvenida/onboarding, widgets, informes PDF/XLSX, copias/restauración, bloqueo local y preparación de publicación continúan diseñados o planificados, pero no implementados.
 
 ## Requisitos de desarrollo
 

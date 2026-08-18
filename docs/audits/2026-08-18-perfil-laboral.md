@@ -87,4 +87,4 @@ La orientación automática quedó restaurada. Al finalizar se desinstalaron ún
 
 No se agregaron logs, datos reales, identificadores personales obligatorios, secretos, permisos, telemetría, nube, sincronización ni red. Las pruebas y el recorrido usaron exclusivamente datos ficticios y almacenamiento QA aislado.
 
-La implementación permanece sin commit en `codex/guard-profile-settings`. La revisión final del diff y de los archivos no rastreados, `git diff --check`, la búsqueda de secretos y el estado Git quedaron limpios dentro del alcance esperado. La rama está lista para solicitar autorización de commit. La promoción a `main` y cualquier publicación requieren autorizaciones explícitas separadas.
+La revisión final del diff y de los archivos no rastreados, `git diff --check`, la búsqueda de secretos y el estado Git quedaron limpios dentro del alcance esperado. La implementación se confirmó como `32767084ae96c399ab4af40cae35eaa40b1ae925`, se promovió por fast-forward y se publicó en `origin/main`; `codex/guard-profile-settings` se conserva apuntando al mismo SHA.
