@@ -8,7 +8,9 @@ import com.blackatsystems.miguardia.core.domain.model.Shift
 import com.blackatsystems.miguardia.core.domain.model.ShiftNotificationConfig
 import com.blackatsystems.miguardia.core.domain.repository.ShiftNotificationConfigRepository
 import com.blackatsystems.miguardia.notifications.NotificationPreferencesStore
+import com.blackatsystems.miguardia.notifications.NotificationAttentionMode
 import com.blackatsystems.miguardia.notifications.NotificationPrivacy
+import com.blackatsystems.miguardia.notifications.NotificationRhythm
 import com.blackatsystems.miguardia.notifications.NotificationRuntime
 import com.blackatsystems.miguardia.notifications.NotificationSystemAccess
 import java.util.UUID
@@ -114,6 +116,10 @@ class NotificationViewModel(
     fun setPreciseTiming(value: Boolean) = launchWrite { preferencesStore.setPreciseTiming(value) }
     fun setPersistent(value: Boolean) = launchWrite { preferencesStore.setPersistentWhileActive(value) }
     fun setPrivacy(value: NotificationPrivacy) = launchWrite { preferencesStore.setPrivacy(value) }
+    fun setAttentionMode(value: NotificationAttentionMode) = launchWrite {
+        preferencesStore.setAttentionMode(value)
+    }
+    fun applyRhythm(value: NotificationRhythm) = launchWrite { preferencesStore.applyRhythm(value) }
     fun setSound(uri: Uri?) = launchWrite { preferencesStore.setSoundUri(uri) }
     fun setGlobalReminders(values: Collection<Long>) = launchWrite {
         preferencesStore.setGlobalReminderLeadMinutes(values)
@@ -150,6 +156,14 @@ class NotificationViewModel(
                 else -> "Se mostraron nuevamente $restored notificaciones."
             }
         }
+    }
+
+    fun sendTestNotification() = launchOperation {
+        if (!systemAccess.read().notificationPermissionGranted) {
+            return@launchOperation "Primero permití las notificaciones en Android."
+        }
+        runtime.showTestNotification(preferencesStore.current())
+        "Prueba enviada. Se elimina sola en un minuto."
     }
 
     fun clearMessage() = _uiState.update { it.copy(errorMessage = null, infoMessage = null) }

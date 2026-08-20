@@ -8,12 +8,19 @@ import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -35,15 +42,21 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.core.net.toUri
-import com.blackatsystems.miguardia.notifications.NotificationPrivacy
 import com.blackatsystems.miguardia.core.domain.model.Shift
+import com.blackatsystems.miguardia.notifications.NotificationAttentionMode
+import com.blackatsystems.miguardia.notifications.NotificationPrivacy
+import com.blackatsystems.miguardia.notifications.NotificationRhythm
 import com.blackatsystems.miguardia.ui.components.PersistentMessage
 import com.blackatsystems.miguardia.ui.components.ScreenHeading
 import com.blackatsystems.miguardia.ui.components.SectionCard
+import com.blackatsystems.miguardia.ui.theme.vigiliaColors
 import java.time.format.DateTimeFormatter
 import java.util.UUID
 
@@ -56,6 +69,8 @@ data class NotificationActions(
     val setPreciseTiming: (Boolean) -> Unit = {},
     val setPersistent: (Boolean) -> Unit = {},
     val setPrivacy: (NotificationPrivacy) -> Unit = {},
+    val setAttentionMode: (NotificationAttentionMode) -> Unit = {},
+    val applyRhythm: (NotificationRhythm) -> Unit = {},
     val setSound: (Uri?) -> Unit = {},
     val setGlobalReminders: (Collection<Long>) -> Unit = {},
     val setShiftReminders: (Collection<Long>) -> Unit = {},
@@ -63,6 +78,7 @@ data class NotificationActions(
     val useGlobalForShift: () -> Unit = {},
     val restoreNotification: (UUID) -> Unit = {},
     val restoreAllNotifications: () -> Unit = {},
+    val sendTestNotification: () -> Unit = {},
     val clearMessage: () -> Unit = {},
     val retry: () -> Unit = {},
 ) {
@@ -76,6 +92,8 @@ data class NotificationActions(
             setPreciseTiming = viewModel::setPreciseTiming,
             setPersistent = viewModel::setPersistent,
             setPrivacy = viewModel::setPrivacy,
+            setAttentionMode = viewModel::setAttentionMode,
+            applyRhythm = viewModel::applyRhythm,
             setSound = viewModel::setSound,
             setGlobalReminders = viewModel::setGlobalReminders,
             setShiftReminders = viewModel::setShiftReminders,
@@ -83,6 +101,7 @@ data class NotificationActions(
             useGlobalForShift = viewModel::useGlobalForShift,
             restoreNotification = viewModel::restoreNotification,
             restoreAllNotifications = viewModel::restoreAllNotifications,
+            sendTestNotification = viewModel::sendTestNotification,
             clearMessage = viewModel::clearMessage,
             retry = viewModel::retry,
         )
@@ -211,6 +230,7 @@ private fun GlobalSettings(
         }
     }
     RestorableNotifications(state, actions)
+    NotificationPreview(state, actions)
     if (!state.preferences.enabled) return
 
     SectionCard(
@@ -231,8 +251,10 @@ private fun GlobalSettings(
     }
     if (!state.systemAccess.notificationPermissionGranted) return
 
+    NotificationRhythmSettings(state, actions)
+
     SectionCard(
-        title = "2. Elegí cuándo avisar",
+        title = "Cuándo te acompaña",
         supportingText = reminderSummary(state.preferences.globalReminderLeadMinutes),
     ) {
         Text("Elegí una opción. Recomendamos 12 horas antes.")
@@ -259,7 +281,7 @@ private fun GlobalSettings(
         }
     }
     SectionCard(
-        title = "3. Elegí cómo se muestra",
+        title = "Permanencia",
         supportingText = if (state.preferences.persistentWhileActive) {
             "Queda visible mientras la guardia está en curso."
         } else {
@@ -273,6 +295,30 @@ private fun GlobalSettings(
             actions.setPersistent(false)
         }
         Text("El contador queda dentro de la notificación y Android lo actualiza sin despertar MiGuardia cada minuto.")
+    }
+    SectionCard(
+        title = "Cómo llama tu atención",
+        supportingText = attentionSummary(state.preferences.attentionMode),
+    ) {
+        NotificationAttentionMode.entries.forEach { mode ->
+            ChoiceRow(attentionLabel(mode), state.preferences.attentionMode == mode) {
+                actions.setAttentionMode(mode)
+            }
+        }
+        if (state.preferences.attentionMode == NotificationAttentionMode.SOUND_AND_VIBRATION) {
+            Text(
+                if (state.preferences.soundUri == null) {
+                    "Sonido: predeterminado de Android"
+                } else {
+                    "Sonido: elegido en Android"
+                },
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = chooseSound) { Text("Elegir sonido") }
+                TextButton(onClick = { actions.setSound(null) }) { Text("Predeterminado") }
+            }
+        }
+        Text("Android conserva el control final del canal, el sonido y la vibración.")
     }
     OutlinedButton(
         onClick = { showAdvanced = !showAdvanced },
@@ -294,17 +340,120 @@ private fun GlobalSettings(
             ToggleRow("Intentar publicar exactamente a horario", state.preferences.preciseTiming, actions.setPreciseTiming)
             Text("Es una notificación común: nunca funciona como despertador.")
         }
-        SectionCard("Privacidad y sonido") {
+        SectionCard("Privacidad") {
             Text("Pantalla bloqueada", style = MaterialTheme.typography.titleSmall)
             NotificationPrivacy.entries.forEach { privacy ->
                 ChoiceRow(privacyLabel(privacy), state.preferences.privacy == privacy) { actions.setPrivacy(privacy) }
             }
-            Text(if (state.preferences.soundUri == null) "Sonido: predeterminado de Android" else "Sonido: elegido en Android")
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = chooseSound) { Text("Elegir sonido") }
-                TextButton(onClick = { actions.setSound(null) }) { Text("Predeterminado") }
+        }
+    }
+}
+
+@Composable
+private fun NotificationPreview(state: NotificationUiState, actions: NotificationActions) {
+    SectionCard(
+        title = "Vista previa",
+        supportingText = "Contenido ficticio. No crea guardias ni modifica tu calendario.",
+    ) {
+        PulsoVigiliaPreview(state.preferences.privacy)
+        Button(
+            onClick = actions.sendTestNotification,
+            enabled = state.systemAccess.notificationPermissionGranted && !state.isSaving,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text("Enviar notificación de prueba")
+        }
+        Text("La prueba usa datos ficticios y desaparece sola en un minuto.")
+    }
+}
+
+@Composable
+private fun PulsoVigiliaPreview(privacy: NotificationPrivacy) {
+    val colors = MaterialTheme.vigiliaColors
+    val accent = if (privacy == NotificationPrivacy.HIDDEN) {
+        MaterialTheme.colorScheme.outline
+    } else {
+        Color(0xFF8B5CFF)
+    }
+    val title = when (privacy) {
+        NotificationPrivacy.COMPLETE -> "PRÓXIMA GUARDIA · Hospital Norte"
+        NotificationPrivacy.REDUCED -> "PRÓXIMA GUARDIA"
+        NotificationPrivacy.HIDDEN -> "MiGuardia"
+    }
+    val schedule = when (privacy) {
+        NotificationPrivacy.COMPLETE -> "NOR · 19:00–07:00"
+        NotificationPrivacy.REDUCED -> "Horario 19:00–07:00"
+        NotificationPrivacy.HIDDEN -> "Tenés un aviso de guardia."
+    }
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .semantics { contentDescription = "Vista previa Pulso Vigilia" },
+        color = colors.surfaceRaised,
+        shape = MaterialTheme.shapes.medium,
+        border = BorderStroke(1.dp, colors.outlineSubtle),
+    ) {
+        Row(modifier = Modifier.height(IntrinsicSize.Min)) {
+            Box(
+                Modifier
+                    .width(4.dp)
+                    .fillMaxHeight()
+                    .background(accent),
+            )
+            Column(
+                modifier = Modifier.padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(title, style = MaterialTheme.typography.titleSmall)
+                Text(schedule, style = MaterialTheme.typography.bodyMedium)
+                if (privacy == NotificationPrivacy.COMPLETE) {
+                    Text("Acceso principal", style = MaterialTheme.typography.bodySmall)
+                    Text("Clima: fresco, sin lluvia prevista", style = MaterialTheme.typography.bodySmall)
+                }
+                if (privacy != NotificationPrivacy.HIDDEN) {
+                    Text(
+                        "Comienza en 3 h 12 min",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = colors.active,
+                    )
+                }
             }
-            Text("Vibración: MiGuardia la solicita; Android conserva el control final.")
+        }
+    }
+}
+
+@Composable
+private fun NotificationRhythmSettings(state: NotificationUiState, actions: NotificationActions) {
+    val current = state.preferences.rhythm()
+    SectionCard(
+        title = "Ritmo de avisos",
+        supportingText = "Actual: ${rhythmLabel(current)}. Elegí una base y ajustala cuando quieras.",
+    ) {
+        listOf(
+            NotificationRhythm.ACCOMPANIED,
+            NotificationRhythm.ESSENTIAL,
+            NotificationRhythm.DISCREET,
+        ).forEach { rhythm ->
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { actions.applyRhythm(rhythm) }
+                    .padding(vertical = 4.dp),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    RadioButton(selected = current == rhythm, onClick = { actions.applyRhythm(rhythm) })
+                    Text(rhythmLabel(rhythm), style = MaterialTheme.typography.titleSmall)
+                }
+                Text(
+                    rhythmDescription(rhythm),
+                    modifier = Modifier.padding(start = 48.dp),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        if (current == NotificationRhythm.CUSTOM) {
+            Text("Personalizado combina los ajustes que elegiste.")
         }
     }
 }
@@ -483,11 +632,42 @@ private fun privacyLabel(value: NotificationPrivacy): String = when (value) {
     NotificationPrivacy.HIDDEN -> "Oculta: mensaje genérico"
 }
 
+private fun attentionLabel(value: NotificationAttentionMode): String = when (value) {
+    NotificationAttentionMode.SOUND_AND_VIBRATION -> "Sonido y vibración"
+    NotificationAttentionMode.VIBRATION_ONLY -> "Sólo vibración"
+    NotificationAttentionMode.SILENT -> "Silencioso"
+}
+
+private fun attentionSummary(value: NotificationAttentionMode): String = when (value) {
+    NotificationAttentionMode.SOUND_AND_VIBRATION -> "Suena y vibra al publicar el aviso."
+    NotificationAttentionMode.VIBRATION_ONLY -> "Vibra sin reproducir sonido."
+    NotificationAttentionMode.SILENT -> "Aparece sin sonido ni vibración."
+}
+
+private fun rhythmLabel(value: NotificationRhythm): String = when (value) {
+    NotificationRhythm.ACCOMPANIED -> "Acompañado"
+    NotificationRhythm.ESSENTIAL -> "Esencial"
+    NotificationRhythm.DISCREET -> "Discreto"
+    NotificationRhythm.CUSTOM -> "Personalizado"
+}
+
+private fun rhythmDescription(value: NotificationRhythm): String = when (value) {
+    NotificationRhythm.ACCOMPANIED -> "12 h y 2 h antes · sonido y vibración · fija."
+    NotificationRhythm.ESSENTIAL -> "12 h antes · sonido y vibración · fija."
+    NotificationRhythm.DISCREET -> "12 h antes · silenciosa · descartable · privacidad reducida."
+    NotificationRhythm.CUSTOM -> "Combinación ajustada por vos."
+}
+
 private fun reminderSummary(values: List<Long>): String = when (values.size) {
     0 -> "Sin avisos previos."
     1 -> {
         val minutes = values.single()
-        if (minutes % 60L == 0L) "Un aviso ${minutes / 60L} horas antes." else "Un aviso $minutes minutos antes."
+        if (minutes % 60L == 0L) {
+            val hours = minutes / 60L
+            "Un aviso $hours ${if (hours == 1L) "hora" else "horas"} antes."
+        } else {
+            "Un aviso $minutes minutos antes."
+        }
     }
     else -> "${values.size} avisos configurados."
 }

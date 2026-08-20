@@ -5,8 +5,10 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import android.graphics.drawable.ColorDrawable
 import android.net.Uri
 import android.os.SystemClock
+import android.view.View
 import android.widget.Chronometer
 import android.widget.TextView
 import androidx.test.core.app.ApplicationProvider
@@ -15,6 +17,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.blackatsystems.miguardia.core.domain.model.Shift
 import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
 import com.blackatsystems.miguardia.notifications.NotificationPreferences
+import com.blackatsystems.miguardia.notifications.NotificationAttentionMode
 import com.blackatsystems.miguardia.notifications.NotificationPrivacy
 import com.blackatsystems.miguardia.notifications.ShiftNotificationPresenter
 import java.time.Instant
@@ -60,8 +63,8 @@ class ShiftNotificationPresenterInstrumentedTest {
         presenter.show(shift, NOW, NotificationPreferences(enabled = true))
 
         val posted = notificationForTag(shift.id)
-        assertEquals("Entrás a las 19:00", posted.extras.getString(Notification.EXTRA_TITLE))
-        assertTrue(posted.extras.getString(Notification.EXTRA_TEXT).orEmpty().contains("Objetivo ficticio (QA) · Horario 19:00–07:00 · Puesto: Acceso"))
+        assertEquals("PRÓXIMA GUARDIA · Objetivo ficticio", posted.extras.getString(Notification.EXTRA_TITLE))
+        assertEquals("QA · 19:00–07:00", posted.extras.getString(Notification.EXTRA_TEXT))
         assertEquals(3, posted.actions.size)
         assertEquals(listOf("Ver detalles", "Cómo llegar", "Informar novedad"), posted.actions.map { it.title.toString() })
         assertEquals(3, posted.actions.map { it.actionIntent }.toSet().size)
@@ -71,11 +74,29 @@ class ShiftNotificationPresenterInstrumentedTest {
         assertTrue(posted.flags and Notification.FLAG_ONGOING_EVENT != 0)
         assertFalse(posted.extras.getBoolean(Notification.EXTRA_SHOW_CHRONOMETER))
         assertNotNull(posted.contentView)
-        val compactCountdown = posted.contentView.apply(context, null)
+        val compact = posted.contentView.apply(context, null)
+        assertEquals(
+            "PRÓXIMA GUARDIA · Objetivo ficticio",
+            compact.findViewById<TextView>(R.id.notification_title).text.toString(),
+        )
+        assertEquals(
+            "QA · 19:00–07:00",
+            compact.findViewById<TextView>(R.id.notification_schedule).text.toString(),
+        )
+        assertEquals(
+            shift.colorArgbSnapshot,
+            (compact.findViewById<View>(R.id.notification_accent).background as ColorDrawable).color,
+        )
+        val compactCountdown = compact
             .findViewById<Chronometer>(R.id.notification_countdown)
         assertTrue(compactCountdown.isCountDown)
         assertTrue(compactCountdown.format.toString().startsWith("Comienza en"))
-        val dismissControl = posted.bigContentView.apply(context, null)
+        val expanded = posted.bigContentView.apply(context, null)
+        assertEquals("PRÓXIMA GUARDIA", expanded.findViewById<TextView>(R.id.notification_title).text.toString())
+        assertEquals("Objetivo ficticio", expanded.findViewById<TextView>(R.id.notification_objective).text.toString())
+        assertEquals("QA · Horario 19:00–07:00", expanded.findViewById<TextView>(R.id.notification_schedule).text.toString())
+        assertEquals("Puesto: Acceso", expanded.findViewById<TextView>(R.id.notification_position).text.toString())
+        val dismissControl = expanded
             .findViewById<TextView>(R.id.notification_dismiss)
         assertEquals("Eliminar notificación", dismissControl.text.toString())
         assertTrue(dismissControl.hasOnClickListeners())
@@ -93,8 +114,9 @@ class ShiftNotificationPresenterInstrumentedTest {
             NotificationPreferences(enabled = true, persistentWhileActive = true, privacy = NotificationPrivacy.REDUCED),
         )
         var posted = notificationForTag(shift.id)
-        assertEquals("Guardia en curso", posted.extras.getString(Notification.EXTRA_TITLE))
-        assertEquals("Guardia en curso · 19:00–07:00", posted.publicVersion.extras.getString(Notification.EXTRA_TEXT))
+        assertEquals("EN CURSO", posted.extras.getString(Notification.EXTRA_TITLE))
+        assertEquals("EN CURSO", posted.publicVersion.extras.getString(Notification.EXTRA_TITLE))
+        assertEquals("Horario 19:00–07:00", posted.publicVersion.extras.getString(Notification.EXTRA_TEXT))
         assertTrue(posted.flags and Notification.FLAG_ONGOING_EVENT != 0)
         assertFalse(posted.extras.getBoolean(Notification.EXTRA_SHOW_CHRONOMETER))
         assertFalse(posted.extras.getBoolean(Notification.EXTRA_CHRONOMETER_COUNT_DOWN))
@@ -114,6 +136,11 @@ class ShiftNotificationPresenterInstrumentedTest {
         assertEquals("MiGuardia", posted.publicVersion.extras.getString(Notification.EXTRA_TITLE))
         assertEquals("Tenés un aviso de guardia.", posted.publicVersion.extras.getString(Notification.EXTRA_TEXT))
         assertFalse(posted.publicVersion.extras.getString(Notification.EXTRA_TEXT).orEmpty().contains("Objetivo"))
+        val hidden = posted.contentView.apply(context, null)
+        assertEquals(View.GONE, hidden.findViewById<View>(R.id.notification_countdown).visibility)
+        val hiddenAccent = (hidden.findViewById<View>(R.id.notification_accent).background as ColorDrawable).color
+        assertNotEquals(shift.colorArgbSnapshot, hiddenAccent)
+        assertEquals(hiddenAccent, posted.color)
     }
 
     @Test
@@ -127,7 +154,11 @@ class ShiftNotificationPresenterInstrumentedTest {
             silentUpdate = true,
         )
         var posted = notificationForTag(shift.id)
-        assertTrue(posted.extras.getString(Notification.EXTRA_TEXT).orEmpty().contains("Clima: Lluvia"))
+        var expanded = posted.bigContentView.apply(context, null)
+        assertEquals(
+            "Clima: Lluvia · 12–18 °C",
+            expanded.findViewById<TextView>(R.id.notification_weather).text.toString(),
+        )
         assertTrue(posted.flags and Notification.FLAG_ONLY_ALERT_ONCE != 0)
 
         presenter.show(
@@ -137,12 +168,13 @@ class ShiftNotificationPresenterInstrumentedTest {
             weatherText = "Clima: dato que debe omitirse",
         )
         posted = notificationForTag(shift.id)
-        assertFalse(posted.extras.getString(Notification.EXTRA_TEXT).orEmpty().contains("Clima:"))
+        expanded = posted.bigContentView.apply(context, null)
+        assertEquals(View.GONE, expanded.findViewById<View>(R.id.notification_weather).visibility)
         assertFalse(posted.publicVersion.extras.getString(Notification.EXTRA_TEXT).orEmpty().contains("Clima:"))
     }
 
     @Test
-    fun simultaneousGuardsStaySeparateGroupedAndSoundCreatesVibratingVersionedChannel() {
+    fun simultaneousGuardsStaySeparateAndAttentionModesOwnOneVersionedChannel() {
         val first = shift(SHIFT_ONE)
         val second = shift(SHIFT_TWO)
         val legacyChannelId = "guard_shifts_v1_legacy"
@@ -164,12 +196,53 @@ class ShiftNotificationPresenterInstrumentedTest {
         assertTrue(manager.activeNotifications.any { it.notification.flags and Notification.FLAG_GROUP_SUMMARY != 0 })
         assertTrue(channelBefore.startsWith(ShiftNotificationPresenter.CHANNEL_PREFIX))
         assertTrue(manager.getNotificationChannel(channelBefore).shouldVibrate())
+        assertNotNull(manager.getNotificationChannel(channelBefore).sound)
         assertTrue(manager.notificationChannels.none { it.id == legacyChannelId })
 
-        presenter.show(first, NOW, custom.copy(soundUri = null))
-        val defaultChannel = notificationForTag(first.id).channelId
-        assertNotEquals(channelBefore, defaultChannel)
+        presenter.show(
+            first,
+            NOW,
+            custom.copy(attentionMode = NotificationAttentionMode.VIBRATION_ONLY),
+        )
+        val vibrationChannelId = notificationForTag(first.id).channelId
+        val vibrationChannel = manager.getNotificationChannel(vibrationChannelId)
+        assertNotEquals(channelBefore, vibrationChannelId)
+        assertTrue(vibrationChannel.shouldVibrate())
+        assertEquals(null, vibrationChannel.sound)
+
+        presenter.show(
+            first,
+            NOW,
+            custom.copy(attentionMode = NotificationAttentionMode.SILENT),
+        )
+        val silentChannel = manager.getNotificationChannel(notificationForTag(first.id).channelId)
+        assertFalse(silentChannel.shouldVibrate())
+        assertEquals(null, silentChannel.sound)
+        assertEquals(NotificationManager.IMPORTANCE_LOW, silentChannel.importance)
         assertEquals(1, manager.notificationChannels.count { it.id.startsWith(ShiftNotificationPresenter.OWNED_CHANNEL_PREFIX) })
+    }
+
+    @Test
+    fun testNotificationUsesReservedIdentityNoShiftActionsAndExpiresAlone() {
+        presenter.showTestNotification(
+            NotificationPreferences(
+                enabled = false,
+                privacy = NotificationPrivacy.REDUCED,
+                attentionMode = NotificationAttentionMode.SILENT,
+            ),
+        )
+
+        val posted = notificationForTag(
+            tag = ShiftNotificationPresenter.PREVIEW_TAG,
+            id = ShiftNotificationPresenter.PREVIEW_NOTIFICATION_ID,
+        )
+        assertEquals("PRUEBA · PRÓXIMA", posted.extras.getString(Notification.EXTRA_TITLE))
+        assertEquals("Horario 19:00–07:00", posted.extras.getString(Notification.EXTRA_TEXT))
+        assertTrue(posted.actions.isNullOrEmpty())
+        assertEquals(null, posted.group)
+        assertEquals(null, posted.deleteIntent)
+        assertFalse(posted.flags and Notification.FLAG_ONGOING_EVENT != 0)
+        assertEquals(60_000L, posted.timeoutAfter)
     }
 
     private fun shift(
@@ -199,15 +272,21 @@ class ShiftNotificationPresenterInstrumentedTest {
     private fun notificationForTag(
         shiftId: UUID,
         predicate: (Notification) -> Boolean = { true },
+    ): Notification = notificationForTag(shiftId.toString(), ShiftNotificationPresenter.NOTIFICATION_ID, predicate)
+
+    private fun notificationForTag(
+        tag: String,
+        id: Int,
+        predicate: (Notification) -> Boolean = { true },
     ): Notification {
         repeat(40) {
-            manager.activeNotifications.firstOrNull { it.tag == shiftId.toString() }
+            manager.activeNotifications.firstOrNull { it.tag == tag && it.id == id }
                 ?.notification
                 ?.takeIf(predicate)
                 ?.let { return it }
             SystemClock.sleep(50)
         }
-        error("No se publicó la notificación QA esperada para el UUID ficticio.")
+        error("No se publicó la notificación QA esperada para la identidad $tag/$id.")
     }
 
     private companion object {

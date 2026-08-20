@@ -27,6 +27,7 @@ class NotificationRuntime(
         context = context.applicationContext,
         weatherRuntime = weatherRuntime,
     )
+    private val presenter = ShiftNotificationPresenter(context.applicationContext)
 
     fun start() = reconciler.start()
 
@@ -38,6 +39,10 @@ class NotificationRuntime(
 
     fun rebuild() {
         scope.launch { reconciler.rebuildOnce() }
+    }
+
+    fun showTestNotification(preferences: NotificationPreferences) {
+        presenter.showTestNotification(preferences)
     }
 
     internal suspend fun reconcileNow() = reconciler.reconcileOnce()

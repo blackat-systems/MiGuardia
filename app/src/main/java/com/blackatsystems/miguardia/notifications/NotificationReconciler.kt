@@ -76,8 +76,8 @@ internal class NotificationReconciler(
     }
 
     suspend fun dismissShift(shiftId: String) = mutex.withLock {
-        presenter.cancel(shiftId)
         preferences.markDismissed(shiftId)
+        presenter.cancel(shiftId)
     }
 
     fun observeRestorableShifts(): Flow<List<Shift>> {
@@ -171,7 +171,11 @@ internal class NotificationReconciler(
             configs = source.configs,
         )
             .associateBy { it.id.toString() }
-        val retainedDismissed = dismissed.filterTo(linkedSetOf()) { id -> id in eligibleById }
+        val retainedDismissed = linkedSetOf<String>()
+        dismissed.forEach { id ->
+            if (isCurrentlyEligibleForDismissal(id, now)) retainedDismissed += id
+        }
+        retainedDismissed.forEach(presenter::cancel)
         val shouldDisplay = buildSet {
             if (source.preferences.enabled && systemAccess.read().notificationPermissionGranted) {
                 addAll(displayed.filter { it in eligibleById && it !in retainedDismissed })
@@ -196,6 +200,15 @@ internal class NotificationReconciler(
         presenter.updateGroupSummary(shouldDisplay.size, source.preferences)
         preferences.setDisplayedShiftIds(shouldDisplay)
         preferences.setDismissedShiftIds(retainedDismissed)
+    }
+
+    private suspend fun isCurrentlyEligibleForDismissal(shiftId: String, now: java.time.Instant): Boolean {
+        val id = runCatching { UUID.fromString(shiftId) }.getOrNull() ?: return false
+        val shift = shifts.getById(id) ?: return false
+        val currentVacations = vacations.observeEndingOnOrAfter(shift.localStartDate).first()
+        val currentOverride = configs.getForShift(id)
+        return shift.isEligibleUpcomingWork(now, currentVacations) &&
+            currentOverride?.reminderLeadMinutes?.isEmpty() != true
     }
 
     private data class Source(

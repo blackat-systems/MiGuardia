@@ -64,13 +64,21 @@ class ShiftAlarmReceiver : BroadcastReceiver() {
                 if (!identity.isStillCurrent(shift.startAt, shift.endAt, preferences, override)) {
                     return@launch
                 }
+                val shiftId = shift.id.toString()
+                if (!application.notificationPreferences.markDisplayedUnlessDismissed(shiftId)) {
+                    presenter.cancel(shiftId)
+                    return@launch
+                }
                 val cachedWeather = if (preferences.privacy == NotificationPrivacy.COMPLETE) {
                     application.weatherRuntime.notificationTextFromCache(shift, now)
                 } else {
                     null
                 }
                 presenter.show(shift, now, preferences, cachedWeather)
-                application.notificationPreferences.markDisplayed(shift.id.toString())
+                if (shiftId in application.notificationPreferences.dismissedShiftIds()) {
+                    presenter.cancel(shiftId)
+                    return@launch
+                }
                 if (cachedWeather == null && preferences.privacy == NotificationPrivacy.COMPLETE) {
                     val refreshedWeather = withTimeoutOrNull(8_000L) {
                         application.weatherRuntime.refreshNotificationText(shift)
@@ -86,6 +94,7 @@ class ShiftAlarmReceiver : BroadcastReceiver() {
                             currentShift != null &&
                             currentPreferences.enabled &&
                             currentPreferences.privacy == NotificationPrivacy.COMPLETE &&
+                            currentShift.id.toString() !in application.notificationPreferences.dismissedShiftIds() &&
                             NotificationSystemAccess(application).read().notificationPermissionGranted &&
                             currentShift.isEligibleUpcomingWork(updateAt, currentVacations) &&
                             identity.isStillCurrent(
@@ -102,6 +111,12 @@ class ShiftAlarmReceiver : BroadcastReceiver() {
                                 refreshedWeather,
                                 silentUpdate = true,
                             )
+                            if (
+                                currentShift.id.toString() in
+                                application.notificationPreferences.dismissedShiftIds()
+                            ) {
+                                presenter.cancel(currentShift.id.toString())
+                            }
                         }
                     }
                 }

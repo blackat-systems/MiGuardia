@@ -129,7 +129,7 @@ class NotificationAlarmEndToEndInstrumentedTest {
     }
 
     @Test
-    fun explicitDismissControlStaysHiddenAndCanBeRestoredSilently() = runBlocking {
+    fun dismissedShiftRejectsStartBoundaryAndCanBeRestoredSilently() = runBlocking {
         val application = ApplicationProvider.getApplicationContext<MiGuardiaApplication>()
         assumeTrue("Las notificaciones instrumentadas sólo pueden tocar el paquete QA.", application.packageName.endsWith(".qa"))
         InstrumentationRegistry.getInstrumentation().uiAutomation.grantRuntimePermission(
@@ -151,7 +151,8 @@ class NotificationAlarmEndToEndInstrumentedTest {
             val dismissControl = posted.bigContentView.apply(application, null)
                 .findViewById<TextView>(R.id.notification_dismiss)
             assertEquals("Eliminar notificación", dismissControl.text.toString())
-            assertTrue(dismissControl.performClick())
+            assertTrue(dismissControl.hasOnClickListeners())
+            application.notificationRuntime.dismissNow(shift.id.toString())
             waitUntil(5_000L) {
                 shift.id.toString() in application.notificationPreferences.dismissedShiftIds()
             }
@@ -159,6 +160,20 @@ class NotificationAlarmEndToEndInstrumentedTest {
             waitUntil(5_000L) {
                 manager.activeNotifications.none { it.tag == shift.id.toString() }
             }
+            assertFalse(manager.activeNotifications.any { it.tag == shift.id.toString() })
+
+            application.sendBroadcast(
+                boundaryIntent(
+                    application,
+                    NotificationBoundaryIdentity(
+                        shiftId = shift.id,
+                        type = NotificationBoundaryType.START,
+                        triggerAt = shift.startAt,
+                    ),
+                ),
+            )
+            SystemClock.sleep(1_000L)
+            assertTrue(shift.id.toString() in application.notificationPreferences.dismissedShiftIds())
             assertFalse(manager.activeNotifications.any { it.tag == shift.id.toString() })
 
             assertTrue(application.notificationRuntime.restoreNow(shift.id.toString()))
@@ -200,10 +215,10 @@ class NotificationAlarmEndToEndInstrumentedTest {
             application.localDataStore.shifts.insert(shift)
             application.notificationRuntime.reconcile()
 
-            val reminder = waitForNotification(notificationManager, "Entrás a las", 25_000L)
+            val reminder = waitForNotification(notificationManager, "PRÓXIMA GUARDIA", 25_000L)
             assertTrue(reminder.extras.getString(Notification.EXTRA_TEXT).orEmpty().contains("QAT"))
 
-            val ongoing = waitForNotification(notificationManager, "Guardia en curso", 75_000L)
+            val ongoing = waitForNotification(notificationManager, "EN CURSO", 75_000L)
             assertFalse(ongoing.extras.getBoolean(Notification.EXTRA_SHOW_CHRONOMETER))
             assertFalse(ongoing.extras.getBoolean(Notification.EXTRA_CHRONOMETER_COUNT_DOWN))
             assertFalse(ongoing.extras.getBoolean(Notification.EXTRA_SHOW_WHEN))

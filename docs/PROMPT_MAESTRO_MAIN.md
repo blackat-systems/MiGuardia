@@ -764,6 +764,8 @@ Decisión posterior del 18 de agosto de 2026: Joa aprobó simplificar la zona in
 
 Corrección de primera carga del 18 de agosto de 2026: Joa rechazó que una instalación vacía abra directamente `SHIFT_FORM` con una fecha preseleccionada. El CTA pasa a ser `Cargar datos` y abre una preparación inline sin `ShiftDraft`: permite crear varios objetivos y varios horarios, y `Continuar y elegir días` sólo se habilita al existir una combinación activa. Únicamente esa acción cierra la preparación y deja el Calendario en edición con selección vacía. Fotos y navegación mensual siguen habilitadas mientras no haya un formulario real abierto.
 
+Decisión posterior del 18 de agosto de 2026: Joa reabrió y priorizó explícitamente **Notificaciones** para desarrollar **Pulso Vigilia**. La restricción histórica de no ampliar el módulo queda superada únicamente para el alcance autosuficiente de `docs/prompts/NOTIFICACIONES_PULSO_VIGILIA.md`: tarjeta de estado Vigilia compacta/expandida, trazo con color histórico, ritmos globales Acompañado/Esencial/Discreto, vista previa, notificación real de prueba y corrección para que una frontera posterior no vuelva a publicar un aviso ocultado. Room permanece en v5 con trece entidades; no se autorizan permisos, dependencias, servicios, polling, Live Updates ni alarmas tipo despertador.
+
 La primera versión utilizable debe alcanzar almacenamiento local, calendario, carga individual/múltiple, objetivos/horarios, fotos y horas básicas antes de sumar capas más complejas.
 
 ## 26. Criterios transversales de aceptación

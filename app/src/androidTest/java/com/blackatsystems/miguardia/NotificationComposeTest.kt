@@ -3,6 +3,7 @@ package com.blackatsystems.miguardia
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -10,7 +11,9 @@ import com.blackatsystems.miguardia.core.domain.model.Shift
 import com.blackatsystems.miguardia.core.domain.model.ShiftNotificationConfig
 import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
 import com.blackatsystems.miguardia.notifications.NotificationPreferences
+import com.blackatsystems.miguardia.notifications.NotificationAttentionMode
 import com.blackatsystems.miguardia.notifications.NotificationPrivacy
+import com.blackatsystems.miguardia.notifications.NotificationRhythm
 import com.blackatsystems.miguardia.notifications.NotificationSystemAccessState
 import com.blackatsystems.miguardia.ui.notifications.NotificationActions
 import com.blackatsystems.miguardia.ui.notifications.NotificationSurface
@@ -29,7 +32,10 @@ class NotificationComposeTest {
     @get:Rule val compose = createComposeRule()
 
     @Test
-    fun globalSettingsGuideTheUserBeforeShowingAdvancedChoices() {
+    fun globalSettingsOffersPreviewRhythmsAndAttentionBeforeAdvancedChoices() {
+        var selectedRhythm: NotificationRhythm? = null
+        var selectedAttention: NotificationAttentionMode? = null
+        var testsSent = 0
         compose.setContent {
             MaterialTheme {
                 NotificationSurfaceHost(
@@ -39,26 +45,40 @@ class NotificationComposeTest {
                         systemAccess = NotificationSystemAccessState(true, false),
                         isLoading = false,
                     ),
-                    NotificationActions(),
+                    NotificationActions(
+                        applyRhythm = { selectedRhythm = it },
+                        setAttentionMode = { selectedAttention = it },
+                        sendTestNotification = { testsSent++ },
+                    ),
                 )
             }
         }
 
         compose.onNodeWithText("Notificaciones").assertExists()
         compose.onNodeWithText("1. Permití los avisos").assertExists()
-        compose.onNodeWithText("2. Elegí cuándo avisar").assertExists()
-        compose.onNodeWithText("3. Elegí cómo se muestra").assertExists()
+        compose.onNodeWithText("Vista previa").assertExists()
+        compose.onNodeWithContentDescription("Vista previa Pulso Vigilia").assertExists()
+        compose.onNodeWithText("PRÓXIMA GUARDIA · Hospital Norte").assertExists()
+        compose.onNodeWithText("Ritmo de avisos").assertExists()
+        compose.onNodeWithText("Acompañado").performScrollTo().performClick()
+        assertEquals(NotificationRhythm.ACCOMPANIED, selectedRhythm)
+        compose.onNodeWithText("Cuándo te acompaña").assertExists()
+        compose.onNodeWithText("Permanencia").assertExists()
+        compose.onNodeWithText("Cómo llama tu atención").assertExists()
+        compose.onNodeWithText("Sólo vibración").performScrollTo().performClick()
+        assertEquals(NotificationAttentionMode.VIBRATION_ONLY, selectedAttention)
         compose.onNodeWithText("Recomendamos 12 horas antes.", substring = true).assertExists()
         compose.onNodeWithText("Abrir ajustes de notificaciones").assertExists()
+        compose.onNodeWithText("Enviar notificación de prueba").performScrollTo().performClick()
+        assertEquals(1, testsSent)
         compose.onNodeWithText("Puntualidad exacta: pendiente").assertDoesNotExist()
         compose.onNodeWithText("Ver opciones avanzadas").performScrollTo().performClick()
         compose.onNodeWithText("Puntualidad exacta: pendiente").assertExists()
         compose.onNodeWithText("Completa: objetivo, horario y puesto").assertExists()
         compose.onNodeWithText("Reducida: estado y horario").assertExists()
         compose.onNodeWithText("Oculta: mensaje genérico").assertExists()
-        compose.onNodeWithText("Vibración: MiGuardia la solicita; Android conserva el control final.")
-            .performScrollTo()
-            .assertExists()
+        compose.onNodeWithText("Android conserva el control final del canal, el sonido y la vibración.")
+            .performScrollTo().assertExists()
     }
 
     @Test
@@ -79,8 +99,59 @@ class NotificationComposeTest {
 
         compose.onNodeWithText("1. Permití los avisos").assertExists()
         compose.onNodeWithText("Notificaciones: pendiente").assertExists()
-        compose.onNodeWithText("2. Elegí cuándo avisar").assertDoesNotExist()
-        compose.onNodeWithText("3. Elegí cómo se muestra").assertDoesNotExist()
+        compose.onNodeWithText("Vista previa").assertExists()
+        compose.onNodeWithText("Ritmo de avisos").assertDoesNotExist()
+        compose.onNodeWithText("Cuándo te acompaña").assertDoesNotExist()
+    }
+
+    @Test
+    fun oneHourReminderUsesSingularCopy() {
+        compose.setContent {
+            MaterialTheme {
+                NotificationSurfaceHost(
+                    NotificationUiState(
+                        surface = NotificationSurface.GLOBAL,
+                        preferences = NotificationPreferences(
+                            enabled = true,
+                            globalReminderLeadMinutes = listOf(60L),
+                        ),
+                        systemAccess = NotificationSystemAccessState(true, false),
+                        isLoading = false,
+                    ),
+                    NotificationActions(),
+                )
+            }
+        }
+
+        compose.onNodeWithText("Un aviso 1 hora antes.").assertExists()
+        compose.onNodeWithText("Un aviso 1 horas antes.").assertDoesNotExist()
+    }
+
+    @Test
+    fun customHiddenPreferencesAreNamedPersonalizedAndPreviewLeaksNoFixtureDetails() {
+        compose.setContent {
+            MaterialTheme {
+                NotificationSurfaceHost(
+                    NotificationUiState(
+                        surface = NotificationSurface.GLOBAL,
+                        preferences = NotificationPreferences(
+                            enabled = true,
+                            globalReminderLeadMinutes = listOf(360L),
+                            privacy = NotificationPrivacy.HIDDEN,
+                        ),
+                        systemAccess = NotificationSystemAccessState(true, false),
+                        isLoading = false,
+                    ),
+                    NotificationActions(),
+                )
+            }
+        }
+
+        compose.onNodeWithText("Actual: Personalizado", substring = true).assertExists()
+        compose.onNodeWithText("Tenés un aviso de guardia.").assertExists()
+        compose.onNodeWithText("Hospital Norte").assertDoesNotExist()
+        compose.onNodeWithText("NOR · 19:00–07:00").assertDoesNotExist()
+        compose.onNodeWithText("Comienza en 3 h 12 min").assertDoesNotExist()
     }
 
     @Test

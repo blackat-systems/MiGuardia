@@ -29,16 +29,52 @@ enum class NotificationPrivacy {
     HIDDEN,
 }
 
+enum class NotificationAttentionMode {
+    SOUND_AND_VIBRATION,
+    VIBRATION_ONLY,
+    SILENT,
+}
+
+enum class NotificationRhythm {
+    ACCOMPANIED,
+    ESSENTIAL,
+    DISCREET,
+    CUSTOM,
+}
+
 data class NotificationPreferences(
     val enabled: Boolean = false,
     val preciseTiming: Boolean = false,
     val globalReminderLeadMinutes: List<Long> = listOf(DEFAULT_REMINDER_MINUTES),
     val persistentWhileActive: Boolean = true,
     val privacy: NotificationPrivacy = NotificationPrivacy.COMPLETE,
+    val attentionMode: NotificationAttentionMode = NotificationAttentionMode.SOUND_AND_VIBRATION,
     val soundUri: Uri? = null,
 ) {
     companion object {
         const val DEFAULT_REMINDER_MINUTES = 12L * 60L
+    }
+
+    fun rhythm(): NotificationRhythm = when {
+        globalReminderLeadMinutes == listOf(120L, 720L) &&
+            persistentWhileActive &&
+            privacy == NotificationPrivacy.COMPLETE &&
+            attentionMode == NotificationAttentionMode.SOUND_AND_VIBRATION ->
+            NotificationRhythm.ACCOMPANIED
+
+        globalReminderLeadMinutes == listOf(DEFAULT_REMINDER_MINUTES) &&
+            persistentWhileActive &&
+            privacy == NotificationPrivacy.COMPLETE &&
+            attentionMode == NotificationAttentionMode.SOUND_AND_VIBRATION ->
+            NotificationRhythm.ESSENTIAL
+
+        globalReminderLeadMinutes == listOf(DEFAULT_REMINDER_MINUTES) &&
+            !persistentWhileActive &&
+            privacy == NotificationPrivacy.REDUCED &&
+            attentionMode == NotificationAttentionMode.SILENT ->
+            NotificationRhythm.DISCREET
+
+        else -> NotificationRhythm.CUSTOM
     }
 }
 
@@ -78,6 +114,34 @@ class NotificationPreferencesStore private constructor(
     suspend fun setPreciseTiming(value: Boolean) = update { it[PreciseTiming] = value }
     suspend fun setPersistentWhileActive(value: Boolean) = update { it[Persistent] = value }
     suspend fun setPrivacy(value: NotificationPrivacy) = update { it[Privacy] = value.name }
+    suspend fun setAttentionMode(value: NotificationAttentionMode) = update {
+        it[AttentionMode] = value.name
+    }
+
+    suspend fun applyRhythm(value: NotificationRhythm) {
+        require(value != NotificationRhythm.CUSTOM) { "El ritmo personalizado no es un preset aplicable." }
+        update { preferences ->
+            val reminderMinutes = when (value) {
+                NotificationRhythm.ACCOMPANIED -> listOf(120L, 720L)
+                NotificationRhythm.ESSENTIAL,
+                NotificationRhythm.DISCREET,
+                -> listOf(NotificationPreferences.DEFAULT_REMINDER_MINUTES)
+                NotificationRhythm.CUSTOM -> error("Unreachable")
+            }
+            preferences[ReminderMinutes] = reminderMinutes.map(Long::toString).toSet()
+            preferences[Persistent] = value != NotificationRhythm.DISCREET
+            preferences[Privacy] = if (value == NotificationRhythm.DISCREET) {
+                NotificationPrivacy.REDUCED.name
+            } else {
+                NotificationPrivacy.COMPLETE.name
+            }
+            preferences[AttentionMode] = if (value == NotificationRhythm.DISCREET) {
+                NotificationAttentionMode.SILENT.name
+            } else {
+                NotificationAttentionMode.SOUND_AND_VIBRATION.name
+            }
+        }
+    }
 
     suspend fun setGlobalReminderLeadMinutes(values: Collection<Long>) {
         val validated = validateReminderLeadMinutes(values)
@@ -124,6 +188,17 @@ class NotificationPreferencesStore private constructor(
         values[DisplayedShiftIds] = values[DisplayedShiftIds].orEmpty() + shiftId
     }
 
+    internal suspend fun markDisplayedUnlessDismissed(shiftId: String): Boolean {
+        var accepted = false
+        update { values ->
+            if (shiftId !in values[DismissedShiftIds].orEmpty()) {
+                values[DisplayedShiftIds] = values[DisplayedShiftIds].orEmpty() + shiftId
+                accepted = true
+            }
+        }
+        return accepted
+    }
+
     internal suspend fun clearShiftTracking(shiftId: String) = update { values ->
         values[DisplayedShiftIds] = values[DisplayedShiftIds].orEmpty() - shiftId
         values[DismissedShiftIds] = values[DismissedShiftIds].orEmpty() - shiftId
@@ -150,6 +225,9 @@ class NotificationPreferencesStore private constructor(
             privacy = values[Privacy]
                 ?.let { runCatching { NotificationPrivacy.valueOf(it) }.getOrNull() }
                 ?: NotificationPrivacy.COMPLETE,
+            attentionMode = values[AttentionMode]
+                ?.let { runCatching { NotificationAttentionMode.valueOf(it) }.getOrNull() }
+                ?: NotificationAttentionMode.SOUND_AND_VIBRATION,
             soundUri = values[SoundUri]?.let(Uri::parse),
         )
     }
@@ -160,6 +238,7 @@ class NotificationPreferencesStore private constructor(
         val PreciseTiming = booleanPreferencesKey("precise_timing")
         val Persistent = booleanPreferencesKey("persistent_while_active")
         val Privacy = stringPreferencesKey("privacy")
+        val AttentionMode = stringPreferencesKey("attention_mode")
         val ReminderMinutes = stringSetPreferencesKey("global_reminder_minutes")
         val SoundUri = stringPreferencesKey("sound_uri")
         val InstalledBoundaryKeys = stringSetPreferencesKey("installed_boundary_keys")
