@@ -66,6 +66,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
@@ -95,12 +96,12 @@ import com.blackatsystems.miguardia.ui.calendar.CalendarLoadState
 import com.blackatsystems.miguardia.ui.calendar.CalendarInteractionMode
 import com.blackatsystems.miguardia.ui.calendar.CalendarUiState
 import com.blackatsystems.miguardia.ui.calendar.CalendarViewModel
-import com.blackatsystems.miguardia.ui.calendar.firstShiftDate
 import com.blackatsystems.miguardia.ui.components.PersistentMessage
 import com.blackatsystems.miguardia.ui.components.ScreenHeading
 import com.blackatsystems.miguardia.ui.components.SectionCard
 import com.blackatsystems.miguardia.ui.components.TransientConfirmation
 import com.blackatsystems.miguardia.ui.management.CalendarManagementInlineContent
+import com.blackatsystems.miguardia.ui.management.InitialDataPreparationContent
 import com.blackatsystems.miguardia.ui.management.ManagementActions
 import com.blackatsystems.miguardia.ui.management.ManagementSurface
 import com.blackatsystems.miguardia.ui.management.ManagementSurfaceHost
@@ -376,6 +377,8 @@ fun MiGuardiaApp(
         onDismissDate = calendarViewModel::clearSelectedDate,
         onEnterCalendarEditMode = calendarViewModel::enterEditMode,
         onEditSelectionChange = calendarViewModel::setEditSelectedDates,
+        onConfirmEditSelection = calendarViewModel::confirmEditSelection,
+        onResumeEditSelection = calendarViewModel::resumeEditSelection,
         onFinishCalendarEditMode = calendarViewModel::finishEditMode,
         onRetry = calendarViewModel::retry,
         summaryState = summaryState,
@@ -421,6 +424,8 @@ fun MiGuardiaApp(
     modifier: Modifier = Modifier,
     onEnterCalendarEditMode: (LocalDate?) -> Unit = {},
     onEditSelectionChange: (Set<LocalDate>) -> Unit = {},
+    onConfirmEditSelection: () -> Unit = {},
+    onResumeEditSelection: () -> Unit = {},
     onFinishCalendarEditMode: () -> Unit = {},
     nextEventState: NextEventUiState = NextEventUiState(),
     onNextEventRetry: () -> Unit = {},
@@ -467,8 +472,9 @@ fun MiGuardiaApp(
     val inlineCalendarManagement = destination == MainDestination.CALENDAR &&
         calendarState.interactionMode == CalendarInteractionMode.EDIT &&
         when (managementState.surface) {
-            ManagementSurface.DAY_OFF_FORM -> true
-            ManagementSurface.SHIFT_FORM -> managementState.shiftDraft?.editingShift == null
+            ManagementSurface.INITIAL_DATA_PREPARATION -> true
+            ManagementSurface.DAY_OFF_FORM -> managementState.dayOffDraft != null
+            ManagementSurface.SHIFT_FORM -> managementState.shiftDraft?.let { it.editingShift == null } == true
             else -> false
         }
     val hasBlockingSurface = managementState.surface != ManagementSurface.NONE ||
@@ -481,6 +487,9 @@ fun MiGuardiaApp(
     val canOpenDrawer = !hasBlockingSurface && selectedDay == null
     LaunchedEffect(calendarNavigationRequest) {
         if (calendarNavigationRequest > 0) {
+            if (managementState.surface == ManagementSurface.INITIAL_DATA_PREPARATION) {
+                managementActions.close()
+            }
             drawerState.snapTo(DrawerValue.Closed)
             destination = MainDestination.CALENDAR
         }
@@ -603,15 +612,20 @@ fun MiGuardiaApp(
                             managementActions.updateCalendarSelection(selectedDates)
                         }
                     },
+                    onConfirmEditSelection = onConfirmEditSelection,
+                    onResumeEditSelection = onResumeEditSelection,
                     onRetry = onRetry,
                     onNextEventRetry = onNextEventRetry,
                     onEnterEditMode = { onEnterCalendarEditMode(null) },
-                    onFinishEditMode = onFinishCalendarEditMode,
-                    onLoadFirstShift = {
-                        val today = calendarState.referenceInstant.atZone(AppDefaults.zoneId()).toLocalDate()
-                        val selectedDate = firstShiftDate(calendarState.visibleMonth, today)
-                        onEnterCalendarEditMode(selectedDate)
-                        managementActions.openAddShiftForDates(calendarState.visibleMonth, setOf(selectedDate))
+                    onFinishEditMode = {
+                        if (managementState.surface == ManagementSurface.INITIAL_DATA_PREPARATION) {
+                            managementActions.close()
+                        }
+                        onFinishCalendarEditMode()
+                    },
+                    onLoadInitialData = {
+                        onEnterCalendarEditMode(null)
+                        managementActions.openInitialDataPreparation()
                     },
                     managementState = managementState,
                     managementActions = managementActions,
@@ -653,7 +667,22 @@ fun MiGuardiaApp(
             calendarState.interactionMode == CalendarInteractionMode.EDIT &&
             selectedDay == null &&
             !hasBlockingSurface,
-        onBack = onFinishCalendarEditMode,
+        onBack = {
+            if (calendarState.editSelectionConfirmed) {
+                onResumeEditSelection()
+            } else {
+                onFinishCalendarEditMode()
+            }
+        },
+    )
+    BackHandler(
+        enabled = destination == MainDestination.CALENDAR &&
+            calendarState.interactionMode == CalendarInteractionMode.EDIT &&
+            managementState.surface == ManagementSurface.INITIAL_DATA_PREPARATION,
+        onBack = {
+            managementActions.close()
+            onFinishCalendarEditMode()
+        },
     )
     BackHandler(
         enabled = drawerState.isOpen && !hasBlockingSurface,
@@ -683,9 +712,18 @@ fun MiGuardiaApp(
             DayDetailSheet(
                 day = selectedDay,
                 referenceInstant = calendarState.referenceInstant,
+                editEnabled = calendarState.hasAnyShiftsLoaded,
                 onEditDay = {
                     onDismissDate()
-                    onEnterCalendarEditMode(selectedDay.date)
+                    val hasUsableSchedule = managementState.scheduleOptions.any {
+                        it.objective.isActive && it.combination.isActive
+                    }
+                    if (!calendarState.hasAnyShifts && !hasUsableSchedule) {
+                        onEnterCalendarEditMode(null)
+                        managementActions.openInitialDataPreparation()
+                    } else {
+                        onEnterCalendarEditMode(selectedDay.date)
+                    }
                 },
                 onOpenWeather = weatherActions.openShift,
                 weatherState = weatherState,
@@ -733,11 +771,13 @@ private fun CalendarScreen(
     onToday: () -> Unit,
     onSelectDate: (LocalDate) -> Unit,
     onEditSelectionChange: (Set<LocalDate>) -> Unit,
+    onConfirmEditSelection: () -> Unit,
+    onResumeEditSelection: () -> Unit,
     onRetry: () -> Unit,
     onNextEventRetry: () -> Unit,
     onEnterEditMode: () -> Unit,
     onFinishEditMode: () -> Unit,
-    onLoadFirstShift: () -> Unit,
+    onLoadInitialData: () -> Unit,
     onOpenPhotos: () -> Unit,
     managementState: ManagementUiState,
     managementActions: ManagementActions,
@@ -749,7 +789,12 @@ private fun CalendarScreen(
 ) {
     val today = state.referenceInstant.atZone(AppDefaults.zoneId()).toLocalDate()
     var pendingMonthChange by rememberSaveable { mutableStateOf<String?>(null) }
-    val formOpen = managementState.surface in setOf(ManagementSurface.SHIFT_FORM, ManagementSurface.DAY_OFF_FORM)
+    val formOpen = when (managementState.surface) {
+        ManagementSurface.SHIFT_FORM -> managementState.shiftDraft?.let { it.editingShift == null } == true
+        ManagementSurface.DAY_OFF_FORM -> managementState.dayOffDraft != null
+        else -> false
+    }
+    val initialDataPreparationOpen = managementState.surface == ManagementSurface.INITIAL_DATA_PREPARATION
     val requestMonthChange: (String, () -> Unit) -> Unit = { key, action ->
         if (state.interactionMode == CalendarInteractionMode.EDIT && state.editSelectedDates.isNotEmpty()) {
             pendingMonthChange = key
@@ -763,7 +808,9 @@ private fun CalendarScreen(
         if (state.visibleMonth == YearMonth.from(today)) onToday() else requestMonthChange("today", onToday)
     }
     TransientConfirmation(
-        message = managementState.infoMessage.takeIf { managementState.surface == ManagementSurface.NONE },
+        message = managementState.infoMessage.takeIf {
+            managementState.surface in setOf(ManagementSurface.NONE, ManagementSurface.INITIAL_DATA_PREPARATION)
+        },
         onDismiss = managementActions.clearMessage,
     ) {
         Column(
@@ -793,6 +840,7 @@ private fun CalendarScreen(
                 onNext = nextMonth,
                 onToday = currentMonth,
                 onPhotos = onOpenPhotos,
+                showPhotos = state.interactionMode == CalendarInteractionMode.EDIT,
                 appZoom = appZoom,
                 navigationEnabled = !formOpen,
             )
@@ -817,45 +865,74 @@ private fun CalendarScreen(
                     interactionMode = state.interactionMode,
                     selectedDates = state.editSelectedDates,
                     onEditSelectionChange = onEditSelectionChange,
-                    selectionEnabled = !formOpen,
+                    selectionEnabled = !formOpen && !initialDataPreparationOpen,
+                    selectionConfirmed = state.editSelectionConfirmed,
+                    monthSwipeEnabled = !formOpen,
                     appZoom = appZoom,
                 )
             }
 
             if (state.interactionMode == CalendarInteractionMode.EDIT) {
-                CalendarEditTools(
-                    state = state,
-                    managementState = managementState,
-                    managementActions = managementActions,
-                    onOpenExceptions = onOpenExceptions,
-                    onOpenWeather = onOpenWeather,
-                    weatherState = weatherState,
-                )
+                if (initialDataPreparationOpen) {
+                    InitialDataPreparationContent(
+                        state = managementState,
+                        actions = managementActions,
+                    )
+                } else if (!formOpen) {
+                    CalendarEditTools(
+                        state = state,
+                        managementActions = managementActions,
+                        onConfirmSelection = onConfirmEditSelection,
+                        onResumeSelection = onResumeEditSelection,
+                        onOpenExceptions = onOpenExceptions,
+                        onOpenWeather = onOpenWeather,
+                        weatherState = weatherState,
+                    )
+                }
                 if (formOpen) {
                     CalendarManagementInlineContent(
                         state = managementState,
                         actions = managementActions,
                         onOpenNotifications = onOpenNotifications,
+                        onReturnToDateSelection = onResumeEditSelection,
                     )
                 }
             }
 
             if (!formOpen) {
-                Button(
-                    onClick = when {
-                        state.interactionMode == CalendarInteractionMode.EDIT -> onFinishEditMode
-                        state.hasAnyShifts -> onEnterEditMode
-                        else -> onLoadFirstShift
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(
-                        when {
-                            state.interactionMode == CalendarInteractionMode.EDIT -> "Terminar"
-                            state.hasAnyShifts -> "Editar calendario"
-                            else -> "Cargar mi primera guardia"
-                        },
-                    )
+                if (state.interactionMode == CalendarInteractionMode.EDIT) {
+                    OutlinedButton(
+                        onClick = onFinishEditMode,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(if (initialDataPreparationOpen) "Salir por ahora" else "Salir de edición")
+                    }
+                } else {
+                    if (!state.hasAnyShiftsLoaded && state.shiftPresenceError) {
+                        OutlinedButton(
+                            onClick = onRetry,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text("Reintentar carga")
+                        }
+                    } else if (!state.hasAnyShiftsLoaded) {
+                        Button(
+                            onClick = {},
+                            enabled = false,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("calendar-shift-presence-loading"),
+                        ) {
+                            Text("Cargando datos…")
+                        }
+                    } else {
+                        Button(
+                            onClick = if (state.hasAnyShifts) onEnterEditMode else onLoadInitialData,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text(if (state.hasAnyShifts) "Editar calendario" else "Cargar datos")
+                        }
+                    }
                 }
             }
         }
@@ -884,54 +961,130 @@ private fun CalendarScreen(
 @Composable
 private fun CalendarEditTools(
     state: CalendarUiState,
-    managementState: ManagementUiState,
     managementActions: ManagementActions,
+    onConfirmSelection: () -> Unit,
+    onResumeSelection: () -> Unit,
     onOpenExceptions: (com.blackatsystems.miguardia.core.domain.model.Shift) -> Unit,
     onOpenWeather: (java.util.UUID) -> Unit,
     weatherState: WeatherUiState,
 ) {
     val selectedDays = state.days.filter { it.date in state.editSelectedDates }
-    val formOpen = managementState.surface in setOf(ManagementSurface.SHIFT_FORM, ManagementSurface.DAY_OFF_FORM)
+    val selectionReady = state.loadState == CalendarLoadState.CONTENT &&
+        selectedDays.size == state.editSelectedDates.size
+    val selectionStatusMessage = if (state.loadState == CalendarLoadState.ERROR) {
+        "No pudimos preparar los días elegidos. Reintentá arriba."
+    } else {
+        "Cargando los días elegidos…"
+    }
     var pendingDeleteId by rememberSaveable { mutableStateOf<String?>(null) }
-    SectionCard(
-        title = "Herramientas de edición",
-        supportingText = "La selección se hace únicamente sobre la grilla mensual de arriba.",
-        modifier = Modifier.testTag("calendar-edit-tools"),
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("calendar-edit-tools"),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Text(
-            text = when (state.editSelectedDates.size) {
-                0 -> "Todavía no seleccionaste días. Tocá una o varias fechas del mes."
-                1 -> "1 día seleccionado"
-                else -> "${state.editSelectedDates.size} días seleccionados"
-            },
-            modifier = Modifier.testTag("calendar-edit-selection-count"),
-            fontWeight = FontWeight.SemiBold,
-        )
-        if (formOpen) {
+        if (state.editSelectedDates.isEmpty()) {
             Text(
-                "La selección queda visible y bloqueada mientras completás la operación debajo.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.vigiliaColors.onSurfaceMuted,
+                text = "Elegí uno o varios días",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
             )
-        } else if (state.editSelectedDates.isNotEmpty()) {
-            Button(
-                onClick = {
-                    managementActions.openAddShiftForDates(state.visibleMonth, state.editSelectedDates)
+            Text(
+                text = "Tocá las fechas que querés modificar",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.testTag("calendar-edit-empty-instruction"),
+            )
+        } else if (!state.editSelectionConfirmed) {
+            Text(
+                text = "Elegí uno o varios días",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(
+                text = if (state.editSelectedDates.size == 1) {
+                    "1 día seleccionado"
+                } else {
+                    "${state.editSelectedDates.size} días seleccionados"
                 },
-                modifier = Modifier.fillMaxWidth(),
-            ) { Text("Agregar guardia") }
-            if (selectedDays.none { it.shifts.isNotEmpty() }) {
-                OutlinedButton(
+                modifier = Modifier.testTag("calendar-edit-selection-count"),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Button(
+                onClick = onConfirmSelection,
+                enabled = selectionReady,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 56.dp)
+                    .testTag("calendar-confirm-date-selection"),
+            ) {
+                Text("Terminar de elegir días")
+            }
+            if (!selectionReady) {
+                Text(
+                    text = selectionStatusMessage,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        } else {
+            Text(
+                text = "¿Qué querés cargar?",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(
+                text = if (state.editSelectedDates.size == 1) {
+                    "1 día elegido"
+                } else {
+                    "${state.editSelectedDates.size} días elegidos"
+                },
+                modifier = Modifier.testTag("calendar-edit-selection-count"),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+            if (selectionReady) {
+                Button(
                     onClick = {
-                        managementActions.openDayOffsForDates(state.visibleMonth, state.editSelectedDates)
+                        managementActions.openAddShiftForDates(state.visibleMonth, state.editSelectedDates)
                     },
-                    modifier = Modifier.fillMaxWidth(),
-                ) { Text("Agregar francos") }
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 56.dp)
+                        .testTag("calendar-add-shift"),
+                ) { Text("Agregar guardia") }
+                if (selectedDays.none { it.shifts.isNotEmpty() }) {
+                    OutlinedButton(
+                        onClick = {
+                            managementActions.openDayOffsForDates(state.visibleMonth, state.editSelectedDates)
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 56.dp)
+                            .testTag("calendar-add-day-offs"),
+                    ) { Text("Agregar francos") }
+                }
+            } else {
+                Text(
+                    text = selectionStatusMessage,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            OutlinedButton(
+                onClick = onResumeSelection,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 48.dp)
+                    .testTag("calendar-change-date-selection"),
+            ) {
+                Text("Modificar días elegidos")
             }
         }
     }
 
-    if (!formOpen && selectedDays.size == 1 && selectedDays.single().shifts.isNotEmpty()) {
+    if (state.editSelectionConfirmed && selectedDays.size == 1 && selectedDays.single().shifts.isNotEmpty()) {
         val day = selectedDays.single()
         SectionCard(
             title = "Acciones del ${day.date.dayOfMonth}",
@@ -994,6 +1147,8 @@ private fun CalendarGridViewport(
     selectedDates: Set<LocalDate>,
     onEditSelectionChange: (Set<LocalDate>) -> Unit,
     selectionEnabled: Boolean,
+    selectionConfirmed: Boolean,
+    monthSwipeEnabled: Boolean,
     appZoom: AppZoom,
 ) {
     BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
@@ -1025,7 +1180,8 @@ private fun CalendarGridViewport(
                     selectedDates = selectedDates,
                     onEditSelectionChange = onEditSelectionChange,
                     selectionEnabled = selectionEnabled,
-                    enableMonthSwipe = !isEnlarged,
+                    selectionConfirmed = selectionConfirmed,
+                    enableMonthSwipe = !isEnlarged && monthSwipeEnabled,
                 )
             }
         }
@@ -1059,6 +1215,7 @@ private fun MonthControls(
     onNext: () -> Unit,
     onToday: () -> Unit,
     onPhotos: () -> Unit,
+    showPhotos: Boolean,
     appZoom: AppZoom,
     navigationEnabled: Boolean,
 ) {
@@ -1105,29 +1262,37 @@ private fun MonthControls(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    OutlinedButton(onClick = onToday, enabled = navigationEnabled, modifier = Modifier.weight(1f)) {
+                    OutlinedButton(
+                        onClick = onToday,
+                        enabled = navigationEnabled,
+                        modifier = if (showPhotos) Modifier.weight(1f) else Modifier.fillMaxWidth(),
+                    ) {
                         Text("Ir a hoy")
                     }
-                    OutlinedButton(
-                        onClick = onPhotos,
-                        enabled = navigationEnabled,
-                        modifier = Modifier
-                            .weight(1f)
-                            .semantics { contentDescription = "Fotos del cronograma del mes" },
-                    ) { Text("Fotos del mes") }
+                    if (showPhotos) {
+                        OutlinedButton(
+                            onClick = onPhotos,
+                            enabled = navigationEnabled,
+                            modifier = Modifier
+                                .weight(1f)
+                                .semantics { contentDescription = "Fotos del cronograma del mes" },
+                        ) { Text("Fotos del mes") }
+                    }
                 }
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(onClick = onToday, enabled = navigationEnabled, modifier = Modifier.fillMaxWidth()) {
                         Text("Ir a hoy")
                     }
-                    OutlinedButton(
-                        onClick = onPhotos,
-                        enabled = navigationEnabled,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .semantics { contentDescription = "Fotos del cronograma del mes" },
-                    ) { Text("Fotos del mes") }
+                    if (showPhotos) {
+                        OutlinedButton(
+                            onClick = onPhotos,
+                            enabled = navigationEnabled,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .semantics { contentDescription = "Fotos del cronograma del mes" },
+                        ) { Text("Fotos del mes") }
+                    }
                 }
             }
         }
@@ -1173,6 +1338,7 @@ private fun MonthGrid(
     selectedDates: Set<LocalDate>,
     onEditSelectionChange: (Set<LocalDate>) -> Unit,
     selectionEnabled: Boolean,
+    selectionConfirmed: Boolean,
     enableMonthSwipe: Boolean,
 ) {
     val dayByDate = remember(days) { days.associateBy { it.date } }
@@ -1184,7 +1350,7 @@ private fun MonthGrid(
     }
     var horizontalDrag by remember { mutableFloatStateOf(0f) }
 
-    val swipeModifier = if (enableMonthSwipe && selectionEnabled) {
+    val swipeModifier = if (enableMonthSwipe) {
         Modifier.pointerInput(month, selectedDates) {
                 detectHorizontalDragGestures(
                     onDragStart = { horizontalDrag = 0f },
@@ -1228,10 +1394,12 @@ private fun MonthGrid(
                             day = day,
                             isToday = day.date == today,
                             isSelected = day.date in selectedDates,
+                            enabled = interactionMode == CalendarInteractionMode.VIEW ||
+                                (selectionEnabled && !selectionConfirmed),
                             onClick = {
                                 if (interactionMode == CalendarInteractionMode.VIEW) {
                                     onSelectDate(day.date)
-                                } else if (selectionEnabled) {
+                                } else if (selectionEnabled && !selectionConfirmed) {
                                     onEditSelectionChange(
                                         if (day.date in selectedDates) selectedDates - day.date else selectedDates + day.date,
                                     )
@@ -1251,6 +1419,7 @@ private fun DayCell(
     day: CalendarDay,
     isToday: Boolean,
     isSelected: Boolean,
+    enabled: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -1288,12 +1457,16 @@ private fun DayCell(
                 contentDescription = if (isSelected) "$description, seleccionado para editar" else description
                 role = Role.Button
                 selected = isSelected
-                onClick(action = {
-                    onClick()
-                    true
-                })
+                if (enabled) {
+                    onClick(action = {
+                        onClick()
+                        true
+                    })
+                } else {
+                    disabled()
+                }
             }
-            .clickable(onClick = onClick)
+            .clickable(enabled = enabled, onClick = onClick)
             .padding(horizontal = 2.dp, vertical = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(2.dp),
@@ -1401,6 +1574,7 @@ private fun AutoSizeSingleLineText(
 private fun DayDetailSheet(
     day: CalendarDay,
     referenceInstant: java.time.Instant,
+    editEnabled: Boolean,
     onEditDay: () -> Unit,
     onOpenWeather: (java.util.UUID) -> Unit,
     weatherState: WeatherUiState,
@@ -1459,6 +1633,7 @@ private fun DayDetailSheet(
         }
         Button(
             onClick = onEditDay,
+            enabled = editEnabled,
             modifier = Modifier
                 .fillMaxWidth()
                 .testTag("edit-day-action"),
@@ -1508,7 +1683,7 @@ private fun ShiftDetail(
                 Text(address)
             }
             if (onOpenExceptions != null) {
-                Button(onClick = { onOpenExceptions(shift) }, modifier = Modifier.fillMaxWidth()) {
+                OutlinedButton(onClick = { onOpenExceptions(shift) }, modifier = Modifier.fillMaxWidth()) {
                     Text("Informar novedad / notas")
                 }
             }

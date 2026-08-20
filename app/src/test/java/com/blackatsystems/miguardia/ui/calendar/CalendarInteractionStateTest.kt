@@ -49,10 +49,25 @@ class CalendarInteractionStateTest {
     }
 
     @Test
-    fun savedEditModeAndFirstShiftDateAreDeterministic() {
+    fun dateSelectionMustBeConfirmedAndResumingKeepsTheChosenDates() {
+        val editing = CalendarUiState(MONTH, Instant.EPOCH)
+            .enterEditing(SELECTED_DATE)
+            .toggleEditDate(SECOND_DATE)
+
+        val confirmed = editing.confirmEditSelection()
+        val resumed = confirmed.resumeEditSelection()
+
+        assertEquals(true, confirmed.editSelectionConfirmed)
+        assertEquals(setOf(SELECTED_DATE, SECOND_DATE), confirmed.editSelectedDates)
+        assertEquals(false, resumed.editSelectionConfirmed)
+        assertEquals(setOf(SELECTED_DATE, SECOND_DATE), resumed.editSelectedDates)
+        assertEquals(false, confirmed.toggleEditDate(SELECTED_DATE).editSelectionConfirmed)
+        assertEquals(false, confirmed.finishEditing().editSelectionConfirmed)
+    }
+
+    @Test
+    fun savedEditModeIsDeterministic() {
         assertEquals(CalendarInteractionMode.EDIT, calendarInteractionModeFromSaved("EDIT"))
-        assertEquals(SELECTED_DATE, firstShiftDate(MONTH, SELECTED_DATE))
-        assertEquals(LocalDate.of(2026, 9, 1), firstShiftDate(YearMonth.of(2026, 9), SELECTED_DATE))
     }
 
     private companion object {

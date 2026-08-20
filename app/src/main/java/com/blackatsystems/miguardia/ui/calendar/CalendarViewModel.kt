@@ -58,6 +58,9 @@ class CalendarViewModel(
         .orEmpty()
         .mapNotNull { runCatching { LocalDate.parse(it) }.getOrNull() }
         .filterTo(linkedSetOf()) { YearMonth.from(it) == initialMonth }
+    private val initialEditSelectionConfirmed = savedStateHandle.get<Boolean>(EDIT_SELECTION_CONFIRMED_KEY) == true &&
+        initialInteractionMode == CalendarInteractionMode.EDIT &&
+        initialEditSelectedDates.isNotEmpty()
 
     private val _uiState = kotlinx.coroutines.flow.MutableStateFlow(
         CalendarUiState(
@@ -68,13 +71,16 @@ class CalendarViewModel(
             editSelectedDates = initialEditSelectedDates.takeIf {
                 initialInteractionMode == CalendarInteractionMode.EDIT
             }.orEmpty(),
+            editSelectionConfirmed = initialEditSelectionConfirmed,
             interactionMode = initialInteractionMode,
+            hasAnyShiftsLoaded = false,
         ),
     )
     val uiState: kotlinx.coroutines.flow.StateFlow<CalendarUiState> = _uiState
 
     private var observationJob: Job? = null
     private var boundaryJob: Job? = null
+    private var shiftPresenceJob: Job? = null
 
     init {
         observeGlobalShiftPresence()
@@ -103,10 +109,12 @@ class CalendarViewModel(
         savedStateHandle[INTERACTION_MODE_KEY] = CalendarInteractionMode.VIEW.name
         savedStateHandle[DETAIL_DATE_KEY] = date.toString()
         savedStateHandle.remove<ArrayList<String>>(EDIT_SELECTED_DATES_KEY)
+        savedStateHandle.remove<Boolean>(EDIT_SELECTION_CONFIRMED_KEY)
         _uiState.update {
             it.copy(
                 detailDate = date,
                 editSelectedDates = emptySet(),
+                editSelectionConfirmed = false,
                 interactionMode = CalendarInteractionMode.VIEW,
             )
         }
@@ -123,6 +131,7 @@ class CalendarViewModel(
         savedStateHandle.remove<String>(DETAIL_DATE_KEY)
         savedStateHandle.remove<String>(LEGACY_SELECTED_DATE_KEY)
         persistEditSelection(selectedDate?.let(::setOf).orEmpty())
+        savedStateHandle.remove<Boolean>(EDIT_SELECTION_CONFIRMED_KEY)
         _uiState.update { it.enterEditing(selectedDate) }
     }
 
@@ -131,6 +140,7 @@ class CalendarViewModel(
         val updated = current.toggleEditDate(date)
         if (updated == current) return
         persistEditSelection(updated.editSelectedDates)
+        savedStateHandle.remove<Boolean>(EDIT_SELECTION_CONFIRMED_KEY)
         _uiState.value = updated
     }
 
@@ -141,19 +151,35 @@ class CalendarViewModel(
             dates.any { YearMonth.from(it) != current.visibleMonth }
         ) return
         persistEditSelection(dates)
-        _uiState.update { it.copy(editSelectedDates = dates) }
+        savedStateHandle.remove<Boolean>(EDIT_SELECTION_CONFIRMED_KEY)
+        _uiState.update { it.copy(editSelectedDates = dates, editSelectionConfirmed = false) }
     }
 
     fun clearEditSelection() = setEditSelectedDates(emptySet())
 
+    fun confirmEditSelection() {
+        val current = _uiState.value
+        val updated = current.confirmEditSelection()
+        if (updated == current) return
+        savedStateHandle[EDIT_SELECTION_CONFIRMED_KEY] = true
+        _uiState.value = updated
+    }
+
+    fun resumeEditSelection() {
+        savedStateHandle.remove<Boolean>(EDIT_SELECTION_CONFIRMED_KEY)
+        _uiState.update(CalendarUiState::resumeEditSelection)
+    }
+
     fun finishEditMode() {
         savedStateHandle[INTERACTION_MODE_KEY] = CalendarInteractionMode.VIEW.name
         savedStateHandle.remove<ArrayList<String>>(EDIT_SELECTED_DATES_KEY)
+        savedStateHandle.remove<Boolean>(EDIT_SELECTION_CONFIRMED_KEY)
         _uiState.update(CalendarUiState::finishEditing)
     }
 
     fun retry() {
         observeMonth(_uiState.value.visibleMonth)
+        if (!_uiState.value.hasAnyShiftsLoaded) observeGlobalShiftPresence()
     }
 
     private fun setVisibleMonth(month: YearMonth) {
@@ -162,6 +188,7 @@ class CalendarViewModel(
         savedStateHandle.remove<String>(DETAIL_DATE_KEY)
         savedStateHandle.remove<String>(LEGACY_SELECTED_DATE_KEY)
         savedStateHandle.remove<ArrayList<String>>(EDIT_SELECTED_DATES_KEY)
+        savedStateHandle.remove<Boolean>(EDIT_SELECTION_CONFIRMED_KEY)
         _uiState.update {
             it.copy(
                 visibleMonth = month,
@@ -169,6 +196,7 @@ class CalendarViewModel(
                 days = emptyList(),
                 detailDate = null,
                 editSelectedDates = emptySet(),
+                editSelectionConfirmed = false,
                 loadState = CalendarLoadState.LOADING,
                 errorMessage = null,
             )
@@ -179,16 +207,31 @@ class CalendarViewModel(
     private fun persistEditSelection(dates: Set<LocalDate>) {
         if (dates.isEmpty()) {
             savedStateHandle.remove<ArrayList<String>>(EDIT_SELECTED_DATES_KEY)
+            savedStateHandle.remove<Boolean>(EDIT_SELECTION_CONFIRMED_KEY)
         } else {
             savedStateHandle[EDIT_SELECTED_DATES_KEY] = ArrayList(dates.sorted().map(LocalDate::toString))
         }
     }
 
     private fun observeGlobalShiftPresence() {
-        viewModelScope.launch {
+        shiftPresenceJob?.cancel()
+        _uiState.update { it.copy(shiftPresenceError = false) }
+        shiftPresenceJob = viewModelScope.launch {
             shiftRepository.observeHasAny()
-                .catch { /* Conservamos el valor seguro: no ofrecer una falsa primera carga. */ }
-                .collect { hasAny -> _uiState.update { it.copy(hasAnyShifts = hasAny) } }
+                .catch {
+                    _uiState.update { state ->
+                        if (state.hasAnyShiftsLoaded) state else state.copy(shiftPresenceError = true)
+                    }
+                }
+                .collect { hasAny ->
+                    _uiState.update {
+                        it.copy(
+                            hasAnyShifts = hasAny,
+                            hasAnyShiftsLoaded = true,
+                            shiftPresenceError = false,
+                        )
+                    }
+                }
         }
     }
 
@@ -301,6 +344,7 @@ class CalendarViewModel(
         const val INTERACTION_MODE_KEY = "calendar.interactionMode"
         const val DETAIL_DATE_KEY = "calendar.detailDate"
         const val EDIT_SELECTED_DATES_KEY = "calendar.editSelectedDates"
+        const val EDIT_SELECTION_CONFIRMED_KEY = "calendar.editSelectionConfirmed"
         const val LEGACY_SELECTED_DATE_KEY = "calendar.selectedDate"
     }
 }

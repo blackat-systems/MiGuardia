@@ -11,6 +11,7 @@ import java.util.UUID
 
 enum class ManagementSurface {
     NONE,
+    INITIAL_DATA_PREPARATION,
     SETTINGS,
     OBJECTIVE_FORM,
     SCHEDULE_FORM,
@@ -59,6 +60,8 @@ data class DayOffDraft(
 data class ManagementUiState(
     val surface: ManagementSurface = ManagementSurface.NONE,
     val formReturnSurface: ManagementSurface = ManagementSurface.NONE,
+    val catalogLoaded: Boolean = false,
+    val catalogErrorMessage: String? = null,
     val objectives: List<Objective> = emptyList(),
     val scheduleOptions: List<ScheduleOption> = emptyList(),
     val recent: List<RecentScheduleCombination> = emptyList(),

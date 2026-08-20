@@ -1,6 +1,6 @@
 # MiGuardia — dependencia CALENDARIO: modo consulta y edición explícita
 
-> Estado: contrato histórico; módulo integrado en `main` mediante `9ea42db` y verificado por MAIN. La prohibición de `Editar día` en consulta y la selección de fechas dentro de formularios quedan reemplazadas por `docs/prompts/CALENDARIO_SELECCION_DIRECTA.md` desde el 18 de agosto de 2026.
+> Estado: contrato histórico; módulo integrado en `main` mediante `9ea42db` y verificado por MAIN. La prohibición de `Editar día` en consulta, la selección de fechas dentro de formularios, la primera carga basada en `Cargar mi primera guardia`, la aparición inmediata de Guardia/Francos al tocar fechas y el antiguo uso ambiguo de `Terminar` quedan reemplazados por `docs/prompts/CALENDARIO_SELECCION_DIRECTA.md` y `docs/prompts/SIMPLIFICACION_FLUJO_DE_CARGA.md` desde el 18 de agosto de 2026. El contrato vigente separa `Terminar de elegir días` de `Salir de edición` y conserva las fechas al usar `Modificar días elegidos`.
 >
 > Fecha: 2026-08-17
 >

@@ -47,7 +47,7 @@ Al finalizar debe existir:
 - finalización local versionada y resistente a recreación;
 - una entrada `Ayuda` desde Configuración;
 - temas de ayuda acotados y acción `Repetir guía inicial`;
-- primera carga guiada cuando todavía no existe ninguna guardia;
+- preparación de datos guiada cuando todavía no existe ninguna guardia;
 - reutilización estricta de Perfil, Objetivos/horarios y carga de guardias existentes;
 - regreso final al Calendario sin filas parciales ni datos ficticios.
 
@@ -85,7 +85,7 @@ Los textos son breves, verificables y propios de las funciones reales. No mencio
   1. botón de tres líneas y destinos Calendario, Resumen y Configuración;
   2. próxima guardia, mes, anterior/siguiente, Hoy y gesto horizontal;
   3. toque de un día para detalles y `Editar día`;
-  4. botón grande `Editar calendario`, selección directa de uno o varios días y bandeja de herramientas;
+  4. botón grande `Editar calendario`, selección directa de uno o varios días, `Terminar de elegir días` y elección posterior entre Guardia o Francos;
   5. Fotos del cronograma;
   6. Resumen;
   7. Configuración y sus entradas principales, incluida Ayuda.
@@ -109,14 +109,15 @@ Los textos son breves, verificables y propios de las funciones reales. No mencio
 ### 4.5 Primera carga guiada
 
 - Sólo se presenta como recorrido especial cuando `ShiftRepository.observeHasAny()` es falso.
-- La acción `Cargar mi primera guardia` abre una guía breve en lugar de lanzar un formulario imposible de completar sin horarios.
+- La acción `Cargar datos` abre la preparación inline real en lugar de lanzar un formulario de guardia imposible de completar sin horarios.
 - La guía deriva el avance de datos reales y muestra, como máximo, tres bloques:
   1. revisar Perfil laboral mediante la superficie existente;
-  2. crear al menos un objetivo y un horario activo mediante `Objetivos y horarios`;
-  3. cargar la primera guardia seleccionando la fecha en la grilla principal y usando el formulario vigente sin un segundo calendario.
+  2. crear uno o varios objetivos y horarios activos mediante los formularios reales;
+  3. tocar `Continuar y elegir días` cuando exista al menos una combinación activa, seleccionar una o varias fechas en la grilla principal, confirmar `Terminar de elegir días`, elegir Guardia o Francos y usar el formulario vigente sin un segundo calendario.
 - Perfil es revisable, no obligatorio: nombre sigue opcional y `Inforce` continúa siendo la empresa inicial válida.
-- Si ya existe un horario activo, la guía permite avanzar directamente a la carga.
-- La fecha inicial usa la regla vigente `firstShiftDate`; no inventa otra selección temporal.
+- Si ya existe un horario activo, `Continuar y elegir días` está habilitado, pero no avanza automáticamente: permite crear más objetivos u horarios antes de seguir.
+- La selección comienza vacía. La primera carga no usa `firstShiftDate` ni elige una fecha por el usuario.
+- Guardia y Francos no aparecen durante la selección. `Terminar de elegir días` confirma el conjunto sin guardar, mientras `Modificar días elegidos` vuelve a la grilla conservando las fechas y `Salir de edición` abandona el modo.
 - Al guardar la primera guardia, la guía observa la fuente real, muestra confirmación y permite ir al Calendario.
 - Salir por ahora no crea ni elimina datos. Los objetivos u horarios ya confirmados permanecen porque son datos válidos, no residuos del tutorial.
 - Atrás desde Perfil o gestión vuelve a la guía con su estado derivado actualizado.
@@ -149,7 +150,7 @@ Para el avance real reutilizá:
 - `ScheduleCombinationRepository.observeByObjective()` filtrando `isActive`;
 - `ShiftRepository.observeHasAny()`;
 - `ManagementViewModel` y sus formularios existentes;
-- `CalendarInteractionMode`, la selección directa de fechas y `firstShiftDate`.
+- `CalendarInteractionMode` y la selección directa de fechas.
 
 Room debe permanecer exactamente en v5. No cambies entidades, esquemas, DAO, migraciones ni `LocalDataStore`. Tampoco cambies manifiesto, permisos, Gradle, dependencias, red, canales ni servicios.
 
@@ -232,9 +233,11 @@ No debe alcanzar Room, esquemas, migraciones, manifiesto, permisos, Gradle, depe
 - error de lectura/escritura y reintento;
 - Ayuda aparece una sola vez en Configuración;
 - repetición completa vuelve a Ayuda y no muestra Omitir guía;
-- CTA de calendario vacío abre la guía;
+- CTA `Cargar datos` abre la preparación sin preseleccionar fecha ni crear `ShiftDraft`;
 - guía abre Perfil y gestión reales, sin formularios duplicados;
 - horario activo habilita la carga real;
+- selección vacía, elección múltiple, `Terminar de elegir días` y elección posterior Guardia/Francos respetan la secuencia;
+- `Modificar días elegidos` conserva las fechas elegidas, se muestra como un control secundario delimitado y `Salir de edición` se mantiene como acción distinta;
 - primera guardia confirmada conduce al Calendario;
 - claro/oscuro, 100/150/200 %, retrato y paisaje mantienen acciones alcanzables.
 
@@ -245,7 +248,8 @@ No debe alcanzar Room, esquemas, migraciones, manifiesto, permisos, Gradle, depe
 - menú lateral, sus tres destinos y gesto horizontal del mes;
 - Perfil conserva datos y protección de borrador;
 - Objetivos/horarios y carga simple/múltiple conservan validaciones;
-- `Cargar mi primera guardia` no elige fechas fuera del mes;
+- `Cargar datos` no elige ninguna fecha y permite varios objetivos/horarios antes de continuar;
+- Guardia y Francos no aparecen antes de `Terminar de elegir días`, y volver a seleccionar no vacía el conjunto;
 - ninguna preferencia, entidad o instantánea histórica cambia al repetir o abandonar.
 
 Ejecutá con `--max-workers=1` pruebas afectadas, `testDebugUnitTest`, `lintDebug`, `assembleDebug`, `assembleRelease` y APK de instrumentación/QA. MAIN decide la selección física final por mapa de impacto.

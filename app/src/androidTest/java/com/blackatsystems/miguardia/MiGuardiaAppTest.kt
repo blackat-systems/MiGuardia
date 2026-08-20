@@ -158,32 +158,42 @@ class MiGuardiaAppTest {
                 "MiGuardia no se hizo visible dentro del tiempo esperado.",
                 device.wait(Until.hasObject(By.pkg(context.packageName).depth(0)), WAIT_TIMEOUT_MILLIS),
             )
-            val firstShift = "Cargar mi primera guardia"
+            val loadData = "Cargar datos"
             val editCalendar = "Editar calendario"
             val entry = when {
-                device.scrollUntilText(firstShift) -> firstShift
+                device.scrollUntilText(loadData) -> loadData
                 device.scrollUntilText(editCalendar) -> editCalendar
                 else -> throw AssertionError("No apareció una entrada consciente a la edición del calendario.")
             }
             device.tapText(entry)
-            if (entry == firstShift) {
+            if (entry == loadData) {
                 assertTrue(
-                    "La primera carga no mostró el formulario debajo de la grilla principal.",
-                    device.scrollUntilText("Agregar guardia"),
+                    "La primera carga no mostró su preparación sin abrir una guardia.",
+                    device.scrollUntilText("Primero: prepará objetivos y horarios"),
                 )
-                device.pressBack()
-                device.tapText("Descartar")
+                device.assertTextGone("Cargar mi primera guardia")
+                scenario.recreate()
+                assertTrue(
+                    "La preparación de datos no sobrevivió la recreación.",
+                    device.scrollUntilText("Primero: prepará objetivos y horarios"),
+                )
+                assertTrue(
+                    "No apareció Salir por ahora después de recrear la preparación.",
+                    device.scrollUntilText("Salir por ahora"),
+                )
+                device.tapText("Salir por ahora")
+                assertTrue("La salida no volvió al calendario vacío.", device.scrollUntilText(loadData))
+            } else {
+                assertTrue("No apareció Salir de edición.", device.scrollUntilText("Salir de edición"))
+                scenario.recreate()
+                assertTrue("El modo edición no sobrevivió la recreación.", device.scrollUntilText("Salir de edición"))
+
+                device.tapText("Salir de edición")
+                assertTrue(
+                    "Salir de edición no regresó al modo consulta.",
+                    device.scrollUntilText(loadData) || device.scrollUntilText(editCalendar),
+                )
             }
-
-            assertTrue("No apareció Terminar en modo edición.", device.scrollUntilText("Terminar"))
-            scenario.recreate()
-            assertTrue("El modo edición no sobrevivió la recreación.", device.scrollUntilText("Terminar"))
-
-            device.tapText("Terminar")
-            assertTrue(
-                "Terminar no regresó al modo consulta.",
-                device.scrollUntilText(firstShift) || device.scrollUntilText(editCalendar),
-            )
         }
     }
 
@@ -241,6 +251,7 @@ class MiGuardiaAppTest {
             wait(Until.hasObject(By.desc(description)), WAIT_TIMEOUT_MILLIS),
         )
         findObject(By.desc(description)).click()
+        waitForIdle()
     }
 
     private fun UiDevice.openDestination(context: Context, destination: Int) {

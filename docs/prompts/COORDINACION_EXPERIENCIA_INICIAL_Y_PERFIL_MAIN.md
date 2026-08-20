@@ -63,9 +63,9 @@ Prompt: `docs/prompts/CALENDARIO_MODO_CONSULTA_Y_EDICION.md`.
 
 Rama sugerida: `codex/calendar-edit-mode`.
 
-Debe reutilizar el calendario, la proyección y las fuentes actuales. Abre en consulta; permite navegar, ver Hoy, fotos, clima y detalles informativos. Tocar un día abre su detalle y un único `Editar día` entra conscientemente en edición con esa fecha preseleccionada, sin escribir por sí solo. El botón grande es `Editar calendario`; si todavía no hay cargas puede aparecer `Cargar mi primera guardia`.
+Debe reutilizar el calendario, la proyección y las fuentes actuales. Abre en consulta; permite navegar, ver Hoy, clima y detalles informativos; Fotos se ofrece sólo al entrar en edición. Tocar un día abre su detalle y un único `Editar día` entra conscientemente en edición con esa fecha preseleccionada, sin escribir por sí solo. El botón grande es `Editar calendario`; si todavía no hay cargas muestra `Cargar datos`, prepara primero uno o varios objetivos y horarios reales sin crear una guardia ni preseleccionar una fecha, y sólo después de `Continuar y elegir días` habilita la selección vacía sobre la grilla.
 
-El modo edición conserva mes y posición, se identifica con `Editando calendario` y permite seleccionar uno o varios días sobre la misma grilla completa. La bandeja usa esa selección para guardias o francos; los formularios no vuelven a mostrar otro calendario. `Terminar` y Atrás salen de edición de manera segura y los formularios conservan su protección de cambios sin confirmar.
+El modo edición conserva mes y posición, se identifica con `Editando calendario` y permite seleccionar uno o varios días sobre la misma grilla completa. La secuencia es explícita: elegir fechas, tocar `Terminar de elegir días`, elegir Guardia o Francos y recién entonces abrir el formulario/revisión. Antes de confirmar no se muestran operaciones. `Modificar días elegidos` vuelve a la selección preservando fechas y aparece como control secundario delimitado dentro del bloque de selección; `Salir de edición` es una acción distinta que regresa a consulta y limpia la selección. Los formularios no vuelven a mostrar otro calendario y conservan su protección de cambios sin confirmar.
 
 No reintroducir Vacaciones desde Calendario, duplicación ni limpieza general. Vacaciones conserva su acceso directo en el menú lateral. `Editar día` sólo cambia de modo y selección; la escritura ocurre dentro de acciones confirmadas. Las guardias conservan acciones individuales y eliminación confirmada.
 
@@ -74,7 +74,7 @@ Pruebas mínimas:
 - consulta no invoca mutaciones;
 - entrada y salida conservan mes, fecha y desplazamiento pertinente;
 - vacío conduce a la primera carga mediante el flujo real;
-- Atrás y `Terminar` son seguros;
+- Atrás, `Terminar de elegir días` y `Salir de edición` respetan sus etapas y son seguros;
 - carga simple/múltiple, franco, segunda guardia, edición, eliminación, clima y detalles no regresan;
 - Vigilia clara/oscura, paisaje y zoom interno 100/150/200 %;
 - semántica accesible básica, sin activar ni declarar una auditoría específica de TalkBack y sin consultar ajustes visuales del sistema.
@@ -156,7 +156,7 @@ Debe nacer del `HEAD` canónico posterior a Fotos, menú lateral y selección di
 - finalización persistida localmente;
 - permisos solicitados únicamente en contexto;
 - llegada al Calendario;
-- calendario vacío con `Cargar mi primera guardia`;
+- calendario vacío con `Cargar datos`, preparación de uno o varios objetivos y horarios, continuación explícita hacia una selección inicialmente vacía, `Terminar de elegir días` y posterior elección Guardia/Francos;
 - primera carga que reutiliza Perfil, Objetivos, Horarios y Calendario reales;
 - abandono o Atrás sin filas parciales falsas.
 

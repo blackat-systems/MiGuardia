@@ -147,7 +147,7 @@ Calendario, barra superior:
 - flechas anterior/siguiente;
 - gesto horizontal para cambiar mes;
 - botón Hoy;
-- botón de fotos del cronograma del mes;
+- botón de fotos del cronograma del mes visible únicamente al entrar en modo edición;
 - en el modo normal no muestra una acción permanente `Agregar`; la entrada consciente a las mutaciones es el botón inferior `Editar calendario`.
 
 Menú del mes:
@@ -192,21 +192,28 @@ Un día vacío se considera visual y funcionalmente “sin definir”. No hace f
 El calendario usa una sola proyección y una sola pantalla con dos estados de interacción:
 
 1. **Modo consulta**, predeterminado:
-   - permite cambiar mes, volver a Hoy, abrir fotos, consultar resúmenes, clima y detalles informativos;
+   - permite cambiar mes, volver a Hoy y consultar resúmenes, clima y detalles informativos; no muestra el acceso a Fotos;
    - ninguna interacción escribe datos por sí sola;
    - muestra abajo `Editar calendario` sin tapar fechas ni competir con la navegación;
-   - si todavía no existe ninguna carga, puede mostrar `Cargar mi primera guardia`, que entra al mismo modo de edición guiado.
+   - si todavía no existe ninguna guardia, muestra `Cargar datos`; esa acción inicia una preparación local sin preseleccionar fechas ni crear un borrador de guardia.
 2. **Modo edición**, iniciado conscientemente:
+   - muestra el acceso a las fotos del cronograma del mes;
    - conserva el mes, la posición y el mismo componente visual;
    - se identifica con texto visible `Editando calendario`, no sólo mediante color;
    - tocar celdas de la grilla principal selecciona o deselecciona una o varias fechas del mismo mes;
-   - una bandeja ubicada inmediatamente debajo de esa misma grilla usa la selección para `Agregar guardia`, `Agregar francos` y las acciones individuales compatibles;
+   - una bandeja ubicada inmediatamente debajo de esa misma grilla guía una secuencia explícita: elegir días, confirmar `Terminar de elegir días` y recién entonces elegir entre `Agregar guardia`, `Agregar francos` y las acciones individuales compatibles;
    - al elegir guardia o franco, objetivo, horario, puesto, vista previa y confirmación se despliegan debajo de la grilla principal; no se reemplaza la pantalla ni se navega a otro estilo de calendario;
    - los formularios reciben las fechas seleccionadas y no muestran un segundo calendario, selector `Una fecha`/`Varias fechas` ni otra cuadrícula para volver a elegirlas;
    - la selección permanece visible y semánticamente distinguible sin tapar abreviatura, horario, estados o marcadores del día;
    - cambiar de mes con una selección activa exige una confirmación explícita que informa que esa selección se limpiará; nunca se mezclan silenciosamente fechas de meses distintos;
    - no agrega Vacaciones al calendario: siguen administrándose únicamente desde el acceso `Vacaciones` del panel lateral;
-   - la acción inferior cambia a `Terminar`; Atrás sale primero de edición y protege cualquier formulario sin confirmar.
+   - `Terminar de elegir días` confirma solamente el conjunto elegido, bloquea temporalmente la grilla y abre la elección de operación; no sale del modo edición ni escribe datos;
+   - `Modificar días elegidos` vuelve desde la elección de operación o desde un formulario a la selección editable conservando exactamente las fechas elegidas; si existe un borrador real, primero protege su descarte;
+   - `Salir de edición` es una acción distinta: vuelve a consulta y limpia la selección; Atrás recorre primero la etapa superior o protege el formulario antes de abandonar la edición.
+
+La preparación inicial de `Cargar datos` aparece dentro del Calendario y se deriva de los repositorios reales. Primero permite crear todos los objetivos y horarios que el usuario necesite, reutilizando sus formularios dueños. `Continuar y elegir días` permanece deshabilitado hasta que exista al menos un horario activo de un objetivo activo; crear el primero sólo habilita esa acción y nunca avanza automáticamente. Al continuar, la preparación se cierra, la selección sigue vacía y recién entonces la grilla admite uno o varios días. Después de elegirlos, `Terminar de elegir días` abre una etapa separada que pregunta qué se quiere cargar; Guardia y Francos no aparecen antes de esa confirmación. Durante la preparación, anterior, siguiente, Hoy, gesto mensual y Fotos permanecen operativos porque todavía no existe un formulario de guardia o franco. Un formulario real sí bloquea temporalmente esas acciones para proteger su selección y borrador. `Modificar días elegidos` aparece como una acción secundaria delimitada dentro del bloque de selección y vuelve a la grilla conservando las fechas; si el formulario está virgen lo hace directamente y sólo pide descartar cuando existe una elección, texto, advertencia u otro borrador real que pueda perderse.
+
+Hasta que la consulta global de guardias emita su primer valor, MiGuardia no debe ofrecer ni `Editar calendario` ni `Cargar datos`: muestra una espera neutral y permite reintentar si la lectura falla. Las celdas quedan semánticamente deshabilitadas durante la preparación y los formularios. Crear, guardar, cancelar o restaurar un formulario de objetivo u horario iniciado desde la preparación debe volver a esa misma preparación, y sus confirmaciones se muestran allí sin reaparecer tarde.
 
 En consulta, tocar cualquier día abre sus detalles y al final ofrece un único botón consciente `Editar día`. Ese botón no modifica datos: cierra el detalle, entra al mismo modo edición y preselecciona exactamente esa fecha. En edición, cada guardia conserva `Informar novedad / notas`, `Editar`, `Agregar una segunda guardia` cuando corresponde y `Eliminar`; eliminar exige confirmación. La configuración particular de avisos vive dentro de `Editar`. Una guardia futura elegible muestra un resumen meteorológico de todo su horario y permite abrir el detalle hora por hora. No reintroducir duplicación ni limpieza general si no existe un flujo vigente y probado.
 
@@ -320,7 +327,7 @@ Vacaciones se registra manualmente como un período inclusivo de días corridos,
 
 ## 10. Fotos mensuales del cronograma
 
-El usuario puede asociar una o varias fotos del cronograma a un mes/año concreto y, si corresponde, identificarlas por objetivo. El botón superior permite consultarlas sin alternar con la galería mientras carga su calendario.
+El usuario puede asociar una o varias fotos del cronograma a un mes/año concreto y, si corresponde, identificarlas por objetivo. El botón superior se muestra únicamente cuando el Calendario está en modo edición y permite consultarlas sin alternar con la galería mientras carga su calendario; en consulta permanece oculto.
 
 Funciones: visualizar, desplazarse y hacer zoom. No recortar, no OCR, no leer automáticamente, no importar Excel. Las imágenes se mantienen locales, se conservan con una referencia segura y no se suben al repositorio ni a servicios externos. Miniatura y visor respetan la orientación visual de fotos verticales y horizontales, incluidas las que dependen de la etiqueta EXIF de orientación. Sólo puede interpretarse local y transitoriamente esa etiqueta para dibujar la imagen; no extraer, persistir, exponer, registrar ni transmitir ubicación, autor, dispositivo u otros metadatos.
 
@@ -580,7 +587,7 @@ Primera apertura:
 
 La guía contextual señala controles principales y explica dónde están, para qué sirven y cómo comenzar a usarlos. No simula funciones futuras, no escribe datos, no solicita permisos y no bloquea la salida. Notificaciones, clima y los demás apartados directos se explican desde Ayuda o desde su propia superficie sin convertir la primera apertura en un recorrido exhaustivo. El tutorial se implementa únicamente después de consolidar la orientación de Fotos, la edición directa sobre la grilla principal y el menú lateral.
 
-Al finalizar, la aplicación lleva al calendario. Si está vacío, `Cargar mi primera guardia` acompaña la creación del primer objetivo, su horario y la primera carga reutilizando los flujos reales.
+Al finalizar, la aplicación lleva al calendario. Si está vacío, `Cargar datos` abre la preparación real de objetivos y horarios. El usuario puede crear varios de ambos; sólo después de elegir conscientemente `Continuar y elegir días` comienza la selección vacía sobre la grilla. El usuario elige fechas, toca `Terminar de elegir días`, decide entre Guardia o Francos y recién entonces completa el formulario correspondiente.
 
 Valores predeterminados V1:
 
@@ -753,6 +760,10 @@ Decisión posterior del 18 de agosto de 2026: Joa rechazó el panel lateral desn
 
 Decisión posterior del 18 de agosto de 2026: Joa rechazó que la edición simple o masiva reemplace el Calendario por una pantalla secundaria con otra grilla pequeña o circular. La grilla mensual principal es el único selector de fechas. En consulta, el detalle termina en `Editar día`; en edición, la misma grilla selecciona días y conserva su representación completa, mientras la bandeja y los controles reales de guardia o franco aparecen debajo. `Editar calendario` comienza vacío, `Editar día` preselecciona sólo esa fecha y ninguno escribe por sí solo. Los calendarios internos y el selector `Una fecha`/`Varias fechas` desaparecen de Guardia y Francos. El lote de varios francos debe ser atómico sin cambiar Room v5 ni sus esquemas.
 
+Decisión posterior del 18 de agosto de 2026: Joa aprobó simplificar la zona inferior del Calendario a una sola decisión por etapa. La secuencia es preparación, elección de días, confirmación explícita `Terminar de elegir días`, elección entre Guardia o Francos y formulario/revisión. Guardia y Francos no se muestran mientras todavía se eligen fechas. `Modificar días elegidos` regresa a esa selección conservando las fechas y se presenta dentro de un control secundario claramente delimitado, mientras `Salir de edición` abandona el modo y las limpia. Al abrir Guardia o Francos desaparecen por completo `Herramientas de edición` y sus explicaciones redundantes; la grilla y la selección continúan visibles y bloqueadas. Guardia revela progresivamente recientes, otros objetivos, puesto y vista previa, y Francos concentra fechas y confirmación en un único bloque. Si no hay objetivos, Guardia ofrece crear el primero; si existen objetivos activos pero ningún horario utilizable, ofrece agregar un horario eligiendo su objetivo dueño, sin mostrar carpetas vacías ni pedir otro primer objetivo. Se conservan borradores, advertencias, políticas de ocupadas, confirmación final y atomicidad.
+
+Corrección de primera carga del 18 de agosto de 2026: Joa rechazó que una instalación vacía abra directamente `SHIFT_FORM` con una fecha preseleccionada. El CTA pasa a ser `Cargar datos` y abre una preparación inline sin `ShiftDraft`: permite crear varios objetivos y varios horarios, y `Continuar y elegir días` sólo se habilita al existir una combinación activa. Únicamente esa acción cierra la preparación y deja el Calendario en edición con selección vacía. Fotos y navegación mensual siguen habilitadas mientras no haya un formulario real abierto.
+
 La primera versión utilizable debe alcanzar almacenamiento local, calendario, carga individual/múltiple, objetivos/horarios, fotos y horas básicas antes de sumar capas más complejas.
 
 ## 26. Criterios transversales de aceptación
@@ -811,7 +822,7 @@ Casos críticos obligatorios:
 22. ausencia o cancelación explícita dentro de vacaciones conserva su clasificación propia;
 23. feriado, `F` o `?` puede coexistir con `V`, mientras carpeta médica superpuesta se rechaza.
 24. el calendario abre en modo consulta y ninguna interacción de ese modo modifica repositorios;
-25. `Editar calendario` conserva mes y posición, se distingue con texto y `Terminar` o Atrás regresan con seguridad a consulta.
+25. `Editar calendario` conserva mes y posición, se distingue con texto y `Salir de edición` o Atrás regresan con seguridad a consulta; `Terminar de elegir días` sólo confirma la selección y no abandona la edición.
 
 ## 27. Política para decisiones todavía abiertas
 

@@ -1,14 +1,33 @@
 package com.blackatsystems.miguardia
 
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsNotSelected
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.Until
+import com.blackatsystems.miguardia.core.domain.AppDefaults
+import com.blackatsystems.miguardia.core.domain.model.Objective
+import com.blackatsystems.miguardia.core.domain.model.ScheduleCombination
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.YearMonth
+import java.time.format.DateTimeFormatter
+import java.util.Locale
+import java.util.UUID
+import kotlinx.coroutines.runBlocking
+import org.junit.After
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -23,6 +42,18 @@ class ManagementActivityRecreationTest {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         UiDevice.getInstance(instrumentation).wakeUp()
         instrumentation.uiAutomation.executeShellCommand("wm dismiss-keyguard").close()
+        val dataStore = (composeRule.activity.application as MiGuardiaApplication).localDataStore
+        runBlocking {
+            dataStore.objectives.delete(OBJECTIVE.id)
+            dataStore.objectives.create(OBJECTIVE)
+            dataStore.scheduleCombinations.create(SCHEDULE)
+        }
+    }
+
+    @After
+    fun removeFixture() {
+        val dataStore = (composeRule.activity.application as MiGuardiaApplication).localDataStore
+        runBlocking { dataStore.objectives.delete(OBJECTIVE.id) }
     }
 
     @Test
@@ -46,5 +77,115 @@ class ManagementActivityRecreationTest {
 
         composeRule.onNodeWithText("Objetivo de recreación").assertExists()
         composeRule.onNodeWithText("Guardar objetivo").assertExists()
+    }
+
+    @Test
+    fun progressiveShiftStageDatesAndOptionalPositionSurviveActivityRecreation() {
+        val today = LocalDate.now(AppDefaults.zoneId())
+        val month = YearMonth.from(today)
+        val selectedDate = today
+        val hasInitialDataEntry = composeRule.onAllNodesWithText("Cargar datos")
+            .fetchSemanticsNodes().isNotEmpty()
+        if (hasInitialDataEntry) {
+            composeRule.onNodeWithText("Cargar datos").performScrollTo().performClick()
+            composeRule.onNodeWithText("Continuar y elegir días").performScrollTo().performClick()
+        } else {
+            composeRule.onNodeWithText("Editar calendario").performScrollTo().performClick()
+        }
+        composeRule.onNodeWithContentDescription(selectedDate.spanishDisplayName(), substring = true)
+            .performClick()
+        composeRule.onNodeWithText("Terminar de elegir días").performScrollTo().performClick()
+        composeRule.onNodeWithText("¿Qué querés cargar?").assertExists()
+
+        composeRule.activityRule.scenario.recreate()
+
+        composeRule.onNodeWithText("¿Qué querés cargar?").assertExists()
+        composeRule.onNodeWithContentDescription(selectedDate.spanishDisplayName(), substring = true)
+            .assertIsSelected()
+            .assertIsNotEnabled()
+        composeRule.onNodeWithText("Agregar guardia").performClick()
+
+        composeRule.waitUntil(5_000L) {
+            composeRule.onAllNodesWithText("Objetivo recreación (REC)").fetchSemanticsNodes().isNotEmpty() ||
+                composeRule.onAllNodesWithText("Elegir otro objetivo u horario").fetchSemanticsNodes().isNotEmpty()
+        }
+        if (composeRule.onAllNodesWithText("Elegir otro objetivo u horario").fetchSemanticsNodes().isNotEmpty()) {
+            composeRule.onNodeWithText("Elegir otro objetivo u horario").performScrollTo().performClick()
+        }
+        composeRule.waitUntil(5_000L) {
+            composeRule.onAllNodesWithText("Objetivo recreación (REC)").fetchSemanticsNodes().isNotEmpty()
+        }
+        composeRule.onNodeWithText("Objetivo recreación (REC)").performScrollTo().performClick()
+        composeRule.onNodeWithText("18:37–06:23").performScrollTo().performClick()
+        composeRule.onNodeWithText("+ Agregar puesto opcional").performScrollTo().performClick()
+        composeRule.onNodeWithText("Puesto opcional").performTextInput("Puesto ficticio recreado")
+        composeRule.onNodeWithTag("selected-combination-summary").assertExists()
+        composeRule.onNodeWithTag("shift-preview").assertExists()
+
+        composeRule.activityRule.scenario.recreate()
+
+        composeRule.onNodeWithTag("month-grid").assertExists()
+        composeRule.onNodeWithTag("calendar-inline-management").assertExists()
+        composeRule.onNodeWithTag("calendar-edit-tools").assertDoesNotExist()
+        composeRule.onNodeWithText("Herramientas de edición").assertDoesNotExist()
+        composeRule.onNodeWithText("Elegí uno o varios días").assertDoesNotExist()
+        composeRule.onNodeWithTag("calendar-edit-selection-count").assertDoesNotExist()
+        composeRule.onNodeWithContentDescription(selectedDate.spanishDisplayName(), substring = true)
+            .assertIsSelected()
+        composeRule.onNodeWithTag("selected-combination-summary").assertExists()
+        composeRule.onNodeWithText("REC · Objetivo recreación").assertExists()
+        composeRule.onNodeWithText("Elegí objetivo y horario").assertDoesNotExist()
+        composeRule.onNodeWithText("+ Agregar horario").assertDoesNotExist()
+        composeRule.onNodeWithText("Modificar días elegidos").performScrollTo().assertExists()
+        composeRule.onNodeWithTag("optional-position-field").performScrollTo().assertExists()
+        composeRule.onNodeWithText("Puesto ficticio recreado").assertExists()
+        composeRule.onNodeWithTag("shift-preview").assertExists()
+        composeRule.onAllNodesWithText("Puesto: Puesto ficticio recreado").assertCountEquals(1)
+
+        val lockedDate = when {
+            selectedDate.dayOfMonth < month.lengthOfMonth() -> selectedDate.plusDays(1)
+            else -> selectedDate.minusDays(1)
+        }
+        composeRule.onNodeWithContentDescription(lockedDate.spanishDisplayName(), substring = true)
+            .assertIsNotEnabled()
+            .assertIsNotSelected()
+        composeRule.onNodeWithContentDescription(selectedDate.spanishDisplayName(), substring = true)
+            .assertIsSelected()
+
+        composeRule.onNodeWithTag("review-shift").performScrollTo().performClick()
+        composeRule.onNodeWithText("Confirmar guardia").assertExists()
+        composeRule.onAllNodesWithText("Fechas: ${selectedDate.format(EXACT_DATE_FORMATTER)}")
+            .assertCountEquals(2)
+        composeRule.onAllNodesWithText("Puesto: Puesto ficticio recreado").assertCountEquals(2)
+    }
+
+    private fun LocalDate.spanishDisplayName(): String = format(FULL_DATE_FORMATTER)
+        .replaceFirstChar { it.titlecase(SPANISH_ARGENTINA) }
+
+    private companion object {
+        val SPANISH_ARGENTINA: Locale = Locale.forLanguageTag("es-AR")
+        val FULL_DATE_FORMATTER: DateTimeFormatter =
+            DateTimeFormatter.ofPattern("EEEE d 'de' MMMM 'de' yyyy", SPANISH_ARGENTINA)
+        val EXACT_DATE_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/uuuu")
+        val OBJECTIVE = Objective(
+            id = UUID.fromString("92000000-0000-0000-0000-000000000001"),
+            fullName = "Objetivo recreación",
+            abbreviation = "REC",
+            address = null,
+            note = null,
+            isActive = true,
+            createdAt = Instant.EPOCH,
+            updatedAt = Instant.EPOCH,
+        )
+        val SCHEDULE = ScheduleCombination(
+            id = UUID.fromString("92000000-0000-0000-0000-000000000002"),
+            objectiveId = OBJECTIVE.id,
+            startTime = LocalTime.of(18, 37),
+            endTime = LocalTime.of(6, 23),
+            colorArgb = 0xFF315DA8.toInt(),
+            isActive = true,
+            createdAt = Instant.EPOCH,
+            updatedAt = Instant.EPOCH,
+        )
     }
 }

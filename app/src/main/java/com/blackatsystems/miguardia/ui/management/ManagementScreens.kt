@@ -1,6 +1,7 @@
 package com.blackatsystems.miguardia.ui.management
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.Canvas
@@ -15,16 +16,21 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -43,6 +49,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -50,7 +57,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.input.pointer.pointerInput
@@ -71,17 +81,19 @@ import com.blackatsystems.miguardia.ui.components.PrimaryAction
 import com.blackatsystems.miguardia.ui.components.ScreenHeading
 import com.blackatsystems.miguardia.ui.components.SectionCard
 import com.blackatsystems.miguardia.ui.components.SurfaceHeader
+import com.blackatsystems.miguardia.ui.theme.vigiliaColors
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
-import java.time.format.TextStyle
 import java.util.Locale
 import java.util.UUID
 
 data class ManagementActions(
     val close: () -> Unit = {},
     val discardForm: () -> Unit = {},
+    val openInitialDataPreparation: () -> Unit = {},
+    val retryCatalog: () -> Unit = {},
     val openSettings: () -> Unit = {},
     val showHidden: (Boolean) -> Unit = {},
     val openObjective: (Objective?) -> Unit = {},
@@ -113,6 +125,8 @@ data class ManagementActions(
         fun from(viewModel: ManagementViewModel) = ManagementActions(
             close = viewModel::closeSurface,
             discardForm = viewModel::discardCurrentForm,
+            openInitialDataPreparation = viewModel::openInitialDataPreparation,
+            retryCatalog = viewModel::retryCatalog,
             openSettings = viewModel::openSettings,
             showHidden = viewModel::showHidden,
             openObjective = viewModel::openObjectiveForm,
@@ -173,6 +187,14 @@ fun ManagementSurfaceHost(
             state.errorMessage?.let { MessageCard(it, isError = true, actions.clearMessage) }
             when (state.surface) {
                 ManagementSurface.NONE -> Unit
+                ManagementSurface.INITIAL_DATA_PREPARATION -> InitialDataPreparationContent(
+                    state = state,
+                    actions = actions,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(16.dp),
+                )
                 ManagementSurface.SETTINGS -> SettingsManagementContent(state, actions)
                 ManagementSurface.OBJECTIVE_FORM -> ObjectiveForm(state, actions)
                 ManagementSurface.SCHEDULE_FORM -> ScheduleForm(state, actions)
@@ -197,14 +219,157 @@ fun ManagementSurfaceHost(
 }
 
 @Composable
+fun InitialDataPreparationContent(
+    state: ManagementUiState,
+    actions: ManagementActions,
+    modifier: Modifier = Modifier,
+) {
+    val activeObjectives = state.objectives.filter { it.isActive }
+    val activeOptions = state.scheduleOptions.filter { it.objective.isActive && it.combination.isActive }
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .testTag("initial-data-setup"),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Text(
+            text = "Primero: prepará objetivos y horarios",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+        )
+        Text(
+            text = "Un objetivo es el lugar donde trabajás. Un horario dice cuándo entrás y salís. Creá todos los que necesites y después elegí los días.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
+        if (!state.catalogLoaded) {
+            if (state.catalogErrorMessage != null) {
+                PersistentMessage(
+                    message = state.catalogErrorMessage,
+                    onRetry = actions.retryCatalog,
+                )
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                    Text("Cargando tus objetivos y horarios…")
+                }
+            }
+        } else if (activeObjectives.isEmpty()) {
+            Button(
+                onClick = { actions.openObjective(null) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 56.dp)
+                    .testTag("initial-data-add-first-objective"),
+            ) {
+                Text("Crear mi primer objetivo")
+            }
+        } else {
+            activeObjectives.forEach { objective ->
+                val objectiveOptions = activeOptions.filter { it.objective.id == objective.id }
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("initial-data-objective-${objective.id}"),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                    ),
+                ) {
+                    Column(
+                        modifier = Modifier.padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Text(
+                            text = "${objective.abbreviation} · ${objective.fullName}",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        if (objectiveOptions.isEmpty()) {
+                            Text(
+                                text = "Todavía no tiene horarios.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        } else {
+                            objectiveOptions.forEach { option ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .testTag("initial-data-schedule-${option.combination.id}"),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Box(
+                                        Modifier
+                                            .size(12.dp)
+                                            .background(Color(option.combination.colorArgb), CircleShape),
+                                    )
+                                    Text("${option.combination.startTime}–${option.combination.endTime}")
+                                }
+                            }
+                        }
+                        OutlinedButton(
+                            onClick = { actions.openSchedule(objective.id, null) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 52.dp)
+                                .testTag("initial-data-add-schedule-${objective.id}"),
+                        ) {
+                            Text("Agregar horario")
+                        }
+                    }
+                }
+            }
+
+            TextButton(
+                onClick = { actions.openObjective(null) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("initial-data-add-objective"),
+            ) {
+                Text("Crear otro objetivo")
+            }
+        }
+
+        Button(
+            onClick = actions.close,
+            enabled = state.catalogLoaded && activeOptions.isNotEmpty(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 56.dp)
+                .testTag("initial-data-continue"),
+        ) {
+            Text("Continuar y elegir días")
+        }
+    }
+}
+
+@Composable
 fun CalendarManagementInlineContent(
     state: ManagementUiState,
     actions: ManagementActions,
     onOpenNotifications: (Shift) -> Unit = {},
+    onReturnToDateSelection: () -> Unit = {},
 ) {
     if (state.surface !in setOf(ManagementSurface.SHIFT_FORM, ManagementSurface.DAY_OFF_FORM)) return
     var confirmClose by rememberSaveable { mutableStateOf(false) }
-    val requestClose = { confirmClose = true }
+    val requestClose = {
+        if (state.hasUnsavedInlineDraft()) {
+            confirmClose = true
+        } else {
+            actions.discardForm()
+            onReturnToDateSelection()
+        }
+    }
+    val formAnchor = remember { BringIntoViewRequester() }
+    LaunchedEffect(state.surface) {
+        formAnchor.bringIntoView()
+    }
     BackHandler(onBack = requestClose)
     TransientConfirmation(state.infoMessage, actions.clearMessage) {
         Column(
@@ -215,12 +380,22 @@ fun CalendarManagementInlineContent(
         ) {
             state.errorMessage?.let { MessageCard(it, isError = true, actions.clearMessage) }
             when (state.surface) {
-                ManagementSurface.SHIFT_FORM -> ShiftForm(state, actions, onOpenNotifications, inline = true)
-                ManagementSurface.DAY_OFF_FORM -> DayOffForm(state, actions, inline = true)
+                ManagementSurface.SHIFT_FORM -> ShiftForm(
+                    state = state,
+                    actions = actions,
+                    onOpenNotifications = onOpenNotifications,
+                    inline = true,
+                    modifier = Modifier.bringIntoViewRequester(formAnchor),
+                    onChangeDates = requestClose,
+                )
+                ManagementSurface.DAY_OFF_FORM -> DayOffForm(
+                    state = state,
+                    actions = actions,
+                    inline = true,
+                    modifier = Modifier.bringIntoViewRequester(formAnchor),
+                    onChangeDates = requestClose,
+                )
                 else -> Unit
-            }
-            OutlinedButton(onClick = requestClose, modifier = Modifier.fillMaxWidth()) {
-                Text("Volver a las herramientas")
             }
         }
     }
@@ -230,15 +405,38 @@ fun CalendarManagementInlineContent(
             title = { Text("Descartar cambios") },
             text = { Text("Hay datos del formulario sin guardar. ¿Querés volver a la selección de días?") },
             confirmButton = {
-                TextButton(onClick = { confirmClose = false; actions.discardForm() }) { Text("Descartar") }
+                TextButton(onClick = {
+                    confirmClose = false
+                    actions.discardForm()
+                    onReturnToDateSelection()
+                }) { Text("Descartar") }
             },
             dismissButton = { TextButton(onClick = { confirmClose = false }) { Text("Seguir editando") } },
         )
     }
 }
 
+private fun ManagementUiState.hasUnsavedInlineDraft(): Boolean = when (surface) {
+    ManagementSurface.SHIFT_FORM -> shiftDraft?.let { draft ->
+        draft.combinationId != null ||
+            draft.position.isNotBlank() ||
+            draft.pendingPolicy != null ||
+            draft.occupiedDates.isNotEmpty() ||
+            draft.warnings.isNotEmpty() ||
+            draft.coexistenceWarnings.isNotEmpty()
+    } == true
+    ManagementSurface.DAY_OFF_FORM -> false
+    else -> false
+}
+
 @Composable
-private fun DayOffForm(state: ManagementUiState, actions: ManagementActions, inline: Boolean) {
+private fun DayOffForm(
+    state: ManagementUiState,
+    actions: ManagementActions,
+    inline: Boolean,
+    modifier: Modifier = Modifier,
+    onChangeDates: (() -> Unit)? = null,
+) {
     val draft = state.dayOffDraft ?: return
     Column(
         modifier = if (inline) {
@@ -248,25 +446,54 @@ private fun DayOffForm(state: ManagementUiState, actions: ManagementActions, inl
         },
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        ScreenHeading(
-            title = "Agregar francos",
-            supportingText = "Se marcarán las fechas elegidas arriba. Marcar F no elimina guardias ni otros datos del día.",
-        )
-        Text(monthLabel(draft.month), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        Text(
-            when (draft.selectedDates.size) {
-                0 -> "No hay fechas seleccionadas."
-                1 -> "1 fecha seleccionada."
-                else -> "${draft.selectedDates.size} fechas seleccionadas."
-            },
-            fontWeight = FontWeight.SemiBold,
-        )
-        PrimaryAction(
-            label = if (draft.selectedDates.size == 1) "Agregar franco" else "Agregar francos",
-            onClick = actions.saveDayOffs,
-            enabled = draft.selectedDates.isNotEmpty(),
-            working = state.isSaving,
-        )
+        Surface(
+            modifier = modifier
+                .fillMaxWidth()
+                .testTag("day-off-confirmation"),
+            color = MaterialTheme.colorScheme.surfaceContainer,
+            shape = MaterialTheme.shapes.medium,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Text(
+                    text = "Agregar francos",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    text = dayOffSelectionSummary(draft.selectedDates),
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.testTag("day-off-selection-summary"),
+                )
+                PrimaryAction(
+                    label = if (draft.selectedDates.size == 1) {
+                        "Confirmar franco"
+                    } else {
+                        "Confirmar ${draft.selectedDates.size} francos"
+                    },
+                    onClick = actions.saveDayOffs,
+                    enabled = draft.selectedDates.isNotEmpty(),
+                    working = state.isSaving,
+                    modifier = Modifier
+                        .heightIn(min = 56.dp)
+                        .testTag("confirm-day-offs"),
+                )
+                onChangeDates?.let { changeDates ->
+                    OutlinedButton(
+                        onClick = changeDates,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 48.dp),
+                    ) {
+                        Text("Modificar días elegidos")
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -437,7 +664,7 @@ private fun ObjectiveForm(state: ManagementUiState, actions: ManagementActions) 
             label = { Text("Nota opcional") },
             modifier = Modifier.fillMaxWidth(),
         )
-        SaveButton(state.isSaving, "Guardar objetivo", actions.saveObjective)
+        SaveButton(state.isSaving, "Guardar objetivo", onClick = actions.saveObjective)
     }
 }
 
@@ -717,25 +944,38 @@ private fun ShiftForm(
     actions: ManagementActions,
     onOpenNotifications: (Shift) -> Unit,
     inline: Boolean,
+    modifier: Modifier = Modifier,
+    onChangeDates: (() -> Unit)? = null,
 ) {
     val draft = state.shiftDraft ?: return
     var finalConfirmation by rememberSaveable { mutableStateOf(false) }
     val activeOptions = state.scheduleOptions.filter { it.objective.isActive && it.combination.isActive }
     val activeObjectives = state.objectives.filter(Objective::isActive)
-    val selectedObjectiveId = activeOptions
-        .firstOrNull { it.combination.id == draft.combinationId }
-        ?.objective
-        ?.id
-    var expandedObjectiveId by rememberSaveable(draft.month, draft.editingShift?.id) {
-        mutableStateOf(selectedObjectiveId?.toString())
+    val selectedOption = activeOptions.firstOrNull { it.combination.id == draft.combinationId }
+    val activeCombinationIds = activeOptions.mapTo(hashSetOf()) { it.combination.id }
+    val recentOptions = state.recent
+        .filter { it.combination.id in activeCombinationIds }
+        .take(5)
+    var exploringOptions by rememberSaveable(draft.month, draft.editingShift?.id) {
+        mutableStateOf(draft.combinationId == null)
     }
-    LaunchedEffect(selectedObjectiveId, activeObjectives) {
-        when {
-            selectedObjectiveId != null -> expandedObjectiveId = selectedObjectiveId.toString()
-            expandedObjectiveId == null && activeObjectives.size == 1 -> {
-                expandedObjectiveId = activeObjectives.single().id.toString()
-            }
+    var objectiveExplorerRequested by rememberSaveable(draft.month, draft.editingShift?.id) {
+        mutableStateOf(false)
+    }
+    var positionExpanded by rememberSaveable(draft.month, draft.editingShift?.id) {
+        mutableStateOf(draft.position.isNotBlank())
+    }
+    var expandedObjectiveId by rememberSaveable(draft.month, draft.editingShift?.id) {
+        mutableStateOf<String?>(null)
+    }
+    LaunchedEffect(draft.combinationId) {
+        if (draft.combinationId != null) {
+            exploringOptions = false
         }
+    }
+    val chooseCombination: (UUID) -> Unit = { combinationId ->
+        actions.chooseCombination(combinationId)
+        exploringOptions = false
     }
     Column(
         modifier = if (inline) {
@@ -746,87 +986,195 @@ private fun ShiftForm(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         if (inline) {
-            ScreenHeading(
-                title = "Agregar guardia",
-                supportingText = "La selección pertenece a la grilla principal; elegí objetivo, horario y puesto.",
+            ShiftInlineContext(
+                draft = draft,
+                onChangeDates = checkNotNull(onChangeDates),
+                modifier = modifier,
             )
+        } else {
+            ScreenHeading(if (draft.editingShift == null) "Agregar guardia" else "Editar guardia")
         }
-        Text(monthLabel(draft.month), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        Text(
-            if (draft.selectedDates.size == 1) {
-                "1 fecha elegida arriba: ${draft.selectedDates.single().dayOfMonth}"
-            } else {
-                "${draft.selectedDates.size} fechas elegidas arriba: ${draft.selectedDates.sorted().joinToString { it.dayOfMonth.toString() }}"
-            },
-            fontWeight = FontWeight.SemiBold,
-        )
 
-        Text("Usados recientemente", fontWeight = FontWeight.Bold)
-        if (state.recent.isEmpty()) Text("Todavía no hay horarios recientes.")
-        state.recent.forEach { recent ->
-            CombinationChoice(
-                label = "${recent.objective.abbreviation} · ${recent.combination.startTime}–${recent.combination.endTime}",
-                selected = draft.combinationId == recent.combination.id,
-                color = recent.combination.colorArgb,
-                onClick = { actions.chooseCombination(recent.combination.id) },
-            )
-        }
-        Text("Explorar objetivos y horarios", fontWeight = FontWeight.Bold)
-        OutlinedButton(
-            onClick = { actions.openObjective(null) },
-            modifier = Modifier.fillMaxWidth(),
-        ) { Text("Crear objetivo") }
-        if (activeObjectives.isEmpty()) {
-            Text("Todavía no hay objetivos. Creá el primero para agregar sus horarios.")
-        }
-        activeObjectives.forEach { objective ->
-            ObjectiveScheduleFolder(
-                objective = objective,
-                schedules = activeOptions.filter { it.objective.id == objective.id },
-                selectedCombinationId = draft.combinationId,
-                expanded = expandedObjectiveId == objective.id.toString(),
-                onToggle = {
-                    expandedObjectiveId = if (expandedObjectiveId == objective.id.toString()) {
-                        null
-                    } else {
-                        objective.id.toString()
-                    }
-                },
-                onChoose = actions.chooseCombination,
-                onAddSchedule = { actions.openSchedule(objective.id, null) },
-            )
-        }
-        OutlinedTextField(
-            value = draft.position,
-            onValueChange = actions.updatePosition,
-            label = { Text("Puesto opcional") },
-            modifier = Modifier.fillMaxWidth(),
-        )
-        draft.editingShift?.let { shift ->
-            SectionCard(
-                title = "Avisos de esta guardia",
-                supportingText = "Usa la configuración global salvo que elijas una excepción para esta guardia.",
-            ) {
-                OutlinedButton(
-                    onClick = { onOpenNotifications(shift) },
+        if (!state.catalogLoaded) {
+            if (state.catalogErrorMessage != null) {
+                PersistentMessage(
+                    message = state.catalogErrorMessage,
+                    onRetry = actions.retryCatalog,
+                )
+            } else {
+                Row(
                     modifier = Modifier.fillMaxWidth(),
-                ) { Text("Configurar avisos") }
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                    Text("Cargando objetivos y horarios…")
+                }
+            }
+        } else if (!exploringOptions && selectedOption != null) {
+            SelectedCombinationSummary(
+                option = selectedOption,
+                onChange = {
+                    exploringOptions = true
+                    objectiveExplorerRequested = false
+                },
+            )
+        } else if (activeObjectives.isEmpty()) {
+            EmptyState(
+                title = "Creá tu primer objetivo",
+                message = "Después vas a poder agregarle un horario para cargar la guardia.",
+                actionLabel = "Crear mi primer objetivo",
+                onAction = { actions.openObjective(null) },
+            )
+        } else if (activeOptions.isEmpty()) {
+            MissingSchedulesState(
+                objectives = activeObjectives,
+                onAddSchedule = { objectiveId -> actions.openSchedule(objectiveId, null) },
+                onCreateObjective = { actions.openObjective(null) },
+            )
+        } else {
+            Text(
+                text = "Elegí objetivo y horario",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+            )
+            if (recentOptions.isNotEmpty()) {
+                Text("Usados recientemente", fontWeight = FontWeight.Bold)
+                recentOptions.forEach { recent ->
+                    RecentCombinationCard(
+                        objective = recent.objective,
+                        combination = recent.combination,
+                        selected = draft.combinationId == recent.combination.id,
+                        onClick = { chooseCombination(recent.combination.id) },
+                    )
+                }
+                if (!objectiveExplorerRequested) {
+                    OutlinedButton(
+                        onClick = { objectiveExplorerRequested = true },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 48.dp),
+                    ) {
+                        Text("Elegir otro objetivo u horario")
+                    }
+                }
+            }
+            if (recentOptions.isEmpty() || objectiveExplorerRequested) {
+                if (recentOptions.isNotEmpty()) {
+                    Text("Objetivos y horarios", fontWeight = FontWeight.Bold)
+                }
+                activeObjectives.forEach { objective ->
+                    ObjectiveScheduleFolder(
+                        objective = objective,
+                        schedules = activeOptions.filter { it.objective.id == objective.id },
+                        selectedCombinationId = draft.combinationId,
+                        expanded = expandedObjectiveId == objective.id.toString(),
+                        onToggle = {
+                            expandedObjectiveId = if (expandedObjectiveId == objective.id.toString()) {
+                                null
+                            } else {
+                                objective.id.toString()
+                            }
+                        },
+                        onChoose = chooseCombination,
+                        onAddSchedule = { actions.openSchedule(objective.id, null) },
+                    )
+                }
+                OutlinedButton(
+                    onClick = { actions.openObjective(null) },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("Crear objetivo")
+                }
             }
         }
-        ShiftPreview(state)
-        SaveButton(state.isSaving, "Revisar y guardar") { finalConfirmation = true }
+
+        if (!exploringOptions && selectedOption != null) {
+            if (!positionExpanded) {
+                TextButton(
+                    onClick = { positionExpanded = true },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("add-optional-position"),
+                ) {
+                    Text("+ Agregar puesto opcional")
+                }
+            } else {
+                OutlinedTextField(
+                    value = draft.position,
+                    onValueChange = actions.updatePosition,
+                    label = { Text("Puesto opcional") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("optional-position-field"),
+                )
+            }
+            draft.editingShift?.let { shift ->
+                SectionCard(
+                    title = "Avisos de esta guardia",
+                    supportingText = "Usa la configuración global salvo que elijas una excepción para esta guardia.",
+                ) {
+                    OutlinedButton(
+                        onClick = { onOpenNotifications(shift) },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { Text("Configurar avisos") }
+                }
+            }
+            ShiftPreview(draft = draft, option = selectedOption)
+            SaveButton(
+                saving = state.isSaving,
+                label = if (draft.selectedDates.size == 1) {
+                    "Revisar guardia"
+                } else {
+                    "Revisar ${draft.selectedDates.size} guardias"
+                },
+                modifier = Modifier
+                    .heightIn(min = 56.dp)
+                    .testTag("review-shift"),
+            ) {
+                finalConfirmation = true
+            }
+        }
         Spacer(Modifier.height(24.dp))
     }
 
-    if (finalConfirmation) {
+    if (finalConfirmation && selectedOption != null) {
         AlertDialog(
             onDismissRequest = { finalConfirmation = false },
-            title = { Text("Confirmar guardias") },
-            text = {
+            title = {
                 Text(
-                    "Vas a guardar ${draft.selectedDates.size} guardia(s) en ${monthLabel(draft.month)}. " +
-                        "Si alguna fecha ya pasó, MiGuardia la marcará automáticamente como realizada.",
+                    if (draft.selectedDates.size == 1) {
+                        "Confirmar guardia"
+                    } else {
+                        "Confirmar ${draft.selectedDates.size} guardias"
+                    },
                 )
+            },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .heightIn(max = 320.dp)
+                        .verticalScroll(rememberScrollState())
+                        .testTag("shift-final-confirmation-content"),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text("Fechas: ${exactDateList(draft.selectedDates)}")
+                    Text(
+                        "Objetivo: ${selectedOption.objective.abbreviation} · " +
+                            selectedOption.objective.fullName,
+                    )
+                    Text(
+                        "Horario: ${selectedOption.combination.startTime}–" +
+                            selectedOption.combination.endTime,
+                    )
+                    draft.position.trim().takeIf(String::isNotEmpty)?.let { position ->
+                        Text("Puesto: $position")
+                    }
+                    Text(
+                        "Si alguna fecha ya pasó, MiGuardia la marcará automáticamente como realizada.",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
             },
             confirmButton = {
                 TextButton(
@@ -834,7 +1182,12 @@ private fun ShiftForm(
                     onClick = { finalConfirmation = false; actions.saveShift(null, false) },
                 ) { Text("Guardar") }
             },
-            dismissButton = { TextButton(onClick = { finalConfirmation = false }) { Text("Volver") } },
+            dismissButton = {
+                TextButton(
+                    onClick = { finalConfirmation = false },
+                    modifier = Modifier.testTag("shift-confirmation-back"),
+                ) { Text("Volver") }
+            },
         )
     }
     if (draft.occupiedDates.isNotEmpty()) OccupiedDatesDialog(draft, state.isSaving, actions)
@@ -845,6 +1198,201 @@ private fun ShiftForm(
             onConfirm = actions.confirmWarnings,
             onDismiss = actions.dismissWarnings,
         )
+    }
+}
+
+@Composable
+private fun MissingSchedulesState(
+    objectives: List<Objective>,
+    onAddSchedule: (UUID) -> Unit,
+    onCreateObjective: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .testTag("shift-empty-schedules"),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Text(
+            text = "Agregá un horario",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+        )
+        Text(
+            text = "Elegí a qué objetivo querés agregarle el nuevo horario.",
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        objectives.forEach { objective ->
+            OutlinedButton(
+                onClick = { onAddSchedule(objective.id) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 56.dp)
+                    .testTag("add-schedule-to-${objective.id}"),
+            ) {
+                Text("${objective.fullName} (${objective.abbreviation})")
+            }
+        }
+        TextButton(
+            onClick = onCreateObjective,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text("Crear otro objetivo")
+        }
+    }
+}
+
+@Composable
+private fun ShiftInlineContext(
+    draft: ShiftDraft,
+    onChangeDates: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .testTag("shift-form-context"),
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        shape = MaterialTheme.shapes.medium,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = "Agregar guardia · ${dayCountLabel(draft.selectedDates.size)}",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+            )
+            OutlinedButton(
+                onClick = onChangeDates,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 48.dp),
+            ) {
+                Text("Modificar días elegidos")
+            }
+        }
+    }
+}
+
+@Composable
+private fun RecentCombinationCard(
+    objective: Objective,
+    combination: ScheduleCombination,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    val description = buildString {
+        append(objective.abbreviation)
+        append(", ")
+        append(objective.fullName)
+        append(", de ")
+        append(combination.startTime)
+        append(" a ")
+        append(combination.endTime)
+        if (selected) append(", seleccionado")
+    }
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 64.dp)
+            .semantics {
+                contentDescription = description
+                this.selected = selected
+                role = Role.RadioButton
+            }
+            .clickable(onClick = onClick)
+            .testTag("recent-combination-${combination.id}"),
+        color = if (selected) {
+            MaterialTheme.vigiliaColors.active.copy(
+                alpha = if (MaterialTheme.vigiliaColors.isDark) 0.22f else 0.12f,
+            )
+        } else {
+            MaterialTheme.colorScheme.surfaceContainer
+        },
+        shape = MaterialTheme.shapes.medium,
+        border = BorderStroke(
+            width = if (selected) 2.dp else 1.dp,
+            color = if (selected) {
+                MaterialTheme.vigiliaColors.active
+            } else {
+                MaterialTheme.colorScheme.outlineVariant
+            },
+        ),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Box(
+                Modifier
+                    .width(6.dp)
+                    .height(44.dp)
+                    .background(Color(combination.colorArgb), MaterialTheme.shapes.extraSmall),
+            )
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                Text(
+                    text = "${objective.abbreviation} · ${objective.fullName}",
+                    fontWeight = FontWeight.Bold,
+                )
+                Text("${combination.startTime}–${combination.endTime}")
+                if (selected) {
+                    Text(
+                        text = "Seleccionado",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.vigiliaColors.active,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SelectedCombinationSummary(
+    option: ScheduleOption,
+    onChange: () -> Unit,
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("selected-combination-summary"),
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        shape = MaterialTheme.shapes.medium,
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Box(
+                Modifier
+                    .width(6.dp)
+                    .height(48.dp)
+                    .background(Color(option.combination.colorArgb), MaterialTheme.shapes.extraSmall),
+            )
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                Text(
+                    "${option.objective.abbreviation} · ${option.objective.fullName}",
+                    fontWeight = FontWeight.Bold,
+                )
+                Text("${option.combination.startTime}–${option.combination.endTime}")
+            }
+            TextButton(onClick = onChange) {
+                Text("Cambiar")
+            }
+        }
     }
 }
 
@@ -933,36 +1481,53 @@ private fun CombinationChoice(label: String, selected: Boolean, color: Int, onCl
 }
 
 @Composable
-private fun ShiftPreview(state: ManagementUiState) {
-    val draft = state.shiftDraft ?: return
-    val option = state.scheduleOptions.firstOrNull { it.combination.id == draft.combinationId }
-    val selectedDates = draft.selectedDates.sorted()
-    val dateSummary = when (selectedDates.size) {
-        0 -> "Ninguna fecha seleccionada"
-        1 -> "1 fecha seleccionada: ${selectedDates.single().dayOfMonth}"
-        else -> "${selectedDates.size} fechas seleccionadas: ${selectedDates.joinToString { it.dayOfMonth.toString() }}"
-    }
-    val previewColor = option?.combination?.colorArgb
-    SectionCard(
-        title = "Vista previa",
-        supportingText = "Así se verá la guardia antes de confirmar.",
+private fun ShiftPreview(
+    draft: ShiftDraft,
+    option: ScheduleOption,
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("shift-preview"),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        shape = MaterialTheme.shapes.medium,
     ) {
-        Text(dateSummary, fontWeight = FontWeight.SemiBold)
-        if (option != null) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                previewColor?.let { Box(Modifier.size(16.dp).background(Color(it), CircleShape)) }
-                Column(Modifier.padding(start = 8.dp)) {
-                    Text(option.objective.fullName, fontWeight = FontWeight.Bold)
-                    Text("${option.combination.startTime}–${option.combination.endTime}")
-                }
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Box(
+                    Modifier
+                        .size(16.dp)
+                        .background(Color(option.combination.colorArgb), CircleShape),
+                )
+                Text(
+                    text = "${option.objective.abbreviation} · ${option.combination.startTime}–" +
+                        "${option.combination.endTime} · ${guardCountLabel(draft.selectedDates.size)}",
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f),
+                )
             }
+            Text(
+                text = option.objective.fullName,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Text(
+                text = "Fechas: ${exactDateList(draft.selectedDates)}",
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.testTag("shift-preview-dates"),
+            )
             if (option.combination.endTime <= option.combination.startTime) {
                 Text("Termina al día siguiente", style = MaterialTheme.typography.bodySmall)
             }
-        } else {
-            Text("Elegí un objetivo y horario para completar la vista previa.")
+            draft.position.trim().takeIf(String::isNotEmpty)?.let { position ->
+                Text("Puesto: $position")
+            }
         }
-        draft.position.takeIf(String::isNotBlank)?.let { Text("Puesto: $it") }
     }
 }
 
@@ -1065,12 +1630,24 @@ private fun WarningDialog(
 }
 
 @Composable
-private fun SaveButton(saving: Boolean, label: String, onClick: () -> Unit) {
-    PrimaryAction(label = label, onClick = onClick, enabled = !saving, working = saving)
+private fun SaveButton(
+    saving: Boolean,
+    label: String,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    PrimaryAction(
+        label = label,
+        onClick = onClick,
+        enabled = !saving,
+        working = saving,
+        modifier = modifier,
+    )
 }
 
 private fun surfaceTitle(surface: ManagementSurface): String = when (surface) {
     ManagementSurface.NONE -> ""
+    ManagementSurface.INITIAL_DATA_PREPARATION -> "Cargar datos"
     ManagementSurface.SETTINGS -> "Objetivos y horarios"
     ManagementSurface.OBJECTIVE_FORM -> "Objetivo"
     ManagementSurface.SCHEDULE_FORM -> "Horario"
@@ -1078,8 +1655,24 @@ private fun surfaceTitle(surface: ManagementSurface): String = when (surface) {
     ManagementSurface.DAY_OFF_FORM -> "Francos"
 }
 
-private fun monthLabel(month: YearMonth): String {
-    val locale = Locale.forLanguageTag("es-AR")
-    val name = month.month.getDisplayName(TextStyle.FULL, locale).replaceFirstChar { it.titlecase(locale) }
-    return "$name de ${month.year}"
+private fun dayCountLabel(count: Int): String = if (count == 1) "1 día" else "$count días"
+
+private fun guardCountLabel(count: Int): String = if (count == 1) "1 guardia" else "$count guardias"
+
+private fun dayOffSelectionSummary(dates: Set<LocalDate>): String {
+    val count = dates.size
+    val label = if (count == 1) "1 franco" else "$count francos"
+    return "$label · ${exactDateList(dates)}"
 }
+
+private fun exactDateList(dates: Set<LocalDate>): String {
+    val formattedDates = dates.sorted().map { it.format(ExactDateFormatter) }
+    return when (formattedDates.size) {
+        0 -> "ninguna fecha"
+        1 -> formattedDates.single()
+        2 -> formattedDates.joinToString(" y ")
+        else -> formattedDates.dropLast(1).joinToString(", ") + " y " + formattedDates.last()
+    }
+}
+
+private val ExactDateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/uuuu")

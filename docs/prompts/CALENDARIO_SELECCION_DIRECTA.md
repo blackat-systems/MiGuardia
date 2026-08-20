@@ -12,7 +12,7 @@
 
 ## 1. Misión
 
-Corregir la experiencia de carga para que la grilla principal sea el único lugar donde se eligen una o varias fechas. En consulta, tocar un día abre detalles y ofrece `Editar día`. En edición, tocar las celdas selecciona fechas y una bandeja de herramientas ubicada debajo de esa misma grilla permite elegir objetivo, horario y operación usando exactamente esa selección.
+Corregir la experiencia de carga para que la grilla principal sea el único lugar donde se eligen una o varias fechas. En consulta, tocar un día abre detalles y ofrece `Editar día`. En edición, tocar las celdas selecciona fechas; la bandeja exige confirmar `Terminar de elegir días` antes de ofrecer Guardia o Francos y después usa exactamente ese conjunto en sus formularios.
 
 La decisión explícita de Joa es que el Calendario no navegue ni sea reemplazado por una pantalla secundaria con otra grilla más chica, circular o de estilo diferente. Durante la edición simple o masiva debe seguir viéndose el mismo calendario mensual, con su tamaño, celdas, estados, colores y gesto mensual vigentes. Las herramientas aparecen debajo y el contenido puede desplazarse para alcanzarlas.
 
@@ -43,23 +43,55 @@ No reutilizar un único campo para ambas responsabilidades.
 - `Editar día` cierra el popup, entra al mismo modo edición y preselecciona exactamente esa fecha.
 - El botón grande `Editar calendario` entra en edición con selección vacía.
 - `Editar día` y `Editar calendario` cambian solamente modo y selección; no abren por sí solos `SHIFT_FORM`, no crean borradores laborales y no escriben repositorios.
+- El acceso a Fotos del mes permanece oculto en consulta.
 - Clima y demás información de consulta permanecen accesibles.
 
 ### 2.2 Edición sobre la grilla
 
+- El acceso a Fotos del mes se muestra únicamente en este modo.
 - Se conserva mes, scroll y representación completa de guardias, colores, horarios, `F`, `?`, `CM`, vacaciones y feriados.
 - Tocar una celda del mes visible alterna su selección; no abre el detalle.
 - La selección se distingue visual y semánticamente sin ocultar el contenido del día.
 - Sólo se seleccionan fechas del mismo mes visible.
 - Cambiar de mes con selección no vacía debe pedir una decisión clara o limpiar de forma explícita antes de cambiar; nunca mezclar silenciosamente meses.
-- Debajo de la grilla aparece una bandeja con cantidad seleccionada y acciones compatibles. La grilla continúa siendo parte visible de la misma pantalla y no se reemplaza por otra ruta o superficie de calendario.
+- Debajo de la grilla aparece una bandeja que separa selección y operación. La grilla continúa siendo parte visible de la misma pantalla y no se reemplaza por otra ruta o superficie de calendario.
 - Sin selección, la bandeja explica brevemente que hay que elegir uno o varios días.
-- Con selección, la bandeja permite elegir `Agregar guardia` o `Agregar francos`.
+- Con selección todavía editable, la bandeja muestra la cantidad y una única acción principal `Terminar de elegir días`; no muestra todavía Guardia ni Francos.
+- `Terminar de elegir días` confirma únicamente el conjunto elegido, bloquea la grilla y abre una etapa separada que pregunta qué se quiere cargar.
+- Recién en esa etapa aparecen `Agregar guardia` y, cuando corresponda, `Agregar francos`, junto con `Modificar días elegidos`.
+- `Modificar días elegidos` aparece como un control secundario delimitado dentro del bloque de selección y vuelve a la grilla editable sin vaciar ni modificar el conjunto elegido.
 - Al elegir `Agregar guardia`, la zona inferior muestra o expande los selectores reales de objetivo, horario, puesto y confirmación necesarios. Al elegir `Agregar francos`, muestra la confirmación correspondiente. En ambos casos se conserva arriba la misma grilla con la selección visible.
 - Crear o editar una plantilla de objetivo/horario puede abrir su superficie dueña existente. Al volver debe restaurar la selección y la bandeja sin introducir otro selector de fechas.
 - Con una sola fecha ocupada, ofrecer acceso individual inequívoco a cada guardia para `Informar novedad / notas`, `Editar`, segunda guardia cuando corresponda y `Eliminar` confirmado.
 - No inventar edición colectiva de guardias heterogéneas.
-- `Terminar` y Atrás salen a consulta, limpian selección y conservan mes/posición; un formulario o confirmación superior mantiene prioridad.
+- `Salir de edición` abandona el modo, limpia la selección y conserva mes/posición. No confundirla con `Terminar de elegir días`, que sólo avanza a la elección de operación.
+- Atrás recorre primero la etapa superior: desde la elección de operación vuelve a seleccionar conservando fechas; un formulario o confirmación superior mantiene prioridad; recién después se puede salir a consulta.
+
+### 2.3 Jerarquía visual refinada para la carga
+
+La decisión posterior de Joa del 18 de agosto de 2026 simplifica la zona inferior sin cambiar la selección ni las reglas anteriores:
+
+- sin fechas elegidas se muestra solamente `Elegí uno o varios días` y una instrucción breve;
+- con selección todavía editable se muestra un único contador y la acción grande `Terminar de elegir días`;
+- después de confirmarla se muestra una pregunta breve, las acciones grandes `Agregar guardia` y, cuando corresponda, `Agregar francos`, y la acción secundaria delimitada `Modificar días elegidos`;
+- `Modificar días elegidos` siempre vuelve a la selección preservando las fechas elegidas;
+- al abrir cualquiera de esos formularios desaparecen por completo la tarjeta `Herramientas de edición`, su contador y las explicaciones técnicas; la grilla permanece visible, seleccionada y bloqueada;
+- Guardia usa un contexto compacto con `Modificar días elegidos` dentro del mismo recuadro, muestra recientes antes que el explorador completo y revela puesto y vista previa sólo después de elegir objetivo y horario;
+- Guardia diferencia la ausencia total de objetivos de la existencia de objetivos sin horarios utilizables: el primer caso inicia la creación del objetivo y el segundo pide elegir a cuál objetivo agregar el horario, sin carpetas vacías;
+- Francos concentra cantidad, fechas exactas, `Modificar días elegidos` y la única acción primaria en un solo bloque delimitado;
+- la confirmación final, las advertencias, la protección de borradores reales y las mutaciones atómicas permanecen vigentes; un formulario virgen vuelve directamente a la selección conservada sin una falsa advertencia de descarte.
+
+### 2.4 Preparación de la primera carga
+
+- Una base sin guardias muestra `Cargar datos`, no `Cargar mi primera guardia`.
+- Hasta resolver la presencia global de guardias no se ofrece una entrada de edición; ante fallo se permite reintentar sin asumir que la base está vacía.
+- La acción abre una preparación inline sin fecha preseleccionada, `ShiftDraft` ni formulario de guardia.
+- La grilla no admite selección durante esa preparación, pero mes anterior/siguiente, Hoy, gesto horizontal y Fotos permanecen operativos.
+- Se pueden crear varios objetivos y varios horarios usando los formularios reales. Guardar o cancelar vuelve a la preparación.
+- `Continuar y elegir días` se muestra deshabilitado hasta que exista al menos un horario activo perteneciente a un objetivo activo.
+- Crear el primer horario no avanza automáticamente: el usuario puede agregar más objetivos u horarios.
+- Sólo `Continuar y elegir días` cierra la preparación y deja edición con selección vacía; recién entonces se eligen una o varias fechas.
+- Después de elegirlas se debe tocar `Terminar de elegir días`; esa acción no guarda ni sale de edición, sólo habilita la elección Guardia/Francos.
 
 ## 3. Herramientas y formularios reales sin segundo calendario
 
@@ -71,8 +103,8 @@ No reutilizar un único campo para ambas responsabilidades.
 - La edición individual de una guardia existente puede reutilizar su superficie actual, pero no debe permitir cambiar fechas mediante un calendario secundario. La fecha o selección de entrada proviene del Calendario.
 - Conservar objetivo, horario, puesto, vista previa, confirmación, advertencia de descanso, ocupadas, reemplazo, conservar libres, segunda guardia y cancelación.
 - `SelectableMonthCalendar` puede permanecer donde otra función real lo use, por ejemplo Feriados; no borrarlo globalmente.
-- La carga de la primera guardia y el futuro tutorial deben preseleccionar una fecha mediante la grilla principal o el contrato directo equivalente, sin restaurar un calendario duplicado.
-- En una base QA vacía, `Cargar mi primera guardia` entra al mismo modo edición, preselecciona la fecha aprobada y lleva la atención hacia la bandeja inferior; no salta al calendario circular histórico.
+- La primera carga y el futuro tutorial no preseleccionan una fecha ni restauran un calendario duplicado: primero preparan objetivos y horarios; después dejan que el usuario elija sobre la grilla principal.
+- En una base QA vacía, `Cargar datos` nunca abre por sí solo Guardia o Francos.
 
 ## 4. Consistencia y datos
 
@@ -103,6 +135,8 @@ No cambiar manifiesto, permisos, dependencias, versión Room, entidades, esquema
 - `Editar día` preselecciona una fecha;
 - `Editar calendario` empieza vacío;
 - alternar fechas no sale del mes;
+- confirmar la selección no modifica fechas ni escribe datos;
+- volver a seleccionar conserva las fechas confirmadas;
 - salir limpia selección sin alterar datos;
 - cambio de mes no mezcla selecciones;
 - lote de francos es atómico ante éxito y fallo.
@@ -114,6 +148,9 @@ No cambiar manifiesto, permisos, dependencias, versión Room, entidades, esquema
 - edición selecciona/deselecciona sobre la grilla principal;
 - contenido del día sigue legible mientras está seleccionado;
 - bandeja recibe cantidad correcta;
+- Guardia y Francos no aparecen antes de `Terminar de elegir días`;
+- `Terminar de elegir días` bloquea la grilla y muestra una única elección de operación;
+- `Modificar días elegidos` vuelve a la grilla editable conservando el conjunto;
 - guardia/franco reciben exactamente las fechas elegidas;
 - formularios no contienen un segundo calendario ni selector simple/múltiple;
 - después de elegir `Agregar guardia` o `Agregar francos`, `month-grid` continúa existiendo y mostrando la selección mientras objetivo, horario o confirmación aparecen debajo;

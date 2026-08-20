@@ -35,8 +35,10 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.util.UUID
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
@@ -62,17 +64,46 @@ class ManagementViewModel(
 ) : ViewModel() {
     private val zone = AppDefaults.zoneId()
     private val writeMutex = Mutex()
+    private val persistedSurface = savedStateHandle.get<String>(SURFACE_KEY)
+        ?.let { runCatching { ManagementSurface.valueOf(it) }.getOrNull() }
+        ?: ManagementSurface.NONE
+    private val restoredSurface = persistedSurface.takeUnless {
+        it == ManagementSurface.SHIFT_FORM || it == ManagementSurface.DAY_OFF_FORM
+    } ?: ManagementSurface.NONE
+    private val restoredFormReturnSurface = savedStateHandle.get<String>(FORM_RETURN_SURFACE_KEY)
+        ?.let { runCatching { ManagementSurface.valueOf(it) }.getOrNull() }
+        ?.takeIf {
+            restoredSurface in setOf(ManagementSurface.OBJECTIVE_FORM, ManagementSurface.SCHEDULE_FORM) &&
+                it in setOf(ManagementSurface.INITIAL_DATA_PREPARATION, ManagementSurface.SETTINGS)
+        }
+        ?: ManagementSurface.NONE
     private val _uiState = MutableStateFlow(
         ManagementUiState(
-            surface = savedStateHandle.get<String>(SURFACE_KEY)
-                ?.let(ManagementSurface::valueOf)
-                ?: ManagementSurface.NONE,
+            surface = restoredSurface,
+            formReturnSurface = restoredFormReturnSurface,
         ),
     )
     val uiState: StateFlow<ManagementUiState> = _uiState
+    private var catalogObservationJob: Job? = null
 
     init {
+        if (restoredSurface != persistedSurface) {
+            persistSurface(restoredSurface)
+        }
+        observeCatalog()
         viewModelScope.launch {
+            scheduleRepository.observeRecentlyUsed().collect { recent ->
+                _uiState.update { it.copy(recent = recent) }
+            }
+        }
+    }
+
+    fun retryCatalog() = observeCatalog()
+
+    private fun observeCatalog() {
+        catalogObservationJob?.cancel()
+        _uiState.update { it.copy(catalogLoaded = false, catalogErrorMessage = null) }
+        catalogObservationJob = viewModelScope.launch {
             objectiveRepository.observeAll()
                 .flatMapLatest { objectives ->
                     if (objectives.isEmpty()) {
@@ -87,14 +118,24 @@ class ManagementViewModel(
                         }
                     }
                 }
-                .collect { (objectives, options) ->
-                    _uiState.update { it.copy(objectives = objectives, scheduleOptions = options) }
+                .catch {
+                    _uiState.update {
+                        it.copy(
+                            catalogLoaded = false,
+                            catalogErrorMessage = "No pudimos cargar tus objetivos y horarios. Intentá nuevamente.",
+                        )
+                    }
                 }
-        }
-        viewModelScope.launch {
-            scheduleRepository.observeRecentlyUsed().collect { recent ->
-                _uiState.update { it.copy(recent = recent) }
-            }
+                .collect { (objectives, options) ->
+                    _uiState.update {
+                        it.copy(
+                            catalogLoaded = true,
+                            catalogErrorMessage = null,
+                            objectives = objectives,
+                            scheduleOptions = options,
+                        )
+                    }
+                }
         }
     }
 
@@ -107,6 +148,19 @@ class ManagementViewModel(
             )
         }
         persistSurface(ManagementSurface.SETTINGS)
+    }
+
+    fun openInitialDataPreparation() {
+        _uiState.update {
+            it.copy(
+                surface = ManagementSurface.INITIAL_DATA_PREPARATION,
+                formReturnSurface = ManagementSurface.NONE,
+                errorMessage = null,
+                shiftDraft = null,
+                dayOffDraft = null,
+            )
+        }
+        persistSurface(ManagementSurface.INITIAL_DATA_PREPARATION)
     }
 
     fun closeSurface() {
@@ -153,9 +207,10 @@ class ManagementViewModel(
                     note = objective?.note.orEmpty(),
                 ),
                 errorMessage = null,
+                infoMessage = null,
             )
         }
-        persistSurface(ManagementSurface.OBJECTIVE_FORM)
+        persistSurface(ManagementSurface.OBJECTIVE_FORM, returnSurface)
     }
 
     fun updateObjectiveDraft(transform: (ObjectiveDraft) -> ObjectiveDraft) =
@@ -170,6 +225,7 @@ class ManagementViewModel(
             _uiState.update { it.copy(errorMessage = "Ingresá un nombre y una abreviatura de 2 a 5 caracteres.") }
             return
         }
+        val target = _uiState.value.formReturnSurface
         viewModelScope.launch {
             saving {
                 val now = clock.instant()
@@ -185,7 +241,6 @@ class ManagementViewModel(
                     updatedAt = now,
                 )
                 if (existing == null) objectiveRepository.create(objective) else objectiveRepository.update(objective)
-                val target = _uiState.value.formReturnSurface
                 _uiState.update {
                     it.copy(
                         surface = target,
@@ -226,9 +281,10 @@ class ManagementViewModel(
                     colorArgb = combination?.colorArgb ?: DEFAULT_SCHEDULE_COLOR,
                 ),
                 errorMessage = null,
+                infoMessage = null,
             )
         }
-        persistSurface(ManagementSurface.SCHEDULE_FORM)
+        persistSurface(ManagementSurface.SCHEDULE_FORM, returnSurface)
     }
 
     fun updateScheduleDraft(transform: (ScheduleDraft) -> ScheduleDraft) =
@@ -244,6 +300,7 @@ class ManagementViewModel(
             it.objective.id == objectiveId && it.combination.id != draft.editingId &&
                 areColorsTooSimilar(it.combination.colorArgb, draft.colorArgb)
         }
+        val target = _uiState.value.formReturnSurface
         viewModelScope.launch {
             saving {
                 val now = clock.instant()
@@ -259,7 +316,6 @@ class ManagementViewModel(
                     updatedAt = now,
                 )
                 if (existing == null) scheduleRepository.create(combination) else scheduleRepository.update(combination)
-                val target = _uiState.value.formReturnSurface
                 _uiState.update {
                     it.copy(
                         surface = target,
@@ -611,14 +667,23 @@ class ManagementViewModel(
         persistSurface(surface)
     }
 
-    private fun persistSurface(surface: ManagementSurface) {
+    private fun persistSurface(
+        surface: ManagementSurface,
+        formReturnSurface: ManagementSurface = ManagementSurface.NONE,
+    ) {
         savedStateHandle[SURFACE_KEY] = surface.name
+        if (formReturnSurface == ManagementSurface.NONE) {
+            savedStateHandle.remove<String>(FORM_RETURN_SURFACE_KEY)
+        } else {
+            savedStateHandle[FORM_RETURN_SURFACE_KEY] = formReturnSurface.name
+        }
     }
 
     private fun formReturnSurfaceFor(current: ManagementSurface): ManagementSurface = when (current) {
         ManagementSurface.SHIFT_FORM -> ManagementSurface.SHIFT_FORM
-        ManagementSurface.DAY_OFF_FORM -> ManagementSurface.NONE
-        else -> ManagementSurface.SETTINGS
+        ManagementSurface.SETTINGS -> ManagementSurface.SETTINGS
+        ManagementSurface.INITIAL_DATA_PREPARATION -> ManagementSurface.INITIAL_DATA_PREPARATION
+        else -> ManagementSurface.NONE
     }
 
     class Factory(
@@ -649,6 +714,7 @@ class ManagementViewModel(
     companion object {
         private val DEFAULT_SCHEDULE_COLOR = 0xFF1565C0.toInt()
         private const val SURFACE_KEY = "management.surface"
+        private const val FORM_RETURN_SURFACE_KEY = "management.formReturnSurface"
         private val TIME_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
         private val DATE_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/uuuu")
     }
