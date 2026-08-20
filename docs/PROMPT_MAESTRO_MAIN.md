@@ -2,7 +2,7 @@
 
 > Versión inicial: 2026-08-13
 >
-> Última actualización funcional: 2026-08-18
+> Última actualización funcional: 2026-08-19
 >
 > Estado: decisiones funcionales aprobadas en PLANIFICACIÓN
 >
@@ -81,6 +81,22 @@ Principios del producto:
 La primera versión es Android, en español y se prueba en Córdoba Capital. No hay cuentas ni servicios de MiGuardia en la nube.
 
 Decisión de alcance actualizada el 18 de agosto de 2026: completar primero una MiGuardia coherente para vigiladores. Después, MiGuardia se ampliará de forma explícita para médicos, enfermeros, policías y vigiladores de seguridad que trabajan en distintos lugares, días y horarios. Esa dirección futura está confirmada, pero su vocabulario común, reglas específicas, selección de profesión y tratamiento de remuneración deben diseñarse en un incremento posterior; no generalizar ni complicar silenciosamente la V1 actual.
+
+### Corte funcional vinculante de MiGuardia 1.0
+
+Decisión de Joaquin del 19 de agosto de 2026: MiGuardia 1.0 es el estado estable y verificable actualmente publicado para vigiladores privados, incluido Pulso Vigilia. El cierre no espera a completar toda la planificación original. Hasta sellar esta versión no se implementan funciones nuevas; sólo pueden corregirse defectos bloqueantes o regresiones verificables del comportamiento ya construido.
+
+Quedan diferidos a MiGuardia 2.0, sin considerarse defectos ni bloqueantes de 1.0:
+
+- onboarding completo, recorrido contextual y Ayuda;
+- widgets;
+- informes PDF/XLSX;
+- copias de seguridad y restauración;
+- bloqueo local;
+- ampliación a Salud, Policía y otras profesiones;
+- rediseños o mejoras que no sean indispensables para estabilizar el estado actual.
+
+Las secciones de este documento que especifican esas capacidades se conservan como alcance futuro y no como criterio de aceptación del corte 1.0. No recuperar implementaciones desde worktrees históricos ni iniciar ese backlog antes del sellado. La decisión y sus consecuencias se registran en `docs/adr/0016-corte-funcional-miguardia-1-0.md`.
 
 ## 3. Plataforma y entorno ya preparado
 
@@ -716,6 +732,8 @@ No implementar en V1 sin nueva decisión de Joaquin:
 
 ## 25. Orden de construcción aprobado
 
+La lista siguiente conserva la hoja de ruta histórica que guio la construcción. Desde el corte funcional vinculante del 19 de agosto de 2026 ya no constituye una puerta de salida para MiGuardia 1.0: todo elemento no implementado del plan original queda registrado como backlog de MiGuardia 2.0, salvo que Joaquin lo reclasifique expresamente.
+
 Construir por etapas, manteniendo una app ejecutable:
 
 1. base del proyecto, arquitectura y almacenamiento local;
@@ -765,6 +783,8 @@ Decisión posterior del 18 de agosto de 2026: Joa aprobó simplificar la zona in
 Corrección de primera carga del 18 de agosto de 2026: Joa rechazó que una instalación vacía abra directamente `SHIFT_FORM` con una fecha preseleccionada. El CTA pasa a ser `Cargar datos` y abre una preparación inline sin `ShiftDraft`: permite crear varios objetivos y varios horarios, y `Continuar y elegir días` sólo se habilita al existir una combinación activa. Únicamente esa acción cierra la preparación y deja el Calendario en edición con selección vacía. Fotos y navegación mensual siguen habilitadas mientras no haya un formulario real abierto.
 
 Decisión posterior del 18 de agosto de 2026: Joa reabrió y priorizó explícitamente **Notificaciones** para desarrollar **Pulso Vigilia**. La restricción histórica de no ampliar el módulo queda superada únicamente para el alcance autosuficiente de `docs/prompts/NOTIFICACIONES_PULSO_VIGILIA.md`: tarjeta de estado Vigilia compacta/expandida, trazo con color histórico, ritmos globales Acompañado/Esencial/Discreto, vista previa, notificación real de prueba y corrección para que una frontera posterior no vuelva a publicar un aviso ocultado. Room permanece en v5 con trece entidades; no se autorizan permisos, dependencias, servicios, polling, Live Updates ni alarmas tipo despertador.
+
+Decisión vinculante posterior del 19 de agosto de 2026: una vez auditado y publicado Pulso Vigilia, el estado estable alcanzado en `main` define MiGuardia 1.0 para vigiladores privados. Onboarding, widgets, informes PDF/XLSX, copias y restauración, bloqueo local, multiprofesión y mejoras no indispensables quedan diferidos a MiGuardia 2.0. No son regresiones ni bloqueantes del sellado. Antes del tag sólo se admiten correcciones bloqueantes o regresiones verificables; la etiqueta, la numeración y el inicio de 2.0 requieren puertas posteriores explícitas.
 
 La primera versión utilizable debe alcanzar almacenamiento local, calendario, carga individual/múltiple, objetivos/horarios, fotos y horas básicas antes de sumar capas más complejas.
 

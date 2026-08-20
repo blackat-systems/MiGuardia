@@ -1,9 +1,11 @@
 # ADR 0014: Onboarding local versionado y primera carga guiada
 
-- Estado: aceptada para implementación
+- Estado: aceptada como diseño, diferida a MiGuardia 2.0
 - Fecha: 2026-08-18
 
 ## Contexto
+
+Actualización del 19 de agosto de 2026: el diseño se conserva, pero dejó de ser requisito de MiGuardia 1.0 por el corte funcional registrado en `docs/adr/0016-corte-funcional-miguardia-1-0.md`. No debe implementarse antes del sellado.
 
 MiGuardia necesita explicar su valor y su privacidad en la primera apertura, mostrar contextualmente dónde están y cómo se usan sus controles principales, permitir repetir esa guía desde Ayuda y acompañar la primera carga sin duplicar Perfil, Objetivos, Horarios ni Calendario.
 
