@@ -1,5 +1,29 @@
 # MiGuardia — reglas permanentes del repositorio
 
+## 0. Estado de MiGuardia 2.0
+
+Esta rama desarrolla **MiGuardia 2.0** como actualización de la misma aplicación
+Android. Nace exactamente del tag inmutable `v1.0.0`, commit
+`82db6fd8eb2c511205968894dc9857a96b16ed20`, en la rama
+`codex/miguardia-2.0`.
+
+Reglas obligatorias durante la transición:
+
+- no mover, reemplazar ni reescribir el tag `v1.0.0`;
+- conservar `applicationId = "com.blackatsystems.miguardia"` para que 2.0 pueda
+  actualizar 1.0;
+- preservar todos los datos locales existentes mediante migraciones explícitas
+  y no destructivas desde Room v5;
+- no recuperar código desde worktrees históricos como sustituto de la base
+  sellada;
+- mantener una sola configuración laboral por usuario; no crear múltiples
+  perfiles laborales;
+- considerar `docs/PROMPT_MAESTRO_MAIN_2_0.md`,
+  `docs/PLANIFICACION_MIGUARDIA_2_0.md` y los ADR de 2.0 como autoridad sobre
+  las decisiones nuevas;
+- no iniciar implementación funcional mientras PLANIFICACIÓN no cierre el
+  contrato correspondiente y MAIN no lo convierta en un incremento verificable.
+
 ## 1. Propósito y alcance
 
 Este repositorio contiene **MiGuardia**, una aplicación Android para que vigiladores de seguridad registren y consulten manualmente sus guardias, francos, días sin definir, carpetas médicas, novedades, horas, próximos eventos, clima e informes.
@@ -17,17 +41,23 @@ La versión inicial:
 Antes de planificar, editar código o proponer una dependencia, todo agente debe leer, en este orden:
 
 1. este `AGENTS.md` completo;
-2. `docs/PROMPT_MAESTRO_MAIN.md` completo;
-3. los documentos del módulo afectado, si existen;
-4. el código y las pruebas relacionados.
+2. `docs/STATUS.md` y `docs/PLANIFICACION_MIGUARDIA_2_0.md` completos;
+3. `docs/PROMPT_MAESTRO_MAIN_2_0.md` completo cuando la tarea sea MAIN o una
+   dependencia de 2.0;
+4. los ADR de MiGuardia 2.0 aplicables;
+5. `docs/PROMPT_MAESTRO_MAIN.md` completo como base histórica heredada de 1.0;
+6. los documentos del módulo afectado, si existen;
+7. el código y las pruebas relacionados.
 
 Jerarquía de decisiones:
 
 1. una instrucción actual y explícita de Joaquin;
-2. `docs/PROMPT_MAESTRO_MAIN.md` y las decisiones aprobadas que registre;
-3. este archivo;
-4. documentos técnicos, ADR y prompts de módulos;
-5. implementación existente.
+2. `docs/PROMPT_MAESTRO_MAIN_2_0.md` y
+   `docs/PLANIFICACION_MIGUARDIA_2_0.md` para decisiones de 2.0;
+3. `docs/PROMPT_MAESTRO_MAIN.md` para contratos heredados que 2.0 no reemplace;
+4. este archivo;
+5. documentos técnicos, ADR y prompts de módulos;
+6. implementación existente.
 
 Si dos fuentes se contradicen, no inventar una solución silenciosa. Explicar el conflicto en español, recomendar una opción y pedir decisión solo si cambia el producto. Después, actualizar primero la fuente documental correspondiente y luego el código.
 
@@ -110,6 +140,8 @@ Priorizar pruebas de límites: medianoche, fin de mes/año, febrero bisiesto, ca
 
 - Repositorio remoto privado: `https://github.com/blackat-systems/MiGuardia`.
 - Rama principal: `main`.
+- Rama de desarrollo de MiGuardia 2.0: `codex/miguardia-2.0`.
+- `main` y el tag `v1.0.0` son referencias protegidas; 2.0 no se desarrolla directamente sobre ellas.
 - Autor configurado: `joaquin <blackat.systems@gmail.com>`.
 - Revisar `git status` y el diff antes de confirmar cambios.
 - Hacer commits pequeños y coherentes con mensajes en inglés tipo Conventional Commits, por ejemplo `feat:`, `fix:`, `test:`, `docs:`, `refactor:` y `chore:`.

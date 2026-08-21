@@ -1,5 +1,12 @@
 # Prompt maestro de inicialización — MAIN de MiGuardia
 
+> **Aviso para MiGuardia 2.0:** este documento conserva el contrato funcional y
+> técnico heredado de MiGuardia 1.0. No debe usarse por sí solo para iniciar MAIN
+> 2.0. Primero deben leerse `docs/STATUS.md`,
+> `docs/PLANIFICACION_MIGUARDIA_2_0.md` y los ADR de 2.0. Al concluir
+> PLANIFICACIÓN se creó `docs/PROMPT_MAESTRO_MAIN_2_0.md`, que indica qué se
+> conserva, qué se reemplaza y en qué orden se migra.
+
 > Versión inicial: 2026-08-13
 >
 > Última actualización funcional: 2026-08-19
