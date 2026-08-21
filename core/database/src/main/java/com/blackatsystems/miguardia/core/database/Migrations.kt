@@ -49,3 +49,41 @@ internal val MIGRATION_4_5 = object : Migration(4, 5) {
         )
     }
 }
+
+internal const val MIGRATED_V1_WORK_CONFIGURATION_TIMELINE_ID: String =
+    "00000000-0000-0000-0000-000000000100"
+
+internal val MIGRATION_5_6 = object : Migration(5, 6) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            """CREATE TABLE IF NOT EXISTS `work_configuration_roots` (`timelineId` TEXT NOT NULL, `singletonSlot` INTEGER NOT NULL, `origin` TEXT NOT NULL, PRIMARY KEY(`timelineId`))""",
+        )
+        db.execSQL(
+            "CREATE UNIQUE INDEX IF NOT EXISTS `index_work_configuration_roots_singletonSlot` ON `work_configuration_roots` (`singletonSlot`)",
+        )
+        db.execSQL(
+            """CREATE TABLE IF NOT EXISTS `per_period_hours_definitions` (`id` TEXT NOT NULL, `timelineId` TEXT NOT NULL, `periodKind` TEXT NOT NULL, `weeklyFirstDayIso` INTEGER, `cycleAnchorDate` TEXT, `cycleLengthDays` INTEGER, PRIMARY KEY(`id`), FOREIGN KEY(`timelineId`) REFERENCES `work_configuration_roots`(`timelineId`) ON UPDATE NO ACTION ON DELETE RESTRICT )""",
+        )
+        db.execSQL(
+            "CREATE INDEX IF NOT EXISTS `index_per_period_hours_definitions_timelineId` ON `per_period_hours_definitions` (`timelineId`)",
+        )
+        db.execSQL(
+            """CREATE TABLE IF NOT EXISTS `work_configuration_revisions` (`id` TEXT NOT NULL, `timelineId` TEXT NOT NULL, `effectiveFrom` TEXT NOT NULL, `sector` TEXT NOT NULL, `availabilityLabel` TEXT, `hoursReferenceKind` TEXT NOT NULL, `periodKind` TEXT, `weeklyFirstDayIso` INTEGER, `cycleAnchorDate` TEXT, `cycleLengthDays` INTEGER, `requiredMinutes` INTEGER, `perPeriodDefinitionId` TEXT, PRIMARY KEY(`id`), FOREIGN KEY(`timelineId`) REFERENCES `work_configuration_roots`(`timelineId`) ON UPDATE NO ACTION ON DELETE RESTRICT , FOREIGN KEY(`perPeriodDefinitionId`) REFERENCES `per_period_hours_definitions`(`id`) ON UPDATE NO ACTION ON DELETE RESTRICT )""",
+        )
+        db.execSQL(
+            "CREATE UNIQUE INDEX IF NOT EXISTS `index_work_configuration_revisions_timelineId_effectiveFrom` ON `work_configuration_revisions` (`timelineId`, `effectiveFrom`)",
+        )
+        db.execSQL(
+            "CREATE INDEX IF NOT EXISTS `index_work_configuration_revisions_perPeriodDefinitionId` ON `work_configuration_revisions` (`perPeriodDefinitionId`)",
+        )
+        db.execSQL(
+            """CREATE TABLE IF NOT EXISTS `per_period_hours_values` (`id` TEXT NOT NULL, `definitionId` TEXT NOT NULL, `windowStartInclusive` TEXT NOT NULL, `windowEndExclusive` TEXT NOT NULL, `requiredMinutes` INTEGER NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`definitionId`) REFERENCES `per_period_hours_definitions`(`id`) ON UPDATE NO ACTION ON DELETE RESTRICT )""",
+        )
+        db.execSQL(
+            "CREATE UNIQUE INDEX IF NOT EXISTS `index_per_period_hours_values_definitionId_windowStartInclusive` ON `per_period_hours_values` (`definitionId`, `windowStartInclusive`)",
+        )
+        db.execSQL(
+            """INSERT INTO `work_configuration_roots` (`timelineId`, `singletonSlot`, `origin`) VALUES ('$MIGRATED_V1_WORK_CONFIGURATION_TIMELINE_ID', 1, 'MIGRATED_V1')""",
+        )
+    }
+}

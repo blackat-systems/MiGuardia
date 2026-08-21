@@ -104,7 +104,7 @@ class NextEventQueriesInstrumentedTest {
     }
 
     @Test
-    fun namedIsolatedDatabaseReopensWithDataAndRemainsVersionFiveWithThirteenEntities() = runBlocking {
+    fun namedIsolatedDatabaseReopensWithDataAndRemainsVersionSixWithSeventeenEntities() = runBlocking {
         val shift = shift(
             "30000000-0000-0000-0000-000000000001",
             NOW.plusSeconds(60),
@@ -118,7 +118,7 @@ class NextEventQueriesInstrumentedTest {
 
         val database = MiGuardiaDatabase.build(context, databaseName)
         val sqlite = database.openHelper.readableDatabase
-        assertEquals(5, sqlite.version)
+        assertEquals(6, sqlite.version)
         val cursor = sqlite.query(
             "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'android_%' AND name != 'room_master_table'",
         )
@@ -127,7 +127,7 @@ class NextEventQueriesInstrumentedTest {
         }
         cursor.close()
         database.close()
-        assertEquals(13, tables.size)
+        assertEquals(17, tables.size)
         assertTrue("shifts" in tables)
         assertTrue("vacations" in tables)
         assertTrue("shift_notification_configs" in tables)

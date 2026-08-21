@@ -45,7 +45,7 @@ class Migration1To2InstrumentedTest {
 
         helper.runMigrationsAndValidate(DB, 2, true, MIGRATION_1_2).close()
         val db = Room.databaseBuilder(context, MiGuardiaDatabase::class.java, DB)
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
             .build()
         val sqlite = db.openHelper.readableDatabase
         listOf("objectives", "schedule_combinations", "shifts", "explicit_day_statuses", "medical_leaves").forEach { table ->

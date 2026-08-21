@@ -51,6 +51,7 @@ prevalecen para el estado operativo.
 | `UX_UI_CALENDARIO_ADAPTABLE_2_0.md` | **CERRADO** | El Calendario ya se adapta y conserva todo su contenido alcanzable |
 | `REGLAS_CONFIGURACION_LABORAL_POR_MES.md` | **DESCARTADO / HISTÓRICO** | El código candidato no está en el árbol y no debe recuperarse; la vigencia mensual fue reemplazada por cambios desde una fecha concreta |
 | `REGLAS_DOMINIO_CONFIGURACION_Y_HORAS_V2.md` | **CERRADO** | Reglas puras verificadas de sector, vigencia por fecha, referencias de horas, extras y reglas por lugar, sin Room ni pantallas |
+| `CONFIGURACION_PERSISTENTE_Y_MIGRACION_ROOM_V6.md` | **CERRADO** | La configuración global ya se guarda y Room migra 5→6 sin alterar las trece familias históricas |
 
 ## Contratos históricos de MiGuardia 1.0
 
@@ -88,8 +89,8 @@ MAIN crea o actualiza el prompt de cada bloque antes de implementarlo. El primer
 contrato ya está cerrado; los siguientes nacen únicamente cuando su dependencia
 anterior esté cerrada:
 
-1. **Próximo:** Room v6 y configuración inicial;
-2. lugares, tipos y plantillas V2;
+1. Room v6 y configuración inicial: **cerrado**;
+2. **Próximo:** lugares, tipos y plantillas V2;
 3. recurrencias y edición puntual/masiva;
 4. motor de horario real, extras y cumplimiento;
 5. disponibilidad y situaciones especiales;

@@ -15,11 +15,14 @@ import com.blackatsystems.miguardia.core.database.dao.ShiftNoteDao
 import com.blackatsystems.miguardia.core.database.dao.ShiftNoveltyDao
 import com.blackatsystems.miguardia.core.database.dao.ShiftNotificationConfigDao
 import com.blackatsystems.miguardia.core.database.dao.VacationDao
+import com.blackatsystems.miguardia.core.database.dao.WorkConfigurationDao
 import com.blackatsystems.miguardia.core.database.entity.ExplicitDayStatusEntity
 import com.blackatsystems.miguardia.core.database.entity.FormalShiftChangeEntity
 import com.blackatsystems.miguardia.core.database.entity.HolidayEntity
 import com.blackatsystems.miguardia.core.database.entity.MedicalLeaveEntity
 import com.blackatsystems.miguardia.core.database.entity.ObjectiveEntity
+import com.blackatsystems.miguardia.core.database.entity.PerPeriodHoursDefinitionEntity
+import com.blackatsystems.miguardia.core.database.entity.PerPeriodHoursValueEntity
 import com.blackatsystems.miguardia.core.database.entity.ScheduleCombinationEntity
 import com.blackatsystems.miguardia.core.database.entity.SchedulePhotoEntity
 import com.blackatsystems.miguardia.core.database.entity.ShiftEntity
@@ -28,6 +31,8 @@ import com.blackatsystems.miguardia.core.database.entity.ShiftNoveltyEntity
 import com.blackatsystems.miguardia.core.database.entity.ShiftNotificationConfigEntity
 import com.blackatsystems.miguardia.core.database.entity.ShiftNotificationReminderEntity
 import com.blackatsystems.miguardia.core.database.entity.VacationEntity
+import com.blackatsystems.miguardia.core.database.entity.WorkConfigurationRevisionEntity
+import com.blackatsystems.miguardia.core.database.entity.WorkConfigurationRootEntity
 
 @Database(
     entities = [
@@ -44,8 +49,12 @@ import com.blackatsystems.miguardia.core.database.entity.VacationEntity
         SchedulePhotoEntity::class,
         ShiftNotificationConfigEntity::class,
         ShiftNotificationReminderEntity::class,
+        WorkConfigurationRootEntity::class,
+        PerPeriodHoursDefinitionEntity::class,
+        WorkConfigurationRevisionEntity::class,
+        PerPeriodHoursValueEntity::class,
     ],
-    version = 5,
+    version = 6,
     exportSchema = true,
 )
 internal abstract class MiGuardiaDatabase : RoomDatabase() {
@@ -60,6 +69,7 @@ internal abstract class MiGuardiaDatabase : RoomDatabase() {
     internal abstract fun vacationDao(): VacationDao
     internal abstract fun schedulePhotoDao(): SchedulePhotoDao
     internal abstract fun shiftNotificationConfigDao(): ShiftNotificationConfigDao
+    internal abstract fun workConfigurationDao(): WorkConfigurationDao
 
     companion object {
         const val DATABASE_NAME: String = "miguardia.db"
@@ -71,6 +81,12 @@ internal abstract class MiGuardiaDatabase : RoomDatabase() {
             context.applicationContext,
             MiGuardiaDatabase::class.java,
             databaseName,
-        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5).build()
+        ).addMigrations(
+            MIGRATION_1_2,
+            MIGRATION_2_3,
+            MIGRATION_3_4,
+            MIGRATION_4_5,
+            MIGRATION_5_6,
+        ).build()
     }
 }

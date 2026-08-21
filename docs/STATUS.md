@@ -163,6 +163,35 @@ Validación posterior a retirar el estimador monetario el 2026-08-21:
 La auditoría no encontró defectos concretos y quedó registrada en
 `docs/audits/2026-08-21-reglas-configuracion-laboral-por-mes-y-estado-git.md`.
 
+## Configuración persistente y Room v6
+
+El segundo bloque de MAIN 2.0 quedó implementado y verificado el 2026-08-21:
+
+- `HoursReference.PendingSetup` distingue “todavía no se configuró” de una
+  decisión consciente de no usar referencia o de una referencia desconocida;
+- una instalación nueva comienza sin configuración y crea una única línea
+  temporal al elegir sector;
+- una instalación actualizada desde 1.0 recibe una raíz `MIGRATED_V1` vacía y
+  sigue usando el comportamiento heredado hasta una activación V2 fechada;
+- Room v6 agrega cuatro tablas y no modifica las trece familias de la versión
+  5;
+- revisiones y definiciones son históricas e insert-only; los valores por
+  período sólo admiten una corrección explícita de minutos;
+- los esquemas `1.json` a `5.json` conservaron exactamente sus hashes y se
+  agregó únicamente `6.json`.
+
+Validación final:
+
+- JVM: 217 pruebas, 0 fallos, 0 errores y 0 omitidas;
+- base de datos en Samsung `SM-S938B`: 65 pruebas, 0 fallos, 0 errores y 0
+  omitidas;
+- aplicación QA completa en el mismo Samsung: 169 pruebas, 0 fallos, 0 errores
+  y 0 omitidas;
+- `lintDebug`, `assembleDebug` y `assembleQaAndroidTest`: aprobados;
+- paquetes QA retirados al finalizar; la aplicación productiva no fue tocada;
+- evidencia completa en
+  `docs/audits/2026-08-21-configuracion-persistente-y-room-v6.md`.
+
 ## Ejecución autorizada de MAIN
 
 - avanzar de a un bloque pequeño y con nombre humano;
@@ -185,7 +214,6 @@ amplía el alcance a push, tags, Release, publicación o producción.
 
 ## Todavía no implementado
 
-- Room v6 y la migración `5→6`;
 - Perfil/configuración visible para elegir sector y reglas;
 - persistencia de guardias pasivas o extras V2;
 - motor completo de trabajo habitual, extras exactas y disponibilidad, con su
@@ -194,7 +222,8 @@ amplía el alcance a push, tags, Release, publicación o producción.
 
 ## Próximo paso
 
-MAIN debe escribir y auditar el contrato de Room v6 y configuración inicial.
-Recién después podrá implementar una migración explícita `5→6` que preserve los
-datos de MiGuardia 1.0 y traduzca el dominio puro a entidades persistentes. Push,
-tag, Release y cualquier operación sobre producción continúan prohibidos.
+MAIN debe escribir y auditar el contrato del próximo bloque: lugares, tipos de
+trabajo y plantillas V2. Ese bloque debe reutilizar los objetivos, horarios e
+instantáneas históricas sin reinterpretar el pasado ni adelantar recurrencias,
+extras o pantallas de Resumen. Push, tag, Release y cualquier operación sobre
+producción continúan prohibidos.

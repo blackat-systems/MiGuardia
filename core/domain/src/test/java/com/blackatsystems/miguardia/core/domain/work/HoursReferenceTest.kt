@@ -89,12 +89,21 @@ class HoursReferenceTest {
     }
 
     @Test
-    fun notUsedAndUnknownReferencesDoNotInventAZeroValue() {
+    fun pendingSetupNotUsedAndUnknownRemainDistinctAndDoNotInventAZeroValue() {
+        assertSame(HoursReference.PendingSetup, HoursReference.PendingSetup)
         assertSame(HoursReference.NotUsed, HoursReference.NotUsed)
         assertEquals(null, HoursReference.Unknown().period)
         assertEquals(
             HoursPeriod.Monthly,
             HoursReference.Unknown(period = HoursPeriod.Monthly).period,
+        )
+        assertEquals(
+            3,
+            setOf<HoursReference>(
+                HoursReference.PendingSetup,
+                HoursReference.NotUsed,
+                HoursReference.Unknown(),
+            ).size,
         )
     }
 

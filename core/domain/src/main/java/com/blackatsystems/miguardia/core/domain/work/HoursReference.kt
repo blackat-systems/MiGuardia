@@ -96,6 +96,8 @@ data class PositiveMinutes(
 }
 
 sealed interface HoursReference {
+    data object PendingSetup : HoursReference
+
     data object NotUsed : HoursReference
 
     data class Unknown(
