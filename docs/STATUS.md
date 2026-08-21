@@ -78,6 +78,22 @@ La auditoría de reactivación y Puerta 0 está registrada en
   montos, fórmulas, código, preferencias, pruebas y documentación del estimador
   monetario. No se incorporan tablas salariales ni liquidaciones en ningún
   sector.
+- Se implementó el primer bloque puro de MiGuardia 2.0 bajo
+  `core/domain/.../work/`: catálogo de cuatro sectores, vocabulario sugerido,
+  cambios efectivos desde una fecha, referencias mensual/semanal/por ciclo,
+  valores informados período por período, trabajo habitual, clases extra,
+  disponibilidad y reglas versionables por lugar.
+- El dominio no fija 204 horas, horario nocturno ni reglas propias de una
+  profesión. Las referencias faltantes no se convierten en cero y las
+  colecciones validadas no pueden modificarse desde afuera.
+- Verificación del bloque puro el 2026-08-21: 208 pruebas JVM aprobadas —36
+  nuevas del paquete `work`—, lint aprobado y APK `debug` y de instrumentación
+  `qa` compiladas. No se repitió QA física porque no cambió ninguna superficie
+  Android; sigue vigente la línea base física de 169/169 de Puerta 0.
+- Continúa deliberadamente pendiente decidir cómo se muestra el cumplimiento si
+  una configuración cambia en medio de una semana o ciclo. El dominio conserva
+  por separado la vigencia por fecha y la ventana del período para no inventar
+  un prorrateo antes del bloque de motor y Resumen.
 
 ## Estado Git actual
 
@@ -88,13 +104,14 @@ La auditoría de reactivación y Puerta 0 está registrada en
   - `6dab82b8f239f8009cfcb32d400b50fcc4080836`: planificación y traspaso a MAIN.
   - `3519606aeda3a26bed7ec8fc0feb8b7f3f788d35`: retiro de las funciones
     remunerativas.
-  - el checkpoint documental que contiene este estado: cierre de
-    PLANIFICACIÓN, reactivación de MAIN y contrato del primer bloque.
+  - `8b7fa31fb3865e6ef162a6474d57a0061a32c588`: cierre de PLANIFICACIÓN,
+    reactivación de MAIN y contrato del primer bloque.
+  - el checkpoint local que contiene este estado: dominio puro configurable de
+    MiGuardia 2.0 y sus pruebas.
 - La rama 2.0 todavía no posee upstream ni existe en GitHub. Nada de esta puerta
   fue enviado o publicado.
-- No existe código `workconfig` ni una implementación nueva de la configuración
-  laboral; el próximo bloque parte del contrato vigente, no del candidato
-  mensual descartado.
+- El dominio nuevo vive en `core/domain/.../work/`; no se recuperó el candidato
+  mensual descartado ni existe todavía persistencia o pantalla para configurarlo.
 
 ## Antecedente histórico descartado: candidato mensual
 
@@ -177,8 +194,7 @@ amplía el alcance a push, tags, Release, publicación o producción.
 
 ## Próximo paso
 
-MAIN debe ejecutar
-`docs/prompts/REGLAS_DOMINIO_CONFIGURACION_Y_HORAS_V2.md`: reglas puras de
-sector, vigencia por fecha y referencia de horas antes de persistencia o
-interfaz. Puede consolidar cada bloque aprobado mediante un commit local. Push,
+MAIN debe escribir y auditar el contrato de Room v6 y configuración inicial.
+Recién después podrá implementar una migración explícita `5→6` que preserve los
+datos de MiGuardia 1.0 y traduzca el dominio puro a entidades persistentes. Push,
 tag, Release y cualquier operación sobre producción continúan prohibidos.

@@ -1,6 +1,6 @@
 # Reglas internas de configuración y períodos de horas V2
 
-- Estado: **HABILITADO**
+- Estado: **CERRADO**
 - Responsable: MAIN o especialista de dominio
 - Dependencia: documentación cerrada y ADR 0020
 - Tipo de entrega: Kotlin puro y pruebas JVM
@@ -31,7 +31,8 @@ descartada y su código no existe en el árbol actual.
 Agregar bajo `core/domain/.../work/` modelos y reglas puras para:
 
 1. catálogo exacto `Vigilancia privada`, `Policía`, `Enfermería`, `Medicina`;
-2. vocabulario visible de lugar y jornada por sector;
+2. vocabulario sugerido de lugar y jornada por sector, entendido como copy
+   predeterminado y no como una regla laboral universal;
 3. una configuración y sus revisiones efectivas desde `LocalDate`;
 4. resolución determinista de la revisión vigente para una fecha;
 5. referencia de horas:
@@ -42,12 +43,17 @@ Agregar bajo `core/domain/.../work/` modelos y reglas puras para:
 6. períodos mensual, semanal y ciclo personalizado;
 7. semana con día inicial configurable y lunes sugerido por la interfaz;
 8. ciclo con cantidad positiva de días y fecha de anclaje;
-9. tipo de trabajo habitual personalizable;
-10. clase extra con nombre, si ayuda al cumplimiento y si se muestra separada;
-11. nombre visible de disponibilidad: guardia pasiva, disponible para llamado o
+9. valores de referencia informados por período como datos separados, con
+   identidad de la definición y ventana estable; ausencia significa
+   `Falta informar` y dos valores para la misma ventana se rechazan;
+10. tipo de trabajo habitual personalizable; todo trabajo habitual activo ayuda
+    al cumplimiento y no lleva una bandera para desactivarlo;
+11. clase extra con nombre, si ayuda al cumplimiento y si obtiene un desglose
+    propio; desactivar ese desglose nunca elimina su identidad de extra;
+12. nombre visible de disponibilidad: guardia pasiva, disponible para llamado o
     retén;
-12. reglas de lugar versionables para nocturnidad, fin de semana y visibilidad
-    en Resumen, sin montos.
+13. reglas de lugar versionables para nocturnidad, fin de semana, marcas
+    informativas de tratamiento diferente y visibilidad en Resumen, sin montos.
 
 Los nombres internos exactos pueden ajustarse si mejoran claridad, pero deben
 conservar estas capacidades y sus invariantes.
@@ -67,6 +73,20 @@ Permitido:
 - Puede reutilizar tipos de Java time y patrones de validación existentes.
 - No modifica `MonthlyHours.kt`; el motor V1 continúa como compatibilidad.
 
+## LÍMITE ENTRE VIGENCIA Y PERÍODOS
+
+Este bloque mantiene dos reglas independientes:
+
+- la línea temporal responde qué configuración rige en una `LocalDate`;
+- el período responde qué ventana mensual, semanal o de ciclo contiene una
+  `LocalDate`.
+
+No debe existir todavía una función que combine ambas para prorratear, partir o
+reasignar una referencia cuando una revisión comienza en medio de una semana o
+ciclo. Esa decisión pertenece al futuro bloque de motor de cumplimiento y
+Resumen; debe cerrarse antes de calcular progreso. El API de este bloque debe
+permanecer neutral para admitir esa decisión sin reescribir los modelos.
+
 ## DO NOT
 
 - No implementar Room v6, DAO, repositorios ni migraciones.
@@ -77,6 +97,8 @@ Permitido:
 - No crear extras automáticamente por superar una referencia.
 - No permitir minutos negativos, cero donde se exige un valor o duraciones con
   segundos/fracciones.
+- No permitir una nocturnidad deshabilitada con horario o desglose activo, ni un
+  fin de semana `ninguno` con tratamiento diferente o desglose activo.
 - No usar `Double` para tiempo.
 - No agregar dependencias.
 
@@ -93,6 +115,8 @@ Pruebas JVM mínimas:
 - referencia no utilizada sin valor;
 - referencia desconocida nunca proyectada como cero;
 - referencia fija positiva y rechazo de cero/negativa/fraccionaria;
+- referencia por período faltante sin convertirla en cero, valor positivo y
+  duplicado de la misma definición/ventana rechazado;
 - semana con cualquier `DayOfWeek`;
 - ciclos de 14, 21 y 28 días, más rechazo de longitud inválida;
 - anclaje de ciclo antes y después de la fecha consultada;
@@ -100,6 +124,7 @@ Pruebas JVM mínimas:
 - regla nocturna deshabilitada y definida con cruce de medianoche;
 - inicio nocturno igual a final rechazado;
 - sábado, domingo, ambos o ninguno;
+- estados incompatibles de nocturnidad y fin de semana rechazados;
 - ninguna fórmula monetaria ni dependencia Android.
 
 Ejecutar como mínimo:
@@ -119,3 +144,14 @@ Después revisar `git diff --check` y el diff completo del alcance.
 - no cambió comportamiento visible ni persistencia;
 - MAIN auditó el bloque y puede recomendar un commit local antes de diseñar
   Room v6.
+
+## RESULTADO VERIFICADO
+
+El bloque quedó implementado el 2026-08-21 bajo `core/domain/.../work/`, sin
+dependencias nuevas ni cambios en Android, Compose o Room. Incluye 36 pruebas
+propias y cerró una revisión cruzada que reforzó la identidad de los valores por
+período y la inmutabilidad de las colecciones expuestas.
+
+La batería global aprobó 208 pruebas JVM, lint, la APK `debug` y la APK de
+instrumentación `qa`. La evidencia completa está en
+`docs/audits/2026-08-21-dominio-configuracion-y-horas-v2.md`.
