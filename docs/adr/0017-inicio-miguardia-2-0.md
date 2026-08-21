@@ -3,6 +3,9 @@
 - Estado: aceptada
 - Fecha: 2026-08-20
 
+> Actualización 2026-08-21: MAIN ya fue creado y ejecutó su Puerta 0, pero está
+> pausado porque PLANIFICACIÓN volvió a abrirse. Esta ADR no autoriza reanudarlo.
+
 ## Contexto
 
 MiGuardia 1.0.0 quedó sellada en Git y publicada como Release estable. La

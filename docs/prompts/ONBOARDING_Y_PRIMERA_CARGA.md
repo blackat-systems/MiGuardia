@@ -1,6 +1,9 @@
 # MiGuardia — bienvenida, onboarding, primera carga y Ayuda
 
-> Estado: contrato listo para implementación y auditoría de MAIN
+> **BORRADOR HISTÓRICO V1 — NO EJECUTAR; REESCRIBIR PARA 2.0.** Fue diferido y
+> no contempla la elección de los cuatro sectores. Ver `docs/prompts/README.md`.
+
+> Estado histórico: no implementado en 1.0; debe reescribirse para 2.0
 >
 > Fecha: 2026-08-18
 >
@@ -262,7 +265,7 @@ El QA físico usa únicamente `com.blackatsystems.miguardia.qa` y su paquete de 
 - informes PDF/XLSX;
 - copias y restauración;
 - bloqueo local o biometría;
-- cambios de remuneración o SUVICO;
+- cálculos monetarios o liquidaciones;
 - otras profesiones;
 - cuentas, backend, nube, sincronización o monetización;
 - permisos anticipados;

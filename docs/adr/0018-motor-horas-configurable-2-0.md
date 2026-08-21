@@ -1,9 +1,24 @@
 # ADR 0018: motor de horas configurable de MiGuardia 2.0
 
-- Estado: aceptada
+- Estado: reemplazada por ADR 0020; conservar como antecedente
 - Fecha: 2026-08-20
 
 ## Contexto
+
+Actualización del 2026-08-21: la fórmula que convertía automáticamente el
+exceso sobre una base en horas extra, las extras sin horario exacto y la base
+exclusivamente mensual fueron descartadas. El contrato vigente está en ADR
+0020. Este archivo no autoriza implementación.
+
+Revisión del 2026-08-21: Joaquin informó que las reglas administrativas de
+Policía, Enfermería y Medicina todavía se están relevando mediante formularios.
+Por eso este ADR conserva un diseño matemático candidato, pero no constituye el
+motor definitivo de esos sectores.
+
+Permanecen confirmadas la separación de horas regulares y adicionales, que una
+cobertura completa no sea extra por sí sola y la regla de que el trabajo activo
+reemplaza el tramo pasivo superpuesto. Las fórmulas, defaults y su aplicación a
+cada sector deben volver a aprobarse después del relevamiento.
 
 El motor 1.0 fija 204 horas y clasifica como extra el excedente mensual. Esa
 regla sirve para la especialización original, pero no representa a trabajadores
@@ -11,7 +26,7 @@ que desconocen su base, no tienen base fija o trabajan como retén/cubrefranco.
 También se necesita registrar tiempo extra ocurrido en días concretos sin
 mezclarlo con las horas regulares.
 
-## Decisión
+## Diseño candidato
 
 - El usuario mantiene una sola configuración laboral.
 - La base mensual puede estar definida, ser desconocida o no aplicar.

@@ -1,5 +1,9 @@
 # Prompt especializado: NOVEDADES, FERIADOS Y NOTAS
 
+> **HISTÓRICO V1 — NO EJECUTAR.** Room v2 ya fue integrado. Las novedades de
+> tiempo adicional antiguas son notas y no se convierten en extras V2. Ver
+> `docs/prompts/README.md`.
+
 > Estado: contrato histórico; módulo implementado, integrado y verificado por MAIN
 > Fecha: 2026-08-13
 > Autoridad: MAIN

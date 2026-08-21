@@ -1,5 +1,8 @@
 # MAIN — coordinación de experiencia inicial y Perfil laboral
 
+> **HISTÓRICO V1 — NO EJECUTAR.** Fotografía antigua de coordinación; MAIN 2.0
+> está pausado y PLANIFICACIÓN está activa. Ver `docs/prompts/README.md`.
+
 > Estado: continuidad actualizada para MAIN
 >
 > Fecha: 2026-08-18
@@ -107,7 +110,8 @@ La navegación posterior reemplaza el contenedor `Configuración` por accesos di
 
 ## 5. Dependencia 3 — Notificaciones Vigilia y control de visibilidad
 
-Contrato histórico: `docs/prompts/NOTIFICACIONES_VIGILIA_Y_VISIBILIDAD.md`.
+Contrato histórico conservado:
+`docs/prompts/NOTIFICACIONES_PULSO_VIGILIA.md`.
 
 Rama sugerida: `codex/notification-vigilia-visibility`.
 

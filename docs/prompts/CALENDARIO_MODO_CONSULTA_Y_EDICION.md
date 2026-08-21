@@ -1,5 +1,8 @@
 # MiGuardia — dependencia CALENDARIO: modo consulta y edición explícita
 
+> **HISTÓRICO V1 — NO EJECUTAR.** Contrato integrado y reemplazado por decisiones
+> posteriores del Calendario. Ver `docs/prompts/README.md`.
+
 > Estado: contrato histórico; módulo integrado en `main` mediante `9ea42db` y verificado por MAIN. La prohibición de `Editar día` en consulta, la selección de fechas dentro de formularios, la primera carga basada en `Cargar mi primera guardia`, la aparición inmediata de Guardia/Francos al tocar fechas y el antiguo uso ambiguo de `Terminar` quedan reemplazados por `docs/prompts/CALENDARIO_SELECCION_DIRECTA.md` y `docs/prompts/SIMPLIFICACION_FLUJO_DE_CARGA.md` desde el 18 de agosto de 2026. El contrato vigente separa `Terminar de elegir días` de `Salir de edición` y conserva las fechas al usar `Modificar días elegidos`.
 >
 > Fecha: 2026-08-17
@@ -204,7 +207,7 @@ No tocar:
 - notificaciones, clima, fotos, vacaciones o excepciones salvo una llamada ya existente desde navegación;
 - Gradle, catálogo, manifiesto, permisos, firma o build types;
 - prompt maestro, este prompt o ADR históricos;
-- datos reales, escalas salariales o archivos privados.
+- datos reales o archivos privados.
 
 Si necesitás salir de estos límites, frená esa parte y elevá un cambio mínimo a MAIN.
 

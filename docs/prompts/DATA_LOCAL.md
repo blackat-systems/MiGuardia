@@ -1,5 +1,8 @@
 # Prompt maestro de dependencia — DATA LOCAL, incremento 1
 
+> **HISTÓRICO V1 — NO EJECUTAR.** Room v1 fue el comienzo; la base sellada ya es
+> Room v5. Ver `docs/prompts/README.md`.
+
 > Estado: implementado, integrado y verificado por MAIN el 2026-08-13
 >
 > Proyecto: MiGuardia
@@ -202,7 +205,7 @@ No toques:
 - `docs/PROMPT_MAESTRO_MAIN.md`;
 - otros ADR;
 - `app/**` ni interfaz Compose;
-- escalas salariales;
+- archivos privados ajenos al módulo;
 - cronogramas reales;
 - configuración de Git o secretos.
 

@@ -1,5 +1,9 @@
 # Prompt maestro de dependencia — MOTOR DE PRÓXIMO EVENTO
 
+> **HISTÓRICO V1 — NO EJECUTAR.** El motor heredado continúa vigente para 1.0;
+> su adaptación sectorial depende del futuro contrato de horas. Ver
+> `docs/prompts/README.md`.
+
 > Estado: contrato histórico; módulo implementado, integrado y verificado por MAIN
 >
 > Proyecto: MiGuardia
@@ -286,7 +290,7 @@ No modifiques:
 - Gradle, catálogo de versiones o dependencias;
 - manifiesto, permisos o firma;
 - módulos de fotos o almacenamiento de imágenes;
-- escalas salariales y archivos reales ignorados.
+- archivos reales ignorados.
 
 Si el estado real exige salir de estos límites, frená esa parte y pedí autorización a MAIN antes de editar.
 

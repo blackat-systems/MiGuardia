@@ -1,6 +1,9 @@
 # MiGuardia — edición directa sobre la grilla del Calendario
 
-> Estado: contrato listo para implementación y auditoría de MAIN
+> **HISTÓRICO V1 — NO EJECUTAR.** Esta entrega ya forma parte de MiGuardia 1.0.0.
+> Ver `docs/prompts/README.md`.
+
+> Estado histórico: implementado en MiGuardia 1.0; no ejecutar nuevamente
 >
 > Fecha: 2026-08-18
 >

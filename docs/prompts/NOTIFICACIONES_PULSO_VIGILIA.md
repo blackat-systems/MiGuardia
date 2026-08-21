@@ -1,5 +1,9 @@
 # MiGuardia — dependencia especializada NOTIFICACIONES: PULSO VIGILIA
 
+> **HISTÓRICO V1 — NO EJECUTAR.** Pulso Vigilia fue integrado en MiGuardia
+> 1.0.0. La adaptación sectorial futura necesitará un contrato nuevo. Ver
+> `docs/prompts/README.md`.
+
 > Autorización de Joa: 18 de agosto de 2026.
 >
 > Rama asignada: `codex/notifications-pulso-vigilia`.

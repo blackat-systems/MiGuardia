@@ -1,5 +1,8 @@
 # Prompt maestro de dependencia — CALENDARIO MENSUAL, incremento 2
 
+> **HISTÓRICO V1 — NO EJECUTAR.** Contrato ya integrado y superado por la
+> experiencia actual. Ver `docs/prompts/README.md`.
+
 > Estado: implementado, integrado y verificado por MAIN el 2026-08-13
 >
 > Proyecto: MiGuardia
@@ -290,7 +293,7 @@ No toques:
 - entidades, DAO, mapeadores, repositorios o esquema de `core/database`;
 - firmas de los contratos actuales de `core/domain`;
 - `gradle/libs.versions.toml` salvo autorización posterior de MAIN;
-- escalas salariales o cronogramas reales;
+- datos o cronogramas reales;
 - configuración de Git, firma o secretos.
 
 Si el estado real exige salir de estos límites, pedí autorización antes de editar. No hagas una modificación provisional fuera de alcance.

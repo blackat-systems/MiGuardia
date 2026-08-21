@@ -1,0 +1,170 @@
+# Mapa maestro de MiGuardia 2.0
+
+- Estado: fuente activa de producto
+- Fecha: 2026-08-21
+- Propietario del producto: Joaquin
+- Alcance: explicar el producto aprobado y el orden de construcción
+
+## 1. La idea en una frase
+
+MiGuardia 2.0 es **una sola aplicación Android para organizar jornadas
+laborales**, con un Calendario común y reglas de horas adaptadas a cuatro
+sectores distintos: Vigilancia privada, Policía, Enfermería y Medicina.
+
+No son cuatro aplicaciones ni cuatro perfiles simultáneos. Tampoco se fuerza
+una misma regla laboral sobre los cuatro sectores.
+
+## 2. De dónde parte
+
+MiGuardia 1.0.0 ya resuelve el caso de Vigilancia privada:
+
+- calendario mensual;
+- objetivos, horarios y guardias;
+- francos, novedades, feriados, vacaciones y carpetas médicas;
+- fotos privadas del cronograma;
+- horas, próximo evento, notificaciones, clima y resumen mensual;
+- datos locales, sin cuenta ni nube.
+
+MiGuardia 2.0 actualiza esa misma aplicación. Debe conservar el
+`applicationId`, el historial local y la semántica de los datos 1.0 mediante
+migraciones no destructivas.
+
+## 3. Los cuatro sectores exactos
+
+El catálogo está cerrado:
+
+1. Vigilancia privada;
+2. Policía;
+3. Enfermería;
+4. Medicina.
+
+Enfermería y Medicina son sectores independientes. No existe un sector
+configurable llamado `Salud` y no existe la opción `Otro`.
+
+## 4. Qué comparten
+
+La base común de la aplicación incluye:
+
+- el mismo Calendario mensual;
+- lugares o servicios de trabajo;
+- horarios y jornadas con inicio y fin reales;
+- carga manual individual y múltiple;
+- próximos eventos;
+- notas, feriados, vacaciones, carpetas médicas y fotos;
+- notificaciones, clima, futuros widgets, informes y copias;
+- privacidad local y ausencia de cuentas o sincronización.
+
+La interfaz puede cambiar palabras según el sector, pero reutiliza la misma
+base técnica y las mismas garantías de datos.
+
+## 5. Personalización sin fórmulas por profesión
+
+El sector cambia palabras y ejemplos, pero no impone una forma universal de
+trabajar. Cada persona configura:
+
+- sus lugares de trabajo;
+- sus tipos de trabajo;
+- horarios exactos y colores;
+- si utiliza una referencia de horas y de qué período;
+- qué clases de trabajo extra ayudan a completar esa referencia;
+- si utiliza disponibilidad y con qué nombre quiere verla;
+- la franja nocturna y las reglas de feriado o fin de semana de cada lugar.
+
+Una respuesta individual de un formulario sirve como evidencia, no como valor
+predeterminado para todo el sector.
+
+## 6. Piezas del producto
+
+MiGuardia separa conceptos simples para no mezclar cálculo e interfaz:
+
+| Pieza | Qué significa |
+|---|---|
+| Lugar de trabajo | Dónde trabaja la persona |
+| Tipo de trabajo | Qué actividad realiza y cómo se muestra |
+| Plantilla | Lugar + tipo + horario exacto + color |
+| Plan recurrente | Regla que crea jornadas futuras concretas |
+| Jornada | Lo planificado para una fecha |
+| Horario real | Lo que finalmente ocurrió |
+| Clase extra | Categoría elegida para tiempo adicional |
+| Disponibilidad | Guardia pasiva, disponible para llamado o retén |
+| Situación especial | Ausencia, carpeta, vacaciones, capacitación, cancelación, intercambio u otra |
+
+Las jornadas guardan una fotografía histórica. Cambiar un lugar, plantilla,
+plan o regla desde una fecha no reescribe el pasado.
+
+## 7. Decisiones confirmadas
+
+- MiGuardia 2.0 actualiza la misma aplicación, conserva el `applicationId` y
+  protege el tag `v1.0.0`.
+- Existe una sola configuración laboral, con cambios desde una fecha concreta.
+- Una instalación nueva elige primero el sector y entra al Calendario vacío.
+- Un usuario actualizado desde 1.0 conserva su comportamiento histórico hasta
+  activar conscientemente la configuración 2.0.
+- Todo trabajo activo suma al total trabajado.
+- Las horas extras se declaran expresamente, poseen inicio y fin exactos y se
+  muestran separadas sin dejar de integrar el total.
+- Superar una referencia nunca crea horas extras automáticamente.
+- Cada clase extra decide si ayuda a completar las horas requeridas.
+- Dos trabajos activos superpuestos se advierten y, si el usuario los conserva,
+  ambos suman completos.
+- La disponibilidad se informa aparte. El trabajo activo reemplaza sólo el
+  tramo pasivo coincidente.
+- No existen pausas descontables; un corte real se representa con dos jornadas.
+- Nocturnidad, feriado y fin de semana son clasificaciones superpuestas: pueden
+  coincidir, pero no duplican el total trabajado.
+- Una jornada pertenece al día y mes donde comienza; las clasificaciones miran
+  los instantes reales aunque cruce medianoche.
+- MiGuardia no incorpora tablas salariales, montos ni liquidaciones.
+
+## 8. Calendario y Resumen
+
+El Calendario conserva una sola grilla mensual:
+
+- en consulta, tocar un día abre sus detalles sin modificar datos;
+- `Editar este día` permite cambiar únicamente esa fecha;
+- `Editar calendario` abre el recorrido separado para una o varias fechas;
+- una sola jornada muestra abreviatura y horario;
+- varias jornadas muestran únicamente `2 turnos`, `3 turnos`, etc.;
+- la tarjeta superior de la aplicación se despliega para mostrar todas las
+  jornadas del día, incluidas las completadas.
+
+El Resumen siempre muestra lo esencial y permite ordenar u ocultar detalles
+desde `Personalizar resumen`. La persona personaliza la presentación, no las
+fórmulas.
+
+## 9. Investigación sectorial
+
+Las respuestas se registran de forma anónima en `docs/sectores/`. La evidencia
+disponible confirma diversidad de nombres y modalidades, por lo que no se crean
+reglas universales. La investigación futura puede mejorar textos y ejemplos sin
+bloquear la arquitectura personalizable aprobada.
+
+## 10. Orden de construcción
+
+```text
+Reglas puras y pruebas
+        ↓
+Configuración y migración segura
+        ↓
+Lugares, tipos, plantillas y primera carga
+        ↓
+Planes recurrentes y edición del Calendario
+        ↓
+Horario real, extras, disponibilidad y situaciones especiales
+        ↓
+Resumen, próximo evento y notificaciones
+        ↓
+Auditoría integral y compatibilidad Android
+```
+
+MAIN implementa un bloque por vez. Cada bloque debe compilar, pasar sus pruebas,
+preservar el alcance ajeno y quedar documentado antes del siguiente.
+
+## 11. Fuentes de verdad
+
+- Este archivo explica **qué producto se está construyendo**.
+- `docs/PLANIFICACION_MIGUARDIA_2_0.md` contiene **todas las reglas y el orden**.
+- `docs/sectores/` conserva **la evidencia sectorial anónima**.
+- `docs/STATUS.md` indica **qué bloque está activo hoy**.
+- `docs/prompts/README.md` indica **qué prompt puede ejecutarse**.
+- `docs/PROMPT_MAESTRO_MAIN_2_0.md` gobierna **la integración activa**.

@@ -1,6 +1,9 @@
 # MiGuardia — simplificación del flujo de carga
 
-> Estado: contrato aprobado por Joa para implementación especializada
+> **HISTÓRICO V1 — NO EJECUTAR.** El flujo ya forma parte de la base 1.0.0. Ver
+> `docs/prompts/README.md`.
+
+> Estado histórico: implementado en MiGuardia 1.0; no ejecutar nuevamente
 >
 > Fecha: 2026-08-18
 >
@@ -224,8 +227,7 @@ No modificar:
 - DataStore o sus claves;
 - manifiesto o permisos;
 - Gradle, catálogo o dependencias;
-- lógica de horas o remuneración;
-- SUVICO;
+- lógica de horas o cálculos monetarios;
 - notificaciones, clima, persistencia o comportamiento interno de Fotos, perfil, vacaciones o feriados; la única excepción explícita posterior es que el acceso a Fotos se oculta en consulta y aparece en edición;
 - panel lateral o navegación principal;
 - datos históricos;

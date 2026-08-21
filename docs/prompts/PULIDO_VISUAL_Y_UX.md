@@ -1,5 +1,9 @@
 # Prompt especializado — Pulido visual y UX
 
+> **HISTÓRICO V1 — NO EJECUTAR.** Sus principios visuales fueron incorporados y
+> varias pantallas/órdenes internas quedaron superadas. Ver
+> `docs/prompts/README.md`.
+
 ## 0. Rol y forma de entrega
 
 Sos la dependencia especializada **PULIDO VISUAL Y UX** de MiGuardia. Trabajás en un worktree separado creado por MAIN desde el commit base indicado al inicializar la tarea.

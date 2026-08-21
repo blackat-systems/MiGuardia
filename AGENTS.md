@@ -7,6 +7,12 @@ Android. Nace exactamente del tag inmutable `v1.0.0`, commit
 `82db6fd8eb2c511205968894dc9857a96b16ed20`, en la rama
 `codex/miguardia-2.0`.
 
+Estado operativo vigente desde el 2026-08-21: **PLANIFICACIÓN cerrada y MAIN
+2.0 activo**. Joaquin autorizó ejecutar la hoja de ruta completa por bloques,
+con implementación, pruebas y checkpoints locales después de cada entrega
+verificada. Push, tag, Release y cualquier acción sobre producción siguen
+siendo puertas separadas.
+
 Reglas obligatorias durante la transición:
 
 - no mover, reemplazar ni reescribir el tag `v1.0.0`;
@@ -18,15 +24,24 @@ Reglas obligatorias durante la transición:
   sellada;
 - mantener una sola configuración laboral por usuario; no crear múltiples
   perfiles laborales;
-- considerar `docs/PROMPT_MAESTRO_MAIN_2_0.md`,
-  `docs/PLANIFICACION_MIGUARDIA_2_0.md` y los ADR de 2.0 como autoridad sobre
-  las decisiones nuevas;
-- no iniciar implementación funcional mientras PLANIFICACIÓN no cierre el
-  contrato correspondiente y MAIN no lo convierta en un incremento verificable.
+- considerar `docs/MAPA_MAESTRO_MIGUARDIA_2_0.md`,
+  `docs/PLANIFICACION_MIGUARDIA_2_0.md`, `docs/sectores/` y los ADR de 2.0 como
+  autoridad sobre las decisiones nuevas;
+- usar `docs/PROMPT_MAESTRO_MAIN_2_0.md` como prompt activo de integración;
+- implementar únicamente un bloque verificable por vez, con prompt acotado,
+  pruebas proporcionales y documentación coherente antes de avanzar.
 
 ## 1. Propósito y alcance
 
-Este repositorio contiene **MiGuardia**, una aplicación Android para que vigiladores de seguridad registren y consulten manualmente sus guardias, francos, días sin definir, carpetas médicas, novedades, horas, próximos eventos, clima e informes.
+Este repositorio contiene **MiGuardia**, una aplicación Android para organizar
+jornadas laborales. MiGuardia 1.0.0 está especializada en Vigilancia privada.
+MiGuardia 2.0 conserva ese núcleo y lo amplía a un catálogo cerrado de cuatro
+sectores: Vigilancia privada, Policía, Enfermería y Medicina.
+
+El Calendario, la privacidad local y las capacidades comunes se comparten. Las
+reglas de horas y el vocabulario se validan por sector; no se copian por
+analogía. Enfermería y Medicina son sectores independientes y no existe una
+opción `Otro`.
 
 La versión inicial:
 
@@ -41,23 +56,36 @@ La versión inicial:
 Antes de planificar, editar código o proponer una dependencia, todo agente debe leer, en este orden:
 
 1. este `AGENTS.md` completo;
-2. `docs/STATUS.md` y `docs/PLANIFICACION_MIGUARDIA_2_0.md` completos;
-3. `docs/PROMPT_MAESTRO_MAIN_2_0.md` completo cuando la tarea sea MAIN o una
+2. `docs/MAPA_MAESTRO_MIGUARDIA_2_0.md`, `docs/STATUS.md` y
+   `docs/PLANIFICACION_MIGUARDIA_2_0.md` completos;
+3. `docs/prompts/README.md` para comprobar el estado del prompt que se pretende
+   usar;
+4. la ficha aplicable de `docs/sectores/` cuando el trabajo afecte horas,
+   vocabulario o comportamiento sectorial;
+5. `docs/PROMPT_MAESTRO_MAIN_2_0.md` completo cuando la tarea sea MAIN o una
    dependencia de 2.0;
-4. los ADR de MiGuardia 2.0 aplicables;
-5. `docs/PROMPT_MAESTRO_MAIN.md` completo como base histórica heredada de 1.0;
-6. los documentos del módulo afectado, si existen;
-7. el código y las pruebas relacionados.
+6. los ADR de MiGuardia 2.0 aplicables;
+7. `docs/PROMPT_MAESTRO_MAIN.md` completo como base histórica heredada de 1.0;
+8. los documentos del módulo afectado, si existen;
+9. el código y las pruebas relacionados.
 
 Jerarquía de decisiones:
 
 1. una instrucción actual y explícita de Joaquin;
-2. `docs/PROMPT_MAESTRO_MAIN_2_0.md` y
-   `docs/PLANIFICACION_MIGUARDIA_2_0.md` para decisiones de 2.0;
-3. `docs/PROMPT_MAESTRO_MAIN.md` para contratos heredados que 2.0 no reemplace;
-4. este archivo;
-5. documentos técnicos, ADR y prompts de módulos;
-6. implementación existente.
+2. `docs/MAPA_MAESTRO_MIGUARDIA_2_0.md` y
+   `docs/PLANIFICACION_MIGUARDIA_2_0.md` para producto y decisiones de 2.0;
+3. las fichas de `docs/sectores/` para reglas sectoriales respaldadas por
+   evidencia;
+4. `docs/PROMPT_MAESTRO_MAIN_2_0.md` cuando figure expresamente reactivado;
+5. `docs/PROMPT_MAESTRO_MAIN.md` para contratos heredados que 2.0 no reemplace;
+6. este archivo;
+7. documentos técnicos, ADR y prompts de módulos;
+8. implementación existente.
+
+Un prompt rotulado `HISTÓRICO`, `CERRADO`, `PAUSADO` o `CANDIDATO` no es una
+orden ejecutable. Sólo puede iniciarse trabajo desde un prompt que
+`docs/prompts/README.md` marque expresamente como habilitado y después de la
+autorización de Joaquin.
 
 Si dos fuentes se contradicen, no inventar una solución silenciosa. Explicar el conflicto en español, recomendar una opción y pedir decisión solo si cambia el producto. Después, actualizar primero la fuente documental correspondiente y luego el código.
 
@@ -88,7 +116,7 @@ MAIN debe mantener una visión completa del producto, arquitectura, datos, UX, p
 
 MAIN puede preparar estos prompts cuando sean necesarios. La creación o apertura de otra tarea/chat de Codex se hace solamente cuando Joaquin la pida o autorice de forma explícita. Cada dependencia devuelve resultados a MAIN; ninguna dependencia sustituye a MAIN.
 
-Módulos conceptuales previstos: datos locales; objetivos y guardias; calendario; excepciones, notas y feriados; fotos; horas y remuneración; motor de próximo evento; notificaciones; clima; widget; informes; copias de seguridad; configuración y seguridad; diseño y accesibilidad; pruebas y publicación.
+Módulos conceptuales previstos: datos locales; objetivos y guardias; calendario; excepciones, notas y feriados; fotos; horas; motor de próximo evento; notificaciones; clima; widget; informes; copias de seguridad; configuración y seguridad; diseño y accesibilidad; pruebas y publicación.
 
 ## 5. Método de desarrollo
 
@@ -102,7 +130,8 @@ Módulos conceptuales previstos: datos locales; objetivos y guardias; calendario
 - Guardar instantáneas históricas de objetivo, abreviatura, horario, color y puesto en cada guardia; editar una plantilla no altera el pasado.
 - Diseñar migraciones de datos antes de cambiar esquemas persistentes. No usar migración destructiva en datos reales.
 - No añadir dependencias de producción sin justificar necesidad, mantenimiento, licencia, privacidad, tamaño y alternativa nativa.
-- Las escalas SUVICO de julio a diciembre de 2026 están en `escalas_salariales/` y fueron transcritas en `docs/PROMPT_MAESTRO_MAIN.md`. No implementar reglas monetarias que excedan lo demostrado allí; prorrateos, pérdida de presentismo, aplicabilidad de deducciones y otros vacíos requieren confirmación de Joaquin.
+- MiGuardia organiza jornadas y horas. No incorporar tablas salariales, montos,
+  estimaciones remunerativas, liquidaciones, deducciones ni datos sindicales.
 
 ## 6. Calidad y definición de terminado
 
@@ -122,7 +151,7 @@ Un cambio no está terminado hasta que:
 
 Las pruebas pueden recorrer el zoom interno de MiGuardia, pero no deben consultar ni modificar `font_scale`, zoom, tamaño de visualización ni densidad del dispositivo. No implementar variantes automáticas basadas en esos valores del sistema.
 
-Priorizar pruebas de límites: medianoche, fin de mes/año, febrero bisiesto, cambio de mes, dos guardias excepcionales, descanso menor a 12 horas, umbral de 204 horas, tramo nocturno 21:00–06:00, feriado que corta una guardia nocturna, reprogramación de alertas, restauración parcial y datos históricos.
+Priorizar pruebas de límites: medianoche, fin de mes/año, febrero bisiesto, cambio de mes, dos guardias excepcionales, descanso menor a 12 horas, referencias de horas configuradas por el usuario, franjas nocturnas configuradas por lugar, feriado que corta una guardia nocturna, reprogramación de alertas, restauración parcial y datos históricos. Conservar 204 horas y 21:00–06:00 sólo como casos de compatibilidad histórica de Vigilancia V1, nunca como valores predeterminados de V2.
 
 ## 7. Privacidad y seguridad
 
@@ -162,7 +191,7 @@ No incorporar en la primera versión salvo nueva decisión explícita:
 - mapa embebido;
 - feriados automáticos;
 - búsqueda global;
-- integración directa con Inforce o SUVICO.
+- integración directa con empleadores, sindicatos u organizaciones externas.
 
 ## 10. Regla de cierre
 

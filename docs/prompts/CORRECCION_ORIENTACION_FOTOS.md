@@ -1,5 +1,8 @@
 # MiGuardia — corrección de orientación visual de Fotos
 
+> **HISTÓRICO V1 — NO EJECUTAR.** Corrección integrada y cerrada; sólo sirve para
+> mantenimiento ante una regresión. Ver `docs/prompts/README.md`.
+
 > Estado: implementado, auditado, integrado y publicado en `main`
 >
 > Fecha: 2026-08-18

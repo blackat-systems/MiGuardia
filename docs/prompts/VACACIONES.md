@@ -1,5 +1,9 @@
 # Prompt especializado: VACACIONES
 
+> **HISTÓRICO V1 — NO EJECUTAR.** Room v3 y Vacaciones ya están integrados; no
+> generalizar sus reglas remunerativas a otros sectores. Ver
+> `docs/prompts/README.md`.
+
 > Estado: contrato histórico; módulo implementado, integrado y verificado por MAIN
 >
 > Fecha: 2026-08-14
@@ -121,26 +125,10 @@ Consecuencias:
 - el cálculo mensual sigue usando `Duration` e instantes para guardias, pero vacaciones se calcula exclusivamente con `LocalDate` y rangos inclusivos;
 - la invariante vigente permanece para las guardias incluidas en `planned`; las guardias excluidas por vacaciones quedan fuera de ambos lados.
 
-### 4.4 Remuneración: únicamente documentación y límite
+### 4.4 Límite monetario
 
-Este módulo no calcula dinero.
-
-Decisiones respaldadas que deben preservarse para el futuro:
-
-- la retribución vacacional de personal mensualizado se basa en la remuneración computable al inicio dividida por 25, conforme al artículo 155 de la Ley de Contrato de Trabajo;
-- SUVICO acuerda adicionales vacacionales remunerativos por día y sus valores/topes cambian por vigencia;
-- fuentes públicas confirman actualización mensual para julio–diciembre de 2026, pero las escalas locales disponibles no muestran esos importes exactos y el acta completa no está archivada en el repositorio;
-- no derivar el adicional desde básico, jornada, nocturnidad ni otro valor;
-- no hardcodear importes, topes, componentes remunerativos, prorrateos ni descuentos;
-- no persistir dinero ni crear todavía un motor de remuneración vacacional.
-
-Fuentes documentales ya registradas por MAIN:
-
-- `https://www.argentina.gob.ar/normativa/nacional/25552/actualizacion`;
-- `https://www.suvico.org.ar/`;
-- `https://lmdiario.com.ar/contenido/522769/el-personal-de-vigilancia-logro-un-acuerdo-salarial-con-aumentos-progresivos-has`.
-
-No hace falta navegar nuevamente para implementar este módulo salvo contradicción real o necesidad técnica vigente.
+Este módulo registra y clasifica días. No calcula ni persiste montos y no crea
+tablas salariales, estimaciones remunerativas o liquidaciones.
 
 ## 5. Contratos autorizados
 
@@ -268,7 +256,7 @@ Los textos deben explicar:
 
 - que los días se cuentan de forma corrida e inclusiva;
 - que una guardia normal dentro del período no computa horas;
-- que los cálculos salariales de vacaciones se incorporarán posteriormente con fuentes verificadas.
+- que MiGuardia no calcula montos de vacaciones.
 
 ## 9. Escala visual, accesibilidad e insets
 
@@ -430,7 +418,7 @@ No modifiques:
 - Gradle, catálogo de versiones o wrapper;
 - AndroidManifest o permisos;
 - firma;
-- `escalas_salariales/`;
+- archivos privados ajenos al módulo;
 - módulos no relacionados.
 
 Si necesitás salir de esos límites, frená y pedí autorización a MAIN antes de editar.
@@ -439,10 +427,9 @@ Si necesitás salir de esos límites, frená y pedí autorización a MAIN antes 
 
 No implementar:
 
-- remuneración vacacional;
-- valores o topes del adicional SUVICO;
-- sueldo, recibo, bruto o neto;
-- importación o descarga de escalas;
+- cálculos o importes monetarios;
+- recibos o liquidaciones;
+- importación o descarga de tablas salariales;
 - vacaciones automáticas según antigüedad;
 - solicitud o aprobación empresarial de vacaciones;
 - saldos disponibles, gozados o pendientes;
@@ -493,7 +480,7 @@ Entregá:
 - confirmación de que no se consultó ni modificó fuente, zoom ni densidad;
 - estado Git y `git diff --check`;
 - resultado de búsquedas de secretos y configuraciones prohibidas;
-- limitaciones pendientes, especialmente remuneración vacacional;
+- limitaciones pendientes del módulo;
 - instrucciones concretas para que MAIN integre y audite.
 
 No declares terminado lo que no ejecutaste realmente. Si una verificación obligatoria no pudo realizarse, indicá exactamente cuál, por qué y qué evidencia falta.

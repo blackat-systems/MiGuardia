@@ -1,5 +1,8 @@
 # Prompt maestro de dependencia — MOTOR BÁSICO DE HORAS, incremento 4
 
+> **HISTÓRICO V1 — NO EJECUTAR.** Describe el cálculo original de Vigilancia
+> privada; no es un motor multiprofesional. Ver `docs/prompts/README.md`.
+
 > Estado: contrato histórico; módulo implementado, integrado y verificado por MAIN
 >
 > Proyecto: MiGuardia
@@ -238,7 +241,7 @@ Preservá cambios ajenos. No hagas limpieza oportunista ni reformateos masivos.
 
 No implementar ahora:
 
-- remuneración, pesos, escalas SUVICO, presentismo, antigüedad, deducciones o neto;
+- tablas salariales, montos, estimaciones remunerativas o liquidaciones;
 - tabla o editor de feriados;
 - fotos mensuales;
 - novedades, salida temprana/tardía o tiempo adicional;

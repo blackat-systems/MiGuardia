@@ -1,5 +1,9 @@
 # MiGuardia — dependencia especializada Perfil laboral y Configuración
 
+> **HISTÓRICO V1 — NO EJECUTAR.** Conserva el Perfil de Vigilancia 1.0, pero no
+> sirve para configurar los cuatro sectores de 2.0. Ver
+> `docs/prompts/README.md`.
+
 > Estado: implementación auditada, integrada y publicada en `main` mediante `32767084ae96c399ab4af40cae35eaa40b1ae925`
 >
 > Fecha: 2026-08-18
@@ -209,7 +213,7 @@ El QA físico, si MAIN lo autoriza, usa únicamente `com.blackatsystems.miguardi
 - informes PDF/XLSX;
 - copias y restauración;
 - bloqueo local o biometría;
-- cambios de remuneración o reglas SUVICO;
+- cálculos monetarios o liquidaciones;
 - otras profesiones;
 - cuenta, backend, nube, sincronización o monetización;
 - rediseño general de Calendario, Resumen o notificaciones;

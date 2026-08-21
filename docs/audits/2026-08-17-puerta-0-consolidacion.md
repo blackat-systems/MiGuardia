@@ -19,7 +19,7 @@ La auditoría también detectó una discrepancia concreta: el contrato de visibi
 | `codex/main-3` | `6ce20d4598ad0adb66c16e019549c9ab0af51d4c` | Nueve commits por delante de la `main` local, sin divergencia |
 | `origin/codex/main-3` | `6ce20d4598ad0adb66c16e019549c9ab0af51d4c` | Mismo SHA que la candidata al iniciar la consolidación |
 
-La cadena adicional de `codex/main-3` incorpora Clima, estimación SUVICO, mejoras de UX, Vigilia, documentación de experiencia inicial, política de validación por impacto y modo consulta/edición. El último commit documenta los controles de visibilidad de Notificaciones, pero no implementa por sí solo esos recorridos.
+La cadena adicional de `codex/main-3` incorpora Clima, mejoras de UX, Vigilia, documentación de experiencia inicial, política de validación por impacto y modo consulta/edición. El último commit documenta los controles de visibilidad de Notificaciones, pero no implementa por sí solo esos recorridos.
 
 ## Protección de la carpeta principal
 
@@ -64,7 +64,6 @@ La aplicación mantiene copias automáticas deshabilitadas y tráfico en texto c
 - motor de horas y motor de próximo evento;
 - base de Notificaciones, alarmas, cronómetro, privacidad, canales y descarte informado por Android;
 - Clima para Córdoba Capital con caché privado y degradación sin red;
-- primera estimación bruta SUVICO, limitada a julio–diciembre de 2026 y sin inventar reglas abiertas;
 - identidad Vigilia con `Seguir el sistema`, `Claro` y `Oscuro`;
 - zoom interno 100 %, 150 % y 200 % sin depender de ajustes visuales de Android.
 
@@ -137,7 +136,7 @@ Antes de eliminar cada worktree se debe comparar su diff, identificar archivos �
 - copiar código viejo de Notificaciones sobre la candidata podría hacer retroceder contratos y comportamiento;
 - publicar las referencias visuales sin procedencia/licencia podría introducir material de terceros;
 - el endpoint meteorológico de desarrollo no debe asumirse apto para comercialización;
-- las reglas SUVICO abiertas no pueden inferirse ni presentarse como liquidación oficial;
+- MiGuardia no debe incorporar tablas salariales, montos ni liquidaciones;
 - la documentación y el código deben avanzar juntos para no volver a declarar implementado un contrato todavía pendiente.
 
 ## Recomendación y operaciones posteriores

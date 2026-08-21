@@ -1,10 +1,15 @@
 # Prompt maestro de inicialización — MAIN de MiGuardia
 
+> **CLASIFICACIÓN 2.0: HISTÓRICO DE MIGUARDIA 1.0 — NO EJECUTAR PARA INICIAR
+> MAIN 2.0.** Se conserva como contrato heredado. El estado vigente se consulta
+> en `docs/prompts/README.md` y `docs/MAPA_MAESTRO_MIGUARDIA_2_0.md`.
+
 > **Aviso para MiGuardia 2.0:** este documento conserva el contrato funcional y
 > técnico heredado de MiGuardia 1.0. No debe usarse por sí solo para iniciar MAIN
 > 2.0. Primero deben leerse `docs/STATUS.md`,
 > `docs/PLANIFICACION_MIGUARDIA_2_0.md` y los ADR de 2.0. Al concluir
-> PLANIFICACIÓN se creó `docs/PROMPT_MAESTRO_MAIN_2_0.md`, que indica qué se
+> PLANIFICACIÓN se redactó `docs/PROMPT_MAESTRO_MAIN_2_0.md`, actualmente
+> pausado, que indica qué se
 > conserva, qué se reemplaza y en qué orden se migra.
 
 > Versión inicial: 2026-08-13
@@ -56,7 +61,7 @@ Dependencias conceptuales previstas:
 3. CALENDARIO;
 4. EXCEPCIONES, NOTAS Y FERIADOS;
 5. FOTOS DE CRONOGRAMA;
-6. HORAS Y REMUNERACIÓN;
+6. HORAS;
 7. MOTOR DE PRÓXIMO EVENTO;
 8. NOTIFICACIONES;
 9. CLIMA;
@@ -87,7 +92,7 @@ Principios del producto:
 
 La primera versión es Android, en español y se prueba en Córdoba Capital. No hay cuentas ni servicios de MiGuardia en la nube.
 
-Decisión de alcance actualizada el 18 de agosto de 2026: completar primero una MiGuardia coherente para vigiladores. Después, MiGuardia se ampliará de forma explícita para médicos, enfermeros, policías y vigiladores de seguridad que trabajan en distintos lugares, días y horarios. Esa dirección futura está confirmada, pero su vocabulario común, reglas específicas, selección de profesión y tratamiento de remuneración deben diseñarse en un incremento posterior; no generalizar ni complicar silenciosamente la V1 actual.
+Decisión de alcance actualizada el 18 de agosto de 2026: completar primero una MiGuardia coherente para vigiladores. Después, MiGuardia se ampliará de forma explícita para médicos, enfermeros, policías y vigiladores de seguridad que trabajan en distintos lugares, días y horarios. Esa dirección futura está confirmada, pero su vocabulario común, reglas específicas y selección de profesión deben diseñarse en un incremento posterior; no generalizar ni complicar silenciosamente la V1 actual.
 
 ### Corte funcional vinculante de MiGuardia 1.0
 
@@ -162,7 +167,7 @@ La navegación principal no usa barra inferior. La barra superior muestra a la i
 - `Avisos y contexto`: **Notificaciones** y **Clima**;
 - `Aplicación`: **Apariencia**, cuya pantalla concentra tema y zoom interno.
 
-Los apartados futuros de widgets, remuneración, privacidad, copias de seguridad y Ayuda se incorporan a la sección coherente del panel únicamente cuando existan; no mostrar placeholders. El panel se abre mediante el botón, no mediante arrastre desde el borde, para no competir con el gesto horizontal del Calendario. Atrás cierra primero el panel. Desde Resumen o Apariencia, Atrás vuelve al Calendario antes de salir de la aplicación. Las superficies directas de trabajo o avisos conservan su propio contrato de cierre y regresan al destino que estaba debajo.
+Los apartados futuros de widgets, privacidad, copias de seguridad y Ayuda se incorporan a la sección coherente del panel únicamente cuando existan; no mostrar placeholders. El panel se abre mediante el botón, no mediante arrastre desde el borde, para no competir con el gesto horizontal del Calendario. Atrás cierra primero el panel. Desde Resumen o Apariencia, Atrás vuelve al Calendario antes de salir de la aplicación. Las superficies directas de trabajo o avisos conservan su propio contrato de cierre y regresan al destino que estaba debajo.
 
 Calendario, barra superior:
 
@@ -187,10 +192,9 @@ Resumen:
 - selector de mes;
 - tarjetas de horas y categorías;
 - recuentos de eventos;
-- estimación bruta SUVICO al final, con antigüedad persistida;
 - acción Generar informe.
 
-El panel lateral agrupa accesos a perfil laboral y valores predeterminados; objetivos y horarios; notificaciones; widgets; clima; feriados; remuneración; privacidad y bloqueo; copias de seguridad; apariencia; ayuda, mostrando sólo los apartados ya implementados. La información profesional se concentra en Perfil y las preferencias funcionales permanecen en sus superficies dueñas; no duplicar datos ni ajustes.
+El panel lateral agrupa accesos a perfil laboral y valores predeterminados; objetivos y horarios; notificaciones; widgets; clima; feriados; privacidad y bloqueo; copias de seguridad; apariencia; ayuda, mostrando sólo los apartados ya implementados. La información profesional se concentra en Perfil y las preferencias funcionales permanecen en sus superficies dueñas; no duplicar datos ni ajustes.
 
 El Perfil laboral V1 persiste en un DataStore Preferences exclusivo únicamente el nombre o apodo opcional y la empresa, inicialmente `Inforce` y editable. La profesión `Vigilancia y seguridad` es fija y no se persiste. Objetivos y horarios activos se proyectan desde Room sin duplicarlos, y el puesto continúa perteneciendo a cada carga. Esta decisión no modifica Room v5 ni las instantáneas históricas y se registra en `docs/adr/0013-perfil-laboral-local-en-datastore.md`.
 
@@ -393,108 +397,12 @@ Regla mensual especial:
 
 Usar cálculos por intervalos, no aproximaciones por fecha o cadenas. Probar zona `America/Argentina/Cordoba` o la zona Android equivalente elegida y documentada, límites de mes/año y horario de verano aunque hoy no sea habitual.
 
-## 12. Remuneración estimada y escalas SUVICO incorporadas
+## 12. Límite del producto: horas, no liquidaciones
 
-Joaquin incorporó seis imágenes de escalas SUVICO para la categoría **Vigilador**, con vigencia mensual de julio a diciembre de 2026. Los originales están en `escalas_salariales/`. Son la fuente visual del siguiente registro y deben conservarse sin modificación.
-
-Correspondencia de fuentes:
-
-- `WhatsApp Image 2026-08-13 at 10.07.56.jpeg`: julio;
-- `WhatsApp Image 2026-08-13 at 10.07.56 (1).jpeg`: agosto;
-- `WhatsApp Image 2026-08-13 at 10.07.57.jpeg`: septiembre;
-- `WhatsApp Image 2026-08-13 at 10.07.57 (1).jpeg`: octubre;
-- `WhatsApp Image 2026-08-13 at 10.07.57 (2).jpeg`: noviembre;
-- `WhatsApp Image 2026-08-13 at 10.07.57 (3).jpeg`: diciembre.
-
-Verificación efectuada el 13 de agosto de 2026:
-
-- los componentes y totales de las seis imágenes se reconciliaron matemáticamente;
-- una publicación cordobesa informa que el acuerdo SUVICO–sector empresario fue homologado y confirma los seis totales mensuales: `https://lmdiario.com.ar/contenido/522769/el-personal-de-vigilancia-logro-un-acuerdo-salarial-con-aumentos-progresivos-has`;
-- el sitio oficial `https://www.suvico.org.ar/` confirma que la actividad cordobesa se encuadra en el CCT 422/05 y ofrece una escala salarial, aunque al consultar todavía enlazaba el PDF de enero–junio de 2026;
-- hasta archivar el acta o anexo oficial julio–diciembre, registrar esta carga como “verificada contra imágenes y fuentes públicas”, no como “documento paritario oficial adjunto”.
-
-Decisión documentada sobre vacaciones del 14 de agosto de 2026:
-
-- el artículo 155 de la Ley de Contrato de Trabajo establece que la retribución vacacional de una persona mensualizada se determina dividiendo por 25 la remuneración computable vigente al comenzar el período; también contempla remuneraciones accesorias y promedios para componentes variables;
-- acuerdos SUVICO–CAESI anteriores demuestran un adicional vacacional remunerativo por cada día gozado y un tope que debe leerse del acuerdo aplicable;
-- fuentes públicas de julio de 2026 confirman que el acuerdo del segundo semestre actualizó el adicional vacacional mensualmente, pero las seis imágenes locales no muestran sus valores y todavía no se archivó el acta o anexo oficial completo;
-- por lo tanto, el módulo de Vacaciones solo registra y clasifica días; no calcula dinero, no persiste importes y no inventa el adicional SUVICO 2026;
-- el futuro motor remunerativo deberá versionar por vigencia la remuneración computable, la fórmula `/25`, el adicional SUVICO por día, su eventual tope y su fuente verificable, evitando duplicar la remuneración mensual ordinaria;
-- referencias verificadas: `https://www.argentina.gob.ar/normativa/nacional/25552/actualizacion`, `https://www.suvico.org.ar/` y `https://lmdiario.com.ar/contenido/522769/el-personal-de-vigilancia-logro-un-acuerdo-salarial-con-aumentos-progresivos-has`.
-
-Las imágenes son calculadoras de ejemplo sin antigüedad, nocturnidad, horas extra ni feriados cargados. Los importes están expresados en pesos argentinos:
-
-| Mes 2026 | Básico | Presentismo | Suma no remunerativa | Viáticos art. 106 LCT | Sumas remunerativas | Haberes sin deducciones | Total haberes | Neto del ejemplo |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|
-| Julio | 1.001.300 | 180.000 | 20.000 | 505.500 | 1.181.300 | 525.500 | 1.706.800 | 1.459.327 |
-| Agosto | 1.020.300 | 180.000 | 30.000 | 514.500 | 1.200.300 | 544.500 | 1.744.800 | 1.492.737 |
-| Septiembre | 1.037.600 | 180.000 | 50.000 | 524.000 | 1.217.600 | 574.000 | 1.791.600 | 1.534.704 |
-| Octubre | 1.053.200 | 180.000 | 60.000 | 534.000 | 1.233.200 | 594.000 | 1.827.200 | 1.566.428 |
-| Noviembre | 1.069.000 | 180.000 | 70.000 | 545.000 | 1.249.000 | 615.000 | 1.864.000 | 1.599.310 |
-| Diciembre | 1.085.000 | 180.000 | 120.000 | 545.000 | 1.265.000 | 665.000 | 1.930.000 | 1.658.950 |
-
-Valores unitarios publicados, sin antigüedad:
-
-| Mes 2026 | Hora | Jornada 8 h | Extra 50 % | Extra 100 % | Feriado trabajado 8 h | Adicional nocturno por hora |
-|---|---:|---:|---:|---:|---:|---:|
-| Julio | 5.906,50 | 47.252,00 | 8.859,75 | 11.813,00 | 94.504,00 | 1.001,30 |
-| Agosto | 6.001,50 | 48.012,00 | 9.002,25 | 12.003,00 | 96.024,00 | 1.020,30 |
-| Septiembre | 6.088,00 | 48.704,00 | 9.132,00 | 12.176,00 | 97.408,00 | 1.037,60 |
-| Octubre | 6.166,00 | 49.328,00 | 9.249,00 | 12.332,00 | 98.656,00 | 1.053,20 |
-| Noviembre | 6.245,00 | 49.960,00 | 9.367,50 | 12.490,00 | 99.920,00 | 1.069,00 |
-| Diciembre | 6.325,00 | 50.600,00 | 9.487,50 | 12.650,00 | 101.200,00 | 1.085,00 |
-
-Fórmulas expresadas en las escalas:
-
-- valor de hora = sumas remunerativas / 200;
-- valor de jornada de 8 horas = sumas remunerativas / 25;
-- hora extra al 50 % = valor de hora × 1,5;
-- hora extra al 100 % = valor de hora × 2;
-- feriado trabajado de 8 horas = valor de jornada × 2;
-- adicional nocturno por cada hora entre 21:00 y 06:00 = (básico + antigüedad) × 0,1 %;
-- antigüedad se adiciona al básico como ítem separado según el artículo 10 del CCT 422/05.
-
-Porcentajes de antigüedad publicados:
-
-| Años | % | Años | % | Años | % | Años | % |
-|---:|---:|---:|---:|---:|---:|---:|---:|
-| 1 | 2,0 % | 6 | 11,5 % | 11 | 18,5 % | 16 | 23,5 % |
-| 2 | 4,0 % | 7 | 13,0 % | 12 | 19,5 % | 17 | 24,5 % |
-| 3 | 6,0 % | 8 | 14,5 % | 13 | 20,5 % | 18 | 25,5 % |
-| 4 | 8,0 % | 9 | 16,0 % | 14 | 21,5 % | 19 | 26,5 % |
-| 5 | 10,0 % | 10 | 17,5 % | 15 | 22,5 % | 20 | 27,5 % |
-
-A partir de 21 años, la imagen indica adicionar 1 punto porcentual por cada año siguiente.
-
-Distinción obligatoria:
-
-- **204 horas** sigue siendo el umbral de horas trabajadas que la empresa usa para que MiGuardia clasifique el excedente mensual como extra;
-- **200** es el divisor salarial publicado para obtener el valor monetario de una hora;
-- nunca sustituir uno por otro ni calcular el valor de hora dividiendo por 204.
-
-Las imágenes también muestran ejemplos de descuentos: Cuota Mutual MAVIC, jubilación, Ley 19.032, cuota sindical SUVICO y obra social. Esos importes permiten reconciliar el neto de cada ejemplo, pero no prueban que todas las deducciones correspondan a todo usuario ni definen situaciones personales. La decisión aprobada de producto continúa siendo mostrar primero una **estimación bruta**. No implementar un neto personal como si fuera oficial sin reglas adicionales confirmadas.
-
-Persistencia y vigencia:
-
-- modelar la escala como datos versionados por mes/año;
-- una escala nueva no modifica liquidaciones históricas;
-- conservar cada componente y fórmula de manera auditable, evitando un único total opaco;
-- registrar fuente, categoría, vigencia y estado de verificación;
-- mostrar aviso: información orientativa, no recibo de sueldo ni liquidación oficial.
-
-Reglas aún abiertas, que no deben inventarse: cómo prorratear sueldo básico, presentismo, suma no remunerativa y viáticos durante un mes parcial; cuándo se pierde presentismo; tratamiento exacto de ausencias y carpetas en dinero; componentes exactos de la remuneración computable de vacaciones; valores y topes del adicional vacacional SUVICO julio–diciembre de 2026; modo de evitar la doble contabilización con el salario mensual; qué deducciones personales aplicar; redondeos de una liquidación completa; y si la hora extra al 50 % o al 100 % corresponde a cada clase de excedente real.
-
-Primera estimación implementada el 16 de agosto de 2026:
-
-- aparece al final de `Resumen` y usa exclusivamente las escalas de Vigilador julio–diciembre de 2026 transcritas desde las seis imágenes locales;
-- permite guardar localmente la antigüedad en años, entre 0 y 60, y aplica la tabla publicada; después de 20 años suma un punto porcentual por año;
-- proyecta horas elegibles ya trabajadas y pendientes para nocturnidad, feriados y excedente sobre 204 horas;
-- mantiene como supuesto explícito el básico, presentismo, suma no remunerativa y viáticos del mes completo;
-- cuando hay excedente muestra un rango entre valorar todas esas horas al 50 % y valorarlas al 100 %, porque todavía no existe una regla probada para asignar cada hora;
-- no calcula neto, descuentos personales, prorrateos, pérdida de presentismo ni dinero por vacaciones, ausencias o carpetas;
-- fuera de julio–diciembre de 2026 informa que no hay escala y no extrapola importes;
-- no cambia Room: la antigüedad vive en un DataStore exclusivo y el cálculo puro vive en dominio.
-
+MiGuardia registra jornadas, horas y clasificaciones temporales. No incorpora
+tablas salariales, montos, estimaciones remunerativas, liquidaciones,
+deducciones ni datos sindicales. Las horas base y adicionales se conservan
+únicamente como magnitudes de tiempo.
 ## 13. Feriados manuales
 
 Permitir alta individual y múltiple de fechas, edición y eliminación. Cada feriado pertenece a fecha y año, con nombre opcional. Mostrar indicador pequeño en el calendario sin sustituir Guardia, Franco, `?` o `CM`. Cualquier cambio recalcula resúmenes e informes afectados.
@@ -650,7 +558,7 @@ Copias manuales locales/exportables. Modalidades:
 - calendarios y fotos;
 - todo.
 
-También permitir copia completa o de meses elegidos. Debe poder incluir calendario, objetivos/plantillas, novedades/notas, feriados, preferencias, futura información salarial y fotos según modalidad.
+También permitir copia completa o de meses elegidos. Debe poder incluir calendario, objetivos/plantillas, novedades/notas, feriados, preferencias y fotos según modalidad.
 
 Contraseña opcional y recomendada. Si se ofrece cifrado, usar criptografía estándar y explicar que olvidar la contraseña vuelve irrecuperable la copia; no diseñar criptografía propia.
 
@@ -684,7 +592,7 @@ Resumen con todas las categorías del motor de horas. Tabla diaria con:
 - puesto;
 - novedad relevante.
 
-Notas privadas excluidas por defecto, con inclusión opcional. Fotos del cronograma excluidas por defecto, con inclusión opcional. Cuando exista el módulo salarial, agregar estimación bruta, escala/mes aplicado y descargo informativo.
+Notas privadas excluidas por defecto, con inclusión opcional. Fotos del cronograma excluidas por defecto, con inclusión opcional. Los informes describen jornadas y horas, sin montos ni liquidaciones.
 
 Permitir guardar, compartir y regenerar. Comprobar legibilidad, saltos de página, caracteres españoles y compatibilidad real del XLSX.
 
@@ -732,8 +640,8 @@ No implementar en V1 sin nueva decisión de Joaquin:
 - mapa embebido;
 - feriados obtenidos automáticamente;
 - búsqueda global;
-- integración directa con Inforce o SUVICO;
-- cálculo neto oficial, prorrateos o deducciones personales no confirmadas por las escalas disponibles.
+- integración directa con empleadores, sindicatos u organizaciones externas;
+- tablas salariales, montos, estimaciones remunerativas o liquidaciones.
 - implementación de perfiles para médicos, enfermeros y policías, y generalización del perfil de vigilancia; su dirección futura está confirmada pero permanece fuera del incremento actual;
 - compras, suscripciones, planes Premium o bloqueos sin una matriz de valor aprobada.
 
@@ -755,17 +663,17 @@ Construir por etapas, manteniendo una app ejecutable:
 10. informes y copias de seguridad;
 11. bloqueo, privacidad, accesibilidad y pulido visual;
 12. pruebas integrales y preparación de publicación;
-13. ampliar la remuneración versionada sólo cuando se confirmen las reglas abiertas de prorrateo y aplicabilidad.
+13. conservar fuera del producto toda tabla salarial, monto o liquidación.
 
 Decisión de secuencia del 13 de agosto de 2026: Joaquin autorizó implementar **novedades, feriados y notas** inmediatamente después del motor básico de horas. El módulo de fotos mensuales continúa pendiente y no queda cancelado; solamente se pospone en el orden de ejecución.
 
-Decisión posterior del 14 de agosto de 2026: después de integrar novedades, feriados y notas, Joaquin autorizó implementar **Vacaciones** como incremento separado sobre Room v3. Este módulo registra y clasifica días, pero no implementa todavía remuneración vacacional.
+Decisión posterior del 14 de agosto de 2026: después de integrar novedades, feriados y notas, Joaquin autorizó implementar **Vacaciones** como incremento separado sobre Room v3. Este módulo registra y clasifica días sin calcular montos.
 
 Decisión posterior del 15 de agosto de 2026: después de integrar fotos, accesibilidad y pulido visual, Joaquin autorizó implementar primero el **Motor de próximo evento** como dependencia separada. Debe ser la única fuente reutilizable para la aplicación, las futuras notificaciones y los futuros widgets; las notificaciones no forman parte de ese primer incremento.
 
 Decisión posterior del 16 de agosto de 2026: después de integrar y publicar Notificaciones sobre Room v5, Joa autorizó **Clima** como la siguiente dependencia separada. V1 conserva Córdoba Capital como ubicación fija, no solicita ubicación del teléfono, usa caché privada y debe degradar sin bloquear Calendario ni notificaciones. El proveedor queda detrás de una interfaz reemplazable; cualquier uso comercial debe respetar términos vigentes y no puede asumir que un endpoint gratuito lo autoriza.
 
-Decisión posterior del 16 de agosto de 2026: Joa autorizó un incremento conjunto de UX y remuneración. Se simplifican Agregar, Fotos, conflictos y detalle de guardia; se aclara que los avisos visibles son notificaciones comunes con cronómetro nativo; y se incorpora al final de Resumen una primera estimación bruta SUVICO con antigüedad. En una fecha ocupada, el bloque de acciones conserva `Informar novedad / notas` y ordena las acciones de gestión como `Editar`, `Agregar una segunda guardia` y `Eliminar`; no ofrece `Agregar francos`. Las reglas salariales todavía abiertas permanecen fuera de alcance y no pueden inferirse del estimador.
+Decisión posterior del 16 de agosto de 2026: Joa autorizó un incremento de UX. Se simplifican Agregar, Fotos, conflictos y detalle de guardia; se aclara que los avisos visibles son notificaciones comunes con cronómetro nativo. En una fecha ocupada, el bloque de acciones conserva `Informar novedad / notas` y ordena las acciones de gestión como `Editar`, `Agregar una segunda guardia` y `Eliminar`; no ofrece `Agregar francos`.
 
 Decisión posterior del 16 de agosto de 2026: el detalle meteorológico horario se recorre horizontalmente mediante tarjetas, para no alargar la pantalla en vertical. Los calendarios usados al agregar guardias o francos ocupan todo el ancho disponible, tienen celdas ampliadas y muestran número más inicial histórica del día (`3L`, `4M`, `5X`, `6J`, `7V`, `8S`, `9D`). Esta decisión no cambia fechas, estados ni cálculos.
 
@@ -773,7 +681,7 @@ Decisión posterior del 17 de agosto de 2026: al guardar o editar una guardia, c
 
 Decisión posterior del 17 de agosto de 2026: MiGuardia adopta **Vigilia** como identidad visual definitiva en variantes oscura y clara, con selección persistida `Seguir el sistema`, `Claro` y `Oscuro`. Conserva superficies profundas, acentos magenta/violeta usados con moderación, tokens semánticos y una acción dominante por bloque. La navegación y Configuración aplican divulgación progresiva. Regla rectora: “Vigilia no grita. Señala.”
 
-Decisión de hoja de ruta actualizada el 18 de agosto de 2026: después de cerrar la experiencia actual, MiGuardia se ampliará para cuatro grupos explícitos: médicos, enfermeros, policías y vigiladores de seguridad que trabajan en distintos lugares, días y horarios. No forma parte del incremento actual. Antes de implementarlo se deben definir el vocabulario compartido y específico, la configuración por profesión, qué módulos aplican a cada grupo y cómo se oculta SUVICO fuera de vigilancia. La futura distribución o monetización se decide por separado y esta dirección no autoriza cuentas, servidor, nube ni sincronización.
+Decisión de hoja de ruta actualizada el 18 de agosto de 2026: después de cerrar la experiencia actual, MiGuardia se ampliará para cuatro grupos explícitos: médicos, enfermeros, policías y vigiladores de seguridad que trabajan en distintos lugares, días y horarios. No forma parte del incremento actual. Antes de implementarlo se deben definir el vocabulario compartido y específico, la configuración por profesión y qué módulos aplican a cada grupo. La futura distribución o monetización se decide por separado y esta dirección no autoriza cuentas, servidor, nube ni sincronización.
 
 Decisión posterior del 17 de agosto de 2026: la experiencia inicial se implementa secuencialmente: primero un calendario en modo consulta con `Editar calendario`; luego Perfil laboral y reorganización de Configuración; después el rediseño Vigilia y control de visibilidad de Notificaciones; por último bienvenida, onboarding y primera carga guiada. Cada dependencia nace del `HEAD` verificado de MAIN después de integrar la anterior.
 
@@ -865,11 +773,7 @@ MAIN puede decidir detalles técnicos reversibles. Para una decisión de product
 
 Abiertos conocidos:
 
-- prorrateo mensual de básico, presentismo, sumas no remunerativas y viáticos;
-- pérdida de presentismo y tratamiento monetario de ausencias/carpetas;
-- componentes remunerativos, valores históricos, tope y contabilización exacta de vacaciones SUVICO;
-- selección entre recargo extra del 50 % y del 100 % según cada situación;
-- aplicabilidad de descuentos personales y cálculo neto;
+- cualquier cálculo monetario o liquidación permanece fuera del producto;
 - proveedor meteorológico;
 - `minSdk` y versiones técnicas;
 - detalles finos de publicación y distribución;
@@ -891,7 +795,7 @@ En tu primer turno:
 6. esperá la autorización de Joaquin antes de crear la estructura Android si él inició MAIN solo para validar el traspaso;
 7. una vez autorizado, implementá, compilá y ejecutá en el S25 Ultra, explicando cada paso.
 
-No crees todos los chats ni todos los módulos al inicio. Avanzá por dependencias reales. Podés modelar las escalas versionadas después de que Joaquin valide esta transcripción, pero no implementes prorrateos, netos ni reglas salariales abiertas. No uses datos reales del cronograma en pruebas; crear fixtures ficticios.
+No crees todos los chats ni todos los módulos al inicio. Avanzá por dependencias reales. No uses datos reales del cronograma en pruebas; creá fixtures ficticios. No incorpores tablas salariales, montos ni liquidaciones.
 
 ## 29. Declaración final de autoridad
 

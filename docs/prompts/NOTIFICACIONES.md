@@ -1,5 +1,8 @@
 # MiGuardia — dependencia especializada NOTIFICACIONES
 
+> **HISTÓRICO V1 — NO EJECUTAR.** La migración y el motor de avisos ya están
+> integrados en 1.0. Ver `docs/prompts/README.md`.
+
 > Estado al 18 de agosto de 2026: Notificaciones está implementada e integrada, incluidos `Eliminar notificación` dentro de la vista expandida y `Mostrar notificación nuevamente` desde Configuración. El cierre fue validado localmente y mediante QA físico aislado; la evidencia está en `docs/audits/2026-08-18-notificaciones-visibilidad.md`. Este prompt refleja el alcance original sin red; el manifiesto actual incluye `INTERNET` únicamente porque Clima se integró después.
 >
 > Extensión autorizada posteriormente: `docs/prompts/NOTIFICACIONES_PULSO_VIGILIA.md` redefine únicamente presentación, ritmos globales, prueba real segura y cierre del ocultamiento. Conserva el motor, Room v5, dominio, permisos y límites de plataforma de este documento.

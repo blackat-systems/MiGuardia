@@ -1,5 +1,9 @@
 # Prompt maestro de dependencia — CLIMA
 
+> **HISTÓRICO V1 — NO EJECUTAR.** Clima ya está integrado; sus contratos
+> comerciales deben revalidarse antes de una publicación futura. Ver
+> `docs/prompts/README.md`.
+
 > Estado: contrato histórico; módulo integrado en `main` mediante `735d6a6` y verificado por MAIN
 >
 > Proyecto: MiGuardia

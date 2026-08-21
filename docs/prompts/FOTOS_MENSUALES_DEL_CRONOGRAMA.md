@@ -1,5 +1,8 @@
 # Prompt especializado — Fotos mensuales del cronograma
 
+> **HISTÓRICO V1 — NO EJECUTAR.** Fotos y Room v4 ya fueron integrados y algunas
+> reglas de borrado/navegación fueron reemplazadas. Ver `docs/prompts/README.md`.
+
 ## 0. Rol y entrega
 
 Sos la dependencia especializada **FOTOS MENSUALES DEL CRONOGRAMA** de MiGuardia. Trabajás en un worktree separado creado por MAIN desde el commit base que Joaquin te entregue.

@@ -1,5 +1,9 @@
 # Prompt maestro de dependencia — OBJETIVOS Y GUARDIAS, incremento 3
 
+> **HISTÓRICO V1 — NO EJECUTAR.** La función ya está integrada; el flujo y la
+> navegación fueron reemplazados por contratos posteriores. Ver
+> `docs/prompts/README.md`.
+
 > Estado: implementado por la dependencia; integrado y auditado por MAIN
 >
 > Proyecto: MiGuardia
@@ -351,9 +355,9 @@ No toques:
 - `docs/PROMPT_MAESTRO_MAIN.md`;
 - prompts o ADR existentes;
 - `gradle/libs.versions.toml`;
-- escalas salariales o cronogramas reales;
+- datos o cronogramas reales;
 - firma, configuración de Git o secretos;
-- módulos de horas, fotos, feriados, notificaciones, clima, widget, informes o remuneración.
+- módulos de horas, fotos, feriados, notificaciones, clima, widget o informes.
 
 Si necesitás salir de estos límites, pedí autorización a MAIN antes de editar.
 

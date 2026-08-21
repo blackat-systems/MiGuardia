@@ -1,5 +1,10 @@
 # MiGuardia 1.0.0 — registro de versión
 
+> Nota de continuidad 2.0: este registro conserva el lenguaje histórico del
+> corte 1.0. El catálogo vigente de 2.0 contiene exactamente Vigilancia privada,
+> Policía, Enfermería y Medicina; no existe `Salud` como sector contenedor ni
+> una opción `Otro`.
+
 - Nombre: MiGuardia
 - Versión: 1.0.0
 - `versionCode`: 1
@@ -18,7 +23,6 @@ MiGuardia 1.0.0 consolida el estado estable actual para vigiladores privados:
 - notas, novedades, feriados manuales, carpetas médicas y vacaciones;
 - fotos mensuales privadas, visor con zoom y orientación EXIF local;
 - resumen de horas trabajadas, pendientes, extra, nocturnas y de feriado;
-- estimación remunerativa bruta SUVICO, limitada a julio–diciembre de 2026;
 - motor de próximo evento;
 - Pulso Vigilia con ritmos, vista previa, notificación de prueba, ocultamiento y restauración;
 - clima opcional para Córdoba Capital con caché privada y degradación segura;
@@ -56,7 +60,7 @@ El acceso a Internet se usa sólo para consultar el clima de Córdoba Capital cu
 
 - La aplicación es Android, en español y especializada en vigiladores privados.
 - El clima se limita a Córdoba Capital y puede quedar no disponible sin red ni caché utilizable; esto no bloquea el resto de la aplicación.
-- La estimación SUVICO es bruta y orientativa, sólo cubre julio–diciembre de 2026 y no calcula neto, prorrateos ni deducciones personales.
+- La aplicación organiza jornadas y horas; no presenta montos ni liquidaciones.
 - La presentación, el descarte, el sonido, la vibración y la puntualidad final de notificaciones dependen también de Android, del fabricante y de los permisos concedidos.
 - Este candidato no configura firma privada de publicación ni constituye por sí mismo un APK/AAB publicable.
 - Las capacidades listadas como diferidas pertenecen a 2.0.

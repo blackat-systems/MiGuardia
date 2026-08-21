@@ -1,6 +1,9 @@
 # MiGuardia — navegación principal mediante menú lateral
 
-> Estado: contrato listo para implementación y auditoría de MAIN
+> **HISTÓRICO V1 — NO EJECUTAR.** El menú lateral ya está integrado y cerrado.
+> Ver `docs/prompts/README.md`.
+
+> Estado histórico: implementado en MiGuardia 1.0; no ejecutar nuevamente
 >
 > Fecha: 2026-08-18
 >

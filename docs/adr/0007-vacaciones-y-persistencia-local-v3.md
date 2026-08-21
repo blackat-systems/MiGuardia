@@ -21,9 +21,10 @@ MiGuardia necesita registrar vacaciones manuales que pueden atravesar meses y a�
 - Room pasa a versión 3 con una única tabla nueva `vacations`, índices por fecha inicial y final, y sin claves foráneas.
 - `MIGRATION_2_3` crea solamente esa tabla y sus índices. La cadena `MIGRATION_1_2` + `MIGRATION_2_3` conserva las nueve tablas v2 y las cinco familias originales de v1.
 
-## Remuneración
+## Límite monetario
 
-Este incremento no calcula dinero. La futura remuneración vacacional deberá usar fuentes verificables y versionadas para la remuneración computable, la fórmula legal `/25`, el adicional SUVICO por día y su eventual tope. No se derivan importes desde horas, básico u otras escalas incompletas y no se persisten valores monetarios en Room v3.
+Este incremento no calcula ni persiste dinero. MiGuardia no incorpora tablas
+salariales, estimaciones remunerativas ni liquidaciones.
 
 ## Consecuencias
 

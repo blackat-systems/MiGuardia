@@ -31,5 +31,5 @@ La aplicación todavía no cuenta con un editor local de feriados. Sin embargo, 
 - El motor puede probarse en JVM sin Android ni Room.
 - `ShiftStatus` permanece limitado a `PLANNED`, `CANCELLED` y `ABSENT`; lo completado continúa derivándose del reloj.
 - Room permanece en versión 1, sin entidades, DAO, migraciones ni contratos modificados.
-- El resumen no calcula remuneración ni deducciones y no presume reglas de SUVICO aún no confirmadas.
+- El resumen no calcula montos, remuneraciones ni deducciones.
 - El futuro módulo de feriados solo deberá proporcionar fechas locales al motor existente.

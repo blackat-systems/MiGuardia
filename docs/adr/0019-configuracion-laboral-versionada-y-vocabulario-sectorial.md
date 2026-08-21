@@ -1,9 +1,21 @@
 # ADR 0019: configuración laboral versionada y vocabulario sectorial
 
-- Estado: aceptada
+- Estado: reemplazada parcialmente por ADR 0020; conservar como antecedente
 - Fecha: 2026-08-20
+- Actualización de sectores: 2026-08-21
 
 ## Contexto
+
+Actualización del 2026-08-21: se conservan el catálogo cerrado, una sola
+configuración y el vocabulario sectorial. La vigencia limitada al primer día de
+un mes, `passiveEnabled` como supuesto sectorial y la puerta persistente aquí
+descripta fueron reemplazadas por el contrato por fecha de ADR 0020.
+
+Revisión del 2026-08-21: están aceptados el catálogo exacto de cuatro sectores,
+su identidad separada, una sola configuración vigente y la preservación de
+MiGuardia 1.0. La línea temporal mensual, los defaults sectoriales y la puerta
+Room v6 son una propuesta técnica pendiente de que Joaquin comprenda el bloque y
+de que se incorporen las respuestas de formularios.
 
 MiGuardia 1.0 posee un único perfil local. Su DataStore
 `guard_profile.preferences_pb` guarda solamente nombre o apodo y empresa; la
@@ -11,12 +23,13 @@ profesión `Vigilancia y seguridad` es una constante de presentación. Room v5
 contiene trece entidades de calendario y trabajo, pero no una configuración
 laboral versionada.
 
-MiGuardia 2.0 debe incorporar Vigilancia privada, Policía, Salud y Otro sin
-crear perfiles simultáneos, duplicar el perfil existente ni reinterpretar meses
-históricos. Sector, base mensual y reglas de cálculo necesitan vigencia porque
-pueden cambiar con el tiempo.
+MiGuardia 2.0 debe incorporar un catálogo cerrado de cuatro sectores:
+Vigilancia privada, Enfermería, Medicina y Policía, sin crear perfiles
+simultáneos, duplicar el perfil existente ni reinterpretar meses históricos.
+Sector, base mensual y reglas de cálculo necesitan vigencia porque pueden
+cambiar con el tiempo.
 
-## Decisión
+## Parte aceptada y diseño candidato
 
 ### Una configuración, varias revisiones históricas
 
@@ -53,25 +66,30 @@ deshabilitado.
 
 El dominio utiliza conceptos neutrales y la interfaz adapta las etiquetas:
 
-| Concepto común | Vigilancia privada | Policía | Salud | Otro |
+| Concepto común | Vigilancia privada | Enfermería | Medicina | Policía |
 |---|---|---|---|---|
-| Lugar o servicio | Objetivo | Dependencia o servicio | Institución o servicio | Lugar o servicio |
-| Trabajo activo | Guardia | Servicio | Guardia activa o jornada | Jornada |
-| Etiqueta de tarea | Puesto | Función o destino | Servicio, sala o función | Función |
-| Empleador | Empresa | Institución | Institución | Empleador o institución |
+| Lugar o servicio | Objetivo | Institución o servicio | Institución o servicio | Dependencia o servicio |
+| Trabajo activo | Guardia | Guardia activa o jornada | Guardia activa o jornada | Servicio |
+| Etiqueta de tarea | Puesto | Servicio, sala o función | Servicio, área o función | Función o destino |
+| Empleador | Empresa | Institución | Institución | Institución |
 
 `Lugar o servicio`, `Horario`, `Jornada`, `Horas regulares`, `Horas extra
 informadas`, `Guardia pasiva`, `Feriado`, `Vacaciones` y `Novedad` son conceptos
 compartidos. Los nombres sectoriales son presentación; no crean tablas o motores
 duplicados.
 
-La configuración puede guardar una profesión o función opcional para explicar
-el perfil —por ejemplo Medicina o Enfermería dentro de Salud—, pero no solicita
-matrícula, jerarquía, DNI ni otro identificador sensible.
+Enfermería y Medicina son sectores independientes de primer nivel y no se
+agrupan bajo un sector genérico Salud. La configuración puede guardar además una
+función opcional para explicar el perfil, pero no solicita matrícula, jerarquía,
+DNI ni otro identificador sensible.
 
-La guardia pasiva forma parte del modelo común y cada revisión persiste si está
-habilitada. Al crear una configuración, Salud propone habilitarla y los demás
-sectores proponen deshabilitarla; el usuario confirma o cambia esa propuesta.
+El catálogo es exhaustivo: no existe un sector `Otro` ni una identidad genérica
+`Salud` como alternativa de configuración.
+
+La guardia pasiva forma parte del vocabulario candidato y cada revisión podría
+persistir si está habilitada. Los formularios deben definir qué sectores la
+muestran, con qué nombre y si existe un valor inicial recomendable; no se fija
+un default por profesión en esta etapa.
 Deshabilitarla impide crear nuevas ventanas bajo esa vigencia, pero los registros
 históricos continúan visibles. Ningún sector recibe automáticamente una
 interpretación legal o salarial.
@@ -84,9 +102,8 @@ interpretación legal o salarial.
   configuración las habilita o existen registros.
 - La comparación contra una base mensual depende de la configuración elegida,
   no del nombre del sector.
-- La estimación SUVICO se muestra exclusivamente en Vigilancia privada y sólo
-  para sus vigencias documentadas. Se oculta en Policía, Salud y Otro; no se
-  reemplaza por valores inventados ni por un placeholder de liquidación.
+- No se muestran tablas salariales, montos, estimaciones remunerativas ni
+  liquidaciones en ningún sector.
 - La política nocturna de una revisión está `definida` o `deshabilitada`. Si está
   definida, inicio y fin son minutos distintos y pueden cruzar medianoche. Sólo
   la raíz V1 recibe automáticamente 21:00–06:00; una instalación nueva comienza
@@ -124,8 +141,8 @@ interpretación legal o salarial.
   configurar` hasta que cualquier acceso de creación —Calendario, Objetivos,
   horarios, Perfil o acceso directo— conduzca a una configuración laboral mínima;
   antes de esa confirmación no puede crear objetivos, jornadas, pasivas ni extras.
-  La primera revisión nace con motor V2 y vigencia en el mes actual; propone
-  pasiva habilitada para Salud y deshabilitada para los demás sectores.
+  La primera revisión candidata nace con motor V2 y vigencia en el mes actual;
+  no propone un valor sectorial de pasiva hasta cerrar la investigación.
 - La compatibilidad de empresa se ejecuta sólo cuando Room contiene la raíz con
   origen migración V1. En una única edición atómica de DataStore conserva una
   empresa explícita o materializa `Inforce` si faltaba, y guarda una marca
@@ -135,8 +152,7 @@ interpretación legal o salarial.
 - La puerta v6 incluye un adaptador mínimo del motor y Resumen: la raíz migrada
   conserva el cálculo legado; una revisión V2 resuelve por mes sector, base, modo
   y nocturnidad para `Shift` regular, mantiene `D/P=0` mientras no existan fuentes
-  y no muestra sus tarjetas/acciones aunque `passiveEnabled=true`; oculta SUVICO
-  fuera de Vigilancia.
+  y no muestra sus tarjetas/acciones aunque `passiveEnabled=true`.
 - Las ventanas pasivas y extras se incorporan en una migración posterior junto
   con repositorio, UI y consumo completo del motor, sin exponer acciones antes.
   Una intervención activa regular se guarda una sola vez como `Shift` y se

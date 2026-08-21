@@ -1,5 +1,10 @@
 # ADR 0016: corte funcional de MiGuardia 1.0
 
+> Nota de continuidad 2.0: las referencias históricas a `Salud` u “otras
+> profesiones” quedaron reemplazadas por un catálogo cerrado de Vigilancia
+> privada, Policía, Enfermería y Medicina, con Enfermería y Medicina separadas.
+> Esta ADR sólo define el corte de alcance de MiGuardia 1.0.
+
 - Estado: aceptada
 - Fecha: 2026-08-19
 

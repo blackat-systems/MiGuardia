@@ -1,5 +1,9 @@
 # MiGuardia — prompt maestro de pausa, revisión y reanudación
 
+> **CLASIFICACIÓN 2.0: FOTOGRAFÍA HISTÓRICA DE MIGUARDIA 1.0 — NO EJECUTAR.**
+> Sus ramas, SHA, pendientes y orden de reanudación ya fueron superados. Consultar
+> `docs/STATUS.md` y `docs/prompts/README.md`.
+
 > Reanudación auditada el 17 de agosto de 2026: este documento conserva la fotografía de pausa y sus instrucciones. La evidencia actual de la Puerta 0 está en `docs/audits/2026-08-17-puerta-0-consolidacion.md`. Cuando una descripción histórica contradiga esa auditoría, prevalece la evidencia nueva.
 
 > Cierre posterior del 18 de agosto de 2026: en la instantánea de promoción, `main`, `origin/main`, `codex/main-3` y `origin/codex/main-3` quedaron alineadas en `e3caf6f4acba8af8a1ff27620b7c8c99a4ff176f`. Este documento conserva la fotografía previa y no debe usarse para repetir la promoción. El estado canónico vigente está en `docs/audits/2026-08-18-base-canonica.md`.
@@ -53,7 +57,7 @@ MAIN no tiene autorización implícita para:
 - hacer `reset --hard`, force push o reescritura de historia;
 - publicar, hacer push, merge o release sin autorización explícita de Joa;
 - agregar nube, cuentas, telemetría, anuncios, cobros o servicios externos no aprobados;
-- inventar reglas salariales, legales o de negocio que las fuentes no demuestran.
+- inventar reglas legales o de negocio que las fuentes no demuestran.
 
 ---
 
@@ -113,7 +117,6 @@ flowchart TB
 
     ENGINES --> HOURS["Horas mensuales, nocturnas,<br/>feriadas y extra sobre 204 h"]
     ENGINES --> NEXT["Próximo evento y guardia en curso"]
-    ENGINES --> PAY["Estimación bruta SUVICO<br/>con supuestos visibles"]
     ENGINES --> WEATHER["Clima horario de Córdoba<br/>con caché local"]
 
     SURFACES --> APP["Pantallas Compose / Vigilia"]
@@ -153,14 +156,13 @@ flowchart TB
 ```text
 MiGaurdia/
 ├── app/                  Aplicación Android, Compose y APIs del sistema
-├── core/domain/          Reglas puras: calendario, horas, eventos, clima y remuneración
+├── core/domain/          Reglas puras: calendario, horas, eventos y clima
 ├── core/database/        Room, DAO, repositorios y migraciones
 ├── docs/
 │   ├── PROMPT_MAESTRO_MAIN.md
 │   ├── adr/              Decisiones arquitectónicas
 │   ├── prompts/          Contratos de dependencias
 │   └── audits/           Auditorías históricas
-├── escalas_salariales/   Fuentes SUVICO de julio a diciembre de 2026
 ├── interfaz/             Referencias visuales locales no rastreadas
 ├── output/               Salida generada local; ignorada al reanudar, sin borrarla
 └── Cronograma de ejemplo/ Material privado ignorado por Git
@@ -204,7 +206,7 @@ Esta rama **no representa el estado funcional más avanzado del proyecto**.
 - remoto: `origin/codex/main-3` en el mismo SHA;
 - estado: limpio y sincronizado;
 - relación: nueve commits por delante de la `main` local, sin divergencia propia respecto de esa base;
-- contiene Clima, primera remuneración orientativa, mejoras de UX, Vigilia, modo consulta/edición del calendario y el contrato documental de control de visibilidad de Notificaciones. La implementación de esos controles quedó parcial.
+- contiene Clima, mejoras de UX, Vigilia, modo consulta/edición del calendario y el contrato documental de control de visibilidad de Notificaciones. La implementación de esos controles quedó parcial.
 
 Commits de avance desde la `main` local:
 
@@ -225,7 +227,7 @@ La recomendación de continuidad es tratar `codex/main-3` como **candidata a lí
 1. comparar `main..codex/main-3` completo;
 2. revisar los cambios sin confirmar de la carpeta principal y decidir cuáles ya están incluidos, cuáles evolucionaron y cuáles siguen siendo únicos;
 3. preservar las referencias visuales y prompts no rastreados hasta tomar una decisión consciente;
-4. auditar privacidad, Room, permisos, clima, notificaciones, remuneración y UI;
+4. auditar privacidad, Room, permisos, clima, notificaciones y UI;
 5. obtener autorización explícita de Joa para la operación Git final.
 
 No resolver esta diferencia copiando archivos a mano sin mapa de procedencia.
@@ -243,17 +245,16 @@ No resolver esta diferencia copiando archivos a mano sin mapa de procedencia.
 | Modo consulta/edición | Integrado en `codex/main-3` | `VIEW/EDIT`, `Editar calendario`, `Terminar`, protección de Atrás | Promover a `main` tras auditoría |
 | Objetivos y horarios | Implementados | Color por combinación, recientes, plantillas, instantáneas | Mantener abreviatura exclusiva del objetivo |
 | Carga simple y múltiple | Implementada | Reemplazar, conservar ocupadas, cancelar, segunda guardia | Proteger regresiones de edición masiva |
-| Horas mensuales | Implementadas | Planificadas, trabajadas, pendientes, nocturnas 21–06, feriadas y extra sobre 204 | Reglas monetarias abiertas no deben alterar este motor |
+| Horas mensuales | Implementadas | Planificadas, trabajadas, pendientes, nocturnas 21–06, feriadas y extra sobre 204 | No incorpora montos ni liquidaciones |
 | Feriados, notas y novedades | Implementados | Feriados manuales, ausencia, cancelación, cambio formal, segunda guardia | Mantener privacidad de notas y descripciones |
 | Carpeta médica | Implementada | Período y nota opcional, sin certificado | No contabilizar horas ni exportar notas por defecto |
-| Vacaciones | Implementadas | Períodos, `V`, exclusión de horas, conflicto con CM | Remuneración vacacional sigue abierta |
+| Vacaciones | Implementadas | Períodos, `V`, exclusión de horas, conflicto con CM | No calcula montos |
 | Fotos mensuales | Implementadas | Photo Picker, copia privada, zoom/paneo, asociación mensual | Integrarlas después en backups e informes sólo por elección |
 | Próximo evento | Implementado | Fuente compartida para próxima guardia, en curso y franco | Reutilizarlo en widgets; no duplicar lógica |
 | Notificaciones | Base implementada; refinamiento de visibilidad parcial | Alarmas locales, cronómetro, acciones, privacidad, canales y registro del descarte de Android; faltan los controles explícitos de eliminar/restaurar | Corregir el alcance acotado, probarlo y hacer QA por impacto |
 | Clima | Implementado en `codex/main-3` | Córdoba fija, caché privado, detalle horario, Open-Meteo detrás de interfaz | Revisar proveedor/plan antes de uso comercial |
 | Vigilia | Implementada en `codex/main-3` | Tema claro/oscuro/sistema, tokens y superficies Compose | Logo y tipografías definitivas pendientes |
 | Zoom interno | Implementado | 100 %, 150 % y 200 %, sin leer ajustes visuales de Android | Conservar recorridos físicos y semántica |
-| Estimación SUVICO | Primera versión implementada | Bruta, orientativa, julio–diciembre 2026, antigüedad y rango de extra | No extrapolar meses ni reglas no demostradas |
 | Perfil laboral | Diseñado, no implementado | Prompt coordinador existente | Crear dependencia desde base canónica limpia |
 | Bienvenida/onboarding/ayuda | Diseñado, no implementado | Flujo y criterios definidos | Implementar después de Perfil |
 | Widgets | Decididos, no implementados | Tres modos, múltiples instancias, dos tamaños y privacidad | Crear prompt y dependencia específicos |
@@ -282,7 +283,7 @@ El plan original no era sólo “hacer un calendario”. Después del núcleo ya
    - informe parcial o de cierre;
    - resumen mensual y tabla diaria;
    - inclusión consciente de notas o fotos;
-   - escala y descargo de remuneración;
+   - resumen de jornadas y horas sin montos;
    - guardar, compartir y regenerar.
 
 3. **Copias de seguridad y restauración**
@@ -306,12 +307,7 @@ El plan original no era sólo “hacer un calendario”. Después del núcleo ya
    - permisos en contexto;
    - primera carga usando formularios reales.
 
-6. **Cierre de remuneración**
-   - incorporar nuevas escalas por mes sin cambiar historia;
-   - resolver prorrateos, presentismo, vacaciones, extra 50/100 y aplicabilidad de deducciones sólo con fuente y decisión de Joa;
-   - mantener la estimación como orientativa mientras queden incertidumbres.
-
-7. **Calidad y publicación**
+6. **Calidad y publicación**
    - auditoría integral sobre la rama finalmente promovida;
    - recorrido físico de todos los flujos esenciales;
    - firma y proceso de release;
@@ -490,13 +486,11 @@ flowchart LR
     DOMAIN --> CAL["Proyección calendario"]
     DOMAIN --> HOURS["Motor de horas"]
     DOMAIN --> NEXT["Próximo evento"]
-    DOMAIN --> PAY["Estimación SUVICO"]
     DOMAIN --> WEATHER["Agregación meteorológica"]
 
     CAL --> VM
     HOURS --> VM
     NEXT --> VM
-    PAY --> VM
     WEATHER --> VM
 
     NEXT --> NOTI["AlarmManager + NotificationManager"]
@@ -531,7 +525,6 @@ flowchart TD
     B --> S["Bloqueo + revisión de privacidad"]
     S --> Q["Auditoría integral + release"]
 
-    PAY["Nuevas reglas salariales"] -. "cuando existan fuentes" .-> R
     BRAND["Logo y tipografía final"] -. "sin bloquear el núcleo" .-> Q
     BUSINESS["Monetización y otras profesiones"] -. "después de validar V1" .-> Q
 ```
@@ -596,11 +589,11 @@ No reabrir sin nueva instrucción explícita de Joa:
 - Guardia que comienza el 31: sus horas pertenecen al mes inicial; el tramo del día siguiente puede ser feriado.
 - Sin cálculo automático por supuesta hora real de salida; las notas no alteran horas.
 - Carpetas médicas sin foto de certificado.
-- Vacaciones como días, no horas, hasta definir remuneración.
+- Vacaciones como días, no horas y sin cálculos monetarios.
 - Vigilia clara, oscura o siguiendo el sistema.
 - Zoom interno 100/150/200; no leer ni modificar ajustes visuales de Android.
 - Semántica accesible; no activar ni declarar recorridos específicos de TalkBack mientras la decisión vigente lo prohíba.
-- La primera estimación salarial es bruta, orientativa y limitada a fuentes versionadas.
+- MiGuardia no incorpora tablas salariales, montos ni liquidaciones.
 - Monetización, otras profesiones, OCR, Excel, mapa embebido, ubicación automática y feriados automáticos quedan fuera del incremento actual.
 
 ---
@@ -609,18 +602,12 @@ No reabrir sin nueva instrucción explícita de Joa:
 
 MAIN puede recomendar, pero no inventar ni cerrar silenciosamente:
 
-1. prorrateo de básico, presentismo, sumas no remunerativas y viáticos;
-2. pérdida de presentismo por ausencia o carpeta médica;
-3. remuneración y tope de vacaciones SUVICO;
-4. asignación de horas extra al 50 % o 100 %;
-5. deducciones personales y cálculo neto;
-6. nuevas escalas después de diciembre de 2026;
-7. proveedor o plan meteorológico para distribución comercial;
-8. formato y cifrado de backups;
-9. recuperación ante olvido de PIN en un producto exclusivamente local;
-10. logo y tipografía definitiva;
-11. proceso final de distribución, precio y soporte;
-12. matriz gratuita/paga y eventual arquitectura multiprofesión.
+1. proveedor o plan meteorológico para distribución comercial;
+2. formato y cifrado de backups;
+3. recuperación ante olvido de PIN en un producto exclusivamente local;
+4. logo y tipografía definitiva;
+5. proceso final de distribución, precio y soporte;
+6. matriz gratuita/paga y eventual arquitectura multiprofesión.
 
 ---
 

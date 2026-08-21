@@ -10,24 +10,29 @@ MiGuardia 1.0 es la versión estable actual para vigiladores privados. Es una ap
 - detalle diario, notas, novedades, feriados manuales, carpetas médicas y vacaciones;
 - fotos mensuales del cronograma, con visor, zoom y orientación EXIF local;
 - resumen mensual de horas trabajadas, pendientes, extra, nocturnas y de feriado;
-- estimación bruta SUVICO para las escalas disponibles de julio a diciembre de 2026;
 - motor de próxima guardia o franco y tarjeta superior de estado;
 - Pulso Vigilia: avisos locales, ritmos configurables, vista previa, notificación de prueba, ocultamiento y restauración;
 - clima opcional para Córdoba Capital, con caché privada y degradación cuando no hay información;
 - perfil laboral local, menú lateral, tema claro/oscuro/sistema y zoom interno de 100 %, 150 % o 200 %.
 
-La estimación remunerativa es únicamente orientativa: no es un recibo de sueldo ni una liquidación oficial, no calcula el neto y no completa reglas salariales que no estén demostradas.
+MiGuardia organiza jornadas y horas. No incorpora tablas salariales, montos,
+estimaciones remunerativas ni liquidaciones.
 
-## Capacidades diferidas a MiGuardia 2.0
+## MiGuardia 2.0 en desarrollo
 
-No forman parte de 1.0 y no se consideran defectos de esta versión:
+La rama `codex/miguardia-2.0` amplía la aplicación a cuatro sectores exactos:
+Vigilancia privada, Policía, Enfermería y Medicina. Comparte el Calendario y
+permite que cada persona configure sus lugares, tipos de trabajo, referencias
+de horas, extras y disponibilidad sin imponer una fórmula por profesión.
+
+Continúan como backlog posterior al núcleo laboral:
 
 - onboarding completo, recorrido contextual y Ayuda;
 - widgets;
 - informes PDF/XLSX;
 - copias de seguridad y restauración;
 - bloqueo local;
-- ampliación a Salud, Policía y otras profesiones;
+- publicación de la experiencia multiprofesional completa;
 - rediseños o mejoras no indispensables para estabilizar el producto actual.
 
 ## Requisitos de desarrollo
@@ -55,8 +60,11 @@ Los datos laborales, las preferencias y las fotos permanecen en el teléfono. No
 ## Documentación
 
 - Reglas permanentes: `AGENTS.md`.
-- Producto y decisiones aprobadas: `docs/PROMPT_MAESTRO_MAIN.md`.
-- Pausa y procedimiento de reanudación: `docs/PROMPT_MAESTRO_PAUSA_REVISION_Y_REANUDACION.md`.
+- Mapa de producto 2.0: `docs/MAPA_MAESTRO_MIGUARDIA_2_0.md`.
+- Planificación aprobada: `docs/PLANIFICACION_MIGUARDIA_2_0.md`.
+- MAIN 2.0 activo: `docs/PROMPT_MAESTRO_MAIN_2_0.md`.
+- Estado operativo: `docs/STATUS.md`.
+- Contrato histórico 1.0: `docs/PROMPT_MAESTRO_MAIN.md`.
 - Auditoría original de Puerta 0: `docs/audits/2026-08-17-puerta-0-consolidacion.md`.
 - Cierre de la promoción canónica: `docs/audits/2026-08-18-base-canonica.md`.
 - Cierre de visibilidad de Notificaciones: `docs/audits/2026-08-18-notificaciones-visibilidad.md`.
