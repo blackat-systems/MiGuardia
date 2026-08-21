@@ -396,7 +396,6 @@ fun MiGuardiaApp(
         onSummaryNextMonth = summaryViewModel::showNextMonth,
         onSummaryToday = summaryViewModel::showCurrentMonth,
         onSummaryRetry = summaryViewModel::retry,
-        onSeniorityYearsChange = summaryViewModel::setSeniorityYears,
         managementState = managementState,
         managementActions = ManagementActions.from(managementViewModel),
         exceptionsState = exceptionsState,
@@ -449,7 +448,6 @@ fun MiGuardiaApp(
     onSummaryNextMonth: () -> Unit = {},
     onSummaryToday: () -> Unit = {},
     onSummaryRetry: () -> Unit = {},
-    onSeniorityYearsChange: (Int) -> Unit = {},
     exceptionsState: ExceptionsUiState = ExceptionsUiState(holidayMonth = calendarState.visibleMonth),
     exceptionsActions: ExceptionsActions = ExceptionsActions(),
     vacationState: VacationUiState = VacationUiState(visibleMonth = calendarState.visibleMonth),
@@ -654,7 +652,6 @@ fun MiGuardiaApp(
                     onNextMonth = onSummaryNextMonth,
                     onToday = onSummaryToday,
                     onRetry = onSummaryRetry,
-                    onSeniorityYearsChange = onSeniorityYearsChange,
                 )
 
                 MainDestination.APPEARANCE -> AppearanceScreen(

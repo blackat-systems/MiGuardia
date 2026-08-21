@@ -203,7 +203,7 @@ private fun VacationList(state: VacationUiState, actions: VacationActions) {
             }
         }
         Text(
-            "El cálculo salarial de vacaciones se incorporará posteriormente con fuentes verificadas.",
+            "MiGuardia registra los días de vacaciones sin calcular montos.",
             style = MaterialTheme.typography.bodySmall,
         )
     }

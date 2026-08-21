@@ -107,9 +107,9 @@ class NavigationDrawerComposeTest {
 
         openDestination(
             "main-destination-summary",
-            "Horas, eventos y estimaciones del mes seleccionado.",
+            "Horas y eventos del mes seleccionado.",
         )
-        compose.onNodeWithText("Horas, eventos y estimaciones del mes seleccionado.").assertExists()
+        compose.onNodeWithText("Horas y eventos del mes seleccionado.").assertExists()
         compose.onNodeWithTag("main-navigation-drawer").assertIsNotDisplayed()
 
         openDestination("main-destination-appearance", "Tema de MiGuardia")
@@ -209,7 +209,7 @@ class NavigationDrawerComposeTest {
         }
         openDestination(
             "main-destination-summary",
-            "Horas, eventos y estimaciones del mes seleccionado.",
+            "Horas y eventos del mes seleccionado.",
         )
         compose.onNodeWithContentDescription("Abrir menú").performClick()
 
