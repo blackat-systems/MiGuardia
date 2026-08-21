@@ -2,6 +2,7 @@ package com.blackatsystems.miguardia.ui
 
 import androidx.annotation.StringRes
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -10,16 +11,19 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -52,6 +56,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -62,6 +67,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -77,6 +84,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.TextUnit
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.blackatsystems.miguardia.R
@@ -154,6 +163,7 @@ import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
+import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 
 private val SpanishArgentina = Locale.forLanguageTag("es-AR")
@@ -761,6 +771,108 @@ fun MiGuardiaApp(
     }
 }
 
+internal data class VerticalScrollbarMetrics(
+    val thumbHeightPx: Float,
+    val thumbOffsetPx: Float,
+)
+
+internal fun calculateVerticalScrollbarMetrics(
+    viewportHeightPx: Float,
+    maxScrollPx: Int,
+    scrollValuePx: Int,
+    minimumThumbHeightPx: Float,
+): VerticalScrollbarMetrics? {
+    if (viewportHeightPx <= 0f || maxScrollPx <= 0) return null
+    val contentHeightPx = viewportHeightPx + maxScrollPx
+    val boundedMinimumHeight = minimumThumbHeightPx.coerceIn(0f, viewportHeightPx)
+    val thumbHeightPx = (viewportHeightPx * viewportHeightPx / contentHeightPx)
+        .coerceIn(boundedMinimumHeight, viewportHeightPx)
+    val availableTravelPx = viewportHeightPx - thumbHeightPx
+    val scrollFraction = scrollValuePx.coerceIn(0, maxScrollPx).toFloat() / maxScrollPx.toFloat()
+    return VerticalScrollbarMetrics(
+        thumbHeightPx = thumbHeightPx,
+        thumbOffsetPx = availableTravelPx * scrollFraction,
+    )
+}
+
+@Composable
+private fun CalendarScrollContainer(
+    scrollState: ScrollState,
+    verticalSpacing: Dp,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .testTag("calendar-scroll-viewport"),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(scrollState)
+                .padding(horizontal = 16.dp)
+                .testTag("calendar-scroll-container"),
+            verticalArrangement = Arrangement.spacedBy(verticalSpacing),
+            content = content,
+        )
+        if (scrollState.maxValue > 0) {
+            CalendarVerticalScrollIndicator(
+                scrollState = scrollState,
+                modifier = Modifier.align(Alignment.CenterEnd),
+            )
+        }
+    }
+}
+
+@Composable
+private fun CalendarVerticalScrollIndicator(
+    scrollState: ScrollState,
+    modifier: Modifier = Modifier,
+) {
+    var trackHeightPx by remember { mutableIntStateOf(0) }
+    val density = LocalDensity.current
+    val metrics = calculateVerticalScrollbarMetrics(
+        viewportHeightPx = trackHeightPx.toFloat(),
+        maxScrollPx = scrollState.maxValue,
+        scrollValuePx = 0,
+        minimumThumbHeightPx = with(density) { 40.dp.toPx() },
+    )
+    val trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.58f)
+    val thumbColor = MaterialTheme.colorScheme.primary
+    Box(
+        modifier = modifier
+            .width(10.dp)
+            .fillMaxHeight()
+            .padding(horizontal = 2.dp, vertical = 6.dp)
+            .onSizeChanged { trackHeightPx = it.height }
+            .testTag("calendar-scrollbar-track"),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(trackColor, CircleShape),
+        )
+        metrics?.let { currentMetrics ->
+            Box(
+                modifier = Modifier
+                    .offset {
+                        val currentOffsetPx = calculateVerticalScrollbarMetrics(
+                            viewportHeightPx = trackHeightPx.toFloat(),
+                            maxScrollPx = scrollState.maxValue,
+                            scrollValuePx = scrollState.value,
+                            minimumThumbHeightPx = with(density) { 40.dp.toPx() },
+                        )?.thumbOffsetPx ?: 0f
+                        IntOffset(0, currentOffsetPx.roundToInt())
+                    }
+                    .fillMaxWidth()
+                    .height(with(density) { currentMetrics.thumbHeightPx.toDp() })
+                    .background(thumbColor, CircleShape)
+                    .testTag("calendar-scrollbar-thumb"),
+            )
+        }
+    }
+}
+
 @Composable
 private fun CalendarScreen(
     state: CalendarUiState,
@@ -788,6 +900,7 @@ private fun CalendarScreen(
     appZoom: AppZoom,
 ) {
     val today = state.referenceInstant.atZone(AppDefaults.zoneId()).toLocalDate()
+    val verticalScrollState = rememberScrollState()
     var pendingMonthChange by rememberSaveable { mutableStateOf<String?>(null) }
     val formOpen = when (managementState.surface) {
         ManagementSurface.SHIFT_FORM -> managementState.shiftDraft?.let { it.editingShift == null } == true
@@ -813,124 +926,129 @@ private fun CalendarScreen(
         },
         onDismiss = managementActions.clearMessage,
     ) {
-        Column(
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(contentPadding)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp)
-                .padding(bottom = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(contentPadding),
         ) {
-            NextEventCard(state = nextEventState, onRetry = onNextEventRetry)
-            if (state.interactionMode == CalendarInteractionMode.EDIT) {
-                Text(
-                    text = "Editando calendario",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.vigiliaColors.active,
-                    modifier = Modifier.semantics {
-                        contentDescription = "Editando calendario. Las acciones para modificar están habilitadas."
-                    },
-                )
-            }
-            MonthControls(
-                visibleMonth = state.visibleMonth,
-                onPrevious = previousMonth,
-                onNext = nextMonth,
-                onToday = currentMonth,
-                onPhotos = onOpenPhotos,
-                showPhotos = state.interactionMode == CalendarInteractionMode.EDIT,
-                appZoom = appZoom,
-                navigationEnabled = !formOpen,
-            )
-
-            when (state.loadState) {
-                CalendarLoadState.LOADING -> LoadingCalendar()
-                CalendarLoadState.ERROR -> ErrorCalendar(
-                    message = state.errorMessage ?: stringResource(R.string.calendar_error),
-                    onRetry = onRetry,
-                )
-                CalendarLoadState.CONTENT -> Unit
-            }
-
-            if (state.days.isNotEmpty()) {
-                CalendarGridViewport(
-                    month = state.visibleMonth,
-                    days = state.days,
-                    today = today,
-                    onPreviousMonth = previousMonth,
-                    onNextMonth = nextMonth,
-                    onSelectDate = onSelectDate,
-                    interactionMode = state.interactionMode,
-                    selectedDates = state.editSelectedDates,
-                    onEditSelectionChange = onEditSelectionChange,
-                    selectionEnabled = !formOpen && !initialDataPreparationOpen,
-                    selectionConfirmed = state.editSelectionConfirmed,
-                    monthSwipeEnabled = !formOpen,
-                    appZoom = appZoom,
-                )
-            }
-
-            if (state.interactionMode == CalendarInteractionMode.EDIT) {
-                if (initialDataPreparationOpen) {
-                    InitialDataPreparationContent(
-                        state = managementState,
-                        actions = managementActions,
-                    )
-                } else if (!formOpen) {
-                    CalendarEditTools(
-                        state = state,
-                        managementActions = managementActions,
-                        onConfirmSelection = onConfirmEditSelection,
-                        onResumeSelection = onResumeEditSelection,
-                        onOpenExceptions = onOpenExceptions,
-                        onOpenWeather = onOpenWeather,
-                        weatherState = weatherState,
-                    )
-                }
-                if (formOpen) {
-                    CalendarManagementInlineContent(
-                        state = managementState,
-                        actions = managementActions,
-                        onOpenNotifications = onOpenNotifications,
-                        onReturnToDateSelection = onResumeEditSelection,
-                    )
-                }
-            }
-
-            if (!formOpen) {
+            val verticalSpacing = if (maxHeight < 1_200.dp) 4.dp else 8.dp
+            CalendarScrollContainer(
+                scrollState = verticalScrollState,
+                verticalSpacing = verticalSpacing,
+            ) {
+                NextEventCard(state = nextEventState, onRetry = onNextEventRetry)
                 if (state.interactionMode == CalendarInteractionMode.EDIT) {
-                    OutlinedButton(
-                        onClick = onFinishEditMode,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(if (initialDataPreparationOpen) "Salir por ahora" else "Salir de edición")
+                    Text(
+                        text = "Editando calendario",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.vigiliaColors.active,
+                        modifier = Modifier.semantics {
+                            contentDescription = "Editando calendario. Las acciones para modificar están habilitadas."
+                        },
+                    )
+                }
+                MonthControls(
+                    visibleMonth = state.visibleMonth,
+                    onPrevious = previousMonth,
+                    onNext = nextMonth,
+                    onToday = currentMonth,
+                    onPhotos = onOpenPhotos,
+                    showPhotos = state.interactionMode == CalendarInteractionMode.EDIT,
+                    appZoom = appZoom,
+                    navigationEnabled = !formOpen,
+                )
+
+                when (state.loadState) {
+                    CalendarLoadState.LOADING -> LoadingCalendar()
+                    CalendarLoadState.ERROR -> ErrorCalendar(
+                        message = state.errorMessage ?: stringResource(R.string.calendar_error),
+                        onRetry = onRetry,
+                    )
+
+                    CalendarLoadState.CONTENT -> Unit
+                }
+
+                if (state.days.isNotEmpty()) {
+                    CalendarGridViewport(
+                        month = state.visibleMonth,
+                        days = state.days,
+                        today = today,
+                        onPreviousMonth = previousMonth,
+                        onNextMonth = nextMonth,
+                        onSelectDate = onSelectDate,
+                        interactionMode = state.interactionMode,
+                        selectedDates = state.editSelectedDates,
+                        onEditSelectionChange = onEditSelectionChange,
+                        selectionEnabled = !formOpen && !initialDataPreparationOpen,
+                        selectionConfirmed = state.editSelectionConfirmed,
+                        monthSwipeEnabled = !formOpen,
+                        appZoom = appZoom,
+                    )
+                }
+
+                if (state.interactionMode == CalendarInteractionMode.EDIT) {
+                    if (initialDataPreparationOpen) {
+                        InitialDataPreparationContent(
+                            state = managementState,
+                            actions = managementActions,
+                        )
+                    } else if (!formOpen) {
+                        CalendarEditTools(
+                            state = state,
+                            managementActions = managementActions,
+                            onConfirmSelection = onConfirmEditSelection,
+                            onResumeSelection = onResumeEditSelection,
+                            onOpenExceptions = onOpenExceptions,
+                            onOpenWeather = onOpenWeather,
+                            weatherState = weatherState,
+                        )
                     }
-                } else {
-                    if (!state.hasAnyShiftsLoaded && state.shiftPresenceError) {
+                    if (formOpen) {
+                        CalendarManagementInlineContent(
+                            state = managementState,
+                            actions = managementActions,
+                            onOpenNotifications = onOpenNotifications,
+                            onReturnToDateSelection = onResumeEditSelection,
+                        )
+                    }
+                }
+
+                if (!formOpen) {
+                    if (state.interactionMode == CalendarInteractionMode.EDIT) {
                         OutlinedButton(
-                            onClick = onRetry,
+                            onClick = onFinishEditMode,
                             modifier = Modifier.fillMaxWidth(),
                         ) {
-                            Text("Reintentar carga")
-                        }
-                    } else if (!state.hasAnyShiftsLoaded) {
-                        Button(
-                            onClick = {},
-                            enabled = false,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .testTag("calendar-shift-presence-loading"),
-                        ) {
-                            Text("Cargando datos…")
+                            Text(if (initialDataPreparationOpen) "Salir por ahora" else "Salir de edición")
                         }
                     } else {
-                        Button(
-                            onClick = if (state.hasAnyShifts) onEnterEditMode else onLoadInitialData,
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Text(if (state.hasAnyShifts) "Editar calendario" else "Cargar datos")
+                        if (!state.hasAnyShiftsLoaded && state.shiftPresenceError) {
+                            OutlinedButton(
+                                onClick = onRetry,
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text("Reintentar carga")
+                            }
+                        } else if (!state.hasAnyShiftsLoaded) {
+                            Button(
+                                onClick = {},
+                                enabled = false,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("calendar-shift-presence-loading"),
+                            ) {
+                                Text("Cargando datos…")
+                            }
+                        } else {
+                            Button(
+                                onClick = if (state.hasAnyShifts) onEnterEditMode else onLoadInitialData,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("calendar-bottom-action"),
+                            ) {
+                                Text(if (state.hasAnyShifts) "Editar calendario" else "Cargar datos")
+                            }
                         }
                     }
                 }
@@ -1221,12 +1339,16 @@ private fun MonthControls(
 ) {
     val previousDescription = stringResource(R.string.previous_month)
     val nextDescription = stringResource(R.string.next_month)
+    val todayInline = appZoom == AppZoom.STANDARD && !showPhotos
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 10.dp),
+            modifier = Modifier.padding(
+                horizontal = 8.dp,
+                vertical = if (todayInline) 0.dp else 10.dp,
+            ),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             Row(
@@ -1255,43 +1377,59 @@ private fun MonthControls(
                 ) {
                     Text("›", Modifier.clearAndSetSemantics {}, style = MaterialTheme.typography.headlineMedium)
                 }
-            }
-            if (appZoom == AppZoom.STANDARD) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    OutlinedButton(
+                if (todayInline) {
+                    TextButton(
                         onClick = onToday,
                         enabled = navigationEnabled,
-                        modifier = if (showPhotos) Modifier.weight(1f) else Modifier.fillMaxWidth(),
+                        modifier = Modifier.heightIn(min = 48.dp),
+                        contentPadding = PaddingValues(horizontal = 8.dp),
                     ) {
                         Text("Ir a hoy")
                     }
-                    if (showPhotos) {
-                        OutlinedButton(
-                            onClick = onPhotos,
-                            enabled = navigationEnabled,
-                            modifier = Modifier
-                                .weight(1f)
-                                .semantics { contentDescription = "Fotos del cronograma del mes" },
-                        ) { Text("Fotos del mes") }
-                    }
                 }
-            } else {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = onToday, enabled = navigationEnabled, modifier = Modifier.fillMaxWidth()) {
-                        Text("Ir a hoy")
-                    }
-                    if (showPhotos) {
+            }
+            if (!todayInline) {
+                if (appZoom == AppZoom.STANDARD) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
                         OutlinedButton(
-                            onClick = onPhotos,
+                            onClick = onToday,
                             enabled = navigationEnabled,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .semantics { contentDescription = "Fotos del cronograma del mes" },
-                        ) { Text("Fotos del mes") }
+                            modifier = if (showPhotos) Modifier.weight(1f) else Modifier.fillMaxWidth(),
+                        ) {
+                            Text("Ir a hoy")
+                        }
+                        if (showPhotos) {
+                            OutlinedButton(
+                                onClick = onPhotos,
+                                enabled = navigationEnabled,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .semantics { contentDescription = "Fotos del cronograma del mes" },
+                            ) { Text("Fotos del mes") }
+                        }
+                    }
+                } else {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(
+                            onClick = onToday,
+                            enabled = navigationEnabled,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text("Ir a hoy")
+                        }
+                        if (showPhotos) {
+                            OutlinedButton(
+                                onClick = onPhotos,
+                                enabled = navigationEnabled,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .semantics { contentDescription = "Fotos del cronograma del mes" },
+                            ) { Text("Fotos del mes") }
+                        }
                     }
                 }
             }

@@ -3,10 +3,13 @@ package com.blackatsystems.miguardia.ui.nextevent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -44,62 +47,73 @@ fun NextEventCard(
         ?: "Próximo evento, cargando"
     HeroCard(
         title = "Próximo evento",
+        compact = true,
         modifier = modifier
             .testTag("next-event-card")
             .semantics { contentDescription = accessibility },
     ) {
-        state.result?.let { NextEventContent(it) }
-        when (state.loadState) {
-            NextEventLoadState.LOADING -> Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                CircularProgressIndicator(modifier = Modifier.width(22.dp))
-                Text("Buscando guardias y francos…")
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            state.result?.let { NextEventContent(it) }
+            when (state.loadState) {
+                NextEventLoadState.LOADING -> Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    CircularProgressIndicator(modifier = Modifier.width(22.dp))
+                    Text("Buscando guardias y francos…")
+                }
+
+                NextEventLoadState.ERROR -> PersistentMessage(
+                    message = state.errorMessage ?: "No pudimos actualizar el próximo evento.",
+                    onRetry = onRetry,
+                )
+
+                NextEventLoadState.CONTENT -> Unit
             }
-
-            NextEventLoadState.ERROR -> PersistentMessage(
-                message = state.errorMessage ?: "No pudimos actualizar el próximo evento.",
-                onRetry = onRetry,
-            )
-
-            NextEventLoadState.CONTENT -> Unit
         }
     }
 }
 
 @Composable
 private fun NextEventContent(result: NextEventResult) {
-    when (result.primaryEvent) {
-        NextEventPrimary.ONGOING_SHIFT -> ShiftEventContent(
-            title = "Guardia en curso",
-            shift = result.ongoingShifts.first(),
-            count = result.ongoingShifts.size,
-            remainingLabel = "Termina en ${formatRemaining(result.remaining)}",
-        )
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        when (result.primaryEvent) {
+            NextEventPrimary.ONGOING_SHIFT -> ShiftEventContent(
+                title = "Guardia en curso",
+                shift = result.ongoingShifts.first(),
+                count = result.ongoingShifts.size,
+                remainingLabel = "Termina en ${formatRemaining(result.remaining)}",
+            )
 
-        NextEventPrimary.UPCOMING_SHIFT -> ShiftEventContent(
-            title = "Próxima guardia",
-            shift = result.upcomingShifts.first(),
-            count = result.upcomingShifts.size,
-            remainingLabel = "Comienza en ${formatRemaining(result.remaining)}",
-        )
+            NextEventPrimary.UPCOMING_SHIFT -> ShiftEventContent(
+                title = "Próxima guardia",
+                shift = result.upcomingShifts.first(),
+                count = result.upcomingShifts.size,
+                remainingLabel = "Comienza en ${formatRemaining(result.remaining)}",
+            )
 
-        NextEventPrimary.DAY_OFF -> DayOffContent(result.nextDayOff!!, result.referenceInstant.atZone(com.blackatsystems.miguardia.core.domain.AppDefaults.zoneId()).toLocalDate())
-        NextEventPrimary.NONE -> {
-            Text("Sin próximos eventos", fontWeight = FontWeight.SemiBold)
-            Text("No hay guardias planificadas ni francos marcados explícitamente desde hoy.")
+            NextEventPrimary.DAY_OFF -> DayOffContent(
+                result.nextDayOff!!,
+                result.referenceInstant
+                    .atZone(com.blackatsystems.miguardia.core.domain.AppDefaults.zoneId())
+                    .toLocalDate(),
+            )
+            NextEventPrimary.NONE -> {
+                Text("Sin próximos eventos", fontWeight = FontWeight.SemiBold)
+                Text("No hay guardias planificadas ni francos marcados explícitamente desde hoy.")
+            }
         }
-    }
-    val secondaryDayOff = result.nextDayOff
-    if (
-        secondaryDayOff != null &&
-        (result.primaryEvent == NextEventPrimary.ONGOING_SHIFT || result.primaryEvent == NextEventPrimary.UPCOMING_SHIFT)
-    ) {
-        Text(
-            "Próximo franco: ${secondaryDayOff.format(ArgentineDateFormatter)}",
-            style = MaterialTheme.typography.bodySmall,
-        )
+        val secondaryDayOff = result.nextDayOff
+        if (
+            secondaryDayOff != null &&
+            (result.primaryEvent == NextEventPrimary.ONGOING_SHIFT ||
+                result.primaryEvent == NextEventPrimary.UPCOMING_SHIFT)
+        ) {
+            Text(
+                "Próximo franco: ${secondaryDayOff.format(ArgentineDateFormatter)}",
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
     }
 }
 
@@ -110,44 +124,163 @@ private fun ShiftEventContent(
     count: Int,
     remainingLabel: String,
 ) {
-    Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        Box(
-            Modifier
-                .width(7.dp)
-                .height(58.dp)
-                .background(Color(shift.colorArgbSnapshot), MaterialTheme.shapes.extraSmall),
-        )
-        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            Text(
-                shift.objectiveAbbreviationSnapshot,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-            )
-            Text(shift.objectiveNameSnapshot, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(shift.localStartDate.format(ArgentineDateFormatter))
-            Text(
-                "${shift.startTimeSnapshot.format(EventTimeFormatter)}–${shift.endTimeSnapshot.format(EventTimeFormatter)}",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-            )
-            shift.position?.takeIf(String::isNotBlank)?.let { Text("Puesto: $it") }
+    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+        val narrow = maxWidth < 280.dp
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            if (narrow) {
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(
+                        remainingLabel,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(
+                        title,
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Text(
+                        remainingLabel,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
+            }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(IntrinsicSize.Min),
+                verticalAlignment = Alignment.Top,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Box(
+                    Modifier
+                        .width(7.dp)
+                        .fillMaxHeight()
+                        .background(Color(shift.colorArgbSnapshot), MaterialTheme.shapes.extraSmall),
+                )
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    if (narrow) {
+                        Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                            ShiftObjective(shift)
+                        }
+                    } else {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            ShiftObjective(shift)
+                        }
+                    }
+                    if (narrow) {
+                        Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                            ShiftDateAndTime(shift)
+                        }
+                    } else {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            ShiftDateAndTime(shift)
+                        }
+                    }
+                    shift.position?.takeIf(String::isNotBlank)?.let {
+                        Text("Puesto: $it", style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+            }
+            if (count > 1) {
+                Text("$count guardias comparten este estado.", style = MaterialTheme.typography.bodySmall)
+            }
         }
-    }
-    Text(remainingLabel, fontWeight = FontWeight.SemiBold)
-    if (count > 1) {
-        Text("$count guardias comparten este estado.", style = MaterialTheme.typography.bodySmall)
     }
 }
 
 @Composable
+private fun androidx.compose.foundation.layout.RowScope.ShiftObjective(shift: Shift) {
+    Text(
+        shift.objectiveAbbreviationSnapshot,
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.Bold,
+    )
+    Text(
+        shift.objectiveNameSnapshot,
+        modifier = Modifier.weight(1f),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+}
+
+@Composable
+private fun androidx.compose.foundation.layout.ColumnScope.ShiftObjective(shift: Shift) {
+    Text(
+        shift.objectiveAbbreviationSnapshot,
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.Bold,
+    )
+    Text(
+        shift.objectiveNameSnapshot,
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+}
+
+@Composable
+private fun androidx.compose.foundation.layout.RowScope.ShiftDateAndTime(shift: Shift) {
+    Text(
+        shift.localStartDate.format(ArgentineDateFormatter),
+        style = MaterialTheme.typography.bodyMedium,
+    )
+    Text(
+        "${shift.startTimeSnapshot.format(EventTimeFormatter)}–${shift.endTimeSnapshot.format(EventTimeFormatter)}",
+        style = MaterialTheme.typography.bodyMedium,
+        fontWeight = FontWeight.SemiBold,
+    )
+}
+
+@Composable
+private fun androidx.compose.foundation.layout.ColumnScope.ShiftDateAndTime(shift: Shift) {
+    Text(
+        shift.localStartDate.format(ArgentineDateFormatter),
+        style = MaterialTheme.typography.bodyMedium,
+    )
+    Text(
+        "${shift.startTimeSnapshot.format(EventTimeFormatter)}–${shift.endTimeSnapshot.format(EventTimeFormatter)}",
+        style = MaterialTheme.typography.bodyMedium,
+        fontWeight = FontWeight.SemiBold,
+    )
+}
+
+@Composable
 private fun DayOffContent(date: LocalDate, today: LocalDate) {
-    Text("Próximo franco", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-    Text(date.format(ArgentineDateFormatter))
-    Text(dayDistanceLabel(today, date), fontWeight = FontWeight.SemiBold)
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            "Próximo franco",
+            modifier = Modifier.weight(1f),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+        )
+        Text(date.format(ArgentineDateFormatter), style = MaterialTheme.typography.bodyMedium)
+    }
+    Text(dayDistanceLabel(today, date), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
 }
 
 internal fun formatRemaining(duration: Duration): String {

@@ -290,6 +290,7 @@ fun SectionCard(
 fun HeroCard(
     title: String,
     modifier: Modifier = Modifier,
+    compact: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val colors = MaterialTheme.vigiliaColors
@@ -318,8 +319,13 @@ fun HeroCard(
                 },
                 shape = shape,
             )
-            .padding(MiGuardiaSpacing.extraLarge),
-        verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small),
+            .padding(
+                horizontal = if (compact) MiGuardiaSpacing.large else MiGuardiaSpacing.extraLarge,
+                vertical = if (compact) MiGuardiaSpacing.small else MiGuardiaSpacing.extraLarge,
+            ),
+        verticalArrangement = Arrangement.spacedBy(
+            if (compact) MiGuardiaSpacing.extraSmall else MiGuardiaSpacing.small,
+        ),
     ) {
         Text(
             text = title,
