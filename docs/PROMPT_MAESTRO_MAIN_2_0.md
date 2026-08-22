@@ -20,9 +20,13 @@ Joaquin autorizó:
 - delegar trabajo acotado cuando reduzca tiempo sin romper dependencias;
 - ejecutar pruebas proporcionales;
 - crear commits locales como checkpoints después de una auditoría verde.
+- publicar una vez `codex/miguardia-2.0` en el remoto privado para fijar la
+  base de la dependencia `Cargar jornadas`, por autorización expresa del
+  2026-08-22.
 
-No autorizó push, tag, Release, publicación, cambios en producción ni acciones
-externas irreversibles. Esas puertas continúan separadas.
+Fuera de esa publicación puntual, no autorizó otros pushes, tag, Release,
+`main`, cambios en producción ni acciones externas irreversibles. Esas puertas
+continúan separadas.
 
 ## 2. Autoridad
 
@@ -245,7 +249,10 @@ mayor al planificado.
 - Staging incluye exactamente el bloque auditado.
 - Commits locales pequeños usan Conventional Commits en inglés.
 - Una autorización de ejecución permite esos checkpoints locales verificados.
-- No hacer push, merge a `main`, tag, Release ni publicación.
+- El único push autorizado es el puntual de `codex/miguardia-2.0` al remoto
+  privado para fijar la base de `Cargar jornadas`; se verifica la ref exacta y
+  la autorización se considera consumida al completarlo.
+- No hacer otros pushes, merge a `main`, tag, Release ni publicación.
 - No usar `reset --hard`, no limpiar worktrees históricos y no descartar cambios
   ajenos.
 

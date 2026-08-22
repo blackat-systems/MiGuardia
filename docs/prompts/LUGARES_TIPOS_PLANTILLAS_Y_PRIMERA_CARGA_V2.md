@@ -1,6 +1,6 @@
 # Lugares, tipos, plantillas y primera carga V2
 
-- Estado: **HABILITADO**
+- Estado: **PAUSADO — CONTRATO MARCO DE REFERENCIA, NO EJECUTAR COMPLETO**
 - Fecha: 2026-08-21
 - Rama: `codex/miguardia-2.0`
 - Dependencias cerradas: dominio laboral configurable y Room v6

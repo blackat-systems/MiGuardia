@@ -8,9 +8,11 @@ no significa que exista ya una implementación nueva.
 
 MAIN 2.0 está reactivada y puede ejecutar el plan en bloques pequeños, ordenados
 por dependencias y verificados antes de abrir el siguiente. Están autorizados
-los commits locales como checkpoints de bloques realmente comprobados. No están
-autorizados el push, los tags, un Release, la publicación ni ninguna acción
-sobre el paquete o los datos de producción.
+los commits locales como checkpoints de bloques realmente comprobados. El
+2026-08-22 Joaquin autorizó además un push puntual de
+`codex/miguardia-2.0` al remoto privado para fijar la base de la dependencia
+`Cargar jornadas`. No autorizó otros pushes, tags, un Release, `main`, la
+publicación ni ninguna acción sobre el paquete o los datos de producción.
 
 Para una explicación sin jerga de tareas, ramas, commits y push, consultar
 `docs/GUIA_DE_TRABAJO_CODEX_2_0.md`.
@@ -96,11 +98,11 @@ La auditoría de reactivación y Puerta 0 está registrada en
   por separado la vigencia por fecha y la ventana del período para no inventar
   un prorrateo antes del bloque de motor y Resumen.
 
-## Estado Git actual
+## Estado Git al preparar la dependencia de carga manual
 
 - `main`, `origin/main` y `v1.0.0^{}` permanecen en MiGuardia 1.0.0, commit
   `82db6fd8eb2c511205968894dc9857a96b16ed20`.
-- `codex/miguardia-2.0` conserva checkpoints únicamente locales:
+- `codex/miguardia-2.0` conserva estos checkpoints de desarrollo:
   - `a3e89fdb56aedeed77c89824cec137f37f4c9619`: Calendario adaptable;
   - `6dab82b8f239f8009cfcb32d400b50fcc4080836`: planificación y traspaso a MAIN.
   - `3519606aeda3a26bed7ec8fc0feb8b7f3f788d35`: retiro de las funciones
@@ -112,11 +114,17 @@ La auditoría de reactivación y Puerta 0 está registrada en
   - `4757737`: contrato de lugares, tipos, plantillas y primera carga V2.
   - `49a8179b619b6005899773bacfb0a2ac16920fcd`: Corte A de catálogo laboral y
     persistencia Room v7.
-- La rama 2.0 todavía no posee upstream ni existe en GitHub. Nada de esta puerta
-  fue enviado o publicado.
+  - `cb64948`: auditoría y estado del Corte A.
+  - `e6ec746`: contrato de primera apertura y configuración visible.
+  - `1f048643ba70882576295e4683729a35a9584312`: primera apertura y
+    configuración laboral visible integradas.
+- Al iniciar la preparación documental, la rama todavía no poseía upstream ni
+  existía en GitHub. La autorización puntual permite a MAIN publicar el
+  checkpoint documental de `Cargar jornadas` en el remoto privado y debe
+  verificarse con Git antes de abrir la dependencia.
 - El dominio nuevo vive en `core/domain/.../work/`; no se recuperó el candidato
-  mensual descartado. Room v7 ya persiste su Corte A, pero todavía no existe la
-  pantalla ni el recorrido visible del Corte B.
+  mensual descartado. Room v7 ya persiste su Corte A y la primera configuración
+  visible está integrada; la carga manual V2 todavía no está implementada.
 
 ## Antecedente histórico descartado: candidato mensual
 
@@ -313,7 +321,9 @@ Evidencia completa en
 - conservar explícitamente lo pendiente antes de iniciar el bloque siguiente.
 
 Esta autorización no permite recuperar el candidato mensual descartado ni
-amplía el alcance a push, tags, Release, publicación o producción.
+amplía el alcance a otros pushes, tags, Release, `main`, publicación o
+producción. La excepción puntual de la rama 2.0 se agota al fijar la base de la
+dependencia `Cargar jornadas`.
 
 ## Backlog posterior
 
@@ -339,4 +349,8 @@ Debe reutilizar el catálogo ya configurado y seguir fuera de recurrencias,
 extras, disponibilidad y pantallas de Resumen. Quedan como verificaciones
 separadas el recorrido físico de alarma exacta —sólo con permiso explícito— y
 una migración V1 real en el Samsung; ninguna bloquea este incremento visible.
-Push, tag, Release y cualquier operación sobre producción continúan prohibidos.
+Su contrato ejecutable es
+`docs/prompts/CARGA_MANUAL_DE_JORNADAS_V2.md`: crea jornadas nuevas y deja la
+edición estructural y las recurrencias para el bloque siguiente. Después del
+push puntual autorizado, cualquier otro push, tag, Release y toda operación
+sobre `main` o producción continúan prohibidos.

@@ -1,7 +1,7 @@
 # Índice canónico de prompts — MiGuardia
 
 - Estado: activo
-- Última auditoría completa: 2026-08-21
+- Última auditoría completa: 2026-08-22
 - Regla: un prompt sólo se ejecuta si este índice lo marca `ACTIVO` o
   `HABILITADO` y Joaquin autoriza la tarea
 
@@ -12,7 +12,10 @@
 - **Ejecución:** autorizada por bloques pequeños, ordenados por dependencias y
   verificados antes de continuar.
 - **Commits locales:** permitidos como checkpoints de bloques comprobados.
-- **Push, tag, Release y producción:** no autorizados.
+- **Push puntual de la rama 2.0:** Joaquin autorizó a MAIN a publicar
+  `codex/miguardia-2.0` en el remoto privado para fijar la base de la
+  dependencia `Cargar jornadas`.
+- **Otros pushes, tag, Release, `main` y producción:** no autorizados.
 
 El prompt rector activo es `docs/PROMPT_MAESTRO_MAIN_2_0.md`. El mapa del
 producto está en `docs/MAPA_MAESTRO_MIGUARDIA_2_0.md`, la planificación cerrada
@@ -52,8 +55,9 @@ prevalecen para el estado operativo.
 | `REGLAS_CONFIGURACION_LABORAL_POR_MES.md` | **DESCARTADO / HISTÓRICO** | El código candidato no está en el árbol y no debe recuperarse; la vigencia mensual fue reemplazada por cambios desde una fecha concreta |
 | `REGLAS_DOMINIO_CONFIGURACION_Y_HORAS_V2.md` | **CERRADO** | Reglas puras verificadas de sector, vigencia por fecha, referencias de horas, extras y reglas por lugar, sin Room ni pantallas |
 | `CONFIGURACION_PERSISTENTE_Y_MIGRACION_ROOM_V6.md` | **CERRADO** | La configuración global ya se guarda y Room migra 5→6 sin alterar las trece familias históricas |
-| `LUGARES_TIPOS_PLANTILLAS_Y_PRIMERA_CARGA_V2.md` | **HABILITADO** | Elegir sector, crear lugares, tipos y plantillas, y cargar jornadas V2 con historia propia |
-| `PRIMERA_APERTURA_Y_CONFIGURACION_LABORAL_VISIBLE_V2.md` | **HABILITADO** | Dependencia acotada: primera pantalla de rubro y creación visible del primer lugar y horario |
+| `LUGARES_TIPOS_PLANTILLAS_Y_PRIMERA_CARGA_V2.md` | **PAUSADO / REFERENCIA** | Contrato marco ya dividido: Corte A y primera apertura están cerrados; no debe reejecutarse completo |
+| `PRIMERA_APERTURA_Y_CONFIGURACION_LABORAL_VISIBLE_V2.md` | **CERRADO** | Primera pantalla de rubro y creación visible del primer lugar y horario integradas en `1f048643` |
+| `CARGA_MANUAL_DE_JORNADAS_V2.md` | **HABILITADO** | Elegir uno o varios días en la grilla y cargar jornadas nuevas desde horarios guardados |
 
 ## Contratos históricos de MiGuardia 1.0
 
@@ -85,27 +89,28 @@ compatibilidad.
 | `COORDINACION_EXPERIENCIA_INICIAL_Y_PERFIL_MAIN.md` | Secuencia MAIN de V1 | Fotografía histórica de coordinación |
 | `ONBOARDING_Y_PRIMERA_CARGA.md` | Diseño de onboarding V1 | **REESCRIBIR PARA V2** después de configurar los cuatro sectores |
 
-## Próximos contratos por escribir
+## Secuencia de contratos
 
-MAIN crea o actualiza el prompt de cada bloque antes de implementarlo. El primer
-contrato ya está cerrado; los siguientes nacen únicamente cuando su dependencia
-anterior esté cerrada:
+MAIN crea o actualiza el prompt de cada bloque antes de implementarlo. Cada
+dependencia nueva se habilita únicamente cuando la anterior está cerrada:
 
 1. Room v6 y configuración inicial: **cerrado**;
-2. **Activo:** lugares, tipos, plantillas y primera carga V2 — Corte A de
-   contratos y Room v7 verificado; la primera dependencia del Corte B es la
-   apertura y configuración laboral visible, antes de adaptar la carga manual;
-3. recurrencias y edición puntual/masiva;
-4. motor de horario real, extras y cumplimiento;
-5. disponibilidad y situaciones especiales;
-6. Calendario final y tarjeta superior;
-7. Resumen personalizable;
-8. adaptación de próximo evento y notificaciones;
-9. widget, informes, copias y bloqueo cuando llegue su capa.
+2. **Cerrado:** lugares, tipos, plantillas y primera apertura visible — Corte A
+   de contratos y Room v7, más la configuración inicial, verificados;
+3. **Activo:** carga manual V2 de jornadas nuevas sobre la única grilla;
+4. recurrencias y edición puntual/masiva;
+5. motor de horario real, extras y cumplimiento;
+6. disponibilidad y situaciones especiales;
+7. Calendario final y tarjeta superior;
+8. Resumen personalizable;
+9. adaptación de próximo evento y notificaciones;
+10. widget, informes, copias y bloqueo cuando llegue su capa.
 
 MAIN habilita cada prompt en este índice cuando su contrato y dependencias estén
 cerrados. Los checkpoints pueden confirmarse localmente después de la
-verificación; cualquier publicación requiere una autorización nueva.
+verificación. La autorización puntual de publicación indicada arriba se agota
+al fijar esta base; cualquier otra publicación requiere una autorización
+nueva.
 
 ## Nombres humanos obligatorios
 

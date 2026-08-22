@@ -1,6 +1,6 @@
 # Primera apertura y configuración laboral visible V2
 
-- Estado: **HABILITADO PARA DEPENDENCIA ESPECIALIZADA**
+- Estado: **CERRADO — INTEGRADO EN `1f048643`**
 - Fecha: 2026-08-22
 - Rama obligatoria: `codex/miguardia-2.0`
 - Proyecto obligatorio: `C:\Users\Joaquin\Desktop\chatgptprojects\MiGuardia-2.0`
