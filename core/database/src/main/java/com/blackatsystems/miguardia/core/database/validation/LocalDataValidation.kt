@@ -15,7 +15,7 @@ internal fun Objective.validated(): Objective {
     val normalizedName = fullName.trim()
     val normalizedAbbreviation = abbreviation.trim().uppercase(Locale.ROOT)
     if (normalizedName.isEmpty()) invalid("El nombre del objetivo es obligatorio.")
-    if (normalizedAbbreviation.length !in 2..5) {
+    if (normalizedAbbreviation.codePointCount(0, normalizedAbbreviation.length) !in 2..5) {
         invalid("La abreviatura del objetivo debe tener entre 2 y 5 caracteres.")
     }
     validateTimestamps(createdAt, updatedAt)
@@ -48,6 +48,33 @@ internal fun Shift.validated(): Shift {
         objectiveAddressSnapshot = objectiveAddressSnapshot.normalizedOptional(),
         position = position.normalizedOptional(),
     )
+}
+
+internal fun requireExactShiftSnapshotInstants(shift: Shift) {
+    if (
+        shift.startTimeSnapshot.second != 0 ||
+        shift.startTimeSnapshot.nano != 0 ||
+        shift.endTimeSnapshot.second != 0 ||
+        shift.endTimeSnapshot.nano != 0
+    ) {
+        invalid("Los horarios históricos de una jornada 2.0 deben usar minutos exactos.")
+    }
+    val expectedStart = shift.localStartDate
+        .atTime(shift.startTimeSnapshot)
+        .atZone(shift.zoneId)
+        .toInstant()
+    val endDate = if (shift.endTimeSnapshot > shift.startTimeSnapshot) {
+        shift.localStartDate
+    } else {
+        shift.localStartDate.plusDays(1)
+    }
+    val expectedEnd = endDate
+        .atTime(shift.endTimeSnapshot)
+        .atZone(shift.zoneId)
+        .toInstant()
+    if (shift.startAt != expectedStart || shift.endAt != expectedEnd) {
+        invalid("Los instantes de la jornada no coinciden con su fecha, zona y horario histórico.")
+    }
 }
 
 internal fun MedicalLeave.validated(): MedicalLeave {

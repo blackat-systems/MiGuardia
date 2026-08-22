@@ -140,18 +140,23 @@ class Migration5To6InstrumentedTest {
     }
 
     @Test
-    fun freshV6DatabaseStartsWithoutRootOrUniversalDefaults() {
+    fun freshV7DatabaseStartsWithoutRootCatalogOrUniversalDefaults() {
         val database = MiGuardiaDatabase.build(context, DATABASE_NAME)
         try {
             val sqlite = database.openHelper.writableDatabase
 
-            assertEquals(6, sqlite.version)
+            assertEquals(7, sqlite.version)
             assertEquals(1, scalarInt(sqlite, "PRAGMA foreign_keys"))
-            assertEquals(17, applicationTableCount(sqlite))
+            assertEquals(22, applicationTableCount(sqlite))
             assertEquals(0, rowCount(sqlite, "work_configuration_roots"))
             assertEquals(0, rowCount(sqlite, "per_period_hours_definitions"))
             assertEquals(0, rowCount(sqlite, "work_configuration_revisions"))
             assertEquals(0, rowCount(sqlite, "per_period_hours_values"))
+            assertEquals(0, rowCount(sqlite, "work_places"))
+            assertEquals(0, rowCount(sqlite, "work_types"))
+            assertEquals(0, rowCount(sqlite, "work_templates"))
+            assertEquals(0, rowCount(sqlite, "workplace_rule_revisions"))
+            assertEquals(0, rowCount(sqlite, "shift_work_snapshots"))
             assertEquals(
                 0,
                 scalarInt(

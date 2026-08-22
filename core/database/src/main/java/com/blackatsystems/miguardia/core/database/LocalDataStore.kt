@@ -12,6 +12,8 @@ import com.blackatsystems.miguardia.core.database.repository.RoomShiftNoteReposi
 import com.blackatsystems.miguardia.core.database.repository.RoomShiftNoveltyRepository
 import com.blackatsystems.miguardia.core.database.repository.RoomShiftNotificationConfigRepository
 import com.blackatsystems.miguardia.core.database.repository.RoomVacationRepository
+import com.blackatsystems.miguardia.core.database.repository.RoomV2ShiftRepository
+import com.blackatsystems.miguardia.core.database.repository.RoomWorkCatalogRepository
 import com.blackatsystems.miguardia.core.database.repository.RoomWorkConfigurationRepository
 import com.blackatsystems.miguardia.core.domain.repository.ExplicitDayStatusRepository
 import com.blackatsystems.miguardia.core.domain.repository.HolidayRepository
@@ -24,6 +26,8 @@ import com.blackatsystems.miguardia.core.domain.repository.ShiftNoteRepository
 import com.blackatsystems.miguardia.core.domain.repository.ShiftNoveltyRepository
 import com.blackatsystems.miguardia.core.domain.repository.ShiftNotificationConfigRepository
 import com.blackatsystems.miguardia.core.domain.repository.VacationRepository
+import com.blackatsystems.miguardia.core.domain.repository.V2ShiftRepository
+import com.blackatsystems.miguardia.core.domain.repository.WorkCatalogRepository
 import com.blackatsystems.miguardia.core.domain.repository.WorkConfigurationRepository
 import java.io.Closeable
 
@@ -47,6 +51,8 @@ class LocalDataStore internal constructor(
         RoomShiftNotificationConfigRepository(database)
     val workConfiguration: WorkConfigurationRepository =
         RoomWorkConfigurationRepository(database)
+    val workCatalog: WorkCatalogRepository = RoomWorkCatalogRepository(database)
+    val v2Shifts: V2ShiftRepository = RoomV2ShiftRepository(database)
 
     override fun close() = database.close()
 

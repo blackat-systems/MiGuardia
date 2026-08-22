@@ -54,8 +54,11 @@ internal class RoomShiftRepository(
     override suspend fun update(shift: Shift) {
         val entity = shift.validated().toEntity()
         try {
-            if (dao.update(entity) == 0) {
-                throw InvalidLocalDataException("No existe la guardia ${entity.id}.")
+            database.withTransaction {
+                rejectV1UpdateForV2Shift(entity.id)
+                if (dao.update(entity) == 0) {
+                    throw InvalidLocalDataException("No existe la guardia ${entity.id}.")
+                }
             }
         } catch (error: SQLiteConstraintException) {
             throw InvalidLocalDataException("No se pudo actualizar la guardia ${entity.id}.", error)
@@ -89,6 +92,7 @@ internal class RoomShiftRepository(
         val updateEntities = mutation.shiftsToUpdate.map { it.validated().toEntity() }
         try {
             database.withTransaction {
+                updateEntities.forEach { entity -> rejectV1UpdateForV2Shift(entity.id) }
                 if (mutation.shiftIdsToDelete.isNotEmpty()) {
                     mutation.shiftIdsToDelete.forEach { id ->
                         database.shiftNoveltyDao().deleteLinksToShift(id.toString())
@@ -107,6 +111,14 @@ internal class RoomShiftRepository(
             }
         } catch (error: SQLiteConstraintException) {
             throw InvalidLocalDataException("No se pudo guardar el lote de guardias.", error)
+        }
+    }
+
+    private suspend fun rejectV1UpdateForV2Shift(shiftId: String) {
+        if (database.v2ShiftDao().hasSnapshot(shiftId)) {
+            throw InvalidLocalDataException(
+                "La guardia $shiftId pertenece a MiGuardia 2.0 y debe actualizarse junto con su fotografía laboral.",
+            )
         }
     }
 }

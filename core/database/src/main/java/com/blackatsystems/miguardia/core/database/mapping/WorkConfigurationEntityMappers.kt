@@ -44,7 +44,7 @@ internal fun EffectiveRevision<WorkConfiguration>.toEntity(
             id = id.toString(),
             timelineId = timelineId.toString(),
             effectiveFrom = effectiveFrom.toString(),
-            sector = value.sector.encode(),
+            sector = value.sector.encodeSector(),
             availabilityLabel = value.availabilityLabel?.encode(),
             hoursReferenceKind = encodedReference.kind,
             periodKind = encodedReference.inlinePeriod?.kind,
@@ -335,14 +335,14 @@ private fun PerPeriodHoursValueEntity.toDomain(
     )
 }
 
-private fun WorkSector.encode(): String = when (this) {
+internal fun WorkSector.encodeSector(): String = when (this) {
     WorkSector.PRIVATE_SECURITY -> SECTOR_PRIVATE_SECURITY
     WorkSector.POLICE -> SECTOR_POLICE
     WorkSector.NURSING -> SECTOR_NURSING
     WorkSector.MEDICINE -> SECTOR_MEDICINE
 }
 
-private fun String.decodeSector(): WorkSector = when (this) {
+internal fun String.decodeSector(): WorkSector = when (this) {
     SECTOR_PRIVATE_SECURITY -> WorkSector.PRIVATE_SECURITY
     SECTOR_POLICE -> WorkSector.POLICE
     SECTOR_NURSING -> WorkSector.NURSING

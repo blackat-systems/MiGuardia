@@ -91,7 +91,8 @@ contrato ya está cerrado; los siguientes nacen únicamente cuando su dependenci
 anterior esté cerrada:
 
 1. Room v6 y configuración inicial: **cerrado**;
-2. **Activo:** lugares, tipos, plantillas y primera carga V2;
+2. **Activo:** lugares, tipos, plantillas y primera carga V2 — Corte A de
+   contratos y Room v7 verificado; Corte B visible pendiente;
 3. recurrencias y edición puntual/masiva;
 4. motor de horario real, extras y cumplimiento;
 5. disponibilidad y situaciones especiales;

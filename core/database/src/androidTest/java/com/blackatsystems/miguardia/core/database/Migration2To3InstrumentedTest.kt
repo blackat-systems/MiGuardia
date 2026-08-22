@@ -65,7 +65,14 @@ class Migration2To3InstrumentedTest {
 
         helper.runMigrationsAndValidate(DB_V2, 3, true, MIGRATION_2_3).close()
         val db = Room.databaseBuilder(context, MiGuardiaDatabase::class.java, DB_V2)
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
+            .addMigrations(
+                MIGRATION_1_2,
+                MIGRATION_2_3,
+                MIGRATION_3_4,
+                MIGRATION_4_5,
+                MIGRATION_5_6,
+                MIGRATION_6_7,
+            )
             .build()
         val sqlite = db.openHelper.readableDatabase
         ALL_V2_TABLES.forEach { table -> assertTableCount(sqlite, table, 1) }
@@ -97,7 +104,14 @@ class Migration2To3InstrumentedTest {
             MIGRATION_2_3,
         ).close()
         val db = Room.databaseBuilder(context, MiGuardiaDatabase::class.java, DB_CHAIN)
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
+            .addMigrations(
+                MIGRATION_1_2,
+                MIGRATION_2_3,
+                MIGRATION_3_4,
+                MIGRATION_4_5,
+                MIGRATION_5_6,
+                MIGRATION_6_7,
+            )
             .build()
         val sqlite = db.openHelper.readableDatabase
         V1_TABLES.forEach { table -> assertTableCount(sqlite, table, 1) }

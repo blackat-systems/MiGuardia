@@ -87,3 +87,84 @@ internal val MIGRATION_5_6 = object : Migration(5, 6) {
         )
     }
 }
+
+internal val MIGRATION_6_7 = object : Migration(6, 7) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            """CREATE TABLE IF NOT EXISTS `work_places` (`id` TEXT NOT NULL, `timelineId` TEXT NOT NULL, `sector` TEXT NOT NULL, `objectiveId` TEXT NOT NULL, `isActive` INTEGER NOT NULL, `createdAtEpochMillis` INTEGER NOT NULL, `updatedAtEpochMillis` INTEGER NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`timelineId`) REFERENCES `work_configuration_roots`(`timelineId`) ON UPDATE NO ACTION ON DELETE RESTRICT , FOREIGN KEY(`objectiveId`) REFERENCES `objectives`(`id`) ON UPDATE NO ACTION ON DELETE RESTRICT )""",
+        )
+        db.execSQL(
+            "CREATE UNIQUE INDEX IF NOT EXISTS `index_work_places_timelineId_sector_objectiveId` ON `work_places` (`timelineId`, `sector`, `objectiveId`)",
+        )
+        db.execSQL(
+            "CREATE UNIQUE INDEX IF NOT EXISTS `index_work_places_id_timelineId_sector_objectiveId` ON `work_places` (`id`, `timelineId`, `sector`, `objectiveId`)",
+        )
+        db.execSQL(
+            "CREATE INDEX IF NOT EXISTS `index_work_places_objectiveId` ON `work_places` (`objectiveId`)",
+        )
+
+        db.execSQL(
+            """CREATE TABLE IF NOT EXISTS `work_types` (`id` TEXT NOT NULL, `timelineId` TEXT NOT NULL, `sector` TEXT NOT NULL, `name` TEXT NOT NULL, `normalizedNameKey` TEXT NOT NULL, `behavior` TEXT NOT NULL, `isActive` INTEGER NOT NULL, `createdAtEpochMillis` INTEGER NOT NULL, `updatedAtEpochMillis` INTEGER NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`timelineId`) REFERENCES `work_configuration_roots`(`timelineId`) ON UPDATE NO ACTION ON DELETE RESTRICT )""",
+        )
+        db.execSQL(
+            "CREATE UNIQUE INDEX IF NOT EXISTS `index_work_types_timelineId_sector_normalizedNameKey` ON `work_types` (`timelineId`, `sector`, `normalizedNameKey`)",
+        )
+        db.execSQL(
+            "CREATE UNIQUE INDEX IF NOT EXISTS `index_work_types_id_timelineId_sector` ON `work_types` (`id`, `timelineId`, `sector`)",
+        )
+
+        db.execSQL(
+            """CREATE TABLE IF NOT EXISTS `work_templates` (`id` TEXT NOT NULL, `timelineId` TEXT NOT NULL, `sector` TEXT NOT NULL, `workPlaceId` TEXT NOT NULL, `objectiveId` TEXT NOT NULL, `workTypeId` TEXT NOT NULL, `startTime` TEXT NOT NULL, `endTime` TEXT NOT NULL, `colorArgb` INTEGER NOT NULL, `isActive` INTEGER NOT NULL, `legacyScheduleCombinationId` TEXT, `createdAtEpochMillis` INTEGER NOT NULL, `updatedAtEpochMillis` INTEGER NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`timelineId`) REFERENCES `work_configuration_roots`(`timelineId`) ON UPDATE NO ACTION ON DELETE RESTRICT , FOREIGN KEY(`workPlaceId`, `timelineId`, `sector`, `objectiveId`) REFERENCES `work_places`(`id`, `timelineId`, `sector`, `objectiveId`) ON UPDATE NO ACTION ON DELETE RESTRICT , FOREIGN KEY(`workTypeId`, `timelineId`, `sector`) REFERENCES `work_types`(`id`, `timelineId`, `sector`) ON UPDATE NO ACTION ON DELETE RESTRICT , FOREIGN KEY(`legacyScheduleCombinationId`) REFERENCES `schedule_combinations`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL )""",
+        )
+        db.execSQL(
+            "CREATE INDEX IF NOT EXISTS `index_work_templates_timelineId` ON `work_templates` (`timelineId`)",
+        )
+        db.execSQL(
+            "CREATE INDEX IF NOT EXISTS `index_work_templates_workPlaceId_timelineId_sector_objectiveId` ON `work_templates` (`workPlaceId`, `timelineId`, `sector`, `objectiveId`)",
+        )
+        db.execSQL(
+            "CREATE INDEX IF NOT EXISTS `index_work_templates_workTypeId_timelineId_sector` ON `work_templates` (`workTypeId`, `timelineId`, `sector`)",
+        )
+        db.execSQL(
+            "CREATE INDEX IF NOT EXISTS `index_work_templates_legacyScheduleCombinationId` ON `work_templates` (`legacyScheduleCombinationId`)",
+        )
+        db.execSQL(
+            "CREATE UNIQUE INDEX IF NOT EXISTS `index_work_templates_workPlaceId_workTypeId_startTime_endTime` ON `work_templates` (`workPlaceId`, `workTypeId`, `startTime`, `endTime`)",
+        )
+        db.execSQL(
+            "CREATE UNIQUE INDEX IF NOT EXISTS `index_work_templates_id_timelineId_sector_workPlaceId_objectiveId_workTypeId` ON `work_templates` (`id`, `timelineId`, `sector`, `workPlaceId`, `objectiveId`, `workTypeId`)",
+        )
+
+        db.execSQL(
+            """CREATE TABLE IF NOT EXISTS `workplace_rule_revisions` (`id` TEXT NOT NULL, `timelineId` TEXT NOT NULL, `sector` TEXT NOT NULL, `workPlaceId` TEXT NOT NULL, `objectiveId` TEXT NOT NULL, `effectiveFrom` TEXT NOT NULL, `nightRuleCode` TEXT NOT NULL, `nightStartTime` TEXT, `nightEndTime` TEXT, `nightDifferentTreatment` INTEGER, `nightShowDedicatedSummary` INTEGER, `weekendRuleCode` TEXT NOT NULL, `weekendDifferentTreatment` INTEGER, `weekendShowDedicatedSummary` INTEGER, `holidayDifferentTreatment` INTEGER NOT NULL, `holidayShowDedicatedSummary` INTEGER NOT NULL, `createdAtEpochMillis` INTEGER NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`timelineId`) REFERENCES `work_configuration_roots`(`timelineId`) ON UPDATE NO ACTION ON DELETE RESTRICT , FOREIGN KEY(`workPlaceId`, `timelineId`, `sector`, `objectiveId`) REFERENCES `work_places`(`id`, `timelineId`, `sector`, `objectiveId`) ON UPDATE NO ACTION ON DELETE RESTRICT )""",
+        )
+        db.execSQL(
+            "CREATE UNIQUE INDEX IF NOT EXISTS `index_workplace_rule_revisions_workPlaceId_effectiveFrom` ON `workplace_rule_revisions` (`workPlaceId`, `effectiveFrom`)",
+        )
+        db.execSQL(
+            "CREATE INDEX IF NOT EXISTS `index_workplace_rule_revisions_timelineId` ON `workplace_rule_revisions` (`timelineId`)",
+        )
+        db.execSQL(
+            "CREATE INDEX IF NOT EXISTS `index_workplace_rule_revisions_workPlaceId_timelineId_sector_objectiveId` ON `workplace_rule_revisions` (`workPlaceId`, `timelineId`, `sector`, `objectiveId`)",
+        )
+
+        db.execSQL(
+            """CREATE TABLE IF NOT EXISTS `shift_work_snapshots` (`shiftId` TEXT NOT NULL, `timelineId` TEXT NOT NULL, `sector` TEXT NOT NULL, `configurationRevisionId` TEXT NOT NULL, `workPlaceId` TEXT NOT NULL, `objectiveId` TEXT NOT NULL, `templateId` TEXT NOT NULL, `workTypeId` TEXT NOT NULL, `workTypeNameSnapshot` TEXT NOT NULL, `workTypeBehaviorSnapshot` TEXT NOT NULL, PRIMARY KEY(`shiftId`), FOREIGN KEY(`shiftId`) REFERENCES `shifts`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`timelineId`) REFERENCES `work_configuration_roots`(`timelineId`) ON UPDATE NO ACTION ON DELETE RESTRICT , FOREIGN KEY(`configurationRevisionId`) REFERENCES `work_configuration_revisions`(`id`) ON UPDATE NO ACTION ON DELETE RESTRICT , FOREIGN KEY(`workPlaceId`, `timelineId`, `sector`, `objectiveId`) REFERENCES `work_places`(`id`, `timelineId`, `sector`, `objectiveId`) ON UPDATE NO ACTION ON DELETE RESTRICT , FOREIGN KEY(`workTypeId`, `timelineId`, `sector`) REFERENCES `work_types`(`id`, `timelineId`, `sector`) ON UPDATE NO ACTION ON DELETE RESTRICT , FOREIGN KEY(`templateId`, `timelineId`, `sector`, `workPlaceId`, `objectiveId`, `workTypeId`) REFERENCES `work_templates`(`id`, `timelineId`, `sector`, `workPlaceId`, `objectiveId`, `workTypeId`) ON UPDATE NO ACTION ON DELETE RESTRICT )""",
+        )
+        db.execSQL(
+            "CREATE INDEX IF NOT EXISTS `index_shift_work_snapshots_timelineId` ON `shift_work_snapshots` (`timelineId`)",
+        )
+        db.execSQL(
+            "CREATE INDEX IF NOT EXISTS `index_shift_work_snapshots_configurationRevisionId` ON `shift_work_snapshots` (`configurationRevisionId`)",
+        )
+        db.execSQL(
+            "CREATE INDEX IF NOT EXISTS `index_shift_work_snapshots_workPlaceId_timelineId_sector_objectiveId` ON `shift_work_snapshots` (`workPlaceId`, `timelineId`, `sector`, `objectiveId`)",
+        )
+        db.execSQL(
+            "CREATE INDEX IF NOT EXISTS `index_shift_work_snapshots_workTypeId_timelineId_sector` ON `shift_work_snapshots` (`workTypeId`, `timelineId`, `sector`)",
+        )
+        db.execSQL(
+            "CREATE INDEX IF NOT EXISTS `index_shift_work_snapshots_templateId_timelineId_sector_workPlaceId_objectiveId_workTypeId` ON `shift_work_snapshots` (`templateId`, `timelineId`, `sector`, `workPlaceId`, `objectiveId`, `workTypeId`)",
+        )
+    }
+}

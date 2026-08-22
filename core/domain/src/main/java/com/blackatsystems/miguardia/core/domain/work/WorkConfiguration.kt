@@ -1,5 +1,6 @@
 package com.blackatsystems.miguardia.core.domain.work
 
+import com.blackatsystems.miguardia.core.domain.repository.InvalidV2SelectionException
 import java.time.LocalDate
 import java.util.Collections
 import java.util.UUID
@@ -80,7 +81,36 @@ class EffectiveDateTimeline<T>(
             },
     )
 
-    fun valueAt(date: LocalDate): T? = revisions
+    fun revisionAt(date: LocalDate): EffectiveRevision<T>? = revisions
         .lastOrNull { revision -> !revision.effectiveFrom.isAfter(date) }
-        ?.value
+
+    fun valueAt(date: LocalDate): T? = revisionAt(date)?.value
+}
+
+/**
+ * Demuestra que [revision] es la revisión exacta de [timelineId] resuelta para
+ * [referenceDate]. El constructor privado impide asociar una revisión anterior
+ * del mismo sector con una fecha más nueva.
+ */
+class ResolvedWorkConfigurationRevision private constructor(
+    val timelineId: UUID,
+    val referenceDate: LocalDate,
+    val revision: EffectiveRevision<WorkConfiguration>,
+) {
+    companion object {
+        fun resolve(
+            history: WorkConfigurationHistory,
+            date: LocalDate,
+        ): ResolvedWorkConfigurationRevision {
+            val revision = history.timeline.revisionAt(date)
+                ?: throw InvalidV2SelectionException(
+                    "MiGuardia 2.0 todavia no esta configurada para el $date.",
+                )
+            return ResolvedWorkConfigurationRevision(
+                timelineId = history.timeline.id,
+                referenceDate = date,
+                revision = revision,
+            )
+        }
+    }
 }

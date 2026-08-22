@@ -66,8 +66,9 @@ La auditoría de reactivación y Puerta 0 está registrada en
   genérico Salud ni una opción Otro.
 - Las reglas confirmadas distinguen trabajo habitual, clases de horas extras y
   disponibilidad; el trabajo activo reemplaza sólo el tramo pasivo superpuesto.
-- Room debe evolucionar desde v5 mediante migraciones explícitas y no
-  destructivas. Todavía no existe Room v6 ni una migración nueva implementada.
+- Room evoluciona desde v5 mediante migraciones explícitas y no destructivas.
+  La configuración laboral ya está en Room v6 y el catálogo laboral del Corte
+  A ya está en Room v7; las tablas heredadas permanecen sin cambios.
 - `docs/PROMPT_MAESTRO_MAIN_2_0.md` vuelve a ser el traspaso rector activo. MAIN
   debe concretar cada bloque sin presentar propuestas antiguas como código
   vigente.
@@ -106,12 +107,14 @@ La auditoría de reactivación y Puerta 0 está registrada en
     remunerativas.
   - `8b7fa31fb3865e6ef162a6474d57a0061a32c588`: cierre de PLANIFICACIÓN,
     reactivación de MAIN y contrato del primer bloque.
-  - el checkpoint local que contiene este estado: dominio puro configurable de
-    MiGuardia 2.0 y sus pruebas.
+  - `89937270df90d7d1739725a6be73539a2d0bade9`: dominio laboral configurable;
+  - `7dde17d`: configuración persistente y Room v6;
+  - `4757737`: contrato de lugares, tipos, plantillas y primera carga V2.
 - La rama 2.0 todavía no posee upstream ni existe en GitHub. Nada de esta puerta
   fue enviado o publicado.
 - El dominio nuevo vive en `core/domain/.../work/`; no se recuperó el candidato
-  mensual descartado ni existe todavía persistencia o pantalla para configurarlo.
+  mensual descartado. Room v7 ya persiste su Corte A, pero todavía no existe la
+  pantalla ni el recorrido visible del Corte B.
 
 ## Antecedente histórico descartado: candidato mensual
 
@@ -192,6 +195,49 @@ Validación final:
 - evidencia completa en
   `docs/audits/2026-08-21-configuracion-persistente-y-room-v6.md`.
 
+## Lugares, tipos y plantillas — Corte A y Room v7
+
+El Corte A del bloque activo quedó implementado y verificado el 2026-08-22. La
+aplicación todavía no activa ninguna conducta V2 visible; este checkpoint fija
+los contratos y la persistencia que necesita el recorrido utilizable del Corte
+B.
+
+- el dominio separa lugar laboral, tipo de trabajo, plantilla horaria y reglas
+  versionadas por lugar;
+- Enfermería y Medicina siguen siendo sectores independientes dentro del
+  catálogo cerrado de cuatro sectores;
+- la vigencia se resuelve por fecha local exacta, también cuando una jornada
+  atraviesa dos fechas civiles;
+- una jornada V2 se escribe junto con su fotografía histórica de sector,
+  configuración, lugar, tipo y plantilla;
+- las rutas heredadas de actualización y Novedades no pueden cambiar objetivo,
+  horario o puesto de una jornada V2 sin su fotografía; los cambios de estado
+  siguen disponibles sin alterar la estructura;
+- adopción V1, archivo independiente, retrocarga consciente de una instalación
+  `NEW_V2`, normalización NFKC y recientes V2 poseen contratos explícitos;
+- la selección para una carga V2 rechaza mezclar vigencias V1/V2 o sectores;
+  una sustitución ya confirmada puede borrar jornadas V1 o V2 en esas fechas,
+  pero nunca deja una jornada V2 sin su fotografía;
+- Room v7 agrega exactamente cinco tablas a las diecisiete de v6 y
+  `MIGRATION_6_7` las crea vacías, sin adoptar ni modificar historia;
+- los esquemas `1.json` a `6.json` conservaron exactamente sus hashes y se
+  agregó únicamente `7.json`, con 22 entidades.
+
+Validación final del corte:
+
+- aplicación JVM: 41/41;
+- dominio JVM: 217/217;
+- base de datos JVM: 5/5;
+- total JVM: 263/263, sin fallos, errores ni omitidas;
+- base de datos instrumentada: 98/98 en el Samsung `SM-S938B` API 36;
+- `lintDebug`, APK `debug`, APK de instrumentación del módulo y APK de pruebas
+  QA: aprobados;
+- `git diff --check`: correcto;
+- los paquetes de prueba fueron retirados al finalizar y permaneció instalado
+  únicamente `com.blackatsystems.miguardia`, sin abrirlo ni modificarlo;
+- evidencia completa en
+  `docs/audits/2026-08-22-lugares-tipos-plantillas-room-v7-corte-a.md`.
+
 ## Ejecución autorizada de MAIN
 
 - avanzar de a un bloque pequeño y con nombre humano;
@@ -222,8 +268,8 @@ amplía el alcance a push, tags, Release, publicación o producción.
 
 ## Próximo paso
 
-MAIN debe escribir y auditar el contrato del próximo bloque: lugares, tipos de
-trabajo y plantillas V2. Ese bloque debe reutilizar los objetivos, horarios e
-instantáneas históricas sin reinterpretar el pasado ni adelantar recurrencias,
-extras o pantallas de Resumen. Push, tag, Release y cualquier operación sobre
+MAIN debe continuar con el Corte B ya definido en el prompt activo: recorrido
+visible de sector, catálogo, primera configuración y carga manual V2 sobre la
+única grilla existente. No debe adelantar recurrencias, extras, disponibilidad
+ni pantallas de Resumen. Push, tag, Release y cualquier operación sobre
 producción continúan prohibidos.

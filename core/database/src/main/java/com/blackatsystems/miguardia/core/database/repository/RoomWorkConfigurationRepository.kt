@@ -7,6 +7,7 @@ import com.blackatsystems.miguardia.core.database.entity.PerPeriodHoursDefinitio
 import com.blackatsystems.miguardia.core.database.mapping.newWorkConfigurationRoot
 import com.blackatsystems.miguardia.core.database.mapping.toDomainOrNull
 import com.blackatsystems.miguardia.core.database.mapping.toEntity
+import com.blackatsystems.miguardia.core.database.validation.requireValidV2LocalData
 import com.blackatsystems.miguardia.core.domain.repository.InvalidLocalDataException
 import com.blackatsystems.miguardia.core.domain.repository.WorkConfigurationRepository
 import com.blackatsystems.miguardia.core.domain.work.EffectiveDateTimeline
@@ -51,6 +52,7 @@ internal class RoomWorkConfigurationRepository(
 
         mapConstraint("No se pudo crear la configuración laboral inicial.") {
             database.withTransaction {
+                database.requireValidV2LocalData()
                 if (dao.getOrphanRowCount() != 0) {
                     invalid("La configuración laboral contiene filas sin su registro principal.")
                 }
@@ -62,6 +64,7 @@ internal class RoomWorkConfigurationRepository(
                     dao.insertDefinition(definition)
                 }
                 dao.insertRevision(encodedRevision.revision)
+                database.requireValidV2LocalData()
             }
         }
     }
@@ -72,6 +75,7 @@ internal class RoomWorkConfigurationRepository(
     ) {
         mapConstraint("No se pudo agregar la revisión de configuración laboral.") {
             database.withTransaction {
+                database.requireValidV2LocalData()
                 val current = requireHistory(timelineId)
                 validateHistoryWithRevision(current, revision)
 
@@ -80,6 +84,7 @@ internal class RoomWorkConfigurationRepository(
                     insertDefinitionIfMissing(expected)
                 }
                 dao.insertRevision(encodedRevision.revision)
+                database.requireValidV2LocalData()
             }
         }
     }

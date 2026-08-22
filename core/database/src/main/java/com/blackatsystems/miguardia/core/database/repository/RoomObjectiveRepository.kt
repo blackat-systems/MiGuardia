@@ -7,10 +7,13 @@ import com.blackatsystems.miguardia.core.database.mapping.toDomain
 import com.blackatsystems.miguardia.core.database.mapping.toEntity
 import com.blackatsystems.miguardia.core.database.validation.validateUpdateTimestamp
 import com.blackatsystems.miguardia.core.database.validation.validated
+import com.blackatsystems.miguardia.core.database.validation.requireValidV2LocalData
 import com.blackatsystems.miguardia.core.domain.model.Objective
+import com.blackatsystems.miguardia.core.domain.repository.AdoptedObjectiveInUseException
 import com.blackatsystems.miguardia.core.domain.repository.DuplicateObjectiveAbbreviationException
 import com.blackatsystems.miguardia.core.domain.repository.InvalidLocalDataException
 import com.blackatsystems.miguardia.core.domain.repository.ObjectiveRepository
+import com.blackatsystems.miguardia.core.domain.work.normalizedForV2Update
 import java.time.Instant
 import java.util.UUID
 import kotlinx.coroutines.flow.Flow
@@ -40,11 +43,31 @@ internal class RoomObjectiveRepository(
     }
 
     override suspend fun update(objective: Objective) {
-        val entity = objective.validated().toEntity()
         try {
-            if (objectiveDao.update(entity) == 0) missing(entity.id)
+            database.withTransaction {
+                database.requireValidV2LocalData()
+                val previousEntity = objectiveDao.getById(objective.id.toString())
+                    ?: missing(objective.id.toString())
+                val normalized = if (
+                    database.workCatalogDao().countWorkPlacesForObjective(previousEntity.id) > 0
+                ) {
+                    try {
+                        objective.normalizedForV2Update(previousEntity.toDomain())
+                    } catch (error: IllegalArgumentException) {
+                        throw InvalidLocalDataException(
+                            "No se pudieron actualizar los datos del lugar adoptado.",
+                            error,
+                        )
+                    }
+                } else {
+                    objective.validated()
+                }
+                val entity = normalized.toEntity()
+                if (objectiveDao.update(entity) == 0) missing(entity.id)
+                database.requireValidV2LocalData()
+            }
         } catch (error: SQLiteConstraintException) {
-            mapConstraint(entity.id, entity.abbreviation, error)
+            mapConstraint(objective.id.toString(), objective.abbreviation, error)
         }
     }
 
@@ -59,6 +82,10 @@ internal class RoomObjectiveRepository(
 
     override suspend fun delete(id: UUID) {
         database.withTransaction {
+            database.requireValidV2LocalData()
+            if (database.workCatalogDao().countWorkPlacesForObjective(id.toString()) > 0) {
+                throw AdoptedObjectiveInUseException()
+            }
             scheduleDao.deleteByObjective(id.toString())
             objectiveDao.delete(id.toString())
         }

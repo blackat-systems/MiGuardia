@@ -1,5 +1,7 @@
 package com.blackatsystems.miguardia.core.domain.repository
 
+import java.time.LocalDate
+
 sealed class LocalDataException(
     message: String,
     cause: Throwable? = null,
@@ -37,3 +39,41 @@ class OverlappingVacationException :
 
 class VacationMedicalLeaveConflictException :
     LocalDataException("Las vacaciones no pueden superponerse con una carpeta médica.")
+
+class DuplicateWorkPlaceException(cause: Throwable? = null) :
+    LocalDataException("Ese lugar ya fue agregado para esta forma de trabajar.", cause)
+
+class DuplicateWorkTypeNameException(
+    val name: String,
+    cause: Throwable? = null,
+) : LocalDataException("Ya existe un tipo de trabajo llamado $name.", cause)
+
+class DuplicateWorkTemplateException(cause: Throwable? = null) :
+    LocalDataException("Ya existe ese lugar, tipo de trabajo y horario.", cause)
+
+class AdoptedObjectiveInUseException(cause: Throwable? = null) :
+    LocalDataException(
+        "Ese lugar forma parte de MiGuardia 2.0. Podés archivarlo, pero no eliminar su historia.",
+        cause,
+    )
+
+class MissingWorkplaceRuleException(
+    val date: LocalDate,
+    cause: Throwable? = null,
+) : LocalDataException("El lugar no tiene reglas vigentes para el $date.", cause)
+
+class RetroactiveWorkplaceRuleException(
+    val effectiveFrom: LocalDate,
+    cause: Throwable? = null,
+) : LocalDataException(
+    "No se pueden cambiar desde $effectiveFrom las reglas de una jornada que ya comenzó.",
+    cause,
+)
+
+class InvalidV2SelectionException(message: String) : LocalDataException(message)
+
+class LegacyShiftCannotBeUpdatedAsV2Exception(cause: Throwable? = null) :
+    LocalDataException(
+        "Esta jornada pertenece a MiGuardia 1.0 y no puede convertirse automáticamente.",
+        cause,
+    )
