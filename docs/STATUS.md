@@ -110,6 +110,8 @@ La auditoría de reactivación y Puerta 0 está registrada en
   - `89937270df90d7d1739725a6be73539a2d0bade9`: dominio laboral configurable;
   - `7dde17d`: configuración persistente y Room v6;
   - `4757737`: contrato de lugares, tipos, plantillas y primera carga V2.
+  - `49a8179b619b6005899773bacfb0a2ac16920fcd`: Corte A de catálogo laboral y
+    persistencia Room v7.
 - La rama 2.0 todavía no posee upstream ni existe en GitHub. Nada de esta puerta
   fue enviado o publicado.
 - El dominio nuevo vive en `core/domain/.../work/`; no se recuperó el candidato
