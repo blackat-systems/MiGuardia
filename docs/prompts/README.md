@@ -53,6 +53,7 @@ prevalecen para el estado operativo.
 | `REGLAS_DOMINIO_CONFIGURACION_Y_HORAS_V2.md` | **CERRADO** | Reglas puras verificadas de sector, vigencia por fecha, referencias de horas, extras y reglas por lugar, sin Room ni pantallas |
 | `CONFIGURACION_PERSISTENTE_Y_MIGRACION_ROOM_V6.md` | **CERRADO** | La configuración global ya se guarda y Room migra 5→6 sin alterar las trece familias históricas |
 | `LUGARES_TIPOS_PLANTILLAS_Y_PRIMERA_CARGA_V2.md` | **HABILITADO** | Elegir sector, crear lugares, tipos y plantillas, y cargar jornadas V2 con historia propia |
+| `PRIMERA_APERTURA_Y_CONFIGURACION_LABORAL_VISIBLE_V2.md` | **HABILITADO** | Dependencia acotada: primera pantalla de rubro y creación visible del primer lugar y horario |
 
 ## Contratos históricos de MiGuardia 1.0
 
@@ -92,7 +93,8 @@ anterior esté cerrada:
 
 1. Room v6 y configuración inicial: **cerrado**;
 2. **Activo:** lugares, tipos, plantillas y primera carga V2 — Corte A de
-   contratos y Room v7 verificado; Corte B visible pendiente;
+   contratos y Room v7 verificado; la primera dependencia del Corte B es la
+   apertura y configuración laboral visible, antes de adaptar la carga manual;
 3. recurrencias y edición puntual/masiva;
 4. motor de horario real, extras y cumplimiento;
 5. disponibilidad y situaciones especiales;
