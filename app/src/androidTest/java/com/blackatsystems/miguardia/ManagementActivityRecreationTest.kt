@@ -1,6 +1,6 @@
 package com.blackatsystems.miguardia
 
-import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
+import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotSelected
@@ -13,6 +13,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.core.app.ActivityScenario
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.Until
@@ -35,24 +36,35 @@ import org.junit.Test
 
 class ManagementActivityRecreationTest {
     @get:Rule
-    val composeRule = createAndroidComposeRule<MainActivity>()
+    val composeRule = createEmptyComposeRule()
+
+    private var scenario: ActivityScenario<MainActivity>? = null
 
     @Before
     fun wakeDevice() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val context = instrumentation.targetContext
         UiDevice.getInstance(instrumentation).wakeUp()
         instrumentation.uiAutomation.executeShellCommand("wm dismiss-keyguard").close()
-        val dataStore = (composeRule.activity.application as MiGuardiaApplication).localDataStore
+        ensureMigratedV1ActivityFixture(context)
+        val dataStore = (context.applicationContext as MiGuardiaApplication).localDataStore
         runBlocking {
             dataStore.objectives.delete(OBJECTIVE.id)
             dataStore.objectives.create(OBJECTIVE)
             dataStore.scheduleCombinations.create(SCHEDULE)
         }
+        scenario = ActivityScenario.launch(MainActivity::class.java)
+        composeRule.waitUntil(5_000L) {
+            composeRule.onAllNodesWithText("Calendario").fetchSemanticsNodes().isNotEmpty()
+        }
     }
 
     @After
     fun removeFixture() {
-        val dataStore = (composeRule.activity.application as MiGuardiaApplication).localDataStore
+        scenario?.close()
+        scenario = null
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val dataStore = (context.applicationContext as MiGuardiaApplication).localDataStore
         runBlocking { dataStore.objectives.delete(OBJECTIVE.id) }
     }
 
@@ -73,7 +85,7 @@ class ManagementActivityRecreationTest {
         val statusBarHeight = instrumentation.targetContext.resources.getDimensionPixelSize(statusBarResource)
         assertTrue("El título no debe solaparse con la barra de estado.", titleBounds.top >= statusBarHeight)
 
-        composeRule.activityRule.scenario.recreate()
+        requireNotNull(scenario).recreate()
 
         composeRule.onNodeWithText("Objetivo de recreación").assertExists()
         composeRule.onNodeWithText("Guardar objetivo").assertExists()
@@ -97,7 +109,7 @@ class ManagementActivityRecreationTest {
         composeRule.onNodeWithText("Terminar de elegir días").performScrollTo().performClick()
         composeRule.onNodeWithText("¿Qué querés cargar?").assertExists()
 
-        composeRule.activityRule.scenario.recreate()
+        requireNotNull(scenario).recreate()
 
         composeRule.onNodeWithText("¿Qué querés cargar?").assertExists()
         composeRule.onNodeWithContentDescription(selectedDate.spanishDisplayName(), substring = true)
@@ -122,7 +134,7 @@ class ManagementActivityRecreationTest {
         composeRule.onNodeWithTag("selected-combination-summary").assertExists()
         composeRule.onNodeWithTag("shift-preview").assertExists()
 
-        composeRule.activityRule.scenario.recreate()
+        requireNotNull(scenario).recreate()
 
         composeRule.onNodeWithTag("month-grid").assertExists()
         composeRule.onNodeWithTag("calendar-inline-management").assertExists()

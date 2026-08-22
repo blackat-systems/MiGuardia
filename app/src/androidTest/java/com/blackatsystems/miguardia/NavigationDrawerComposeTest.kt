@@ -53,6 +53,7 @@ import com.blackatsystems.miguardia.ui.vacation.VacationUiState
 import com.blackatsystems.miguardia.ui.weather.WeatherSurface
 import com.blackatsystems.miguardia.ui.weather.WeatherActions
 import com.blackatsystems.miguardia.ui.weather.WeatherUiState
+import com.blackatsystems.miguardia.ui.worksetup.WorkSetupActions
 import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
@@ -77,6 +78,7 @@ class NavigationDrawerComposeTest {
         listOf(
             "Calendario",
             "Resumen",
+            "Mi forma de trabajar",
             "Perfil laboral",
             "Objetivos y horarios",
             "Feriados",
@@ -138,6 +140,7 @@ class NavigationDrawerComposeTest {
                     onSelectDate = {},
                     onDismissDate = {},
                     onRetry = {},
+                    workSetupActions = WorkSetupActions(openOverview = { opened += "work-setup" }),
                     profileActions = ProfileActions(open = { opened += "profile" }),
                     managementActions = ManagementActions(openSettings = { opened += "objectives" }),
                     exceptionsActions = ExceptionsActions(
@@ -153,6 +156,7 @@ class NavigationDrawerComposeTest {
         }
 
         listOf(
+            "drawer-action-work-setup",
             "drawer-action-profile",
             "drawer-action-objectives",
             "drawer-action-holidays",
@@ -164,6 +168,7 @@ class NavigationDrawerComposeTest {
         compose.runOnIdle {
             assertEquals(
                 listOf(
+                    "work-setup",
                     "profile",
                     "objectives",
                     "holidays:$expectedMonth",

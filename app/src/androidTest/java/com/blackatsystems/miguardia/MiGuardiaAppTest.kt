@@ -81,6 +81,7 @@ class MiGuardiaAppTest {
         val context = instrumentation.targetContext
         val device = UiDevice.getInstance(instrumentation)
         prepareDevice(instrumentation, context, device)
+        ensureMigratedV1ActivityFixture(context)
         val currentMonth = YearMonth.now(AppDefaults.zoneId())
 
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
@@ -126,6 +127,7 @@ class MiGuardiaAppTest {
         val keyguardManager = context.getSystemService(KeyguardManager::class.java)
         val device = UiDevice.getInstance(instrumentation)
         prepareDevice(instrumentation, context, device)
+        ensureMigratedV1ActivityFixture(context)
         assertFalse(
             "El dispositivo debe estar desbloqueado para probar la interfaz.",
             keyguardManager.isKeyguardLocked,
@@ -152,6 +154,7 @@ class MiGuardiaAppTest {
         val context = instrumentation.targetContext
         val device = UiDevice.getInstance(instrumentation)
         prepareDevice(instrumentation, context, device)
+        ensureMigratedV1ActivityFixture(context)
 
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             assertTrue(
@@ -202,6 +205,7 @@ class MiGuardiaAppTest {
         val context = instrumentation.targetContext
         val device = UiDevice.getInstance(instrumentation)
         prepareDevice(instrumentation, context, device)
+        ensureMigratedV1ActivityFixture(context)
         val keyguardManager = context.getSystemService(KeyguardManager::class.java)
         assertFalse(
             "El dispositivo debe estar desbloqueado para probar la interfaz.",

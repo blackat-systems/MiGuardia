@@ -156,6 +156,15 @@ import com.blackatsystems.miguardia.ui.weather.WeatherSurface
 import com.blackatsystems.miguardia.ui.weather.WeatherSurfaceHost
 import com.blackatsystems.miguardia.ui.weather.WeatherUiState
 import com.blackatsystems.miguardia.ui.weather.WeatherViewModel
+import com.blackatsystems.miguardia.ui.worksetup.V2FirstWorkSetGuide
+import com.blackatsystems.miguardia.ui.worksetup.WorkSetupActions
+import com.blackatsystems.miguardia.ui.worksetup.WorkSetupSurface
+import com.blackatsystems.miguardia.ui.worksetup.WorkSetupSurfaceHost
+import com.blackatsystems.miguardia.ui.worksetup.WorkSetupUiState
+import com.blackatsystems.miguardia.ui.worksetup.WorkSetupViewModel
+import com.blackatsystems.miguardia.ui.worksetup.WorkSetupStartupScreen
+import com.blackatsystems.miguardia.ui.worksetup.legacyWorkSetupUiState
+import com.blackatsystems.miguardia.core.domain.work.WorkSetupState
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.DayOfWeek
@@ -185,6 +194,7 @@ private enum class DrawerAction(
     val glyph: String,
     val testTag: String,
 ) {
+    WORK_SETUP(R.string.work_setup, R.string.drawer_work_setup_description, "◇", "drawer-action-work-setup"),
     PROFILE(R.string.profile, R.string.drawer_profile_description, "◎", "drawer-action-profile"),
     OBJECTIVES(R.string.objectives_and_schedules, R.string.drawer_objectives_description, "⌖", "drawer-action-objectives"),
     HOLIDAYS(R.string.holidays, R.string.drawer_holidays_description, "✦", "drawer-action-holidays"),
@@ -193,9 +203,15 @@ private enum class DrawerAction(
     WEATHER(R.string.weather, R.string.drawer_weather_description, "☁", "drawer-action-weather"),
 }
 
-private val WorkDrawerActions = listOf(
+private val LegacyWorkDrawerActions = listOf(
+    DrawerAction.WORK_SETUP,
     DrawerAction.PROFILE,
     DrawerAction.OBJECTIVES,
+    DrawerAction.HOLIDAYS,
+    DrawerAction.VACATIONS,
+)
+private val V2WorkDrawerActions = listOf(
+    DrawerAction.WORK_SETUP,
     DrawerAction.HOLIDAYS,
     DrawerAction.VACATIONS,
 )
@@ -359,6 +375,7 @@ fun MiGuardiaApp(
     notificationViewModel: NotificationViewModel,
     weatherViewModel: WeatherViewModel,
     profileViewModel: ProfileViewModel,
+    workSetupViewModel: WorkSetupViewModel,
     modifier: Modifier = Modifier,
     calendarNavigationRequest: Int = 0,
     appZoom: AppZoom = AppZoom.STANDARD,
@@ -376,6 +393,7 @@ fun MiGuardiaApp(
     val notificationState by notificationViewModel.uiState.collectAsStateWithLifecycle()
     val weatherState by weatherViewModel.uiState.collectAsStateWithLifecycle()
     val profileState by profileViewModel.uiState.collectAsStateWithLifecycle()
+    val workSetupState by workSetupViewModel.uiState.collectAsStateWithLifecycle()
     MiGuardiaApp(
         calendarState = calendarState,
         nextEventState = nextEventState,
@@ -411,6 +429,8 @@ fun MiGuardiaApp(
         weatherActions = WeatherActions.from(weatherViewModel),
         profileState = profileState,
         profileActions = ProfileActions.from(profileViewModel),
+        workSetupState = workSetupState,
+        workSetupActions = WorkSetupActions.from(workSetupViewModel),
         calendarNavigationRequest = calendarNavigationRequest,
         appZoom = appZoom,
         onAppZoomChange = onAppZoomChange,
@@ -461,37 +481,62 @@ fun MiGuardiaApp(
     weatherActions: WeatherActions = WeatherActions(),
     profileState: ProfileUiState = ProfileUiState(),
     profileActions: ProfileActions = ProfileActions(),
+    workSetupState: WorkSetupUiState = legacyWorkSetupUiState(),
+    workSetupActions: WorkSetupActions = WorkSetupActions(),
     calendarNavigationRequest: Int = 0,
     appZoom: AppZoom = AppZoom.STANDARD,
     onAppZoomChange: (AppZoom) -> Unit = {},
     appThemeMode: AppThemeMode = AppThemeMode.SYSTEM,
     onAppThemeModeChange: (AppThemeMode) -> Unit = {},
 ) {
+    if (
+        workSetupState.rootState == WorkSetupState.Loading ||
+        workSetupState.rootState == WorkSetupState.LoadError ||
+        workSetupState.rootState == WorkSetupState.FreshInstall
+    ) {
+        WorkSetupStartupScreen(workSetupState, workSetupActions, modifier)
+        return
+    }
+    val isV2Mode = workSetupState.rootState is WorkSetupState.V2NeedsFirstSet ||
+        workSetupState.rootState is WorkSetupState.V2Ready
+    val needsFirstWorkSet = workSetupState.rootState is WorkSetupState.V2NeedsFirstSet
     var destination by rememberSaveable { androidx.compose.runtime.mutableStateOf(MainDestination.CALENDAR) }
+    val displayedCalendarState = if (
+        isV2Mode && calendarState.interactionMode == CalendarInteractionMode.EDIT
+    ) {
+        calendarState.copy(
+            interactionMode = CalendarInteractionMode.VIEW,
+            editSelectedDates = emptySet(),
+            editSelectionConfirmed = false,
+        )
+    } else {
+        calendarState
+    }
     val drawerState = remember { DrawerState(initialValue = DrawerValue.Closed) }
     val coroutineScope = rememberCoroutineScope()
-    val selectedDay = if (calendarState.interactionMode == CalendarInteractionMode.VIEW) {
-        calendarState.detailDate?.let { selectedDate ->
-        calendarState.days.firstOrNull { it.date == selectedDate }
+    val selectedDay = if (displayedCalendarState.interactionMode == CalendarInteractionMode.VIEW) {
+        displayedCalendarState.detailDate?.let { selectedDate ->
+        displayedCalendarState.days.firstOrNull { it.date == selectedDate }
         }
     } else {
         null
     }
     val inlineCalendarManagement = destination == MainDestination.CALENDAR &&
-        calendarState.interactionMode == CalendarInteractionMode.EDIT &&
+        displayedCalendarState.interactionMode == CalendarInteractionMode.EDIT &&
         when (managementState.surface) {
             ManagementSurface.INITIAL_DATA_PREPARATION -> true
             ManagementSurface.DAY_OFF_FORM -> managementState.dayOffDraft != null
             ManagementSurface.SHIFT_FORM -> managementState.shiftDraft?.let { it.editingShift == null } == true
             else -> false
         }
-    val hasBlockingSurface = managementState.surface != ManagementSurface.NONE ||
+    val hasBlockingSurface = (!isV2Mode && managementState.surface != ManagementSurface.NONE) ||
         exceptionsState.surface != ExceptionsSurface.NONE ||
         vacationState.surface != VacationSurface.NONE ||
         photosState.surface != PhotosSurface.NONE ||
         notificationState.surface != NotificationSurface.NONE ||
         weatherState.surface != WeatherSurface.NONE ||
-        profileState.surface != ProfileSurface.NONE
+        (!isV2Mode && profileState.surface != ProfileSurface.NONE) ||
+        workSetupState.surface != WorkSetupSurface.NONE
     val canOpenDrawer = !hasBlockingSurface && selectedDay == null
     LaunchedEffect(calendarNavigationRequest) {
         if (calendarNavigationRequest > 0) {
@@ -500,6 +545,19 @@ fun MiGuardiaApp(
             }
             drawerState.snapTo(DrawerValue.Closed)
             destination = MainDestination.CALENDAR
+        }
+    }
+    LaunchedEffect(isV2Mode) {
+        if (isV2Mode && destination == MainDestination.SUMMARY) {
+            destination = MainDestination.CALENDAR
+        }
+    }
+    LaunchedEffect(isV2Mode, calendarState.interactionMode) {
+        if (
+            isV2Mode &&
+            calendarState.interactionMode == CalendarInteractionMode.EDIT
+        ) {
+            onFinishCalendarEditMode()
         }
     }
     LaunchedEffect(hasBlockingSurface) {
@@ -515,6 +573,10 @@ fun MiGuardiaApp(
         coroutineScope.launch {
             drawerState.close()
             when (action) {
+                DrawerAction.WORK_SETUP -> {
+                    destination = MainDestination.CALENDAR
+                    workSetupActions.openOverview()
+                }
                 DrawerAction.PROFILE -> profileActions.open()
                 DrawerAction.OBJECTIVES -> managementActions.openSettings()
                 DrawerAction.HOLIDAYS -> exceptionsActions.openHolidays(calendarState.visibleMonth)
@@ -546,13 +608,15 @@ fun MiGuardiaApp(
                         selected = destination == MainDestination.CALENDAR,
                         onClick = { selectDestination(MainDestination.CALENDAR) },
                     )
-                    DrawerDestinationItem(
-                        item = MainDestination.SUMMARY,
-                        selected = destination == MainDestination.SUMMARY,
-                        onClick = { selectDestination(MainDestination.SUMMARY) },
-                    )
+                    if (!isV2Mode) {
+                        DrawerDestinationItem(
+                            item = MainDestination.SUMMARY,
+                            selected = destination == MainDestination.SUMMARY,
+                            onClick = { selectDestination(MainDestination.SUMMARY) },
+                        )
+                    }
                     DrawerSectionTitle(R.string.drawer_section_work)
-                    WorkDrawerActions.forEach { action ->
+                    (if (isV2Mode) V2WorkDrawerActions else LegacyWorkDrawerActions).forEach { action ->
                         DrawerActionItem(action = action, onClick = { openDrawerAction(action) })
                     }
                     DrawerSectionTitle(R.string.drawer_section_context)
@@ -605,9 +669,9 @@ fun MiGuardiaApp(
                 )
             },
         ) { innerPadding ->
-            when (destination) {
+            when (if (isV2Mode && destination == MainDestination.SUMMARY) MainDestination.CALENDAR else destination) {
                 MainDestination.CALENDAR -> CalendarScreen(
-                    state = calendarState,
+                    state = displayedCalendarState,
                     nextEventState = nextEventState,
                     contentPadding = innerPadding,
                     onPreviousMonth = onPreviousMonth,
@@ -643,6 +707,10 @@ fun MiGuardiaApp(
                     weatherState = weatherState,
                     onOpenPhotos = { photosActions.open(calendarState.visibleMonth) },
                     appZoom = appZoom,
+                    isV2Mode = isV2Mode,
+                    needsFirstWorkSet = needsFirstWorkSet,
+                    onOpenWorkSetup = workSetupActions.openOverview,
+                    onCreateFirstWorkSet = workSetupActions.openFirstWorkSet,
                 )
 
                 MainDestination.SUMMARY -> SummaryScreen(
@@ -671,7 +739,7 @@ fun MiGuardiaApp(
     )
     BackHandler(
         enabled = destination == MainDestination.CALENDAR &&
-            calendarState.interactionMode == CalendarInteractionMode.EDIT &&
+            displayedCalendarState.interactionMode == CalendarInteractionMode.EDIT &&
             selectedDay == null &&
             !hasBlockingSurface,
         onBack = {
@@ -684,7 +752,7 @@ fun MiGuardiaApp(
     )
     BackHandler(
         enabled = destination == MainDestination.CALENDAR &&
-            calendarState.interactionMode == CalendarInteractionMode.EDIT &&
+            displayedCalendarState.interactionMode == CalendarInteractionMode.EDIT &&
             managementState.surface == ManagementSurface.INITIAL_DATA_PREPARATION,
         onBack = {
             managementActions.close()
@@ -711,7 +779,7 @@ fun MiGuardiaApp(
     val navigationBarBottomPadding = WindowInsets.navigationBars
         .asPaddingValues()
         .calculateBottomPadding()
-    if (selectedDay != null && managementState.surface == ManagementSurface.NONE) {
+    if (selectedDay != null && (isV2Mode || managementState.surface == ManagementSurface.NONE)) {
         ModalBottomSheet(
             onDismissRequest = onDismissDate,
             modifier = Modifier.padding(bottom = navigationBarBottomPadding + 16.dp),
@@ -720,16 +788,20 @@ fun MiGuardiaApp(
                 day = selectedDay,
                 referenceInstant = calendarState.referenceInstant,
                 editEnabled = calendarState.hasAnyShiftsLoaded,
-                onEditDay = {
-                    onDismissDate()
-                    val hasUsableSchedule = managementState.scheduleOptions.any {
-                        it.objective.isActive && it.combination.isActive
-                    }
-                    if (!calendarState.hasAnyShifts && !hasUsableSchedule) {
-                        onEnterCalendarEditMode(null)
-                        managementActions.openInitialDataPreparation()
-                    } else {
-                        onEnterCalendarEditMode(selectedDay.date)
+                onEditDay = if (isV2Mode) {
+                    null
+                } else {
+                    {
+                        onDismissDate()
+                        val hasUsableSchedule = managementState.scheduleOptions.any {
+                            it.objective.isActive && it.combination.isActive
+                        }
+                        if (!calendarState.hasAnyShifts && !hasUsableSchedule) {
+                            onEnterCalendarEditMode(null)
+                            managementActions.openInitialDataPreparation()
+                        } else {
+                            onEnterCalendarEditMode(selectedDay.date)
+                        }
                     }
                 },
                 onOpenWeather = weatherActions.openShift,
@@ -738,13 +810,13 @@ fun MiGuardiaApp(
         }
     }
 
-    if (profileState.surface != ProfileSurface.NONE) {
+    if (!isV2Mode && profileState.surface != ProfileSurface.NONE) {
         ProfileSurfaceHost(
             state = profileState,
             actions = profileActions.copy(openObjectives = managementActions.openSettings),
         )
     }
-    if (managementState.surface != ManagementSurface.NONE && !inlineCalendarManagement) {
+    if (!isV2Mode && managementState.surface != ManagementSurface.NONE && !inlineCalendarManagement) {
         ManagementSurfaceHost(
             state = managementState,
             actions = managementActions,
@@ -765,6 +837,9 @@ fun MiGuardiaApp(
     }
     if (weatherState.surface != WeatherSurface.NONE) {
         WeatherSurfaceHost(weatherState, weatherActions)
+    }
+    if (workSetupState.surface != WorkSetupSurface.NONE) {
+        WorkSetupSurfaceHost(workSetupState, workSetupActions)
     }
 }
 
@@ -895,16 +970,21 @@ private fun CalendarScreen(
     onOpenWeather: (java.util.UUID) -> Unit,
     weatherState: WeatherUiState,
     appZoom: AppZoom,
+    isV2Mode: Boolean,
+    needsFirstWorkSet: Boolean,
+    onOpenWorkSetup: () -> Unit,
+    onCreateFirstWorkSet: () -> Unit,
 ) {
     val today = state.referenceInstant.atZone(AppDefaults.zoneId()).toLocalDate()
     val verticalScrollState = rememberScrollState()
     var pendingMonthChange by rememberSaveable { mutableStateOf<String?>(null) }
-    val formOpen = when (managementState.surface) {
+    val formOpen = !isV2Mode && when (managementState.surface) {
         ManagementSurface.SHIFT_FORM -> managementState.shiftDraft?.let { it.editingShift == null } == true
         ManagementSurface.DAY_OFF_FORM -> managementState.dayOffDraft != null
         else -> false
     }
-    val initialDataPreparationOpen = managementState.surface == ManagementSurface.INITIAL_DATA_PREPARATION
+    val initialDataPreparationOpen = !isV2Mode &&
+        managementState.surface == ManagementSurface.INITIAL_DATA_PREPARATION
     val requestMonthChange: (String, () -> Unit) -> Unit = { key, action ->
         if (state.interactionMode == CalendarInteractionMode.EDIT && state.editSelectedDates.isNotEmpty()) {
             pendingMonthChange = key
@@ -919,6 +999,7 @@ private fun CalendarScreen(
     }
     TransientConfirmation(
         message = managementState.infoMessage.takeIf {
+            !isV2Mode &&
             managementState.surface in setOf(ManagementSurface.NONE, ManagementSurface.INITIAL_DATA_PREPARATION)
         },
         onDismiss = managementActions.clearMessage,
@@ -984,6 +1065,10 @@ private fun CalendarScreen(
                     )
                 }
 
+                if (needsFirstWorkSet && state.interactionMode == CalendarInteractionMode.VIEW) {
+                    V2FirstWorkSetGuide(onCreateFirstPlace = onCreateFirstWorkSet)
+                }
+
                 if (state.interactionMode == CalendarInteractionMode.EDIT) {
                     if (initialDataPreparationOpen) {
                         InitialDataPreparationContent(
@@ -1018,6 +1103,24 @@ private fun CalendarScreen(
                             modifier = Modifier.fillMaxWidth(),
                         ) {
                             Text(if (initialDataPreparationOpen) "Salir por ahora" else "Salir de edición")
+                        }
+                    } else if (isV2Mode) {
+                        if (!needsFirstWorkSet) {
+                            OutlinedButton(
+                                onClick = onOpenWorkSetup,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("calendar-work-setup-action"),
+                            ) {
+                                Text("Mi forma de trabajar")
+                            }
+                            Text(
+                                "La carga manual de jornadas para esta configuración se habilitará más adelante.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
                         }
                     } else {
                         if (!state.hasAnyShiftsLoaded && state.shiftPresenceError) {
@@ -1710,7 +1813,7 @@ private fun DayDetailSheet(
     day: CalendarDay,
     referenceInstant: java.time.Instant,
     editEnabled: Boolean,
-    onEditDay: () -> Unit,
+    onEditDay: (() -> Unit)?,
     onOpenWeather: (java.util.UUID) -> Unit,
     weatherState: WeatherUiState,
 ) {
@@ -1766,14 +1869,16 @@ private fun DayDetailSheet(
                 fontWeight = FontWeight.SemiBold,
             )
         }
-        Button(
-            onClick = onEditDay,
-            enabled = editEnabled,
-            modifier = Modifier
-                .fillMaxWidth()
-                .testTag("edit-day-action"),
-        ) {
-            Text("Editar día")
+        onEditDay?.let { editDay ->
+            Button(
+                onClick = editDay,
+                enabled = editEnabled,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("edit-day-action"),
+            ) {
+                Text("Editar día")
+            }
         }
     }
 }

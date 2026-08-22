@@ -3,6 +3,7 @@
     <string name="app_name">MiGuardia</string>
     <string name="calendar">Calendario</string>
     <string name="summary">Resumen</string>
+    <string name="work_setup">Mi forma de trabajar</string>
     <string name="profile">Perfil laboral</string>
     <string name="objectives_and_schedules">Objetivos y horarios</string>
     <string name="holidays">Feriados</string>
@@ -17,6 +18,7 @@
     <string name="drawer_section_application">Aplicación</string>
     <string name="drawer_calendar_description">Tus guardias, francos y próximos eventos.</string>
     <string name="drawer_summary_description">Horas y eventos del mes.</string>
+    <string name="drawer_work_setup_description">Rubro, lugares, tipos y horarios.</string>
     <string name="drawer_profile_description">Tus datos laborales.</string>
     <string name="drawer_objectives_description">Plantillas, horarios y colores.</string>
     <string name="drawer_holidays_description">Fechas especiales del año.</string>

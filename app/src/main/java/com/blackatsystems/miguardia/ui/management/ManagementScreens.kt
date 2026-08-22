@@ -760,7 +760,7 @@ private fun ScheduleForm(state: ManagementUiState, actions: ManagementActions) {
 }
 
 @Composable
-private fun RgbColorPickerDialog(
+internal fun RgbColorPickerDialog(
     initialColor: Int,
     onDismiss: () -> Unit,
     onConfirm: (Int) -> Unit,

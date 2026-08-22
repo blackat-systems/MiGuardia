@@ -240,6 +240,69 @@ Validación final del corte:
 - evidencia completa en
   `docs/audits/2026-08-22-lugares-tipos-plantillas-room-v7-corte-a.md`.
 
+## Primera apertura y configuración laboral visible — integrada por MAIN
+
+La dependencia visible quedó auditada e integrada sobre el Corte A el
+2026-08-22. Este incremento completa la entrada y la configuración laboral
+visible, pero no completa el Corte B ni habilita todavía la carga manual V2 de
+jornadas.
+
+- una instalación nueva resuelve primero el estado persistido y, sólo si no
+  existe raíz, muestra el selector obligatorio de Vigilancia privada, Policía,
+  Enfermería o Medicina antes del Calendario;
+- la confirmación crea `NEW_V2` con `HoursReference.PendingSetup`, sin
+  disponibilidad, horario nocturno ni valores sectoriales inventados;
+- después se abre el Calendario vacío con una guía para crear el primer lugar,
+  sus reglas, el tipo habitual editable y el primer horario exacto;
+- el primer conjunto usa la transacción pública `createFirstWorkSet`, conserva
+  el borrador ante error y ofrece las tres continuaciones acordadas;
+- se pueden agregar horarios reutilizando lugar y tipo, y también lugares
+  adicionales con sus reglas; cada operación usa el contrato atómico público
+  correspondiente;
+- una raíz V1 conserva el recorrido heredado sin selector bloqueante, mientras
+  V2 oculta Resumen, Perfil, Objetivos y carga manual estructural de V1;
+- los borradores no confirmados se conservan mediante `SavedStateHandle` y los
+  estados de carga o error nunca se confunden con una instalación nueva;
+- catálogo y objetivos se cargan como una sola operación observable: si
+  cualquiera falla, la pantalla queda en error recuperable y no avanza con
+  información parcial;
+- cada carga usa una única fecha local de referencia, conserva la selección al
+  cerrar y reabrir `Agregar otro horario`; al entrar en V2, oculta las
+  superficies y borradores V1 residuales sin dejar que bloqueen el Calendario,
+  termina cualquier edición V1 y no muestra acciones V1 inertes dentro del
+  detalle de un día.
+
+Validación final repetida por MAIN:
+
+- JVM: 287/287 —65 de aplicación, 217 de dominio y 5 de base de datos—; 24
+  pertenecen al coordinador de configuración laboral;
+- lint: 0 errores, 2 advertencias de versiones y 3 sugerencias existentes;
+- APK Debug y APK de AndroidTest QA: compilados correctamente;
+- instrumentación afectada en Samsung `SM-S938B` API 36: 18/18 —11 pruebas de
+  configuración y 7 regresiones vecinas del panel—;
+- regresión de las dos suites históricas que lanzan la actividad: 9/9 mediante
+  un fixture QA determinista de raíz `MIGRATED_V1`;
+- primera corrida global observada por MAIN: 179/180; las otras tres pruebas de
+  `NotificationAlarmEndToEndInstrumentedTest` aprobaron y sólo el recorrido
+  físico de alarma exacta se detuvo en su precondición porque el paquete QA no
+  tenía el acceso especial requerido;
+- repetición excluyendo la clase de cuatro pruebas que contiene ese recorrido
+  físico: 176/176;
+- Room instrumentado: 98/98;
+- el esquema Room v7 conservó el SHA-256
+  `E3DA609D63A26609C9679DF49766714A74809CF2259CDA14FEBDF4E11D753C03` y
+  dominio, base de datos, Gradle, manifiesto, permisos, versión y SDK quedaron
+  sin cambios;
+- se preserva como evidencia heredada el recorrido manual QA aprobado por la
+  dependencia desde instalación nueva hasta un lugar, un tipo y un horario
+  persistidos; MAIN no repitió ese recorrido visual manual;
+- el paquete QA se desinstaló al cerrar y la aplicación productiva permaneció
+  instalada y sin abrir;
+- `git diff --check`: correcto.
+
+Evidencia completa en
+`docs/audits/2026-08-22-primera-apertura-configuracion-laboral-visible.md`.
+
 ## Ejecución autorizada de MAIN
 
 - avanzar de a un bloque pequeño y con nombre humano;
@@ -262,7 +325,8 @@ amplía el alcance a push, tags, Release, publicación o producción.
 
 ## Todavía no implementado
 
-- Perfil/configuración visible para elegir sector y reglas;
+- activación consciente de V2 desde una instalación migrada y cambios de sector
+  efectivos desde una fecha;
 - persistencia de guardias pasivas o extras V2;
 - motor completo de trabajo habitual, extras exactas y disponibilidad, con su
   presentación en Resumen y Calendario;
@@ -270,8 +334,9 @@ amplía el alcance a push, tags, Release, publicación o producción.
 
 ## Próximo paso
 
-MAIN debe continuar con el Corte B ya definido en el prompt activo: recorrido
-visible de sector, catálogo, primera configuración y carga manual V2 sobre la
-única grilla existente. No debe adelantar recurrencias, extras, disponibilidad
-ni pantallas de Resumen. Push, tag, Release y cualquier operación sobre
-producción continúan prohibidos.
+El siguiente incremento es la carga manual V2 sobre la única grilla existente.
+Debe reutilizar el catálogo ya configurado y seguir fuera de recurrencias,
+extras, disponibilidad y pantallas de Resumen. Quedan como verificaciones
+separadas el recorrido físico de alarma exacta —sólo con permiso explícito— y
+una migración V1 real en el Samsung; ninguna bloquea este incremento visible.
+Push, tag, Release y cualquier operación sobre producción continúan prohibidos.
