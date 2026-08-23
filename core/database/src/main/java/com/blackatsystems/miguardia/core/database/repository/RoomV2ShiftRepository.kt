@@ -17,11 +17,14 @@ import com.blackatsystems.miguardia.core.database.validation.validated
 import com.blackatsystems.miguardia.core.domain.model.ShiftWorkSnapshot
 import com.blackatsystems.miguardia.core.domain.model.ShiftOccupancyExpectation
 import com.blackatsystems.miguardia.core.domain.model.V2ShiftBatchMutation
+import com.blackatsystems.miguardia.core.domain.model.V2ShiftLookup
 import com.blackatsystems.miguardia.core.domain.model.V2ShiftWrite
+import com.blackatsystems.miguardia.core.domain.model.V2ShiftWriteExpectation
 import com.blackatsystems.miguardia.core.domain.repository.ConflictingLocalWriteException
 import com.blackatsystems.miguardia.core.domain.repository.InvalidLocalDataException
 import com.blackatsystems.miguardia.core.domain.repository.LegacyShiftCannotBeUpdatedAsV2Exception
 import com.blackatsystems.miguardia.core.domain.repository.V2ShiftRepository
+import com.blackatsystems.miguardia.core.domain.shift.isExactV2PositionOnlyEdit
 import com.blackatsystems.miguardia.core.domain.work.resolveWorkplaceRuleSegments
 import java.util.UUID
 import kotlinx.coroutines.flow.Flow
@@ -50,6 +53,15 @@ internal class RoomV2ShiftRepository(
             database.requireValidV2LocalData()
             dao.getSnapshot(shiftId.toString())?.toDomainWorkSnapshot()
         }
+
+    override suspend fun getShift(shiftId: UUID): V2ShiftLookup = database.withTransaction {
+        database.requireValidV2LocalData()
+        val storedShift = database.shiftDao().getById(shiftId.toString())
+            ?: return@withTransaction V2ShiftLookup.Missing
+        val pair = dao.getShiftWithSnapshot(shiftId.toString())
+            ?: return@withTransaction V2ShiftLookup.LegacyV1(storedShift.toDomain())
+        V2ShiftLookup.V2(pair.toDomainWrite())
+    }
 
     override suspend fun insert(write: V2ShiftWrite): Unit = writeShiftData(
         "No se pudo guardar la jornada 2.0.",
@@ -80,14 +92,22 @@ internal class RoomV2ShiftRepository(
         database.requireValidV2LocalData()
     }
 
-    override suspend fun deleteShift(shiftId: UUID): Unit = writeShiftData(
+    override suspend fun deleteShift(expected: V2ShiftWrite): Unit = writeShiftData(
         "No se pudo eliminar la jornada 2.0.",
     ) {
         database.requireValidV2LocalData()
-        requireExistingV2Write(shiftId)
-        database.shiftNoveltyDao().deleteLinksToShift(shiftId.toString())
-        if (dao.deleteShiftAndOwnedSnapshot(shiftId.toString()) != 1) {
-            missingShift(shiftId)
+        val current = dao.getShiftWithSnapshot(expected.shift.id.toString())?.toDomainWrite()
+            ?: throw ConflictingLocalWriteException(
+                "La jornada ya no existe o dejó de ser V2. Revisá el día nuevamente.",
+            )
+        if (current != expected) {
+            throw ConflictingLocalWriteException(
+                "La jornada cambió mientras confirmabas la eliminación. Revisala nuevamente.",
+            )
+        }
+        database.shiftNoveltyDao().deleteLinksToShift(expected.shift.id.toString())
+        if (dao.deleteShiftAndOwnedSnapshot(expected.shift.id.toString()) != 1) {
+            missingShift(expected.shift.id)
         }
         database.requireValidV2LocalData()
     }
@@ -95,6 +115,7 @@ internal class RoomV2ShiftRepository(
     override suspend fun applyV2Batch(
         mutation: V2ShiftBatchMutation,
         expectedOccupancy: ShiftOccupancyExpectation,
+        expectedUpdates: V2ShiftWriteExpectation,
     ): Unit = writeShiftData(
         "No se pudo guardar el lote de jornadas 2.0.",
     ) {
@@ -104,10 +125,12 @@ internal class RoomV2ShiftRepository(
             .mapTo(hashSetOf()) { write -> write.shift.localStartDate }
         val expectedIds = expectedOccupancy.observedShifts
             .mapTo(hashSetOf()) { version -> version.shiftId }
+        val updatedIds = mutation.shiftsToUpdate.mapTo(linkedSetOf()) { it.shift.id }
         if (
             writeDates.any { it !in expectedOccupancy.startDateInclusive..expectedOccupancy.endDateInclusive } ||
             !expectedIds.containsAll(mutation.shiftIdsToDelete) ||
-            !expectedIds.containsAll(mutation.shiftsToUpdate.map { it.shift.id })
+            !expectedIds.containsAll(updatedIds) ||
+            expectedUpdates.writesById.keys != updatedIds
         ) {
             invalid("La ocupacion revisada no cubre todas las jornadas del lote.")
         }
@@ -144,8 +167,18 @@ internal class RoomV2ShiftRepository(
         }
         mutation.shiftsToUpdate.forEach { write ->
             val existing = requireExistingV2Write(write.shift.id)
+            if (existing != expectedUpdates.writesById[write.shift.id]) {
+                throw ConflictingLocalWriteException(
+                    "La jornada cambió mientras revisabas la edición. Revisala nuevamente antes de guardar.",
+                )
+            }
             validateUpdateIdentity(existing, write)
-            validateIncomingWrite(write)
+            if (isExactV2PositionOnlyEdit(existing, write)) {
+                write.shift.validated()
+                requireExactShiftSnapshotInstants(write.shift)
+            } else {
+                validateIncomingWrite(write)
+            }
         }
 
         mutation.shiftIdsToDelete.forEach { id ->
@@ -254,9 +287,11 @@ internal class RoomV2ShiftRepository(
             existing.shift.id != updated.shift.id ||
             existing.shift.createdAt != updated.shift.createdAt ||
             existing.shift.status != updated.shift.status ||
-            updated.shift.updatedAt.isBefore(existing.shift.updatedAt)
+            existing.shift.localStartDate != updated.shift.localStartDate ||
+            existing.shift.zoneId != updated.shift.zoneId ||
+            !updated.shift.updatedAt.isAfter(existing.shift.updatedAt)
         ) {
-            invalid("Editar una jornada debe conservar UUID, creación y estado.")
+            invalid("Editar una jornada debe conservar UUID, fecha, zona, creación y estado.")
         }
     }
 

@@ -5,20 +5,30 @@ import android.database.sqlite.SQLiteDatabase
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.blackatsystems.miguardia.core.domain.model.FormalShiftChange
+import com.blackatsystems.miguardia.core.domain.model.ExplicitDayStatusType
+import com.blackatsystems.miguardia.core.domain.model.Holiday
+import com.blackatsystems.miguardia.core.domain.model.MedicalLeave
 import com.blackatsystems.miguardia.core.domain.model.Objective
 import com.blackatsystems.miguardia.core.domain.model.ShiftBatchMutation
 import com.blackatsystems.miguardia.core.domain.model.ShiftNovelty
 import com.blackatsystems.miguardia.core.domain.model.ShiftNoveltyMutation
 import com.blackatsystems.miguardia.core.domain.model.ShiftNoveltyType
+import com.blackatsystems.miguardia.core.domain.model.ShiftNote
+import com.blackatsystems.miguardia.core.domain.model.ShiftNotificationConfig
 import com.blackatsystems.miguardia.core.domain.model.ShiftOccupancyExpectation
 import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
 import com.blackatsystems.miguardia.core.domain.model.V2ShiftBatchMutation
+import com.blackatsystems.miguardia.core.domain.model.V2ShiftLookup
 import com.blackatsystems.miguardia.core.domain.model.V2ShiftWrite
+import com.blackatsystems.miguardia.core.domain.model.V2ShiftWriteExpectation
+import com.blackatsystems.miguardia.core.domain.model.Vacation
 import com.blackatsystems.miguardia.core.domain.model.toOperationalSnapshot
+import com.blackatsystems.miguardia.core.database.mapping.toEntity
 import com.blackatsystems.miguardia.core.domain.repository.InvalidLocalDataException
 import com.blackatsystems.miguardia.core.domain.repository.LegacyShiftCannotBeUpdatedAsV2Exception
 import com.blackatsystems.miguardia.core.domain.shift.buildV2ShiftWrite
 import com.blackatsystems.miguardia.core.domain.shift.editV2ShiftWrite
+import com.blackatsystems.miguardia.core.domain.shift.editV2ShiftPositionOnly
 import com.blackatsystems.miguardia.core.domain.work.AvailabilityLabel
 import com.blackatsystems.miguardia.core.domain.work.EffectiveRevision
 import com.blackatsystems.miguardia.core.domain.work.FirstWorkSet
@@ -44,6 +54,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -478,6 +490,26 @@ class V2ShiftPersistenceInstrumentedTest {
     }
 
     @Test
+    fun v2BatchStillRejectsADeleteOnlyMutationWithoutChangingThePair() = runBlocking {
+        val fixture = createCatalog()
+        val existing = write(
+            id = uuid(403),
+            date = LocalDate.of(2026, 1, 5),
+            fixture = fixture,
+            configuration = resolvedConfigurationAt(LocalDate.of(2026, 1, 5)),
+            createdAt = FIXED_INSTANT.plusSeconds(1),
+        )
+        store.v2Shifts.insert(existing)
+
+        assertSuspendThrows<InvalidLocalDataException> {
+            applyBatch(V2ShiftBatchMutation(shiftIdsToDelete = setOf(existing.shift.id)))
+        }
+
+        assertEquals(existing.shift, store.shifts.getById(existing.shift.id))
+        assertEquals(existing.snapshot, store.v2Shifts.getWorkSnapshot(existing.shift.id))
+    }
+
+    @Test
     fun staleOccupancyExpectationRejectsASecondWriterInsideTheTransaction() = runBlocking {
         val fixture = createCatalog()
         val date = LocalDate.of(2026, 1, 6)
@@ -827,6 +859,350 @@ class V2ShiftPersistenceInstrumentedTest {
         Unit
     }
 
+    @Test
+    fun positionOnlyBatchKeepsArchivedHistoricalPairAndRollsBackBeforeReopen() = runBlocking {
+        val fixture = createCatalog()
+        val date = LocalDate.of(2026, 1, 12)
+        val original = write(
+            id = uuid(601),
+            date = date,
+            fixture = fixture,
+            configuration = resolvedConfigurationAt(date),
+            createdAt = FIXED_INSTANT.plusSeconds(1),
+        )
+        store.v2Shifts.insert(original)
+        store.workConfiguration.addRevision(
+            TIMELINE_ID,
+            configurationRevision(uuid(602), date.plusDays(1)),
+        )
+        store.workCatalog.setWorkTemplateActive(
+            fixture.template.id,
+            isActive = false,
+            updatedAt = FIXED_INSTANT.plusSeconds(2),
+        )
+        store.workCatalog.setWorkTypeActive(
+            fixture.type.id,
+            isActive = false,
+            updatedAt = FIXED_INSTANT.plusSeconds(3),
+        )
+        store.workCatalog.setWorkPlaceActive(
+            fixture.place.id,
+            isActive = false,
+            updatedAt = FIXED_INSTANT.plusSeconds(4),
+        )
+        val updated = editV2ShiftPositionOnly(
+            original = original,
+            position = "Puesto histórico corregido",
+            updatedAt = original.shift.updatedAt.plusSeconds(5),
+        )
+        val mutation = V2ShiftBatchMutation(shiftsToUpdate = listOf(updated))
+        val occupancy = currentOccupancyFor(mutation)
+        val expected = V2ShiftWriteExpectation.capture(listOf(original))
+        database.openHelper.writableDatabase.execSQL(
+            """CREATE TRIGGER reject_position_snapshot_update
+                BEFORE UPDATE ON shift_work_snapshots
+                WHEN NEW.shiftId = '${original.shift.id}'
+                BEGIN SELECT RAISE(ABORT, 'forced snapshot update failure'); END""".trimIndent(),
+        )
+
+        assertSuspendThrows<InvalidLocalDataException> {
+            store.v2Shifts.applyV2Batch(mutation, occupancy, expected)
+        }
+        assertEquals(original.shift, store.shifts.getById(original.shift.id))
+        assertEquals(original.snapshot, store.v2Shifts.getWorkSnapshot(original.shift.id))
+
+        database.openHelper.writableDatabase.execSQL("DROP TRIGGER reject_position_snapshot_update")
+        store.v2Shifts.applyV2Batch(mutation, occupancy, expected)
+        store.close()
+        openStore()
+        assertEquals(updated.shift, store.shifts.getById(updated.shift.id))
+        assertEquals(original.snapshot, store.v2Shifts.getWorkSnapshot(updated.shift.id))
+
+        val forbiddenArchivedSourceChange = updated.copy(
+            shift = updated.shift.copy(
+                colorArgbSnapshot = updated.shift.colorArgbSnapshot xor 0x00010101,
+                updatedAt = updated.shift.updatedAt.plusMillis(1),
+            ),
+        )
+        assertSuspendThrows<InvalidLocalDataException> {
+            store.v2Shifts.applyV2Batch(
+                V2ShiftBatchMutation(shiftsToUpdate = listOf(forbiddenArchivedSourceChange)),
+                currentOccupancyFor(V2ShiftBatchMutation(shiftsToUpdate = listOf(forbiddenArchivedSourceChange))),
+                V2ShiftWriteExpectation.capture(listOf(updated)),
+            )
+        }
+        assertEquals(updated.shift, store.shifts.getById(updated.shift.id))
+        assertEquals(original.snapshot, store.v2Shifts.getWorkSnapshot(updated.shift.id))
+    }
+
+    @Test
+    fun fullPairCompareAndSetRejectsAConcurrentPositionChangeInTheSameVersion() = runBlocking {
+        val fixture = createCatalog()
+        val date = LocalDate.of(2026, 1, 13)
+        val original = write(
+            id = uuid(611),
+            date = date,
+            fixture = fixture,
+            configuration = resolvedConfigurationAt(date),
+            createdAt = FIXED_INSTANT.plusSeconds(1),
+        )
+        store.v2Shifts.insert(original)
+        val candidate = editV2ShiftPositionOnly(
+            original = original,
+            position = "Borrador",
+            updatedAt = original.shift.updatedAt.plusMillis(1),
+        )
+        val mutation = V2ShiftBatchMutation(shiftsToUpdate = listOf(candidate))
+        val occupancy = currentOccupancyFor(mutation)
+        database.openHelper.writableDatabase.execSQL(
+            "UPDATE shifts SET position = 'Cambio concurrente' WHERE id = '${original.shift.id}'",
+        )
+
+        assertSuspendThrows<ConflictingLocalWriteException> {
+            store.v2Shifts.applyV2Batch(
+                mutation,
+                occupancy,
+                V2ShiftWriteExpectation.capture(listOf(original)),
+            )
+        }
+
+        assertEquals("Cambio concurrente", store.shifts.getById(original.shift.id)?.position)
+        assertEquals(original.shift.updatedAt, store.shifts.getById(original.shift.id)?.updatedAt)
+        assertEquals(original.snapshot, store.v2Shifts.getWorkSnapshot(original.shift.id))
+    }
+
+    @Test
+    fun fullPairCompareAndSetRejectsAConcurrentSnapshotChangeInTheSameVersion() = runBlocking {
+        val fixture = createCatalog()
+        val date = LocalDate.of(2026, 1, 13)
+        val original = write(
+            id = uuid(612),
+            date = date,
+            fixture = fixture,
+            configuration = resolvedConfigurationAt(date),
+            createdAt = FIXED_INSTANT.plusSeconds(1),
+        )
+        store.v2Shifts.insert(original)
+        val candidate = editV2ShiftPositionOnly(
+            original = original,
+            position = "Borrador",
+            updatedAt = original.shift.updatedAt.plusMillis(1),
+        )
+        val mutation = V2ShiftBatchMutation(shiftsToUpdate = listOf(candidate))
+        val occupancy = currentOccupancyFor(mutation)
+        database.openHelper.writableDatabase.execSQL(
+            "UPDATE shift_work_snapshots SET workTypeNameSnapshot = 'Cambio concurrente' " +
+                "WHERE shiftId = '${original.shift.id}'",
+        )
+
+        assertSuspendThrows<ConflictingLocalWriteException> {
+            store.v2Shifts.applyV2Batch(
+                mutation,
+                occupancy,
+                V2ShiftWriteExpectation.capture(listOf(original)),
+            )
+        }
+
+        assertEquals(original.shift, store.shifts.getById(original.shift.id))
+        assertEquals(
+            "Cambio concurrente",
+            store.v2Shifts.getWorkSnapshot(original.shift.id)?.workTypeNameSnapshot,
+        )
+    }
+
+    @Test
+    fun exactDeleteCasRemovesItsOwnedMatrixAndExternalLinkButPreservesEverythingElse() = runBlocking {
+        val fixture = createCatalog()
+        val date = LocalDate.of(2026, 1, 14)
+        val target = write(
+            id = uuid(621),
+            date = date,
+            fixture = fixture,
+            configuration = resolvedConfigurationAt(date),
+            createdAt = FIXED_INSTANT.plusSeconds(1),
+        )
+        val companion = write(
+            id = uuid(622),
+            date = date,
+            fixture = fixture,
+            configuration = resolvedConfigurationAt(date),
+            createdAt = FIXED_INSTANT.plusSeconds(2),
+        )
+        store.v2Shifts.insert(target)
+        store.v2Shifts.insert(companion)
+        val targetNote = ShiftNote(uuid(623), target.shift.id, "Nota ficticia objetivo", FIXED_INSTANT, FIXED_INSTANT)
+        val companionNote = ShiftNote(uuid(624), companion.shift.id, "Nota ficticia compañera", FIXED_INSTANT, FIXED_INSTANT)
+        store.shiftNotes.insert(targetNote)
+        store.shiftNotes.insert(companionNote)
+        val ownedNovelty = ShiftNovelty(
+            uuid(625), target.shift.id, ShiftNoveltyType.ADDITIONAL_TIME,
+            "Novedad ficticia objetivo", null, FIXED_INSTANT, FIXED_INSTANT,
+        )
+        val companionNovelty = ShiftNovelty(
+            uuid(626), companion.shift.id, ShiftNoveltyType.ADDITIONAL_TIME,
+            "Novedad ficticia compañera", null, FIXED_INSTANT, FIXED_INSTANT,
+        )
+        store.shiftNovelties.applyMutation(ShiftNoveltyMutation.SaveInformative(ownedNovelty))
+        store.shiftNovelties.applyMutation(ShiftNoveltyMutation.SaveInformative(companionNovelty))
+        val externalLink = ShiftNovelty(
+            uuid(627), companion.shift.id, ShiftNoveltyType.SECOND_SHIFT,
+            null, target.shift.id, FIXED_INSTANT, FIXED_INSTANT,
+        )
+        database.shiftNoveltyDao().insert(externalLink.toEntity())
+        val formal = FormalShiftChange(
+            uuid(628), target.shift.id, scheduleChanged = true, objectiveChanged = false,
+            description = "Historial ficticio", original = target.shift.toOperationalSnapshot(),
+            final = target.shift.toOperationalSnapshot(), createdAt = FIXED_INSTANT, updatedAt = FIXED_INSTANT,
+        )
+        database.shiftNoveltyDao().upsertFormalChange(formal.toEntity())
+        store.shiftNotificationConfigs.replace(ShiftNotificationConfig(target.shift.id, listOf(30L, 60L)))
+        store.shiftNotificationConfigs.replace(ShiftNotificationConfig(companion.shift.id, listOf(90L)))
+        val undefinedDate = date.plusDays(1)
+        store.explicitDayStatuses.set(date, ExplicitDayStatusType.DAY_OFF)
+        store.explicitDayStatuses.set(undefinedDate, ExplicitDayStatusType.UNDEFINED)
+        val holiday = Holiday(uuid(629), date, "Feriado ficticio", FIXED_INSTANT, FIXED_INSTANT)
+        val vacation = Vacation(uuid(630), date, date, FIXED_INSTANT, FIXED_INSTANT)
+        val medicalLeaveDate = date.plusDays(2)
+        val medicalLeave = MedicalLeave(
+            uuid(634),
+            medicalLeaveDate,
+            medicalLeaveDate,
+            "Dato medico ficticio",
+            FIXED_INSTANT,
+            FIXED_INSTANT,
+        )
+        store.holidays.insert(holiday)
+        store.vacations.insert(vacation)
+        store.medicalLeaves.create(medicalLeave)
+        database.openHelper.writableDatabase.execSQL(
+            "UPDATE shifts SET position = 'Cambio concurrente' WHERE id = '${target.shift.id}'",
+        )
+
+        assertSuspendThrows<ConflictingLocalWriteException> {
+            store.v2Shifts.deleteShift(target)
+        }
+        assertNotNull(store.shifts.getById(target.shift.id))
+        assertNotNull(store.shiftNovelties.getById(externalLink.id))
+
+        val current = (store.v2Shifts.getShift(target.shift.id) as V2ShiftLookup.V2).write
+        store.v2Shifts.deleteShift(current)
+        store.close()
+        openStore()
+
+        assertEquals(V2ShiftLookup.Missing, store.v2Shifts.getShift(target.shift.id))
+        assertNull(store.v2Shifts.getWorkSnapshot(target.shift.id))
+        assertTrue(store.shiftNotes.observeForShift(target.shift.id).first().isEmpty())
+        assertTrue(store.shiftNovelties.observeForShift(target.shift.id).first().isEmpty())
+        assertNull(store.shiftNovelties.observeFormalChange(target.shift.id).first())
+        assertNull(store.shiftNovelties.getById(externalLink.id))
+        assertNull(store.shiftNotificationConfigs.getForShift(target.shift.id))
+
+        assertEquals(companion.shift, store.shifts.getById(companion.shift.id))
+        assertEquals(companion.snapshot, store.v2Shifts.getWorkSnapshot(companion.shift.id))
+        assertEquals(companionNote, store.shiftNotes.getById(companionNote.id))
+        assertEquals(companionNovelty, store.shiftNovelties.getById(companionNovelty.id))
+        assertEquals(listOf(90L), store.shiftNotificationConfigs.getForShift(companion.shift.id)?.reminderLeadMinutes)
+        assertNotNull(store.workConfiguration.get())
+        assertNotNull(store.workCatalog.getWorkTemplate(fixture.template.id))
+        assertEquals(
+            listOf(ExplicitDayStatusType.DAY_OFF, ExplicitDayStatusType.UNDEFINED),
+            store.explicitDayStatuses.observeBetween(date, undefinedDate).first().map { it.type },
+        )
+        assertEquals(holiday, store.holidays.getByDate(date))
+        assertEquals(vacation, store.vacations.getById(vacation.id))
+        assertEquals(
+            listOf(medicalLeave),
+            store.medicalLeaves.observeIntersecting(medicalLeaveDate, medicalLeaveDate).first(),
+        )
+    }
+
+    @Test
+    fun deleteCasTreatsADisappearedTargetAsAConflict() = runBlocking {
+        val fixture = createCatalog()
+        val date = LocalDate.of(2026, 1, 15)
+        val target = write(
+            id = uuid(639),
+            date = date,
+            fixture = fixture,
+            configuration = resolvedConfigurationAt(date),
+            createdAt = FIXED_INSTANT.plusSeconds(1),
+        )
+        store.v2Shifts.insert(target)
+        database.shiftDao().deleteByIds(listOf(target.shift.id.toString()))
+
+        assertSuspendThrows<ConflictingLocalWriteException> {
+            store.v2Shifts.deleteShift(target)
+        }
+
+        assertEquals(V2ShiftLookup.Missing, store.v2Shifts.getShift(target.shift.id))
+    }
+
+    @Test
+    fun failedDeleteRollsBackTheExternalLinkAndCompletePair() = runBlocking {
+        val fixture = createCatalog()
+        val date = LocalDate.of(2026, 1, 15)
+        val target = write(
+            id = uuid(631),
+            date = date,
+            fixture = fixture,
+            configuration = resolvedConfigurationAt(date),
+            createdAt = FIXED_INSTANT.plusSeconds(1),
+        )
+        val owner = write(
+            id = uuid(632),
+            date = date,
+            fixture = fixture,
+            configuration = resolvedConfigurationAt(date),
+            createdAt = FIXED_INSTANT.plusSeconds(2),
+        )
+        store.v2Shifts.insert(target)
+        store.v2Shifts.insert(owner)
+        val link = ShiftNovelty(
+            uuid(633), owner.shift.id, ShiftNoveltyType.SECOND_SHIFT,
+            null, target.shift.id, FIXED_INSTANT, FIXED_INSTANT,
+        )
+        database.shiftNoveltyDao().insert(link.toEntity())
+        database.openHelper.writableDatabase.execSQL(
+            """CREATE TRIGGER reject_exact_v2_delete
+                BEFORE DELETE ON shifts
+                WHEN OLD.id = '${target.shift.id}'
+                BEGIN SELECT RAISE(ABORT, 'forced delete failure'); END""".trimIndent(),
+        )
+
+        assertSuspendThrows<InvalidLocalDataException> {
+            store.v2Shifts.deleteShift(target)
+        }
+
+        assertEquals(target.shift, store.shifts.getById(target.shift.id))
+        assertEquals(target.snapshot, store.v2Shifts.getWorkSnapshot(target.shift.id))
+        assertEquals(link, store.shiftNovelties.getById(link.id))
+        assertEquals(owner.shift, store.shifts.getById(owner.shift.id))
+    }
+
+    @Test
+    fun lookupDistinguishesMissingLegacyAndV2Rows() = runBlocking {
+        val fixture = createCatalog()
+        val date = LocalDate.of(2026, 1, 16)
+        val v2 = write(
+            id = uuid(641),
+            date = date,
+            fixture = fixture,
+            configuration = resolvedConfigurationAt(date),
+            createdAt = FIXED_INSTANT.plusSeconds(1),
+        )
+        val legacy = v2.shift.copy(
+            id = uuid(642),
+            createdAt = FIXED_INSTANT.plusSeconds(2),
+            updatedAt = FIXED_INSTANT.plusSeconds(2),
+        )
+        store.v2Shifts.insert(v2)
+        store.shifts.insert(legacy)
+
+        assertEquals(V2ShiftLookup.V2(v2), store.v2Shifts.getShift(v2.shift.id))
+        assertEquals(V2ShiftLookup.LegacyV1(legacy), store.v2Shifts.getShift(legacy.id))
+        assertEquals(V2ShiftLookup.Missing, store.v2Shifts.getShift(uuid(643)))
+    }
+
     private suspend fun createCatalog(): CatalogFixture {
         val initialRevision = configurationRevision(INITIAL_REVISION_ID, CONFIGURATION_DATE)
         store.workConfiguration.createInitial(TIMELINE_ID, initialRevision)
@@ -894,9 +1270,13 @@ class V2ShiftPersistenceInstrumentedTest {
         )
 
     private suspend fun applyBatch(mutation: V2ShiftBatchMutation) {
+        val expectedUpdates = mutation.shiftsToUpdate.map { candidate ->
+            (store.v2Shifts.getShift(candidate.shift.id) as V2ShiftLookup.V2).write
+        }
         store.v2Shifts.applyV2Batch(
             mutation = mutation,
             expectedOccupancy = currentOccupancyFor(mutation),
+            expectedUpdates = V2ShiftWriteExpectation.capture(expectedUpdates),
         )
     }
 

@@ -15,6 +15,7 @@ import com.blackatsystems.miguardia.core.domain.work.normalizeOptionalWorkText
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import java.time.temporal.ChronoUnit
 import java.util.UUID
 
 data class V2ShiftBatchPlan(
@@ -94,9 +95,10 @@ fun editV2ShiftWrite(
     position: String?,
     updatedAt: Instant,
 ): V2ShiftWrite {
-    require(!updatedAt.isBefore(original.shift.updatedAt)) {
-        "La actualizacion de la jornada no puede retroceder en el tiempo"
+    require(date == original.shift.localStartDate) {
+        "Este editor no puede mover una jornada a otra fecha"
     }
+    val persistedUpdate = nextPersistedV2ShiftUpdate(original.shift.updatedAt, updatedAt)
     val rebuilt = buildV2ShiftWrite(
         id = original.shift.id,
         date = date,
@@ -106,7 +108,7 @@ fun editV2ShiftWrite(
         template = template,
         configurationContext = configurationContext,
         position = position,
-        timestamp = updatedAt,
+        timestamp = persistedUpdate,
         zoneId = original.shift.zoneId,
     )
     return rebuilt.copy(
@@ -115,6 +117,49 @@ fun editV2ShiftWrite(
             createdAt = original.shift.createdAt,
         ),
     )
+}
+
+fun editV2ShiftPositionOnly(
+    original: V2ShiftWrite,
+    position: String?,
+    updatedAt: Instant,
+): V2ShiftWrite {
+    val normalizedPosition = normalizeOptionalWorkText(position)
+    require(normalizedPosition != original.shift.position) {
+        "La correccion de puesto debe modificar el valor confirmado"
+    }
+    return original.copy(
+        shift = original.shift.copy(
+            position = normalizedPosition,
+            updatedAt = nextPersistedV2ShiftUpdate(original.shift.updatedAt, updatedAt),
+        ),
+    )
+}
+
+fun isExactV2PositionOnlyEdit(
+    original: V2ShiftWrite,
+    updated: V2ShiftWrite,
+): Boolean {
+    if (updated.snapshot != original.snapshot) return false
+    if (!updated.shift.updatedAt.isAfter(original.shift.updatedAt)) return false
+    if (updated.shift.position == original.shift.position) return false
+    return updated.shift == original.shift.copy(
+        position = normalizeOptionalWorkText(updated.shift.position),
+        updatedAt = updated.shift.updatedAt,
+    )
+}
+
+private fun nextPersistedV2ShiftUpdate(
+    original: Instant,
+    candidate: Instant,
+): Instant {
+    val storedOriginal = original.truncatedTo(ChronoUnit.MILLIS)
+    val storedCandidate = candidate.truncatedTo(ChronoUnit.MILLIS)
+    return if (storedCandidate.isAfter(storedOriginal)) {
+        storedCandidate
+    } else {
+        storedOriginal.plusMillis(1)
+    }
 }
 
 fun planV2ShiftBatch(

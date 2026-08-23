@@ -175,19 +175,18 @@ internal class NotificationReconciler(
         dismissed.forEach { id ->
             if (isCurrentlyEligibleForDismissal(id, now)) retainedDismissed += id
         }
-        retainedDismissed.forEach(presenter::cancel)
-        val shouldDisplay = buildSet {
-            if (source.preferences.enabled && systemAccess.read().notificationPermissionGranted) {
-                addAll(displayed.filter { it in eligibleById && it !in retainedDismissed })
-                addAll(
-                    eligibleById.values
-                        .filter { it.startAt <= now && it.id.toString() !in retainedDismissed }
-                        .map { it.id.toString() },
-                )
-            }
-        }
-        (displayed - shouldDisplay).forEach(presenter::cancel)
-        shouldDisplay.forEach { id ->
+        val visibility = reconcileNotificationVisibility(
+            notificationsEnabled = source.preferences.enabled,
+            notificationPermissionGranted = systemAccess.read().notificationPermissionGranted,
+            eligibleShiftIds = eligibleById.keys,
+            startedEligibleShiftIds = eligibleById.values
+                .filter { it.startAt <= now }
+                .mapTo(linkedSetOf()) { it.id.toString() },
+            displayedShiftIds = displayed,
+            retainedDismissedShiftIds = retainedDismissed,
+        )
+        visibility.shiftIdsToCancel.forEach(presenter::cancel)
+        visibility.shiftIdsToDisplay.forEach { id ->
             eligibleById[id]?.let { shift ->
                 val weatherText = if (source.preferences.privacy == NotificationPrivacy.COMPLETE) {
                     weatherRuntime.notificationTextFromCache(shift, now)
@@ -197,9 +196,9 @@ internal class NotificationReconciler(
                 presenter.show(shift, now, source.preferences, weatherText)
             }
         }
-        presenter.updateGroupSummary(shouldDisplay.size, source.preferences)
-        preferences.setDisplayedShiftIds(shouldDisplay)
-        preferences.setDismissedShiftIds(retainedDismissed)
+        presenter.updateGroupSummary(visibility.shiftIdsToDisplay.size, source.preferences)
+        preferences.setDisplayedShiftIds(visibility.shiftIdsToDisplay)
+        preferences.setDismissedShiftIds(visibility.retainedDismissedShiftIds)
     }
 
     private suspend fun isCurrentlyEligibleForDismissal(shiftId: String, now: java.time.Instant): Boolean {

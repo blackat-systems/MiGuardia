@@ -5,6 +5,7 @@ import com.blackatsystems.miguardia.core.domain.work.WorkTypeBehavior
 import com.blackatsystems.miguardia.core.domain.work.normalizeRequiredWorkText
 import java.time.Instant
 import java.time.LocalDate
+import java.util.Collections
 import java.util.UUID
 
 data class ShiftWorkSnapshot(
@@ -40,6 +41,39 @@ data class V2ShiftWrite(
         require(shift.sourceObjectiveId == snapshot.objectiveId) {
             "La jornada y su fotografia deben compartir el objetivo fisico"
         }
+    }
+}
+
+sealed interface V2ShiftLookup {
+    data object Missing : V2ShiftLookup
+
+    data class LegacyV1(
+        val shift: Shift,
+    ) : V2ShiftLookup
+
+    data class V2(
+        val write: V2ShiftWrite,
+    ) : V2ShiftLookup
+}
+
+@ConsistentCopyVisibility
+data class V2ShiftWriteExpectation private constructor(
+    val writesById: Map<UUID, V2ShiftWrite>,
+) {
+    companion object {
+        fun capture(writes: Iterable<V2ShiftWrite>): V2ShiftWriteExpectation {
+            val copied = writes.toList()
+            require(copied.map { it.shift.id }.distinct().size == copied.size) {
+                "Una expectativa V2 no puede repetir una jornada"
+            }
+            return V2ShiftWriteExpectation(
+                writesById = Collections.unmodifiableMap(
+                    copied.associateByTo(linkedMapOf()) { it.shift.id },
+                ),
+            )
+        }
+
+        val EMPTY: V2ShiftWriteExpectation = capture(emptyList())
     }
 }
 

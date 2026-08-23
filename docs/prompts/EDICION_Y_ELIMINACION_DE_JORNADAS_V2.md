@@ -1,11 +1,11 @@
 # Edición y eliminación individual de jornadas V2
 
-- Estado: **HABILITADO — PENDIENTE DE IMPLEMENTACIÓN**
+- Estado: **CERRADO — INTEGRADO Y VERIFICADO POR MAIN**
 - Fecha: 2026-08-23
 - Rama obligatoria: `codex/miguardia-2.0`
 - Proyecto obligatorio: `C:\Users\Joaquin\Desktop\chatgptprojects\MiGuardia-2.0`
 - Base funcional cerrada: `ae57686`
-- HEAD de entrada: el checkpoint documental exacto que MAIN informe al abrir la tarea
+- HEAD de entrada: `59e3181d04cf55d02f92b4ae3b6c19c04cb3f972`
 - Nombre humano: **Corregir o eliminar una jornada cargada**
 
 ## ROL
@@ -631,3 +631,43 @@ La dependencia está lista para entregar a MAIN solamente cuando:
 - las pruebas proporcionales pasan con evidencia real;
 - la QA física autorizada queda ejecutada, QA retirada, producción intacta y el
   diff sin commit ni push para auditoría de MAIN.
+
+## CIERRE DE MAIN — 2026-08-23
+
+MAIN auditó el candidato entregado sobre `59e3181`, corrigió los defectos de
+integración encontrados y obtuvo tres reauditorías independientes de sólo
+lectura sin bloqueantes restantes.
+
+Correcciones de integración relevantes:
+
+- la expectativa del par V2 dejó de exponer mapas mutables;
+- el gating excluye `V2NeedsFirstSet` y las rutas V1;
+- las restauraciones reconstruyen las jornadas del día antes de mostrar etapas
+  bloqueantes;
+- los cambios de raíz o timeline invalidan lecturas viejas y no interrumpen una
+  escritura atómica ya iniciada;
+- doble toque, navegación Atrás con teclado abierto, error y reintento quedaron
+  cubiertos;
+- la visibilidad y el seguimiento de avisos se reconcilian por UUID sin retirar
+  jornadas compañeras;
+- Room prueba conflictos por cambios sólo en la fotografía y conserva `F/?`,
+  feriados, vacaciones y carpetas médicas ajenas al borrar.
+
+Validación final:
+
+- 347/347 pruebas JVM: 226 de dominio, 5 de base de datos y 116 de aplicación;
+- lint sin errores; 2 advertencias de versiones y 3 sugerencias heredadas;
+- APK Debug, APK AndroidTest QA y APK AndroidTest Room compilados;
+- 113/113 pruebas instrumentadas únicas en Samsung `SM-S938B`, API 36, más una
+  repetición verde del recorrido integral para revisión visual;
+- revisión visual directa de Calendario, jornada exacta, fecha fija, fotografía
+  histórica, edición, eliminación y confirmación;
+- Room v7 y el SHA-256 de `7.json` permanecen sin cambios;
+- QA, QA.test y el paquete de prueba Room quedaron ausentes; ningún comando
+  apuntó a producción;
+- `git diff --check` correcto y sin push, tag, merge, rebase o cambios en
+  `main`.
+
+La edición y eliminación individual queda cerrada. No se declaran terminadas
+las recurrencias, la edición masiva, el motor final de horas ni el Calendario
+final.

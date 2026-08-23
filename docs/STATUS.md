@@ -111,7 +111,7 @@ y auditada en
   por separado la vigencia por fecha y la ventana del período para no inventar
   un prorrateo antes del bloque de motor y Resumen.
 
-## Estado Git consolidado después de la carga manual
+## Estado Git consolidado actual
 
 - `main`, `origin/main` y `v1.0.0^{}` permanecen en MiGuardia 1.0.0, commit
   `82db6fd8eb2c511205968894dc9857a96b16ed20`.
@@ -134,14 +134,16 @@ y auditada en
   - `ca029d1`: coordinador documental secuencial.
   - `ae57686`: carga manual V2 auditada, probada e integrada.
   - `fe911e2`: flujo de handoffs y checkpoints locales de MAIN.
+  - `a63ca25`: continuidad del código V1 sin migración de sus datos.
+  - `59e3181`: contrato de edición y eliminación individual de jornadas V2.
 - Al iniciar la preparación documental, la rama todavía no poseía upstream. El
   push puntual posterior fue ejecutado y verificado: rama local y remoto privado
   coincidían en `836d908`; esa autorización no puede reutilizarse.
 - El dominio nuevo vive en `core/domain/.../work/`; no se recuperó el candidato
-  mensual descartado. Room v7 ya persiste su Corte A, la primera configuración
-  visible y la carga manual V2. La próxima superficie habilitada es la edición y
-  eliminación individual sobre Room v7. La bifurcación V1 queda como deuda antes
-  de ampliar nuevamente la persistencia o cerrar el candidato final.
+  mensual descartado. Room v7 ya persiste su Corte A, la primera configuración,
+  la carga manual y la edición o eliminación individual de jornadas V2. El
+  retiro de la bifurcación V1 queda como siguiente deuda técnica antes de ampliar
+  nuevamente la persistencia o cerrar el candidato final.
 
 ## Antecedente histórico descartado: candidato mensual
 
@@ -382,6 +384,67 @@ Evidencia completa en
 `docs/audits/2026-08-23-carga-manual-de-jornadas-v2.md` y decisión técnica en
 `docs/adr/0023-precondicion-transaccional-para-lotes-v2.md`.
 
+## Edición y eliminación individual de jornadas V2 — integrada por MAIN
+
+Una configuración `V2Ready` puede abrir el detalle de un día, elegir
+conscientemente `Editar este día` y operar sobre una jornada exacta, identificada
+como `Jornada N de M`. La fecha permanece visible e inmutable y las demás
+jornadas del día se conservan.
+
+- la edición permite elegir una plantilla activa compatible o cambiar solamente
+  el puesto o función conservando la fotografía histórica;
+- la eliminación exige una confirmación que vuelve a mostrar lugar, tipo,
+  horario, color y puesto de la jornada elegida;
+- `Shift` y `ShiftWorkSnapshot` se comparan y escriben o eliminan como un par
+  atómico;
+- la precondición transaccional compara el par histórico completo y la ocupación
+  vecina que se usó para revisar superposiciones y descansos;
+- un conflicto concurrente no sobreescribe ni borra: conserva el borrador y
+  obliga a revisar el estado actual;
+- borrador, revisión, advertencias y confirmación sobreviven a recreación con
+  `SavedStateHandle`; doble toque, error y reintento quedan protegidos;
+- el Calendario observado se actualiza al volver, sin una segunda fuente de
+  jornadas;
+- la reconciliación posterior retira la visibilidad y el seguimiento de una
+  jornada eliminada sin afectar sus compañeras;
+- carga manual, `V2NeedsFirstSet` y las rutas heredadas quedan separadas del
+  coordinador nuevo.
+
+La auditoría de MAIN corrigió antes de aceptar el bloque: expectativas mutables,
+una carrera entre cambios de raíz y escrituras, restauraciones sin las filas del
+día, entrada indebida desde `V2NeedsFirstSet`, navegación Atrás con teclado
+abierto, cobertura explícita de avisos y dos huecos de pruebas Room. Tres
+revisiones independientes de sólo lectura confirmaron después que no quedaban
+bloqueantes.
+
+Validación final de MAIN:
+
+- JVM: 347/347 —226 de dominio, 5 de base de datos y 116 de aplicación—;
+- lint: 0 errores, 2 advertencias de versiones y 3 sugerencias heredadas;
+- APK Debug, APK AndroidTest QA y APK AndroidTest de Room: compilados;
+- Samsung `SM-S938B`, API 36: 113/113 pruebas instrumentadas únicas —87 de
+  Compose y superficies vecinas, 2 de recreación, 1 recorrido integral de
+  edición, 1 de carga manual y 22 de persistencia Room—; el recorrido integral
+  de edición se repitió una vez para preparar la revisión visual, también verde;
+- revisión visual directa con datos ficticios: Calendario con una sola jornada,
+  `Jornada 1 de 1`, fecha fija, fotografía histórica, plantillas activas,
+  acciones separadas y confirmación exacta de borrado;
+- claro/oscuro, retrato/paisaje y zoom interno 100 %, 150 % y 200 % quedaron
+  cubiertos en el dispositivo por la instrumentación; la inspección visual
+  directa final fue en oscuro y retrato;
+- Room continúa en versión 7 y `7.json` conserva el SHA-256
+  `E3DA609D63A26609C9679DF49766714A74809CF2259CDA14FEBDF4E11D753C03`;
+- no cambiaron entidades, DAO, esquema, migraciones, Gradle, manifiesto,
+  permisos, `applicationId`, versión ni SDK;
+- `com.blackatsystems.miguardia.qa`, `.qa.test` y
+  `com.blackatsystems.miguardia.core.database.test` quedaron ausentes al
+  finalizar; ningún comando apuntó a producción;
+- API 26 física permanece pendiente por falta de un dispositivo disponible.
+
+Evidencia completa en
+`docs/audits/2026-08-23-edicion-eliminacion-jornadas-v2.md` y decisión técnica
+en `docs/adr/0025-cas-par-historico-edicion-eliminacion-v2.md`.
+
 ## Flujo vigente de MAIN
 
 - Joaquin entrega un handoff o pide preparar el prompt de una nueva tarea;
@@ -417,8 +480,6 @@ dependencia `Cargar jornadas`.
 
 ## Todavía no implementado
 
-- edición y eliminación individual de jornadas V2; su prompt está habilitado y
-  todavía no posee implementación ni handoff;
 - retiro del origen `MIGRATED_V1`, la activación, la adopción V1 y el gating de
   interfaz legado, junto con una base de persistencia exclusiva de V2;
 - persistencia de guardias pasivas o extras V2;
@@ -429,15 +490,15 @@ dependencia `Cargar jornadas`.
 
 ## Próximo paso
 
-Joaquin autorizó preparar el prompt **Corregir o eliminar una jornada cargada**.
-El contrato está habilitado en
-`docs/prompts/EDICION_Y_ELIMINACION_DE_JORNADAS_V2.md`; no existe todavía código
-candidato ni handoff para integrar. El bloque mantiene la fecha fija, modifica
-una sola jornada V2 y no incluye recurrencias ni edición masiva.
+La edición y eliminación individual quedó cerrada. El siguiente bloque técnico
+recomendado por la secuencia vigente es retirar el modo V1 residual y dejar una
+base de ejecución exclusivamente V2 antes de ampliar nuevamente la persistencia.
+Es una limpieza del código heredado, no una migración de datos ni un regreso a
+la experiencia anterior: la configuración, el Calendario, la carga y la edición
+V2 ya integradas deben conservarse.
 
-La limpieza del modo V1 continúa como deuda antes de ampliar nuevamente Room o
-cerrar el candidato final. No bloquea este incremento porque reutiliza Room v7
-sin cambiar su esquema.
+Todavía no hay un prompt habilitado para esa tarea. MAIN espera la indicación de
+Joaquin antes de escribirlo o abrir otra dependencia.
 
 Quedan como verificaciones separadas el recorrido físico de alarma exacta
 —sólo con permiso explícito— y API 26. Ya no corresponde una migración V1 real

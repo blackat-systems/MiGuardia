@@ -9,7 +9,9 @@ import com.blackatsystems.miguardia.core.domain.model.ShiftOccupancyExpectation
 import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
 import com.blackatsystems.miguardia.core.domain.model.ShiftWorkSnapshot
 import com.blackatsystems.miguardia.core.domain.model.V2ShiftBatchMutation
+import com.blackatsystems.miguardia.core.domain.model.V2ShiftLookup
 import com.blackatsystems.miguardia.core.domain.model.V2ShiftWrite
+import com.blackatsystems.miguardia.core.domain.model.V2ShiftWriteExpectation
 import com.blackatsystems.miguardia.core.domain.repository.MedicalLeaveRepository
 import com.blackatsystems.miguardia.core.domain.repository.ConflictingLocalWriteException
 import com.blackatsystems.miguardia.core.domain.repository.ObjectiveRepository
@@ -1024,12 +1026,14 @@ private class FakeV2Shifts : V2ShiftRepository {
     var calls: Int = 0
     override fun observeWorkSnapshot(shiftId: UUID): Flow<ShiftWorkSnapshot?> = MutableStateFlow(null)
     override suspend fun getWorkSnapshot(shiftId: UUID): ShiftWorkSnapshot? = null
+    override suspend fun getShift(shiftId: UUID): V2ShiftLookup = V2ShiftLookup.Missing
     override suspend fun insert(write: V2ShiftWrite) = error("No se usa")
     override suspend fun update(write: V2ShiftWrite) = error("No se usa")
-    override suspend fun deleteShift(shiftId: UUID) = error("No se usa")
+    override suspend fun deleteShift(expected: V2ShiftWrite) = error("No se usa")
     override suspend fun applyV2Batch(
         mutation: V2ShiftBatchMutation,
         expectedOccupancy: ShiftOccupancyExpectation,
+        expectedUpdates: V2ShiftWriteExpectation,
     ) {
         calls++
         gate?.await()

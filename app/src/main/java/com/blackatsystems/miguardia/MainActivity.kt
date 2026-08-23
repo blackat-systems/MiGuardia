@@ -26,6 +26,7 @@ import com.blackatsystems.miguardia.ui.calendar.CalendarViewModel
 import com.blackatsystems.miguardia.ui.exceptions.ExceptionsViewModel
 import com.blackatsystems.miguardia.ui.management.ManagementViewModel
 import com.blackatsystems.miguardia.ui.management.V2ManualShiftLoadViewModel
+import com.blackatsystems.miguardia.ui.management.V2ShiftEditViewModel
 import com.blackatsystems.miguardia.ui.nextevent.NextEventViewModel
 import com.blackatsystems.miguardia.ui.notifications.NotificationViewModel
 import com.blackatsystems.miguardia.ui.photos.PhotosViewModel
@@ -105,6 +106,18 @@ class MainActivity : ComponentActivity() {
     private val v2ManualShiftLoadViewModel: V2ManualShiftLoadViewModel by viewModels {
         val dataStore = (application as MiGuardiaApplication).localDataStore
         V2ManualShiftLoadViewModel.Factory(
+            configurationRepository = dataStore.workConfiguration,
+            catalogRepository = dataStore.workCatalog,
+            objectiveRepository = dataStore.objectives,
+            shiftRepository = dataStore.shifts,
+            medicalLeaveRepository = dataStore.medicalLeaves,
+            v2ShiftRepository = dataStore.v2Shifts,
+        )
+    }
+
+    private val v2ShiftEditViewModel: V2ShiftEditViewModel by viewModels {
+        val dataStore = (application as MiGuardiaApplication).localDataStore
+        V2ShiftEditViewModel.Factory(
             configurationRepository = dataStore.workConfiguration,
             catalogRepository = dataStore.workCatalog,
             objectiveRepository = dataStore.objectives,
@@ -194,6 +207,7 @@ class MainActivity : ComponentActivity() {
                     nextEventViewModel = nextEventViewModel,
                     managementViewModel = managementViewModel,
                     v2ManualShiftLoadViewModel = v2ManualShiftLoadViewModel,
+                    v2ShiftEditViewModel = v2ShiftEditViewModel,
                     summaryViewModel = summaryViewModel,
                     exceptionsViewModel = exceptionsViewModel,
                     vacationViewModel = vacationViewModel,

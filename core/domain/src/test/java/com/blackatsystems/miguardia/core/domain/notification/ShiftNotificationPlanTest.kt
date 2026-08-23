@@ -210,6 +210,64 @@ class ShiftNotificationPlanTest {
     }
 
     @Test
+    fun `editing only position does not duplicate or replace notification boundaries`() {
+        val shift = shift("00000000-0000-0000-0000-000000000021", "2027-01-01T19:00:00Z", "2027-01-02T07:00:00Z")
+        val original = plan(listOf(shift), global = listOf(360L))
+        val installed = original.boundaries.mapTo(linkedSetOf()) { it.identity.opaqueKey }
+        val positionOnly = plan(
+            listOf(shift.copy(position = "Puesto corregido", updatedAt = shift.updatedAt.plusMillis(1))),
+            global = listOf(360L),
+        )
+
+        val changes = reconcileNotificationPlan(installed, positionOnly)
+
+        assertTrue(changes.cancelOpaqueKeys.isEmpty())
+        assertTrue(changes.scheduleBoundaries.isEmpty())
+    }
+
+    @Test
+    fun `editing an interval replaces only that journey boundaries`() {
+        val target = shift("00000000-0000-0000-0000-000000000022", "2027-01-01T19:00:00Z", "2027-01-02T07:00:00Z")
+        val companion = shift("00000000-0000-0000-0000-000000000023", "2027-01-03T19:00:00Z", "2027-01-04T07:00:00Z")
+        val original = plan(listOf(target, companion), global = listOf(360L))
+        val installed = original.boundaries.mapTo(linkedSetOf()) { it.identity.opaqueKey }
+        val editedTarget = target.copy(
+            startAt = target.startAt.plusSeconds(3_600),
+            endAt = target.endAt.plusSeconds(3_600),
+            startTimeSnapshot = target.startTimeSnapshot.plusHours(1),
+            endTimeSnapshot = target.endTimeSnapshot.plusHours(1),
+            updatedAt = target.updatedAt.plusMillis(1),
+        )
+
+        val changes = reconcileNotificationPlan(
+            installed,
+            plan(listOf(editedTarget, companion), global = listOf(360L)),
+        )
+
+        assertTrue(changes.cancelOpaqueKeys.isNotEmpty())
+        assertTrue(changes.cancelOpaqueKeys.all { it.startsWith(target.id.toString()) })
+        assertTrue(changes.scheduleBoundaries.isNotEmpty())
+        assertTrue(changes.scheduleBoundaries.all { it.identity.shiftId == target.id })
+    }
+
+    @Test
+    fun `deleting a journey cancels its boundaries without touching companion boundaries`() {
+        val target = shift("00000000-0000-0000-0000-000000000024", "2027-01-01T19:00:00Z", "2027-01-02T07:00:00Z")
+        val companion = shift("00000000-0000-0000-0000-000000000025", "2027-01-03T19:00:00Z", "2027-01-04T07:00:00Z")
+        val original = plan(listOf(target, companion), global = listOf(360L))
+        val installed = original.boundaries.mapTo(linkedSetOf()) { it.identity.opaqueKey }
+
+        val changes = reconcileNotificationPlan(
+            installed,
+            plan(listOf(companion), global = listOf(360L)),
+        )
+
+        assertTrue(changes.cancelOpaqueKeys.isNotEmpty())
+        assertTrue(changes.cancelOpaqueKeys.all { it.startsWith(target.id.toString()) })
+        assertTrue(changes.scheduleBoundaries.isEmpty())
+    }
+
+    @Test
     fun `precision mode change forces deterministic rescheduling`() {
         val shift = shift("00000000-0000-0000-0000-000000000020", "2027-01-01T19:00:00Z", "2027-01-02T07:00:00Z")
         val desired = plan(listOf(shift), global = emptyList())

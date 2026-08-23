@@ -61,7 +61,7 @@ prevalecen para el estado operativo.
 | `LUGARES_TIPOS_PLANTILLAS_Y_PRIMERA_CARGA_V2.md` | **PAUSADO / REFERENCIA** | Contrato marco ya dividido: Corte A y primera apertura están cerrados; no debe reejecutarse completo |
 | `PRIMERA_APERTURA_Y_CONFIGURACION_LABORAL_VISIBLE_V2.md` | **CERRADO** | Primera pantalla de rubro y creación visible del primer lugar y horario integradas en `1f048643` |
 | `CARGA_MANUAL_DE_JORNADAS_V2.md` | **CERRADO** | La carga de jornadas nuevas desde horarios guardados fue auditada, probada e integrada por MAIN |
-| `EDICION_Y_ELIMINACION_DE_JORNADAS_V2.md` | **HABILITADO** | Corregir o eliminar una jornada V2 individual desde su día, sin moverla ni crear recurrencias |
+| `EDICION_Y_ELIMINACION_DE_JORNADAS_V2.md` | **CERRADO** | La edición y eliminación exacta de una jornada V2 fue auditada, probada e integrada por MAIN |
 
 ## Contratos históricos de MiGuardia 1.0
 
@@ -103,10 +103,10 @@ Joaquin indicó que quiere preparar o abrir la siguiente:
 2. **Cerrado:** lugares, tipos, plantillas y primera apertura visible — Corte A
    de contratos y Room v7, más la configuración inicial, verificados;
 3. **Cerrado:** carga manual V2 de jornadas nuevas sobre la única grilla;
-4. **Habilitado:** edición y eliminación individual de una jornada V2 en su
-   fecha original;
-5. retirar el modo V1 antes de ampliar nuevamente la persistencia, conservando
-   el código útil;
+4. **Cerrado:** edición y eliminación individual de una jornada V2 en su fecha
+   original;
+5. **Siguiente bloque planificado, todavía no habilitado:** retirar el modo V1
+   antes de ampliar nuevamente la persistencia, conservando el código útil;
 6. recurrencias y edición de una fecha o de todo lo futuro;
 7. horario real, extras y avance contra la referencia;
 8. disponibilidad, situaciones especiales y consolidación final del motor de

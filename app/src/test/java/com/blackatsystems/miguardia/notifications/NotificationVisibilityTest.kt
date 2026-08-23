@@ -58,6 +58,60 @@ class NotificationVisibilityTest {
         assertEquals(emptyList<Shift>(), result)
     }
 
+    @Test
+    fun deletedDismissedShiftIsNotRestorableWhileItsCompanionRemainsRestorable() {
+        val deleted = shift(DELETED_ID, NOW.plusSeconds(3600), NOW.plusSeconds(7200))
+        val companion = shift(COMPANION_ID, NOW.plusSeconds(7200), NOW.plusSeconds(10_800))
+
+        val result = restorableDismissedShifts(
+            now = NOW,
+            shifts = listOf(companion),
+            vacations = emptyList(),
+            configs = emptyList(),
+            dismissedShiftIds = setOf(deleted.id.toString(), companion.id.toString()),
+        )
+
+        assertEquals(listOf(companion.id), result.map(Shift::id))
+    }
+
+    @Test
+    fun deletedShiftCancelsVisibleTrackingWithoutTouchingItsCompanion() {
+        val deletedId = DELETED_ID.toString()
+        val companionId = COMPANION_ID.toString()
+
+        val result = reconcileNotificationVisibility(
+            notificationsEnabled = true,
+            notificationPermissionGranted = true,
+            eligibleShiftIds = setOf(companionId),
+            startedEligibleShiftIds = setOf(companionId),
+            displayedShiftIds = setOf(deletedId, companionId),
+            retainedDismissedShiftIds = emptySet(),
+        )
+
+        assertEquals(setOf(deletedId), result.shiftIdsToCancel)
+        assertEquals(setOf(companionId), result.shiftIdsToDisplay)
+        assertEquals(emptySet<String>(), result.retainedDismissedShiftIds)
+    }
+
+    @Test
+    fun retainedDismissalCancelsOnlyThatJourneyAndKeepsItsTracking() {
+        val dismissedId = DELETED_ID.toString()
+        val companionId = COMPANION_ID.toString()
+
+        val result = reconcileNotificationVisibility(
+            notificationsEnabled = true,
+            notificationPermissionGranted = true,
+            eligibleShiftIds = setOf(dismissedId, companionId),
+            startedEligibleShiftIds = setOf(dismissedId, companionId),
+            displayedShiftIds = setOf(dismissedId, companionId),
+            retainedDismissedShiftIds = setOf(dismissedId),
+        )
+
+        assertEquals(setOf(dismissedId), result.shiftIdsToCancel)
+        assertEquals(setOf(companionId), result.shiftIdsToDisplay)
+        assertEquals(setOf(dismissedId), result.retainedDismissedShiftIds)
+    }
+
     private fun shift(
         id: UUID,
         start: Instant,
@@ -94,5 +148,7 @@ class NotificationVisibilityTest {
         val ENDED_ID: UUID = UUID.fromString("00000000-0000-0000-0000-000000000904")
         val CANCELLED_ID: UUID = UUID.fromString("00000000-0000-0000-0000-000000000905")
         val VACATION_ID: UUID = UUID.fromString("00000000-0000-0000-0000-000000000906")
+        val DELETED_ID: UUID = UUID.fromString("00000000-0000-0000-0000-000000000907")
+        val COMPANION_ID: UUID = UUID.fromString("00000000-0000-0000-0000-000000000908")
     }
 }

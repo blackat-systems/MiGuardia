@@ -16,11 +16,15 @@ estado persistente ni cambiar el esquema para cerrar esta ventana.
 
 ## Decisión
 
-`V2ShiftRepository.applyV2Batch(...)` exige dos objetos separados:
+Para la carga de jornadas nuevas, `V2ShiftRepository.applyV2Batch(...)` exige
+dos objetos separados:
 
 1. `V2ShiftBatchMutation`, que describe las escrituras autorizadas;
 2. `ShiftOccupancyExpectation`, que fotografía las jornadas observadas durante
    la revisión mediante ID, fecha local, inicio, fin, estado y `updatedAt`.
+
+La firma admite además `expectedUpdates`, vacío por defecto para las altas. Las
+ediciones V2 lo usan para comparar el par histórico completo según ADR 0025.
 
 El coordinador captura la ocupación desde dos días antes de la primera fecha
 elegida hasta dos días después de la última, la misma ventana usada para

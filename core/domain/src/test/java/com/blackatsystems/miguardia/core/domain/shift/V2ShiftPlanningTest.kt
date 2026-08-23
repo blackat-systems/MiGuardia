@@ -6,6 +6,7 @@ import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
 import com.blackatsystems.miguardia.core.domain.model.ShiftWorkSnapshot
 import com.blackatsystems.miguardia.core.domain.model.V2ShiftBatchMutation
 import com.blackatsystems.miguardia.core.domain.model.V2ShiftWrite
+import com.blackatsystems.miguardia.core.domain.model.V2ShiftWriteExpectation
 import com.blackatsystems.miguardia.core.domain.repository.InvalidLocalDataException
 import com.blackatsystems.miguardia.core.domain.work.EffectiveRevision
 import com.blackatsystems.miguardia.core.domain.work.EffectiveDateTimeline
@@ -26,6 +27,7 @@ import java.time.LocalTime
 import java.time.ZoneId
 import java.util.UUID
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
@@ -67,22 +69,78 @@ class V2ShiftPlanningTest {
 
         val edited = editV2ShiftWrite(
             original = original,
-            date = DATE.plusDays(1),
+            date = DATE,
             objective = objective(),
             workPlace = place(),
             workType = newType,
             template = newTemplate,
-            configurationContext = configurationContext(DATE.plusDays(1)),
+            configurationContext = configurationContext(DATE),
             position = " Consultorio 2 ",
             updatedAt = NOW.plusSeconds(60),
         )
 
         assertEquals(original.shift.id, edited.shift.id)
         assertEquals(original.shift.createdAt, edited.shift.createdAt)
+        assertEquals(original.shift.localStartDate, edited.shift.localStartDate)
         assertEquals(ShiftStatus.ABSENT, edited.shift.status)
         assertEquals(OTHER_TYPE_ID, edited.snapshot.workTypeId)
         assertEquals("Guardia", edited.snapshot.workTypeNameSnapshot)
         assertEquals("Consultorio 2", edited.shift.position)
+    }
+
+    @Test
+    fun editorRejectsMovingTheOriginalDate() {
+        val original = build()
+
+        assertThrows(IllegalArgumentException::class.java) {
+            editV2ShiftWrite(
+                original = original,
+                date = DATE.plusDays(1),
+                objective = objective(),
+                workPlace = place(),
+                workType = type(),
+                template = template(),
+                configurationContext = configurationContext(DATE.plusDays(1)),
+                position = null,
+                updatedAt = NOW.plusSeconds(1),
+            )
+        }
+    }
+
+    @Test
+    fun equalOrOlderClockCreatesAMillisecondDistinctVersion() {
+        val original = build()
+
+        val sameClock = editV2ShiftPositionOnly(original, "Puesto A", original.shift.updatedAt)
+        val olderClock = editV2ShiftPositionOnly(original, "Puesto B", original.shift.updatedAt.minusSeconds(5))
+
+        assertEquals(original.shift.updatedAt.plusMillis(1), sameClock.shift.updatedAt)
+        assertEquals(original.shift.updatedAt.plusMillis(1), olderClock.shift.updatedAt)
+        assertTrue(isExactV2PositionOnlyEdit(original, sameClock))
+        assertTrue(isExactV2PositionOnlyEdit(original, olderClock))
+    }
+
+    @Test
+    fun positionOnlyEditPreservesTheCompleteHistoricalPair() {
+        val original = build()
+
+        val edited = editV2ShiftPositionOnly(
+            original = original,
+            position = "  Puesto   histórico  ",
+            updatedAt = NOW.plusSeconds(1),
+        )
+
+        assertEquals(original.snapshot, edited.snapshot)
+        assertEquals(
+            original.shift.copy(position = "Puesto histórico", updatedAt = edited.shift.updatedAt),
+            edited.shift,
+        )
+        assertFalse(
+            isExactV2PositionOnlyEdit(
+                original,
+                edited.copy(snapshot = edited.snapshot.copy(workTypeNameSnapshot = "Guardia")),
+            ),
+        )
     }
 
     @Test
@@ -206,22 +264,46 @@ class V2ShiftPlanningTest {
     }
 
     @Test
+    fun writeExpectationIsImmutableAndRejectsRepeatedIds() {
+        val write = build()
+        val expectation = V2ShiftWriteExpectation.capture(listOf(write))
+
+        @Suppress("UNCHECKED_CAST")
+        val exposedCapture = expectation.writesById as MutableMap<UUID, V2ShiftWrite>
+        assertThrows(UnsupportedOperationException::class.java) {
+            exposedCapture.clear()
+        }
+        assertEquals(write, expectation.writesById[write.shift.id])
+
+        @Suppress("UNCHECKED_CAST")
+        val exposedEmpty = V2ShiftWriteExpectation.EMPTY.writesById as MutableMap<UUID, V2ShiftWrite>
+        assertThrows(UnsupportedOperationException::class.java) {
+            exposedEmpty[write.shift.id] = write
+        }
+        assertTrue(V2ShiftWriteExpectation.EMPTY.writesById.isEmpty())
+
+        assertThrows(IllegalArgumentException::class.java) {
+            V2ShiftWriteExpectation.capture(listOf(write, write))
+        }
+    }
+
+    @Test
     fun editingBatchProducesAnUpdateAndNeverAnInsert() {
         val original = build()
         val edited = editV2ShiftWrite(
             original = original,
-            date = DATE.plusDays(1),
+            date = DATE,
             objective = objective(),
             workPlace = place(),
             workType = type(),
             template = template(),
-            configurationContext = configurationContext(DATE.plusDays(1)),
+            configurationContext = configurationContext(DATE),
             position = null,
             updatedAt = NOW.plusSeconds(1),
         )
 
         val plan = planV2ShiftBatch(
-            selectedDates = setOf(DATE.plusDays(1)),
+            selectedDates = setOf(DATE),
             existingShifts = listOf(original.shift),
             candidates = listOf(edited),
             policy = OccupiedDatePolicy.ADD_SECOND_SHIFT,
