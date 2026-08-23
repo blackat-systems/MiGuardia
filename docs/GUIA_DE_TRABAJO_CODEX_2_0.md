@@ -19,6 +19,7 @@ ruta aprobada de a un bloque por vez.
 05 — Primera configuración visible [CERRADA]
 06 — Cargar jornadas desde horarios guardados [CERRADA]
 07 — Coordinación de handoffs [ACTIVA / BAJO INDICACIÓN DE JOAQUIN]
+08 — Corregir o eliminar una jornada [HABILITADA / NO ABIERTA]
 ```
 
 No hace falta crear otro MAIN. La tarea actual mantiene la continuidad del
@@ -139,10 +140,10 @@ separado.
 2. reglas internas por fecha y referencias de horas;
 3. configuración persistente y primera apertura V2;
 4. lugares, tipos, plantillas y carga manual;
-5. retirar el modo V1 y dejar una base exclusiva de V2, reutilizando el código
-   que sirve;
-6. cambios de sector desde una fecha dentro de V2;
-7. recurrencias y edición del Calendario;
+5. editar o eliminar una jornada individual sin cambiar su fecha;
+6. retirar el modo V1 antes de ampliar nuevamente la base, reutilizando el
+   código que sirve;
+7. recurrencias y edición de una fecha o de todo lo futuro;
 8. horario real, extras y avance contra la referencia;
 9. disponibilidad, situaciones especiales y consolidación final del motor;
 10. Calendario final y tarjeta superior;

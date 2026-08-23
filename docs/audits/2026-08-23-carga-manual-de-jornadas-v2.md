@@ -5,6 +5,11 @@
 - Rama: `codex/miguardia-2.0`
 - Base de integración: `ca029d15d8a000002006bcd887a458c627d06e38`
 
+> Nota posterior: la recomendación de las líneas finales sobre activación desde
+> V1 fue reemplazada. El próximo contrato habilitado es la edición y eliminación
+> individual de jornadas V2; esta auditoría conserva intacta su evidencia de
+> carga manual.
+
 ## Resultado
 
 La carga manual V2 quedó integrada como un recorrido explícito sobre la única
@@ -109,11 +114,10 @@ Resumen V2, adaptación de próximo evento, notificaciones, widget, informes,
 copias ni bloqueo. El motor heredado de próximo evento se conserva sin adaptar,
 según el índice canónico.
 
-## Próximo paso
+## Próximo paso registrado entonces — reemplazado
 
-El siguiente bloque es activar MiGuardia 2.0 conscientemente desde una
-instalación anterior y permitir cambiar de rubro desde una fecha. MAIN debe
-crear primero su prompt durable y abrir una sola dependencia implementadora
-después de comprobar que este checkout quedó limpio.
+Al cerrar este checkpoint se había recomendado activar MiGuardia 2.0 desde una
+instalación anterior y cambiar de rubro desde una fecha. Esa secuencia quedó
+reemplazada por la nota superior; no constituye una orden vigente.
 
 No hubo push, tag, merge, rebase, reset ni acciones sobre `main` o producción.

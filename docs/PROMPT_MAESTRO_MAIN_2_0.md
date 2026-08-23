@@ -136,10 +136,10 @@ una decisión documentada.
 2. Implementar reglas puras de configuración, fechas y horas V2.
 3. Diseñar e implementar la configuración inicial completa.
 4. Construir lugares, tipos, plantillas y carga manual de jornadas nuevas.
-5. Retirar el modo V1 y establecer una persistencia exclusiva de V2 sin perder
+5. Permitir editar y eliminar una jornada V2 individual sin cambiar su fecha.
+6. Retirar el modo V1 antes de ampliar nuevamente la persistencia, sin perder
    código útil.
-6. Permitir cambios de sector desde una fecha dentro de V2.
-7. Agregar planes recurrentes y edición puntual/masiva.
+7. Agregar planes recurrentes y edición de una fecha o de todo lo futuro.
 8. Agregar horario real, extras y avance contra la referencia.
 9. Agregar disponibilidad y situaciones especiales, y consolidar después el
    motor final de horas y cumplimiento.

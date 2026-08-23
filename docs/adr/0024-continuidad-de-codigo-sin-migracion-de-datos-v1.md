@@ -39,22 +39,23 @@ hechos de la implementación presente, no requisitos del producto terminado.
    limpieza de una instalación de prueba o del dispositivo requiere una acción
    explícita y separada.
 8. La cadena Room y las rutas heredadas actuales se retirarán únicamente en un
-   bloque de implementación dedicado. Ese bloque debe definir una base limpia
-   de V2, conservar las entidades y funciones útiles, actualizar las pruebas y
-   verificar el resultado antes de eliminar compatibilidad.
+   bloque de implementación dedicado. Ese bloque debe ejecutarse antes de
+   ampliar nuevamente el esquema o cerrar el candidato final, pero no bloquea
+   funciones que reutilicen Room v7 sin cambiarlo.
 9. Una vez establecida la primera base pública de V2, sus migraciones futuras
    sí deberán preservar los datos creados dentro de V2.
-10. Cambiar de rubro desde una fecha continúa siendo una función propia de V2 y
-    no una migración desde 1.0.
+10. La selección inicial conserva un solo rubro. Un eventual cambio posterior
+    de profesión no forma parte de la secuencia actual y requerirá una decisión
+    de producto separada si aparece un caso real.
 
 ## Consecuencias
 
 - queda cancelado el bloque llamado “activar MiGuardia 2.0 desde una
   instalación anterior”;
-- el próximo bloque recomendado es dejar la persistencia y el arranque como
-  V2 únicos, retirando la compatibilidad de datos V1 sin perder código útil;
-- después corresponde implementar el cambio de rubro desde una fecha dentro de
-  V2;
+- la edición y eliminación individual puede avanzar sobre Room v7 sin
+  reconstruir la base ni perder código útil;
+- el retiro del modo V1 continúa pendiente antes de una futura ampliación del
+  esquema o del candidato final, pero no es la próxima pantalla funcional;
 - las pruebas de migración V1 a V2 dejan de ser criterios de aceptación del
   producto final;
 - el estado actual no se modifica de manera oportunista: el retiro requiere su

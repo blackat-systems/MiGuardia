@@ -214,10 +214,10 @@ La secuencia conocida al redactar este prompt es:
 
 6. Elegir días y cargar jornadas desde horarios guardados —cerrado en
    `ae57686`.
-7. Retirar el modo V1 y establecer una base de persistencia exclusiva de V2,
-   conservando el código útil —próximo bloque recomendado, todavía no
-   habilitado.
-8. Cambiar de rubro desde una fecha dentro de V2.
+7. Corregir o eliminar una jornada V2 individual —prompt habilitado; pendiente
+   de implementación y handoff.
+8. Retirar el modo V1 antes de ampliar nuevamente la persistencia, conservando
+   el código útil.
 9. Repetir jornadas y editar una fecha o todo lo futuro.
 10. Registrar el horario realmente trabajado y las horas adicionales.
 11. Calcular trabajo activo, extras y avance contra la referencia por mes,
@@ -234,9 +234,9 @@ La secuencia conocida al redactar este prompt es:
 19. Auditar integralmente el núcleo y su compatibilidad Android.
 
 El motor de próximo evento debe estabilizarse antes de adaptar notificaciones.
-El retiro del modo V1 debe cerrar la falsa compatibilidad de datos sin descartar
-componentes de código útiles. El cambio de sector desde una fecha sigue siendo
-una capacidad propia de V2 y se implementa después de esa limpieza.
+La edición individual reutiliza Room v7 y no amplía el esquema. El retiro del
+modo V1 debe cerrar la falsa compatibilidad de datos sin descartar componentes
+útiles antes de que un bloque posterior vuelva a ampliar la persistencia.
 
 MAIN puede dividir uno de estos objetivos si su riesgo exige dos contratos
 ejecutables, pero no puede fusionar bloques de manera que se pierdan aislamiento
@@ -524,8 +524,7 @@ acción sobre producción.
 
 ## 17. Estado inmediato
 
-La carga manual V2 quedó cerrada en `ae57686`. El próximo bloque recomendado es
-**dejar MiGuardia como V2 única y retirar la compatibilidad de datos con la
-prueba 1.0**, conservando el código útil. No existe una orden vigente para
-escribir su prompt ni abrir su tarea. MAIN espera que Joaquin pida el prompt o
-entregue un nuevo handoff.
+La carga manual V2 quedó cerrada en `ae57686`. Joaquin autorizó preparar el
+prompt **Corregir o eliminar una jornada cargada**. Su contrato está habilitado
+en `EDICION_Y_ELIMINACION_DE_JORNADAS_V2.md`; la implementación comienza sólo
+cuando se abra esa tarea o MAIN reciba su handoff.

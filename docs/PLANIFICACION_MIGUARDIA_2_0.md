@@ -43,10 +43,12 @@ Tampoco autoriza borrados silenciosos en el teléfono de Joaquin.
 - Un cambio se aplica desde una fecha local concreta y continúa hasta el
   siguiente cambio.
 - No se limita la vigencia al primer día de un mes.
-- Cambiar sector, reglas, lugar, plantilla o plan nunca reinterpreta jornadas
+- Cambiar reglas, lugar, plantilla o plan nunca reinterpreta jornadas
   anteriores.
-- Al cambiar de sector, los lugares anteriores dejan de ofrecerse para nuevas
+- Al archivar o reemplazar lugares y plantillas, dejan de ofrecerse para nuevas
   cargas, pero conservan todo su historial.
+- Un eventual cambio de sector después de la elección inicial no pertenece a la
+  secuencia vigente y requiere una decisión de producto explícita de Joaquin.
 - Una instalación nueva no recibe automáticamente 204 horas ni una franja
   nocturna.
 
@@ -423,6 +425,8 @@ No recuerda automáticamente esas respuestas para la próxima ocasión.
 - Antes de ampliar Room nuevamente se define una base exclusiva de V2 y se
   retiran el origen `MIGRATED_V1`, la activación V1→V2 y las rutas de adopción
   histórica que no tengan otro uso real.
+- Esa deuda no bloquea recorridos que reutilizan Room v7 sin modificar su
+  esquema, como la edición y eliminación individual de jornadas V2.
 - Esa limpieza puede reutilizar entidades o repositorios útiles; no exige
   empezar el código desde cero.
 - Una vez fijada la primera base pública de V2, cada versión posterior sí debe
@@ -435,9 +439,9 @@ No recuerda automáticamente esas respuestas para la próxima ocasión.
 2. Reglas puras de configuración, fechas y horas.
 3. Configuración persistente y primera apertura V2.
 4. Lugares, tipos, plantillas y carga manual.
-5. Retiro del modo V1 y definición de una base de persistencia exclusiva de V2.
-6. Cambio de sector desde una fecha dentro de V2.
-7. Planes recurrentes y edición puntual/masiva.
+5. Edición y eliminación individual de jornadas V2 en su fecha original.
+6. Retiro del modo V1 antes de ampliar nuevamente la persistencia.
+7. Planes recurrentes y edición de una fecha o de todo lo futuro.
 8. Horario real, extras y avance contra la referencia.
 9. Disponibilidad, situaciones especiales y consolidación final del motor de
    horas y cumplimiento.

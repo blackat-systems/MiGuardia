@@ -152,9 +152,9 @@ Lugares, tipos, plantillas y primera configuración
         ↓
 Carga manual
         ↓
-Retiro del modo V1 y base de datos exclusiva de V2
+Edición y eliminación individual de jornadas
         ↓
-Cambio de rubro desde una fecha
+Retiro del modo V1 antes de ampliar nuevamente la persistencia
         ↓
 Planes recurrentes y edición del Calendario
         ↓

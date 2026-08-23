@@ -139,9 +139,9 @@ y auditada en
   coincidían en `836d908`; esa autorización no puede reutilizarse.
 - El dominio nuevo vive en `core/domain/.../work/`; no se recuperó el candidato
   mensual descartado. Room v7 ya persiste su Corte A, la primera configuración
-  visible y la carga manual V2 están integradas. El siguiente hueco técnico es
-  retirar la bifurcación V1 y establecer una base exclusiva de V2; después queda
-  el cambio de sector desde una fecha dentro de V2.
+  visible y la carga manual V2. La próxima superficie habilitada es la edición y
+  eliminación individual sobre Room v7. La bifurcación V1 queda como deuda antes
+  de ampliar nuevamente la persistencia o cerrar el candidato final.
 
 ## Antecedente histórico descartado: candidato mensual
 
@@ -408,6 +408,8 @@ dependencia `Cargar jornadas`.
 ## Backlog posterior
 
 - cualquier cálculo monetario o liquidación permanece fuera del producto;
+- un eventual cambio de profesión después de la selección inicial de rubro;
+  no forma parte de la secuencia actual y sólo se abre si aparece un caso real;
 - monetización y distribución;
 - orden fino de widgets, informes, copias/restauración y bloqueo después del
   núcleo de configuración y horas;
@@ -415,9 +417,10 @@ dependencia `Cargar jornadas`.
 
 ## Todavía no implementado
 
+- edición y eliminación individual de jornadas V2; su prompt está habilitado y
+  todavía no posee implementación ni handoff;
 - retiro del origen `MIGRATED_V1`, la activación, la adopción V1 y el gating de
   interfaz legado, junto con una base de persistencia exclusiva de V2;
-- cambios de sector efectivos desde una fecha dentro de V2;
 - persistencia de guardias pasivas o extras V2;
 - motor completo de trabajo habitual, extras exactas y disponibilidad, con su
   presentación en Resumen y Calendario;
@@ -426,12 +429,15 @@ dependencia `Cargar jornadas`.
 
 ## Próximo paso
 
-El siguiente incremento recomendado es **dejar MiGuardia como V2 única y retirar
-la compatibilidad de datos con la prueba 1.0**, conservando el código útil. No
-existe todavía una orden para escribir su prompt ni abrir su tarea: MAIN espera
-la indicación de Joaquin o un nuevo handoff. El cambio de sector desde una fecha
-queda inmediatamente después y tampoco incluye recurrencia ni edición de
-jornadas.
+Joaquin autorizó preparar el prompt **Corregir o eliminar una jornada cargada**.
+El contrato está habilitado en
+`docs/prompts/EDICION_Y_ELIMINACION_DE_JORNADAS_V2.md`; no existe todavía código
+candidato ni handoff para integrar. El bloque mantiene la fecha fija, modifica
+una sola jornada V2 y no incluye recurrencias ni edición masiva.
+
+La limpieza del modo V1 continúa como deuda antes de ampliar nuevamente Room o
+cerrar el candidato final. No bloquea este incremento porque reutiliza Room v7
+sin cambiar su esquema.
 
 Quedan como verificaciones separadas el recorrido físico de alarma exacta
 —sólo con permiso explícito— y API 26. Ya no corresponde una migración V1 real

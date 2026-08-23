@@ -7,6 +7,10 @@
 > Actualización 2026-08-23: ADR 0024 reemplaza también toda obligación de
 > preservar una instalación 1.0, crear una raíz migrada o mantener un motor V1.
 > El catálogo, la configuración única y el vocabulario sectorial permanecen.
+> La instrucción posterior de Joaquin también retira de la secuencia actual el
+> cambio de sector después de la elección inicial. Las menciones inferiores a
+> esa capacidad son históricas y no la habilitan; sólo podría retomarse mediante
+> una nueva decisión de producto explícita.
 
 ## Contexto
 

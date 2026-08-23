@@ -5,6 +5,10 @@
 - HEAD de entrada: `ae576860ced9c51fdd96c3b69c6c050b52c1e0f4`
 - Alcance: gobernanza documental; sin cambios de aplicación
 
+> Nota posterior: la recomendación histórica de activar V2 desde una
+> instalación anterior quedó cancelada. El flujo de handoffs sigue vigente y
+> el próximo contrato habilitado es la edición y eliminación individual V2.
+
 ## Decisión de Joaquin
 
 El flujo operativo vigente es:
@@ -58,9 +62,9 @@ No corresponde ejecutar Gradle ni ADB porque este cambio modifica únicamente
 la forma de coordinación documentada; no cambia código, Room, DataStore,
 Gradle, manifiesto, permisos, versión ni comportamiento de la aplicación.
 
-## Estado al cerrar
+## Estado registrado al cerrar — reemplazado en su próximo bloque
 
-No queda autorizado ningún prompt ni tarea implementadora nueva. El próximo
-bloque recomendado continúa siendo **activar MiGuardia 2.0 desde una
-instalación anterior y cambiar de rubro desde una fecha**, a la espera de una
-indicación expresa de Joaquin.
+En ese momento no quedó autorizado otro prompt y se recomendó activar V2 desde
+una instalación anterior y cambiar de rubro. Esa recomendación quedó
+reemplazada por la nota superior; el contrato de edición y eliminación
+individual fue autorizado después.

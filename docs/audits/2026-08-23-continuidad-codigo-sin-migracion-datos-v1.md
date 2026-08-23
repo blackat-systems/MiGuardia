@@ -5,6 +5,11 @@
 - HEAD de entrada: `fe911e26e367ff1896a20f504476c2d9874557bc`
 - Alcance: decisión y gobernanza documental; sin cambios de aplicación
 
+> Nota posterior: el retiro del modo V1 continúa como deuda previa a una futura
+> ampliación de Room o al candidato final, pero ya no bloquea las funciones que
+> reutilizan Room v7 sin cambiarlo. El próximo contrato habilitado es editar y
+> eliminar una jornada V2 individual.
+
 ## Decisión aclarada por Joaquin
 
 MiGuardia 1.0 y MiGuardia 2.0 sí tienen continuidad técnica: el código inicial
@@ -18,7 +23,8 @@ Por lo tanto:
 - no se reescribe MiGuardia desde cero;
 - V2 comienza con datos limpios y selección de sector;
 - no habrá activación ni migración desde una instalación V1;
-- el cambio de rubro desde una fecha será una función interna de V2.
+- en ese checkpoint se consideró un cambio de rubro interno de V2; la decisión
+  posterior lo retiró de la secuencia actual.
 
 ## Estado técnico observado
 
@@ -56,9 +62,8 @@ resolverse como un bloque ejecutable independiente.
 - `main`, `origin/main` y `v1.0.0` siguen protegidos como historia y fuente;
 - el `applicationId` actual no se presenta como una promesa de migración;
 - se canceló la futura “activación V2 desde una instalación anterior”;
-- el próximo bloque recomendado retira el modo y la persistencia V1, pero no se
-  creó ni habilitó su prompt;
-- el cambio de rubro desde una fecha queda después de esa limpieza técnica;
+- en ese checkpoint se recomendó retirar primero el modo y la persistencia V1,
+  sin crear ni habilitar su prompt; esa prioridad fue reemplazada después;
 - no se autorizó ninguna limpieza automática del Samsung.
 
 ## Validación
@@ -73,8 +78,8 @@ de verdad documental y no cambia código, Room, DataStore, Gradle, manifiesto,
 permisos, versión ni comportamiento de la aplicación. El Samsung no fue
 consultado ni modificado.
 
-## Próximo paso recomendado
+## Próximo paso recomendado entonces — reemplazado
 
-Cuando Joaquin pida el próximo prompt, preparar un bloque dedicado a dejar
-MiGuardia como V2 única y retirar la compatibilidad de datos con la prueba 1.0,
-conservando todo el código útil. No abrir esa tarea automáticamente.
+En ese momento se recomendó preparar un bloque dedicado a dejar MiGuardia como
+V2 única. La nota superior registra su reemplazo como próximo paso; la limpieza
+continúa como deuda técnica no bloqueante para el incremento actual.
