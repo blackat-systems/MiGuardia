@@ -18,15 +18,16 @@ Joaquin autorizó:
 - implementar los bloques en orden;
 - corregir defectos encontrados dentro del alcance;
 - delegar trabajo acotado cuando reduzca tiempo sin romper dependencias;
+- crear una sola tarea especializada por vez, recibir su handoff, auditarla e
+  integrarla según `docs/prompts/ORQUESTACION_SECUENCIAL_MAIN_2_0.md`;
 - ejecutar pruebas proporcionales;
-- crear commits locales como checkpoints después de una auditoría verde.
-- publicar una vez `codex/miguardia-2.0` en el remoto privado para fijar la
-  base de la dependencia `Cargar jornadas`, por autorización expresa del
-  2026-08-22.
+- crear commits locales como checkpoints después de una auditoría verde;
+- conservar como consumida la publicación puntual de
+  `codex/miguardia-2.0` que fijó la base `836d908` de `Cargar jornadas`.
 
-Fuera de esa publicación puntual, no autorizó otros pushes, tag, Release,
-`main`, cambios en producción ni acciones externas irreversibles. Esas puertas
-continúan separadas.
+Esa publicación puntual ya quedó consumida. No hay otro push autorizado, ni
+tag, Release, operación sobre `main`, cambio en producción o acción externa
+irreversible. Esas puertas continúan separadas.
 
 ## 2. Autoridad
 
@@ -128,19 +129,29 @@ una decisión documentada.
 1. Regularizar documentación, diff previo y Git.
 2. Implementar reglas puras de configuración, fechas y horas V2.
 3. Diseñar e implementar Room v6 y la configuración inicial completa.
-4. Construir lugares, tipos, plantillas y primera carga.
-5. Agregar planes recurrentes y edición puntual/masiva.
-6. Agregar horario real, extras y cumplimiento.
-7. Agregar disponibilidad y situaciones especiales.
-8. Terminar Calendario y tarjeta superior desplegable.
-9. Construir Resumen personalizable.
-10. Adaptar próximo evento y notificaciones.
-11. Ejecutar auditoría integral y compatibilidad Android.
+4. Construir lugares, tipos, plantillas y carga manual de jornadas nuevas.
+5. Activar V2 desde una instalación anterior y permitir cambios de sector desde
+   una fecha.
+6. Agregar planes recurrentes y edición puntual/masiva.
+7. Agregar horario real, extras y avance contra la referencia.
+8. Agregar disponibilidad y situaciones especiales, y consolidar después el
+   motor final de horas y cumplimiento.
+9. Terminar Calendario y tarjeta superior desplegable.
+10. Construir Resumen personalizable.
+11. Adaptar próximo evento y notificaciones.
+12. Ejecutar auditoría integral y compatibilidad Android.
+13. Construir la segunda capa local: widget, informes, copias, bloqueo y
+    Ayuda/recorrido inicial.
+14. Auditar la aplicación completa y emitir el candidato local.
 
 No se abre el siguiente bloque hasta que el anterior tenga pruebas, revisión de
 diff y un checkpoint coherente. Se puede desarrollar una migración y su UI por
 subpasos, pero no se integra una base nueva que deje al usuario bloqueado sin
 superficie utilizable.
+
+El ciclo exacto de creación, handoff, auditoría, integración y reanudación está
+en `docs/prompts/ORQUESTACION_SECUENCIAL_MAIN_2_0.md`. Esa autorización no
+habilita otro push, publicación ni dos dependencias implementadoras en paralelo.
 
 ## 7. Contrato de cada bloque
 
@@ -249,9 +260,8 @@ mayor al planificado.
 - Staging incluye exactamente el bloque auditado.
 - Commits locales pequeños usan Conventional Commits en inglés.
 - Una autorización de ejecución permite esos checkpoints locales verificados.
-- El único push autorizado es el puntual de `codex/miguardia-2.0` al remoto
-  privado para fijar la base de `Cargar jornadas`; se verifica la ref exacta y
-  la autorización se considera consumida al completarlo.
+- El push puntual que fijó la base de `Cargar jornadas` ya fue ejecutado y
+  verificado en `836d908`; su autorización está consumida.
 - No hacer otros pushes, merge a `main`, tag, Release ni publicación.
 - No usar `reset --hard`, no limpiar worktrees históricos y no descartar cambios
   ajenos.

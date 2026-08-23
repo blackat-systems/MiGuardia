@@ -50,8 +50,8 @@ las mismas dos respuestas.
 
 ## Cambios ejecutables auditados
 
-Se retiraron el cálculo remunerativo SUVICO, su preferencia de antigüedad, su
-sección de Resumen, sus pruebas y las imágenes de escalas salariales. Los
+Se retiraron el cálculo remunerativo heredado, su preferencia asociada, su
+sección de Resumen, sus pruebas y las imágenes monetarias históricas. Los
 consumidores de Compose y sus constructores quedaron ajustados a las firmas
 nuevas.
 
@@ -60,8 +60,8 @@ descripción del menú que aún mencionaban una estimación. Se actualizaron a
 `Horas y eventos del mes seleccionado` y `Horas y eventos del mes` antes de la
 compilación final.
 
-La búsqueda del código de `app` y `core` no encontró referencias restantes a
-`Suvico`, `RemunerationPreferences` ni estimaciones remunerativas. La frase de
+La búsqueda del código de `app` y `core` no encontró referencias restantes al
+módulo retirado, sus preferencias ni estimaciones remunerativas. La frase de
 Vacaciones conserva únicamente la aclaración explícita de que MiGuardia no
 calcula montos.
 

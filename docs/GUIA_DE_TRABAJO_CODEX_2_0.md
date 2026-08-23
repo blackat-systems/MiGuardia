@@ -1,7 +1,7 @@
 # Guía humana de trabajo — MiGuardia 2.0 en Codex
 
 - Propietario: Joaquin
-- Actualización: 2026-08-21
+- Actualización: 2026-08-22
 - Objetivo: continuar sin tener que administrar Git o muchos chats
 
 ## 1. Estado actual
@@ -14,7 +14,10 @@ ruta aprobada de a un bloque por vez.
 01 — PLANIFICACIÓN — MiGuardia 2.0 [CERRADA]
 02 — UX/UI — Calendario adaptable [CERRADA]
 03 — Reglas por mes [DESCARTADA / HISTÓRICA]
-04 — Reglas internas por fecha y horas [SIGUIENTE BLOQUE]
+04 — Reglas internas, Room v6 y catálogo Room v7 [CERRADAS]
+05 — Primera configuración visible [CERRADA]
+06 — Cargar jornadas desde horarios guardados [CANDIDATA / A AUDITAR]
+07 — Orquestación secuencial de dependencias [ACTIVA]
 ```
 
 No hace falta crear otro MAIN. La tarea actual mantiene la continuidad del
@@ -70,15 +73,17 @@ MAIN debe informar siempre:
 
 ## 5. Cómo se ejecuta un bloque
 
-1. Leer las reglas y el prompt habilitado.
+1. Leer las reglas, el estado y el prompt habilitado.
 2. Verificar rama, HEAD y cambios previos.
-3. Implementar sólo el alcance de ese bloque.
-4. Agregar pruebas de la conducta nueva.
-5. Ejecutar pruebas, lint y compilación proporcionales.
-6. Revisar el diff, Room, permisos, privacidad y secretos.
-7. Corregir cualquier defecto encontrado.
-8. Crear un commit local si todo está realmente verde.
-9. Actualizar `docs/STATUS.md` y comenzar el siguiente bloque.
+3. Si ya existe un candidato, auditarlo antes de abrir otro trabajo.
+4. Si no existe, crear el prompt y una sola tarea especializada.
+5. Recibir su handoff y revisar cada cambio desde MAIN.
+6. Agregar o repetir pruebas de la conducta nueva.
+7. Ejecutar pruebas, lint, compilación y QA proporcionales.
+8. Revisar el diff, Room, permisos, privacidad y secretos.
+9. Corregir cualquier defecto encontrado.
+10. Crear un commit local si todo está realmente verde.
+11. Actualizar `docs/STATUS.md` y recién entonces comenzar el bloque siguiente.
 
 No se mezclan dos migraciones, dos motores o varias pantallas grandes sólo para
 avanzar más rápido.
@@ -95,6 +100,9 @@ MAIN puede aislar una tarea cuando:
 Cada tarea recibe ruta, rama o base, alcance permitido, prohibiciones, pruebas y
 condición de terminado. MAIN revisa su entrega antes de incorporarla.
 
+El contrato completo para crear, recibir e integrar esas tareas está en
+`docs/prompts/ORQUESTACION_SECUENCIAL_MAIN_2_0.md`.
+
 ## 7. Línea de Git
 
 ```text
@@ -105,25 +113,32 @@ v1.0.0 / main
                    │
                    └─ 6dab82b — planificación y traspaso inicial
                               │
-                              └─ cambios actuales pendientes de checkpoint
+                              └─ 836d908 — contrato de carga manual V2
+                                         │
+                                         └─ candidato local pendiente de auditoría
 ```
 
-La rama 2.0 todavía no fue publicada en GitHub. MAIN puede consolidar
-checkpoints locales; el push se decidirá por separado.
+La rama 2.0 fue publicada una sola vez en el remoto privado hasta `836d908` para
+fijar la base de la carga manual. Esa autorización ya fue consumida: MAIN puede
+seguir consolidando checkpoints locales, pero cualquier otro push se decide por
+separado.
 
 ## 8. Orden aprobado
 
 1. documentación y árbol actual;
 2. reglas internas por fecha y referencias de horas;
 3. Room v6 y configuración inicial;
-4. lugares, tipos y plantillas;
-5. recurrencias y edición del Calendario;
-6. horario real, extras y cumplimiento;
-7. disponibilidad y situaciones especiales;
-8. Calendario final y tarjeta superior;
-9. Resumen personalizable;
-10. próximo evento y notificaciones;
-11. auditoría integral y compatibilidad Android.
+4. lugares, tipos, plantillas y carga manual;
+5. activación V2 desde 1.0 y cambios de sector desde una fecha;
+6. recurrencias y edición del Calendario;
+7. horario real, extras y avance contra la referencia;
+8. disponibilidad, situaciones especiales y consolidación final del motor;
+9. Calendario final y tarjeta superior;
+10. Resumen personalizable;
+11. próximo evento y notificaciones;
+12. auditoría integral del núcleo;
+13. widget, informes, copias, bloqueo y Ayuda 2.0;
+14. auditoría de la aplicación completa y candidato local.
 
 ## 9. Qué no tiene que hacer Joaquin
 

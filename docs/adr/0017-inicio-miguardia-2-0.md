@@ -3,8 +3,9 @@
 - Estado: aceptada
 - Fecha: 2026-08-20
 
-> Actualización 2026-08-21: MAIN ya fue creado y ejecutó su Puerta 0, pero está
-> pausado porque PLANIFICACIÓN volvió a abrirse. Esta ADR no autoriza reanudarlo.
+> Actualización 2026-08-22: PLANIFICACIÓN quedó cerrada y MAIN está activo bajo
+> `docs/PROMPT_MAESTRO_MAIN_2_0.md`. La pausa anterior quedó superada; esta ADR
+> continúa definiendo únicamente la base aislada y protegida de MiGuardia 2.0.
 
 ## Contexto
 

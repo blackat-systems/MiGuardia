@@ -9,10 +9,10 @@ no significa que exista ya una implementación nueva.
 MAIN 2.0 está reactivada y puede ejecutar el plan en bloques pequeños, ordenados
 por dependencias y verificados antes de abrir el siguiente. Están autorizados
 los commits locales como checkpoints de bloques realmente comprobados. El
-2026-08-22 Joaquin autorizó además un push puntual de
-`codex/miguardia-2.0` al remoto privado para fijar la base de la dependencia
-`Cargar jornadas`. No autorizó otros pushes, tags, un Release, `main`, la
-publicación ni ninguna acción sobre el paquete o los datos de producción.
+push puntual autorizado el 2026-08-22 ya fijó en el remoto privado la base
+`836d908` de `Cargar jornadas` y quedó consumido. No están autorizados otros
+pushes, tags, un Release, `main`, la publicación ni ninguna acción sobre el
+paquete o los datos de producción.
 
 Para una explicación sin jerga de tareas, ramas, commits y push, consultar
 `docs/GUIA_DE_TRABAJO_CODEX_2_0.md`.
@@ -118,13 +118,13 @@ La auditoría de reactivación y Puerta 0 está registrada en
   - `e6ec746`: contrato de primera apertura y configuración visible.
   - `1f048643ba70882576295e4683729a35a9584312`: primera apertura y
     configuración laboral visible integradas.
-- Al iniciar la preparación documental, la rama todavía no poseía upstream ni
-  existía en GitHub. La autorización puntual permite a MAIN publicar el
-  checkpoint documental de `Cargar jornadas` en el remoto privado y debe
-  verificarse con Git antes de abrir la dependencia.
+- Al iniciar la preparación documental, la rama todavía no poseía upstream. El
+  push puntual posterior fue ejecutado y verificado: rama local y remoto privado
+  coincidían en `836d908`; esa autorización no puede reutilizarse.
 - El dominio nuevo vive en `core/domain/.../work/`; no se recuperó el candidato
   mensual descartado. Room v7 ya persiste su Corte A y la primera configuración
-  visible está integrada; la carga manual V2 todavía no está implementada.
+  visible está integrada; la carga manual V2 existe como candidato local y
+  todavía requiere auditoría, validación e integración de MAIN.
 
 ## Antecedente histórico descartado: candidato mensual
 
@@ -320,6 +320,13 @@ Evidencia completa en
 - permitir un commit local únicamente cuando el checkpoint esté verificado;
 - conservar explícitamente lo pendiente antes de iniciar el bloque siguiente.
 
+Joaquin autorizó además el coordinador
+`docs/prompts/ORQUESTACION_SECUENCIAL_MAIN_2_0.md`: MAIN puede crear, recibir,
+auditar e integrar una sola tarea especializada por vez y continuar cuando la
+anterior esté cerrada, sin pedir nuevamente decisiones ya congeladas.
+Esta autorización secuencial no incluye publicaciones, producción ni acciones
+externas y se detiene ante una decisión material abierta o una validación roja.
+
 Esta autorización no permite recuperar el candidato mensual descartado ni
 amplía el alcance a otros pushes, tags, Release, `main`, publicación o
 producción. La excepción puntual de la rama 2.0 se agota al fijar la base de la
@@ -349,8 +356,14 @@ Debe reutilizar el catálogo ya configurado y seguir fuera de recurrencias,
 extras, disponibilidad y pantallas de Resumen. Quedan como verificaciones
 separadas el recorrido físico de alarma exacta —sólo con permiso explícito— y
 una migración V1 real en el Samsung; ninguna bloquea este incremento visible.
-Su contrato ejecutable es
+Su contrato candidato es
 `docs/prompts/CARGA_MANUAL_DE_JORNADAS_V2.md`: crea jornadas nuevas y deja la
 edición estructural y las recurrencias para el bloque siguiente. Después del
-push puntual autorizado, cualquier otro push, tag, Release y toda operación
+sello remoto ya consumido, cualquier otro push, tag, Release y toda operación
 sobre `main` o producción continúan prohibidos.
+
+Al redactar el coordinador existe un resultado local sin checkpoint de esta
+carga manual. MAIN debe auditar e integrar ese candidato antes de abrir otra
+tarea. Después deberá cerrar el hueco funcional de activación V2 desde una
+instalación anterior y cambios de sector vigentes desde una fecha; recién luego
+avanzará a recurrencias y edición.

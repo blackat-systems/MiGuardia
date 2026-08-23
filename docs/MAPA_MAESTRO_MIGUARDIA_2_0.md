@@ -146,15 +146,25 @@ Reglas puras y pruebas
         ↓
 Configuración y migración segura
         ↓
-Lugares, tipos, plantillas y primera carga
+Lugares, tipos, plantillas y primera configuración
+        ↓
+Carga manual y activación consciente desde una instalación anterior
         ↓
 Planes recurrentes y edición del Calendario
         ↓
 Horario real, extras, disponibilidad y situaciones especiales
         ↓
+Consolidación final del motor de horas y cumplimiento
+        ↓
+Calendario final y tarjeta superior desplegable
+        ↓
 Resumen, próximo evento y notificaciones
         ↓
-Auditoría integral y compatibilidad Android
+Auditoría integral del núcleo y compatibilidad Android
+        ↓
+Widget, informes, copias, bloqueo y Ayuda 2.0
+        ↓
+Auditoría de la aplicación completa y candidato local
 ```
 
 MAIN implementa un bloque por vez. Cada bloque debe compilar, pasar sus pruebas,
@@ -168,3 +178,5 @@ preservar el alcance ajeno y quedar documentado antes del siguiente.
 - `docs/STATUS.md` indica **qué bloque está activo hoy**.
 - `docs/prompts/README.md` indica **qué prompt puede ejecutarse**.
 - `docs/PROMPT_MAESTRO_MAIN_2_0.md` gobierna **la integración activa**.
+- `docs/prompts/ORQUESTACION_SECUENCIAL_MAIN_2_0.md` gobierna **cómo MAIN crea,
+  recibe y cierra una dependencia por vez**.

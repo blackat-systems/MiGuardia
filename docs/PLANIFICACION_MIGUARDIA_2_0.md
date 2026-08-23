@@ -425,10 +425,12 @@ No recuerda automáticamente esas respuestas para la próxima ocasión.
 1. Regularizar documentación y Git.
 2. Reglas puras de configuración, fechas y horas.
 3. Configuración persistente y migración Room v5→v6.
-4. Primera apertura, lugares, tipos y plantillas.
+4. Primera apertura, lugares, tipos, plantillas, carga manual y activación
+   consciente desde una instalación anterior.
 5. Planes recurrentes y edición puntual/masiva.
-6. Horario real, extras y cumplimiento.
-7. Disponibilidad y situaciones especiales.
+6. Horario real, extras y avance contra la referencia.
+7. Disponibilidad, situaciones especiales y consolidación final del motor de
+   horas y cumplimiento.
 8. Calendario final y tarjeta superior desplegable.
 9. Resumen personalizable.
 10. Próximo evento y notificaciones.
@@ -470,3 +472,19 @@ Validación por impacto:
 - patrones de recurrencia arbitrarios fuera de los tres modelos aprobados;
 - cuentas, nube o sincronización;
 - widgets, informes, copias y bloqueo antes de cerrar el núcleo laboral.
+
+## 20. Continuidad después del núcleo
+
+La orden expresa de Joaquin del 2026-08-22 autoriza que, después del checkpoint
+y la auditoría del núcleo laboral, MAIN continúe de a un bloque con:
+
+1. widget basado en el motor final de próximo evento;
+2. informes locales de jornadas y horas;
+3. copias y restauración locales seguras;
+4. bloqueo de acceso local;
+5. Ayuda y recorrido inicial reescritos para la interfaz 2.0 definitiva;
+6. auditoría de la aplicación completa y emisión de un candidato local.
+
+Esta continuidad no autoriza servicios externos, publicación ni decisiones
+funcionales todavía ausentes. Cada superficie necesita su contrato acotado y se
+detiene ante una decisión material abierta.

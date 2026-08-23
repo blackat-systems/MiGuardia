@@ -11,10 +11,12 @@
 - **MAIN 2.0:** reactivada y habilitada.
 - **Ejecución:** autorizada por bloques pequeños, ordenados por dependencias y
   verificados antes de continuar.
+- **Orquestación secuencial:** autorizada para que MAIN cree, reciba, audite e
+  integre una sola tarea especializada por vez mediante
+  `ORQUESTACION_SECUENCIAL_MAIN_2_0.md`.
 - **Commits locales:** permitidos como checkpoints de bloques comprobados.
-- **Push puntual de la rama 2.0:** Joaquin autorizó a MAIN a publicar
-  `codex/miguardia-2.0` en el remoto privado para fijar la base de la
-  dependencia `Cargar jornadas`.
+- **Push puntual de la rama 2.0:** ejecutado y verificado hasta `836d908`; la
+  autorización quedó consumida al fijar la base de `Cargar jornadas`.
 - **Otros pushes, tag, Release, `main` y producción:** no autorizados.
 
 El prompt rector activo es `docs/PROMPT_MAESTRO_MAIN_2_0.md`. El mapa del
@@ -44,6 +46,7 @@ prevalecen para el estado operativo.
 |---|---|---|
 | `docs/PROMPT_MAESTRO_PLANIFICACION_2_0.md` | **CERRADO / REFERENCIA** | Conserva las decisiones que dieron forma al plan; no abre otra planificación |
 | `docs/PROMPT_MAESTRO_MAIN_2_0.md` | **ACTIVO / HABILITADO** | Ejecutar el plan por bloques pequeños, dependientes y verificables |
+| `docs/prompts/ORQUESTACION_SECUENCIAL_MAIN_2_0.md` | **ACTIVO / COORDINADOR** | Crear una dependencia por vez, auditar su handoff, integrarla y recién entonces abrir la siguiente |
 | `docs/PROMPT_MAESTRO_MAIN.md` | **HISTÓRICO V1** | Consultar sólo comportamiento heredado de 1.0 |
 | `docs/PROMPT_MAESTRO_PAUSA_REVISION_Y_REANUDACION.md` | **HISTÓRICO V1** | Fotografía antigua de Git; nunca reanudar desde sus SHA |
 
@@ -57,7 +60,7 @@ prevalecen para el estado operativo.
 | `CONFIGURACION_PERSISTENTE_Y_MIGRACION_ROOM_V6.md` | **CERRADO** | La configuración global ya se guarda y Room migra 5→6 sin alterar las trece familias históricas |
 | `LUGARES_TIPOS_PLANTILLAS_Y_PRIMERA_CARGA_V2.md` | **PAUSADO / REFERENCIA** | Contrato marco ya dividido: Corte A y primera apertura están cerrados; no debe reejecutarse completo |
 | `PRIMERA_APERTURA_Y_CONFIGURACION_LABORAL_VISIBLE_V2.md` | **CERRADO** | Primera pantalla de rubro y creación visible del primer lugar y horario integradas en `1f048643` |
-| `CARGA_MANUAL_DE_JORNADAS_V2.md` | **HABILITADO** | Elegir uno o varios días en la grilla y cargar jornadas nuevas desde horarios guardados |
+| `CARGA_MANUAL_DE_JORNADAS_V2.md` | **CANDIDATO / EN AUDITORÍA** | Existe una implementación local que MAIN debe auditar; no volver a crear esta dependencia |
 
 ## Contratos históricos de MiGuardia 1.0
 
@@ -97,20 +100,30 @@ dependencia nueva se habilita únicamente cuando la anterior está cerrada:
 1. Room v6 y configuración inicial: **cerrado**;
 2. **Cerrado:** lugares, tipos, plantillas y primera apertura visible — Corte A
    de contratos y Room v7, más la configuración inicial, verificados;
-3. **Activo:** carga manual V2 de jornadas nuevas sobre la única grilla;
-4. recurrencias y edición puntual/masiva;
-5. motor de horario real, extras y cumplimiento;
-6. disponibilidad y situaciones especiales;
-7. Calendario final y tarjeta superior;
-8. Resumen personalizable;
-9. adaptación de próximo evento y notificaciones;
-10. widget, informes, copias y bloqueo cuando llegue su capa.
+3. **Candidato en auditoría:** carga manual V2 de jornadas nuevas sobre la
+   única grilla; no reejecutar la dependencia;
+4. activación V2 desde una instalación anterior y cambios de sector desde una
+   fecha;
+5. recurrencias y edición puntual/masiva;
+6. horario real, extras y avance contra la referencia;
+7. disponibilidad, situaciones especiales y consolidación final del motor de
+   horas y cumplimiento;
+8. Calendario final y tarjeta superior;
+9. Resumen personalizable;
+10. adaptación de próximo evento y notificaciones;
+11. auditoría integral del núcleo;
+12. segunda capa: widget, informes, copias, bloqueo y Ayuda/recorrido inicial;
+13. auditoría de la aplicación completa y candidato local.
 
 MAIN habilita cada prompt en este índice cuando su contrato y dependencias estén
 cerrados. Los checkpoints pueden confirmarse localmente después de la
 verificación. La autorización puntual de publicación indicada arriba se agota
 al fijar esta base; cualquier otra publicación requiere una autorización
 nueva.
+
+El coordinador secuencial no habilita paralelismo entre implementadores. Si ya
+existe un resultado candidato o una tarea abierta, MAIN debe cerrarlo antes de
+crear la dependencia siguiente.
 
 ## Nombres humanos obligatorios
 

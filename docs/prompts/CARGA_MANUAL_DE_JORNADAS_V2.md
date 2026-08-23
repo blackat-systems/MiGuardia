@@ -1,6 +1,6 @@
 # Carga manual de jornadas V2
 
-- Estado: **HABILITADO PARA DEPENDENCIA ESPECIALIZADA**
+- Estado: **CANDIDATO / EN AUDITORÍA DE MAIN — NO REEJECUTAR**
 - Fecha: 2026-08-22
 - Rama obligatoria: `codex/miguardia-2.0`
 - Proyecto obligatorio: `C:\Users\Joaquin\Desktop\chatgptprojects\MiGuardia-2.0`
@@ -284,9 +284,7 @@ Se permite modificar solamente:
   la carga V2;
 - `app/src/test/**`;
 - `app/src/androidTest/**`;
-- textos y test tags estrictamente necesarios;
-- este prompt, `docs/STATUS.md` y una auditoría propia únicamente para reflejar
-  el resultado real.
+- textos y test tags estrictamente necesarios.
 
 Preferí extender el recorrido de `ui/management/` y la grilla existentes. Si
 separar un coordinador V2 mejora las pruebas, mantenelo dentro de esa frontera y
@@ -327,6 +325,8 @@ no dupliques ni traslades su responsabilidad al coordinador de carga.
 - no agregar dependencias de producción, cuentas, red, nube, ubicación, OCR,
   telemetría ni datos clínicos;
 - no usar datos reales;
+- no modificar `docs/STATUS.md`, `docs/prompts/README.md`, ADR, auditorías ni
+  este prompt; MAIN es dueño del estado durable y de la auditoría;
 - no tocar la aplicación productiva del Samsung;
 - no hacer commit, push, tag, merge, rebase, reset ni descartar cambios.
 
