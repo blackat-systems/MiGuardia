@@ -214,10 +214,9 @@ La secuencia conocida al redactar este prompt es:
 
 6. Elegir días y cargar jornadas desde horarios guardados —cerrado en
    `ae57686`.
-7. Corregir o eliminar una jornada V2 individual —prompt habilitado; pendiente
-   de implementación y handoff.
+7. Corregir o eliminar una jornada V2 individual —cerrado en `4646f66`.
 8. Retirar el modo V1 antes de ampliar nuevamente la persistencia, conservando
-   el código útil.
+   el código útil —prompt habilitado; pendiente de implementación y handoff.
 9. Repetir jornadas y editar una fecha o todo lo futuro.
 10. Registrar el horario realmente trabajado y las horas adicionales.
 11. Calcular trabajo activo, extras y avance contra la referencia por mes,
@@ -524,7 +523,10 @@ acción sobre producción.
 
 ## 17. Estado inmediato
 
-La carga manual V2 quedó cerrada en `ae57686`. Joaquin autorizó preparar el
-prompt **Corregir o eliminar una jornada cargada**. Su contrato está habilitado
-en `EDICION_Y_ELIMINACION_DE_JORNADAS_V2.md`; la implementación comienza sólo
-cuando se abra esa tarea o MAIN reciba su handoff.
+La edición y eliminación individual quedó cerrada en `4646f66`. Joaquin
+autorizó preparar el prompt **Dejar MiGuardia únicamente en modo 2.0**. Su
+contrato está habilitado en
+`RETIRAR_MODO_V1_Y_FIJAR_BASE_EXCLUSIVA_V2.md`; la implementación comienza sólo
+cuando Joaquin abra esa tarea o entregue su handoff. ADR 0026 fija para ese
+bloque `MiGuardiaV2Database`, `miguardia-v2.db` y Room V2 versión 1, sin una
+migración desde la cadena histórica.

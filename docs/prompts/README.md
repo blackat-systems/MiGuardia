@@ -62,6 +62,7 @@ prevalecen para el estado operativo.
 | `PRIMERA_APERTURA_Y_CONFIGURACION_LABORAL_VISIBLE_V2.md` | **CERRADO** | Primera pantalla de rubro y creación visible del primer lugar y horario integradas en `1f048643` |
 | `CARGA_MANUAL_DE_JORNADAS_V2.md` | **CERRADO** | La carga de jornadas nuevas desde horarios guardados fue auditada, probada e integrada por MAIN |
 | `EDICION_Y_ELIMINACION_DE_JORNADAS_V2.md` | **CERRADO** | La edición y eliminación exacta de una jornada V2 fue auditada, probada e integrada por MAIN |
+| `RETIRAR_MODO_V1_Y_FIJAR_BASE_EXCLUSIVA_V2.md` | **HABILITADO** | Deja una sola experiencia V2 y crea su primera base Room propia sin migrar ni borrar los datos de la prueba 1.0 |
 
 ## Contratos históricos de MiGuardia 1.0
 
@@ -85,7 +86,7 @@ probado, no para sostener compatibilidad de datos o un modo V1 en el producto.
 | `CLIMA.md` | Pronóstico opcional | Herencia vigente; proveedor comercial debe revalidarse |
 | `PULIDO_VISUAL_Y_UX.md` | Pulido previo a Vigilia | Principios útiles, orden de implementación histórico |
 | `VIGILIA_SISTEMA_VISUAL.md` | Identidad visual | Referencia visual heredada; implementación cerrada |
-| `PERFIL_LABORAL_Y_CONFIGURACION.md` | Perfil local V1 | No sirve para configurar cuatro sectores; compatibilidad solamente |
+| `PERFIL_LABORAL_Y_CONFIGURACION.md` | Perfil local V1 | No sirve para configurar cuatro sectores; su superficie fija se retira en el bloque V2-only |
 | `NAVEGACION_MENU_LATERAL.md` | Menú lateral | Integrado y cerrado |
 | `CALENDARIO_MODO_CONSULTA_Y_EDICION.md` | Consulta y edición explícita | Integrado y reemplazado por contratos posteriores |
 | `CALENDARIO_SELECCION_DIRECTA.md` | Una sola grilla para elegir días | Integrado en la base 1.0 |
@@ -105,8 +106,8 @@ Joaquin indicó que quiere preparar o abrir la siguiente:
 3. **Cerrado:** carga manual V2 de jornadas nuevas sobre la única grilla;
 4. **Cerrado:** edición y eliminación individual de una jornada V2 en su fecha
    original;
-5. **Siguiente bloque planificado, todavía no habilitado:** retirar el modo V1
-   antes de ampliar nuevamente la persistencia, conservando el código útil;
+5. **Habilitado:** retirar el modo V1 antes de ampliar nuevamente la
+   persistencia, conservando el código útil y fijando Room V2 versión 1;
 6. recurrencias y edición de una fecha o de todo lo futuro;
 7. horario real, extras y avance contra la referencia;
 8. disponibilidad, situaciones especiales y consolidación final del motor de

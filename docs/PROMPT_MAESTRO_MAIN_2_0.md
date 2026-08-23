@@ -186,9 +186,10 @@ indicación expresa de Joaquin.
 ## 8. Persistencia V2
 
 La cadena Room v1–v7 y el origen `MIGRATED_V1` describen el estado técnico
-actual, no un requisito final. Un bloque específico debe definir la base limpia
-de V2 y retirar el modo legado. Hasta entonces no se borran esquemas ni código
-de forma oportunista.
+anterior al bloque V2-only, no un requisito final. ADR 0026 fija la primera base
+pública de V2 como `MiGuardiaV2Database`, archivo `miguardia-v2.db`, versión 1
+y esquema propio. No existe una migración desde `MiGuardiaDatabase` v1–v7 y el
+archivo histórico `miguardia.db` no se abre, copia, transforma ni borra.
 
 Esa transición debe:
 
@@ -197,13 +198,17 @@ Esa transición debe:
   útiles para el producto nuevo;
 - eliminar la activación, adopción y bifurcación de motor V1 que ya no tienen
   usuario real;
+- retirar de la base pública las tablas y procedencias exclusivamente V1 sin
+  eliminar capacidades comunes como jornadas, notas, feriados, vacaciones,
+  fotos o notificaciones;
 - probar base vacía, primera configuración, reapertura y rollback;
 - no ejecutar una limpieza silenciosa sobre el teléfono ni sobre producción;
 - evitar `allowMainThreadQueries` y bases en memoria en producción.
 
-Después de fijar la primera base pública de V2, todo cambio de Room debe exportar
-su esquema, migrar desde la versión V2 inmediatamente anterior y preservar UUID,
-claves, índices, relaciones e instantáneas V2. No se reservan migraciones vacías.
+Después de integrar esa base versión 1, todo cambio de Room debe exportar su
+esquema, migrar desde la versión V2 inmediatamente anterior y preservar UUID,
+claves, índices, relaciones e instantáneas V2. No se reservan migraciones
+vacías.
 
 ## 9. Calendario
 

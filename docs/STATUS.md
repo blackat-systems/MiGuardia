@@ -136,14 +136,17 @@ y auditada en
   - `fe911e2`: flujo de handoffs y checkpoints locales de MAIN.
   - `a63ca25`: continuidad del código V1 sin migración de sus datos.
   - `59e3181`: contrato de edición y eliminación individual de jornadas V2.
+  - `4646f665eec84052a544a5179c72b93971df2700`: edición y eliminación
+    individual auditada, probada e integrada por MAIN.
 - Al iniciar la preparación documental, la rama todavía no poseía upstream. El
   push puntual posterior fue ejecutado y verificado: rama local y remoto privado
   coincidían en `836d908`; esa autorización no puede reutilizarse.
 - El dominio nuevo vive en `core/domain/.../work/`; no se recuperó el candidato
   mensual descartado. Room v7 ya persiste su Corte A, la primera configuración,
   la carga manual y la edición o eliminación individual de jornadas V2. El
-  retiro de la bifurcación V1 queda como siguiente deuda técnica antes de ampliar
-  nuevamente la persistencia o cerrar el candidato final.
+  retiro de la bifurcación V1 es el bloque habilitado antes de ampliar
+  nuevamente la persistencia o cerrar el candidato final. ADR 0026 fija para
+  ese corte una nueva base `MiGuardiaV2Database`, versión 1.
 
 ## Antecedente histórico descartado: candidato mensual
 
@@ -445,6 +448,34 @@ Evidencia completa en
 `docs/audits/2026-08-23-edicion-eliminacion-jornadas-v2.md` y decisión técnica
 en `docs/adr/0025-cas-par-historico-edicion-eliminacion-v2.md`.
 
+## Base exclusiva V2 y retiro del modo V1 — prompt habilitado
+
+Joaquin autorizó preparar el siguiente contrato. Todavía no existe una
+implementación ni una tarea especializada abierta.
+
+ADR 0026 resolvió la decisión arquitectónica que faltaba:
+
+- la primera base pública de V2 será `MiGuardiaV2Database`, archivo
+  `miguardia-v2.db`, Room versión 1 y esquema propio;
+- no existe migración desde `MiGuardiaDatabase` v1–v7;
+- `miguardia.db` no se abre, copia, transforma ni borra;
+- la nueva base conserva diecinueve tablas que sostienen V2 y capacidades
+  comunes, y excluye `schedule_combinations`, `shift_novelties` y
+  `formal_shift_changes`;
+- desaparecen el origen `MIGRATED_V1`, la activación, la adopción, la
+  procedencia de horarios V1 y los escritores de una jornada sin fotografía;
+- una jornada almacenada sin `ShiftWorkSnapshot` pasa a ser un dato local
+  inválido;
+- el runtime conserva Calendario, configuración, carga, edición/eliminación,
+  próximo evento, notificaciones, clima y las demás capacidades comunes, pero
+  retira Perfil, Resumen, Objetivos/horarios, guardias/francos y Novedades V1.
+
+El contrato ejecutable está en
+`docs/prompts/RETIRAR_MODO_V1_Y_FIJAR_BASE_EXCLUSIVA_V2.md`, estado
+`HABILITADO`. Parte de la base funcional `4646f66`; MAIN informará el checkpoint
+documental exacto al abrir la tarea. Pedir y preparar el prompt no abrió todavía
+otra dependencia.
+
 ## Flujo vigente de MAIN
 
 - Joaquin entrega un handoff o pide preparar el prompt de una nueva tarea;
@@ -480,8 +511,8 @@ dependencia `Cargar jornadas`.
 
 ## Todavía no implementado
 
-- retiro del origen `MIGRATED_V1`, la activación, la adopción V1 y el gating de
-  interfaz legado, junto con una base de persistencia exclusiva de V2;
+- el bloque habilitado de retiro del origen `MIGRATED_V1`, activación, adopción,
+  gating legado y fijación de la base exclusiva V2;
 - persistencia de guardias pasivas o extras V2;
 - motor completo de trabajo habitual, extras exactas y disponibilidad, con su
   presentación en Resumen y Calendario;
@@ -490,15 +521,14 @@ dependencia `Cargar jornadas`.
 
 ## Próximo paso
 
-La edición y eliminación individual quedó cerrada. El siguiente bloque técnico
-recomendado por la secuencia vigente es retirar el modo V1 residual y dejar una
-base de ejecución exclusivamente V2 antes de ampliar nuevamente la persistencia.
-Es una limpieza del código heredado, no una migración de datos ni un regreso a
-la experiencia anterior: la configuración, el Calendario, la carga y la edición
-V2 ya integradas deben conservarse.
+La edición y eliminación individual quedó cerrada. El prompt del siguiente
+bloque, **Dejar MiGuardia únicamente en modo 2.0**, ya está habilitado. Es una
+limpieza del código heredado y la fijación de una base Room V2 propia, no una
+migración de datos ni un regreso a la experiencia anterior: la configuración,
+el Calendario, la carga y la edición V2 ya integradas deben conservarse.
 
-Todavía no hay un prompt habilitado para esa tarea. MAIN espera la indicación de
-Joaquin antes de escribirlo o abrir otra dependencia.
+La tarea implementadora todavía no fue abierta. MAIN espera una indicación
+expresa de Joaquin para crearla o recibir después su handoff.
 
 Quedan como verificaciones separadas el recorrido físico de alarma exacta
 —sólo con permiso explícito— y API 26. Ya no corresponde una migración V1 real
