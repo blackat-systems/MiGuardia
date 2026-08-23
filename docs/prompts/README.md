@@ -1,7 +1,7 @@
 # Índice canónico de prompts — MiGuardia
 
 - Estado: activo
-- Última auditoría completa: 2026-08-22
+- Última auditoría completa: 2026-08-23
 - Regla: un prompt sólo se ejecuta si este índice lo marca `ACTIVO` o
   `HABILITADO` y Joaquin autoriza la tarea
 
@@ -9,12 +9,12 @@
 
 - **PLANIFICACIÓN:** cerrada por autorización expresa de Joaquin.
 - **MAIN 2.0:** reactivada y habilitada.
-- **Ejecución:** autorizada por bloques pequeños, ordenados por dependencias y
-  verificados antes de continuar.
-- **Orquestación secuencial:** autorizada para que MAIN cree, reciba, audite e
-  integre una sola tarea especializada por vez mediante
-  `ORQUESTACION_SECUENCIAL_MAIN_2_0.md`.
-- **Commits locales:** permitidos como checkpoints de bloques comprobados.
+- **Ejecución:** guiada por los handoffs y pedidos expresos de Joaquin.
+- **Orquestación secuencial:** MAIN recibe, audita, integra y cierra un handoff
+  por vez mediante `ORQUESTACION_SECUENCIAL_MAIN_2_0.md`; no crea el prompt ni
+  la tarea siguiente por su cuenta.
+- **Commits locales:** MAIN los crea automáticamente como checkpoints de
+  bloques comprobados.
 - **Push puntual de la rama 2.0:** ejecutado y verificado hasta `836d908`; la
   autorización quedó consumida al fijar la base de `Cargar jornadas`.
 - **Otros pushes, tag, Release, `main` y producción:** no autorizados.
@@ -45,8 +45,8 @@ prevalecen para el estado operativo.
 | Archivo | Estado | Uso permitido |
 |---|---|---|
 | `docs/PROMPT_MAESTRO_PLANIFICACION_2_0.md` | **CERRADO / REFERENCIA** | Conserva las decisiones que dieron forma al plan; no abre otra planificación |
-| `docs/PROMPT_MAESTRO_MAIN_2_0.md` | **ACTIVO / HABILITADO** | Ejecutar el plan por bloques pequeños, dependientes y verificables |
-| `docs/prompts/ORQUESTACION_SECUENCIAL_MAIN_2_0.md` | **ACTIVO / COORDINADOR** | Crear una dependencia por vez, auditar su handoff, integrarla y recién entonces abrir la siguiente |
+| `docs/PROMPT_MAESTRO_MAIN_2_0.md` | **ACTIVO / HABILITADO** | Integrar los handoffs indicados por Joaquin en bloques pequeños y verificables |
+| `docs/prompts/ORQUESTACION_SECUENCIAL_MAIN_2_0.md` | **ACTIVO / COORDINADOR** | Recibir un handoff por vez, auditarlo, integrarlo y esperar que Joaquin indique la tarea siguiente |
 | `docs/PROMPT_MAESTRO_MAIN.md` | **HISTÓRICO V1** | Consultar sólo comportamiento heredado de 1.0 |
 | `docs/PROMPT_MAESTRO_PAUSA_REVISION_Y_REANUDACION.md` | **HISTÓRICO V1** | Fotografía antigua de Git; nunca reanudar desde sus SHA |
 
@@ -94,15 +94,16 @@ compatibilidad.
 
 ## Secuencia de contratos
 
-MAIN crea o actualiza el prompt de cada bloque antes de implementarlo. Cada
-dependencia nueva se habilita únicamente cuando la anterior está cerrada:
+MAIN crea o actualiza el prompt de un bloque cuando Joaquin se lo pide. Una
+dependencia nueva sólo puede habilitarse cuando la anterior está cerrada y
+Joaquin indicó que quiere preparar o abrir la siguiente:
 
 1. Room v6 y configuración inicial: **cerrado**;
 2. **Cerrado:** lugares, tipos, plantillas y primera apertura visible — Corte A
    de contratos y Room v7, más la configuración inicial, verificados;
 3. **Cerrado:** carga manual V2 de jornadas nuevas sobre la única grilla;
-4. **Siguiente:** activación V2 desde una instalación anterior y cambios de
-   sector desde una fecha;
+4. **Próximo recomendado, no habilitado:** activación V2 desde una instalación
+   anterior y cambios de sector desde una fecha;
 5. recurrencias y edición puntual/masiva;
 6. horario real, extras y avance contra la referencia;
 7. disponibilidad, situaciones especiales y consolidación final del motor de
@@ -114,15 +115,16 @@ dependencia nueva se habilita únicamente cuando la anterior está cerrada:
 12. segunda capa: widget, informes, copias, bloqueo y Ayuda/recorrido inicial;
 13. auditoría de la aplicación completa y candidato local.
 
-MAIN habilita cada prompt en este índice cuando su contrato y dependencias estén
-cerrados. Los checkpoints pueden confirmarse localmente después de la
-verificación. La autorización puntual de publicación indicada arriba se agota
-al fijar esta base; cualquier otra publicación requiere una autorización
-nueva.
+Cuando Joaquin pide un prompt, MAIN lo habilita en este índice después de cerrar
+su contrato y dependencias, y crea automáticamente el checkpoint documental
+local verificado. Pedir el prompt no abre por sí solo la tarea. La autorización
+puntual de publicación indicada arriba se agotó al fijar esta base; cualquier
+otra publicación requiere una autorización nueva.
 
 El coordinador secuencial no habilita paralelismo entre implementadores. Si ya
 existe un resultado candidato o una tarea abierta, MAIN debe cerrarlo antes de
-crear la dependencia siguiente.
+aceptar otro handoff. Ninguna dependencia siguiente se crea sin una indicación
+expresa de Joaquin.
 
 ## Nombres humanos obligatorios
 

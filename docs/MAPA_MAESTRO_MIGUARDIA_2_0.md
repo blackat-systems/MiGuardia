@@ -167,8 +167,10 @@ Widget, informes, copias, bloqueo y Ayuda 2.0
 Auditoría de la aplicación completa y candidato local
 ```
 
-MAIN implementa un bloque por vez. Cada bloque debe compilar, pasar sus pruebas,
-preservar el alcance ajeno y quedar documentado antes del siguiente.
+MAIN integra un bloque por vez. Cada bloque debe compilar, pasar sus pruebas,
+preservar el alcance ajeno y quedar documentado antes del siguiente. El mapa
+permite recomendar el orden; Joaquin indica cuándo preparar o abrir cada nueva
+tarea.
 
 ## 11. Fuentes de verdad
 
@@ -178,5 +180,5 @@ preservar el alcance ajeno y quedar documentado antes del siguiente.
 - `docs/STATUS.md` indica **qué bloque está activo hoy**.
 - `docs/prompts/README.md` indica **qué prompt puede ejecutarse**.
 - `docs/PROMPT_MAESTRO_MAIN_2_0.md` gobierna **la integración activa**.
-- `docs/prompts/ORQUESTACION_SECUENCIAL_MAIN_2_0.md` gobierna **cómo MAIN crea,
-  recibe y cierra una dependencia por vez**.
+- `docs/prompts/ORQUESTACION_SECUENCIAL_MAIN_2_0.md` gobierna **cómo MAIN recibe,
+  audita y cierra un handoff por vez, y cuándo puede preparar otra tarea**.

@@ -1,14 +1,15 @@
-# Prompt coordinador — cadena secuencial de dependencias de MAIN 2.0
+# Prompt coordinador — handoffs secuenciales de MAIN 2.0
 
 - Estado: **ACTIVO / COORDINADOR**
-- Fecha de autorización: 2026-08-22
+- Fecha de autorización original: 2026-08-22
+- Flujo actualizado por Joaquin: 2026-08-23
 - Proyecto obligatorio:
   `C:\Users\Joaquin\Desktop\chatgptprojects\MiGuardia-2.0`
 - Rama integradora obligatoria: `codex/miguardia-2.0`
 - Base protegida: `v1.0.0^{}` / `82db6fd8eb2c511205968894dc9857a96b16ed20`
 - Prompt rector: `docs/PROMPT_MAESTRO_MAIN_2_0.md`
-- Alcance de la autorización: crear, recibir, auditar e integrar **una tarea
-  especializada por vez** hasta completar la hoja de ruta aprobada
+- Alcance de la autorización: recibir, auditar, integrar y cerrar **un handoff
+  por vez**; preparar o abrir otra tarea sólo cuando Joaquin lo indique
 
 En este documento, `dependencia` significa una tarea especializada de Codex que
 produce una parte necesaria para MAIN. No significa agregar una biblioteca de
@@ -16,49 +17,45 @@ Gradle ni una dependencia de producción.
 
 ## 1. Orden para MAIN
 
-Sos la tarea MAIN real de MiGuardia 2.0. Tu misión es continuar desde el estado
-verdadero del repositorio hasta dejar la aplicación completa como candidato
-local verificable, siguiendo la hoja de ruta aprobada y sin depender de la
-memoria de los chats.
+Sos la tarea MAIN real de MiGuardia 2.0. Tu misión es conservar la columna
+vertebral del proyecto y procesar, de a uno, los handoffs que Joaquin te
+entregue. La hoja de ruta sigue indicando el orden técnico recomendado, pero no
+autoriza a MAIN a crear por sí sola el prompt o la tarea siguiente.
 
 Trabajá mediante este ciclo estricto:
 
 ```text
 inspeccionar el estado real
-→ cerrar cualquier resultado ya presente
-→ elegir el primer bloque pendiente por dependencias
-→ escribir su prompt autosuficiente
-→ registrar y habilitar ese prompt
-→ crear una sola tarea especializada
-→ esperar su handoff
+→ identificar el handoff entregado por Joaquin y su base
 → auditar el resultado desde MAIN
 → corregir y repetir las pruebas necesarias
 → integrar y crear un checkpoint local verificado
 → actualizar las fuentes de verdad
 → comprobar que no quedó trabajo mezclado
-→ recién entonces iniciar el bloque siguiente
+→ informar el cierre y el próximo bloque recomendado
+→ esperar la próxima indicación de Joaquin
 ```
 
-No abras todos los chats ni escribas todos los prompts por adelantado. Cada
-contrato se redacta contra el código ya integrado del bloque anterior.
+Cuando Joaquin pida preparar el prompt de una nueva tarea, redactalo contra el
+último checkpoint integrado, validalo y creá automáticamente su checkpoint
+documental local. Abrí o creá esa tarea sólo si también lo pide expresamente.
+No escribas prompts ni abras dependencias por adelantado.
 
 ## 2. Autorización secuencial vigente y límites
 
-Este documento registra —y no amplía— la instrucción expresa de Joaquin que
-autoriza a MAIN a:
+Este documento registra —y no amplía— la instrucción expresa más reciente de
+Joaquin, que autoriza a MAIN a:
 
-- crear un subagente interno especializado por vez para los bloques incluidos
-  en la hoja de ruta aprobada;
-- enviarle el prompt durable correspondiente y el HEAD exacto de entrada;
-- esperar su resultado y recibir su handoff;
+- recibir de Joaquin un handoff especializado por vez;
+- comprobar su procedencia, prompt, HEAD de entrada y diff real;
 - pedirle correcciones acotadas sobre la misma dependencia cuando la auditoría
   encuentre defectos reales;
 - integrar únicamente el resultado auditado en `codex/miguardia-2.0`;
 - ejecutar comprobaciones proporcionales y QA con el paquete autorizado;
-- crear commits locales pequeños como checkpoints después de una auditoría
-  verde;
-- preparar el prompt de la dependencia siguiente sin volver a pedir permiso
-  por una decisión que ya esté congelada.
+- crear automáticamente commits locales pequeños como checkpoints después de
+  una auditoría verde, sin pedir otra autorización para ese commit local;
+- preparar el prompt de una nueva tarea únicamente cuando Joaquin lo pida;
+- abrir o crear una tarea especializada únicamente cuando Joaquin lo pida.
 
 Esta autorización **no** permite:
 
@@ -78,9 +75,9 @@ Esta autorización **no** permite:
 - ejecutar una prueba sensible —por ejemplo alarmas exactas o borrado de datos—
   sin la autorización específica que corresponda.
 
-Este documento registra la autorización secuencial expresa de Joaquin. Las
-acciones externas, destructivas, productivas o de publicación continúan siendo
-puertas separadas.
+El flujo anterior de creación automática de dependencias quedó reemplazado el
+2026-08-23 por este modelo guiado por handoffs. Las acciones externas,
+destructivas, productivas o de publicación continúan siendo puertas separadas.
 
 ## 3. Fuentes de verdad
 
@@ -164,53 +161,41 @@ materiales y mantené `docs/STATUS.md` como fuente de continuidad.
 
 ### C. El bloque activo tiene prompt pero todavía no tiene implementación
 
-Comprobá que el prompt siga siendo correcto para el HEAD actual. Si lo es,
-creá una única dependencia desde ese HEAD. Si quedó viejo, actualizalo y
-confirmá primero el contrato documental.
+Comprobá que el prompt siga siendo correcto para el HEAD actual e informá su
+estado. No crees la dependencia hasta que Joaquin lo pida expresamente. Si
+Joaquin solicita actualizar el prompt, corregilo, validalo y confirmá primero
+el contrato documental.
 
 ### D. El bloque anterior está cerrado y el checkout está limpio
 
-Elegí el primer bloque pendiente del grafo, redactá su contrato y abrilo según
-el ciclo de este documento.
+Informá cuál es el primer bloque pendiente del grafo y por qué conviene seguir
+con él. Después esperá: no redactes el prompt ni abras la tarea hasta que
+Joaquin lo indique.
 
 ### E. Hay una contradicción o decisión material abierta
 
 Detené la cadena. Explicale a Joaquin una sola pregunta concreta, recomendá una
 opción y no permitas que una dependencia invente la respuesta.
 
-## 7. Primer arranque obligatorio desde el estado observado
+## 7. Antecedente cerrado del primer ciclo
 
-Al crear este coordinador, el último checkpoint integrado observado fue
-`836d908f54a407c48cc9e3c27c9587c6dc908ca2`. El prompt que originó el candidato
-fue `docs/prompts/CARGA_MANUAL_DE_JORNADAS_V2.md` y ahora debe permanecer
-marcado `CANDIDATO / EN AUDITORÍA — NO REEJECUTAR`.
+Al crear este coordinador, el último checkpoint remoto era `836d908` y existía
+un candidato sin commit de **Elegir días y cargar jornadas desde horarios
+guardados**. MAIN cerró ese ciclo en dos checkpoints locales:
 
-También había un resultado sin commit de **Elegir días y cargar jornadas desde
-horarios guardados**, compuesto por tres archivos modificados y cuatro rutas
-nuevas bajo `app/src/main`, `app/src/test` y `app/src/androidTest`.
+- `ca029d1`: coordinación documental;
+- `ae57686`: carga manual V2 auditada, probada e integrada.
 
-Por lo tanto, la primera acción de MAIN al recibir esta orden es:
-
-1. volver a verificar el estado en vivo, porque este dato puede haber cambiado;
-2. si el candidato continúa presente, **no crear otra tarea de carga manual**;
-3. auditarlo completamente contra su prompt, incluido cada archivo no
-   rastreado;
-4. auditar los cambios documentales de este coordinador y crear para ellos un
-   checkpoint local `docs:` separado, con staging por rutas explícitas y sin
-   incluir ningún archivo del candidato ejecutable;
-5. corregir, validar, documentar e integrar el candidato de carga manual desde
-   su base registrada;
-6. recién con ambos checkpoints controlados, crear el contrato
-   siguiente.
-
-Si el repositorio ya avanzó cuando se ejecute esta orden, aplicá la regla de
-reanudación de la sección anterior y continuá desde el primer bloque realmente
-pendiente. No vuelvas atrás por obedecer una fotografía vieja.
+El prompt `docs/prompts/CARGA_MANUAL_DE_JORNADAS_V2.md` está `CERRADO`. Esta
+sección es trazabilidad histórica, no una orden para volver a ejecutar el
+bloque ni para crear automáticamente el siguiente.
 
 ## 8. Cómo elegir el bloque siguiente
 
 Construí un grafo simple: cada bloque debe depender sólo de contratos ya
 integrados. Usá nombres humanos y evitá códigos como `1A` o `Incremento 3`.
+El grafo permite recomendar el próximo paso; no reemplaza la indicación de
+Joaquin para escribir su prompt o abrir su tarea.
 
 La secuencia conocida al redactar este prompt es:
 
@@ -224,10 +209,10 @@ La secuencia conocida al redactar este prompt es:
 
 ### Núcleo laboral pendiente o en curso
 
-6. Elegir días y cargar jornadas desde horarios guardados —en curso al crear
-   este coordinador.
+6. Elegir días y cargar jornadas desde horarios guardados —cerrado en
+   `ae57686`.
 7. Activar MiGuardia 2.0 desde una instalación anterior y cambiar de rubro
-   desde una fecha.
+   desde una fecha —próximo bloque recomendado, todavía no habilitado.
 8. Repetir jornadas y editar una fecha o todo lo futuro.
 9. Registrar el horario realmente trabajado y las horas adicionales.
 10. Calcular trabajo activo, extras y avance contra la referencia por mes,
@@ -263,16 +248,16 @@ Sólo después de cerrar y auditar el núcleo laboral:
 23. Completar la Ayuda y el recorrido inicial sobre la interfaz definitiva.
 24. Auditar la aplicación completa y emitir el candidato local MiGuardia 2.0.
 
-La orden actual de Joaquin incluye continuar secuencialmente con estas cinco
-superficies locales después del checkpoint del núcleo. No autoriza a inventar
-su comportamiento: si una decisión funcional todavía no está cerrada, MAIN se
-detiene y formula la pregunta mínima necesaria antes de escribir el prompt
-afectado. Estas superficies no se adelantan ni habilitan servicios externos.
+Estas cinco superficies locales permanecen en la hoja de ruta después del
+checkpoint del núcleo. Cada una se prepara sólo cuando Joaquin pida su prompt o
+su tarea. Si una decisión funcional todavía no está cerrada, MAIN se detiene y
+formula la pregunta mínima necesaria. Estas superficies no se adelantan ni
+habilitan servicios externos.
 
 ## 9. Contrato obligatorio de cada dependencia
 
-Antes de crear una tarea especializada, MAIN debe crear o actualizar un archivo
-en `docs/prompts/` con estas secciones explícitas:
+Cuando Joaquin pida preparar una nueva tarea, MAIN debe crear o actualizar un
+archivo en `docs/prompts/` con estas secciones explícitas:
 
 ```text
 ROLE
@@ -309,7 +294,7 @@ El prompt debe incluir además:
 El prompt no puede pedirle a un especialista que diseñe una regla de negocio
 todavía abierta. Primero MAIN estabiliza el contrato o pregunta a Joaquin.
 
-Antes de abrir la tarea:
+Después de redactar el prompt y antes de cualquier apertura:
 
 1. agregá el prompt a `docs/prompts/README.md` como `HABILITADO`;
 2. actualizá `docs/STATUS.md` con objetivo, dependencia y HEAD;
@@ -321,13 +306,15 @@ Antes de abrir la tarea:
    reproducible;
 6. confirmá que el checkout integrador no contiene trabajo mezclado.
 
+La creación de ese checkpoint documental es automática. Haber pedido el prompt
+no equivale por sí solo a pedir que MAIN abra o cree la tarea.
+
 ## 10. Creación y conducción de la tarea especializada
 
-Usá un subagente interno de MAIN para que su resultado vuelva automáticamente a
-MAIN. Este documento registra la autorización expresa de Joaquin; no la concede
-ni la amplía. No hace falta pedirla nuevamente si el bloque pertenece a la
-secuencia aprobada y todas las puertas anteriores están verdes. Sólo creá una
-tarea visible e independiente si Joaquin lo pide expresamente.
+Una tarea especializada sólo se abre o crea por una indicación expresa de
+Joaquin. Si Joaquin administra esa tarea y después entrega su handoff, MAIN no
+la recrea ni simula que la condujo. Si Joaquin pide que MAIN la cree, se abre
+exactamente una implementadora desde el checkpoint documental correspondiente.
 
 Al crearla:
 
@@ -341,9 +328,9 @@ Al crearla:
   estado de MAIN; el especialista devuelve un diff y un handoff;
 - no la presentes como terminada por el solo hecho de haber sido creada.
 
-MAIN espera el handoff. Puede realizar inspecciones de sólo lectura en paralelo,
-pero no abre otra dependencia implementadora ni modifica los mismos archivos
-mientras la tarea está trabajando.
+MAIN recibe el handoff de Joaquin. Puede realizar inspecciones de sólo lectura
+mientras la tarea está trabajando, pero no abre otra dependencia implementadora
+ni modifica los mismos archivos.
 
 Si la herramienta de colaboración interna no está disponible o falla, no
 simules la creación. Conservá el prompt habilitado, registrá `PENDIENTE` y
@@ -462,14 +449,16 @@ Después del checkpoint, MAIN informa a Joaquin en lenguaje común:
 - qué se probó realmente;
 - cuál es el commit local;
 - qué riesgo queda;
-- cuál es la próxima dependencia que va a crear.
+- cuál es el próximo bloque recomendado.
 
-Luego comienza el próximo ciclo sin volver a preguntar decisiones ya cerradas.
+Luego espera la indicación de Joaquin. No prepara el prompt ni crea la próxima
+tarea automáticamente.
 
 ## 15. Condiciones de parada obligatoria
 
-MAIN detiene la cadena y no abre la dependencia siguiente si ocurre cualquiera
-de estas condiciones:
+MAIN no abre una dependencia siguiente sin una indicación expresa de Joaquin.
+Además detiene la integración en curso si ocurre cualquiera de estas
+condiciones:
 
 - ruta, rama, HEAD, base o upstream no coinciden con lo esperado;
 - existen cambios locales sin dueño o no se puede aislar el bloque;
@@ -525,11 +514,9 @@ ciclo, entregar la auditoría final y pedir una autorización separada para cada
 puerta necesaria: cambio de versión, push, tag, GitHub Release y cualquier
 acción sobre producción.
 
-## 17. Instrucción inmediata
+## 17. Estado inmediato
 
-Empezá ahora desde Puerta 0. Si continúa presente el candidato de **Elegir días
-y cargar jornadas desde horarios guardados**, auditá e integrá ese resultado
-antes de crear otra tarea. Cuando quede verde, escribí y habilitá el prompt de
+La carga manual V2 quedó cerrada en `ae57686`. El próximo bloque recomendado es
 **Activar MiGuardia 2.0 desde una instalación anterior y cambiar de rubro desde
-una fecha**, creá una sola dependencia para ejecutarlo y repetí este ciclo hasta
-alcanzar la definición de candidato local completo o una condición de parada.
+una fecha**, pero no existe una orden vigente para escribir su prompt ni abrir
+su tarea. MAIN espera que Joaquin pida el prompt o entregue un nuevo handoff.

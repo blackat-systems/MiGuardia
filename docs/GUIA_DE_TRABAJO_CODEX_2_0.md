@@ -1,8 +1,9 @@
 # Guía humana de trabajo — MiGuardia 2.0 en Codex
 
 - Propietario: Joaquin
-- Actualización: 2026-08-22
-- Objetivo: continuar sin tener que administrar Git o muchos chats
+- Actualización: 2026-08-23
+- Objetivo: que Joaquin marque cuándo nace cada tarea y MAIN se ocupe de la
+  integración técnica completa
 
 ## 1. Estado actual
 
@@ -16,13 +17,13 @@ ruta aprobada de a un bloque por vez.
 03 — Reglas por mes [DESCARTADA / HISTÓRICA]
 04 — Reglas internas, Room v6 y catálogo Room v7 [CERRADAS]
 05 — Primera configuración visible [CERRADA]
-06 — Cargar jornadas desde horarios guardados [CANDIDATA / A AUDITAR]
-07 — Orquestación secuencial de dependencias [ACTIVA]
+06 — Cargar jornadas desde horarios guardados [CERRADA]
+07 — Coordinación de handoffs [ACTIVA / BAJO INDICACIÓN DE JOAQUIN]
 ```
 
 No hace falta crear otro MAIN. La tarea actual mantiene la continuidad del
-proyecto y puede usar colaboradores internos sin convertirlos en chats que
-Joaquin deba seguir.
+proyecto. MAIN no crea sola el prompt ni la tarea siguiente: Joaquin indica
+cuándo quiere prepararla y luego entrega su handoff para integrar.
 
 ## 2. Carpeta y rama correctas
 
@@ -60,8 +61,9 @@ CHECKPOINT EN GIT LOCAL
 COPIA DE LA RAMA EN GITHUB
 ```
 
-Joaquin autorizó a MAIN a crear commits locales cuando un bloque esté probado y
-auditado. Eso no autoriza push, tag, Release ni publicación.
+Joaquin autorizó a MAIN a crear automáticamente commits locales cuando un
+bloque esté probado y auditado. Eso no autoriza push, tag, Release ni
+publicación.
 
 MAIN debe informar siempre:
 
@@ -73,24 +75,26 @@ MAIN debe informar siempre:
 
 ## 5. Cómo se ejecuta un bloque
 
-1. Leer las reglas, el estado y el prompt habilitado.
-2. Verificar rama, HEAD y cambios previos.
-3. Si ya existe un candidato, auditarlo antes de abrir otro trabajo.
-4. Si no existe, crear el prompt y una sola tarea especializada.
-5. Recibir su handoff y revisar cada cambio desde MAIN.
-6. Agregar o repetir pruebas de la conducta nueva.
-7. Ejecutar pruebas, lint, compilación y QA proporcionales.
-8. Revisar el diff, Room, permisos, privacidad y secretos.
-9. Corregir cualquier defecto encontrado.
-10. Crear un commit local si todo está realmente verde.
-11. Actualizar `docs/STATUS.md` y recién entonces comenzar el bloque siguiente.
+1. Joaquin pide preparar un prompt nuevo o entrega un handoff ya producido.
+2. Si pidió el prompt, MAIN lo escribe, lo verifica y crea su checkpoint
+   documental; no abre la tarea salvo que Joaquin también lo pida.
+3. Al recibir un handoff, MAIN verifica rama, HEAD, base y cambios previos.
+4. MAIN revisa cada cambio y confirma que pertenezca al alcance prometido.
+5. MAIN agrega o repite pruebas de la conducta nueva.
+6. MAIN ejecuta pruebas, lint, compilación y QA proporcionales.
+7. MAIN revisa el diff, Room, permisos, privacidad y secretos.
+8. MAIN corrige cualquier defecto de integración dentro del alcance.
+9. MAIN actualiza las fuentes de verdad.
+10. Si todo está verde, MAIN crea automáticamente el commit local del bloque.
+11. MAIN informa el resultado, recomienda el próximo paso y espera a Joaquin.
 
 No se mezclan dos migraciones, dos motores o varias pantallas grandes sólo para
 avanzar más rápido.
 
 ## 6. Cuándo usar una tarea especializada
 
-MAIN puede aislar una tarea cuando:
+Joaquin decide cuándo preparar o abrir una tarea especializada. MAIN puede
+recomendarla cuando:
 
 - posee archivos y responsabilidad claros;
 - el contrato compartido ya está decidido;
@@ -115,7 +119,9 @@ v1.0.0 / main
                               │
                               └─ 836d908 — contrato de carga manual V2
                                          │
-                                         └─ candidato local pendiente de auditoría
+                                         └─ ca029d1 — coordinador documental
+                                                    │
+                                                    └─ ae57686 — carga manual V2 integrada
 ```
 
 La rama 2.0 fue publicada una sola vez en el remoto privado hasta `836d908` para
@@ -141,6 +147,9 @@ separado.
 14. auditoría de la aplicación completa y candidato local.
 
 ## 9. Qué no tiene que hacer Joaquin
+
+Joaquin sí elige cuándo quiere el prompt de una nueva tarea, cuándo quiere
+abrirla y cuándo entregar su handoff a MAIN.
 
 Joaquin no necesita elegir:
 

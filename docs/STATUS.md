@@ -6,13 +6,14 @@ PLANIFICACIÓN quedó cerrada por autorización expresa de Joaquin. Las decision
 funcionales reunidas constituyen la base vigente para avanzar; cerrar esta etapa
 no significa que exista ya una implementación nueva.
 
-MAIN 2.0 está reactivada y puede ejecutar el plan en bloques pequeños, ordenados
-por dependencias y verificados antes de abrir el siguiente. Están autorizados
-los commits locales como checkpoints de bloques realmente comprobados. El
-push puntual autorizado el 2026-08-22 ya fijó en el remoto privado la base
-`836d908` de `Cargar jornadas` y quedó consumido. No están autorizados otros
-pushes, tags, un Release, `main`, la publicación ni ninguna acción sobre el
-paquete o los datos de producción.
+MAIN 2.0 está reactivada para recibir los handoffs que Joaquin entregue,
+auditarlos, integrarlos, probarlos y cerrarlos. Joaquin decide cuándo pedir el
+prompt de una nueva tarea y cuándo abrirla; MAIN no encadena dependencias por su
+cuenta. Después de una integración verde, MAIN crea automáticamente el commit
+local que funciona como checkpoint. El push puntual autorizado el 2026-08-22 ya
+fijó en el remoto privado la base `836d908` de `Cargar jornadas` y quedó
+consumido. No están autorizados otros pushes, tags, un Release, `main`, la
+publicación ni ninguna acción sobre el paquete o los datos de producción.
 
 Para una explicación sin jerga de tareas, ramas, commits y push, consultar
 `docs/GUIA_DE_TRABAJO_CODEX_2_0.md`.
@@ -24,6 +25,8 @@ La definición humana del producto está en
 
 La auditoría de reactivación y Puerta 0 está registrada en
 `docs/audits/2026-08-21-reactivacion-main-y-puerta-cero.md`.
+El flujo vigente de handoffs y checkpoints está registrado en
+`docs/audits/2026-08-23-flujo-handoffs-y-checkpoints-main.md`.
 
 ## Base verificada
 
@@ -98,7 +101,7 @@ La auditoría de reactivación y Puerta 0 está registrada en
   por separado la vigencia por fecha y la ventana del período para no inventar
   un prorrateo antes del bloque de motor y Resumen.
 
-## Estado Git al preparar la dependencia de carga manual
+## Estado Git consolidado después de la carga manual
 
 - `main`, `origin/main` y `v1.0.0^{}` permanecen en MiGuardia 1.0.0, commit
   `82db6fd8eb2c511205968894dc9857a96b16ed20`.
@@ -118,6 +121,8 @@ La auditoría de reactivación y Puerta 0 está registrada en
   - `e6ec746`: contrato de primera apertura y configuración visible.
   - `1f048643ba70882576295e4683729a35a9584312`: primera apertura y
     configuración laboral visible integradas.
+  - `ca029d1`: coordinador documental secuencial.
+  - `ae57686`: carga manual V2 auditada, probada e integrada.
 - Al iniciar la preparación documental, la rama todavía no poseía upstream. El
   push puntual posterior fue ejecutado y verificado: rama local y remoto privado
   coincidían en `836d908`; esa autorización no puede reutilizarse.
@@ -361,21 +366,23 @@ Evidencia completa en
 `docs/audits/2026-08-23-carga-manual-de-jornadas-v2.md` y decisión técnica en
 `docs/adr/0023-precondicion-transaccional-para-lotes-v2.md`.
 
-## Ejecución autorizada de MAIN
+## Flujo vigente de MAIN
 
-- avanzar de a un bloque pequeño y con nombre humano;
-- cerrar primero sus contratos y dependencias;
-- implementar sólo el alcance de ese bloque;
-- ejecutar las pruebas proporcionales al impacto y revisar el diff;
-- permitir un commit local únicamente cuando el checkpoint esté verificado;
-- conservar explícitamente lo pendiente antes de iniciar el bloque siguiente.
+- Joaquin entrega un handoff o pide preparar el prompt de una nueva tarea;
+- MAIN verifica Git y la base antes de tocar el resultado;
+- MAIN audita el diff, integra sólo su alcance y ejecuta pruebas proporcionales;
+- MAIN corrige defectos de integración acotados y actualiza las fuentes de
+  verdad;
+- cuando todo está verde, MAIN crea automáticamente el checkpoint local e
+  informa su commit;
+- MAIN recomienda el siguiente bloque y espera la indicación de Joaquin;
+- MAIN escribe un prompt nuevo o abre una tarea sólo por pedido expreso de
+  Joaquin.
 
-Joaquin autorizó además el coordinador
-`docs/prompts/ORQUESTACION_SECUENCIAL_MAIN_2_0.md`: MAIN puede crear, recibir,
-auditar e integrar una sola tarea especializada por vez y continuar cuando la
-anterior esté cerrada, sin pedir nuevamente decisiones ya congeladas.
-Esta autorización secuencial no incluye publicaciones, producción ni acciones
-externas y se detiene ante una decisión material abierta o una validación roja.
+El coordinador `docs/prompts/ORQUESTACION_SECUENCIAL_MAIN_2_0.md` conserva un
+solo handoff o una sola tarea implementadora por vez. La decisión del 2026-08-23
+reemplaza únicamente la creación automática de prompts y dependencias; mantiene
+la integración, pruebas, documentación y checkpoints locales a cargo de MAIN.
 
 Esta autorización no permite recuperar el candidato mensual descartado ni
 amplía el alcance a otros pushes, tags, Release, `main`, publicación o
@@ -402,10 +409,11 @@ dependencia `Cargar jornadas`.
 
 ## Próximo paso
 
-El siguiente incremento es **activar MiGuardia 2.0 desde una instalación
-anterior y cambiar de rubro desde una fecha**. MAIN debe estabilizar primero su
-contrato durable y recién después abrir una única dependencia implementadora.
-No forma parte de este paso la recurrencia ni la edición de jornadas.
+El siguiente incremento recomendado es **activar MiGuardia 2.0 desde una
+instalación anterior y cambiar de rubro desde una fecha**. Todavía no existe una
+orden vigente para escribir su prompt ni abrir su tarea: MAIN espera la
+indicación de Joaquin o un nuevo handoff. No forma parte de ese futuro paso la
+recurrencia ni la edición de jornadas.
 
 Quedan como verificaciones separadas el recorrido físico de alarma exacta
 —sólo con permiso explícito—, API 26 y una migración V1 real en el Samsung.

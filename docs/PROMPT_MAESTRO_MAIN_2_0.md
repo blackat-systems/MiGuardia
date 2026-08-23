@@ -2,6 +2,7 @@
 
 - Estado: **ACTIVO**
 - Activación: 2026-08-21 por autorización expresa de Joaquin
+- Flujo de handoffs vigente: 2026-08-23
 - Rama integradora: `codex/miguardia-2.0`
 - Base protegida: `v1.0.0^{}` / `82db6fd8eb2c511205968894dc9857a96b16ed20`
 - Aplicación: `com.blackatsystems.miguardia`
@@ -15,13 +16,14 @@ privacidad, pruebas y Git.
 
 Joaquin autorizó:
 
-- implementar los bloques en orden;
+- procesar los bloques que Joaquin active mediante una indicación o un handoff;
 - corregir defectos encontrados dentro del alcance;
-- delegar trabajo acotado cuando reduzca tiempo sin romper dependencias;
-- crear una sola tarea especializada por vez, recibir su handoff, auditarla e
-  integrarla según `docs/prompts/ORQUESTACION_SECUENCIAL_MAIN_2_0.md`;
+- recibir un handoff por vez, auditarlo, integrarlo y cerrarlo según
+  `docs/prompts/ORQUESTACION_SECUENCIAL_MAIN_2_0.md`;
+- preparar el prompt o abrir una nueva tarea solamente cuando Joaquin lo pida;
 - ejecutar pruebas proporcionales;
-- crear commits locales como checkpoints después de una auditoría verde;
+- crear automáticamente commits locales como checkpoints después de una
+  auditoría verde, sin pedir una autorización adicional para ese commit local;
 - conservar como consumida la publicación puntual de
   `codex/miguardia-2.0` que fijó la base `836d908` de `Cargar jornadas`.
 
@@ -145,18 +147,21 @@ una decisión documentada.
 14. Auditar la aplicación completa y emitir el candidato local.
 
 No se abre el siguiente bloque hasta que el anterior tenga pruebas, revisión de
-diff y un checkpoint coherente. Se puede desarrollar una migración y su UI por
-subpasos, pero no se integra una base nueva que deje al usuario bloqueado sin
-superficie utilizable.
+diff y un checkpoint coherente, y Joaquin indique que quiere preparar o abrir
+la nueva tarea. Se puede desarrollar una migración y su UI por subpasos, pero no
+se integra una base nueva que deje al usuario bloqueado sin superficie
+utilizable.
 
 El ciclo exacto de creación, handoff, auditoría, integración y reanudación está
-en `docs/prompts/ORQUESTACION_SECUENCIAL_MAIN_2_0.md`. Esa autorización no
-habilita otro push, publicación ni dos dependencias implementadoras en paralelo.
+en `docs/prompts/ORQUESTACION_SECUENCIAL_MAIN_2_0.md`. La hoja de ruta permite
+recomendar el próximo bloque, pero no crear su prompt o su tarea de forma
+automática. Tampoco habilita otro push, publicación ni dos dependencias
+implementadoras en paralelo.
 
 ## 7. Contrato de cada bloque
 
-Antes de implementar un bloque, crear o actualizar un prompt en `docs/prompts/`
-que incluya:
+Cuando Joaquin pida preparar una nueva tarea, crear o actualizar un prompt en
+`docs/prompts/` que incluya:
 
 - TASK;
 - CONTEXT;
@@ -170,6 +175,8 @@ que incluya:
 
 El especialista, si existe, no redefine producto, esquema compartido ni
 contratos públicos. MAIN audita el diff y repite las pruebas relevantes.
+Pedir un prompt no abre por sí solo la tarea: esa apertura también requiere una
+indicación expresa de Joaquin.
 
 ## 8. Persistencia y migraciones
 
@@ -273,5 +280,5 @@ Cada cierre informa:
 - pruebas y conteos reales;
 - estado de Room, permisos, dependencias y seguridad;
 - commit local, si se creó;
-- próximo bloque que MAIN comenzará sin volver a preguntar una decisión ya
-  cerrada.
+- próximo bloque recomendado, que MAIN no comenzará hasta la indicación de
+  Joaquin.

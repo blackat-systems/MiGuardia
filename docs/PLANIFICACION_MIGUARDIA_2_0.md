@@ -437,8 +437,10 @@ No recuerda automáticamente esas respuestas para la próxima ocasión.
 11. Auditoría global, actualización QA y compatibilidad Android.
 
 Cada bloque requiere un prompt acotado, pruebas proporcionales, revisión del
-diff y un checkpoint local antes de avanzar. Push, tag, Release y producción no
-forman parte de esta autorización.
+diff y un checkpoint local antes de avanzar. Joaquin indica cuándo preparar el
+prompt o abrir la tarea nueva; al recibir su handoff, MAIN audita, integra,
+prueba y crea automáticamente el checkpoint local si todo queda verde. Push,
+tag, Release y producción no forman parte de esta autorización.
 
 ## 18. Compatibilidad y calidad
 
@@ -473,10 +475,10 @@ Validación por impacto:
 - cuentas, nube o sincronización;
 - widgets, informes, copias y bloqueo antes de cerrar el núcleo laboral.
 
-## 20. Continuidad después del núcleo
+## 20. Orden recomendado después del núcleo
 
-La orden expresa de Joaquin del 2026-08-22 autoriza que, después del checkpoint
-y la auditoría del núcleo laboral, MAIN continúe de a un bloque con:
+Después del checkpoint y la auditoría del núcleo laboral, la hoja de ruta
+continúa con:
 
 1. widget basado en el motor final de próximo evento;
 2. informes locales de jornadas y horas;
@@ -485,6 +487,9 @@ y la auditoría del núcleo laboral, MAIN continúe de a un bloque con:
 5. Ayuda y recorrido inicial reescritos para la interfaz 2.0 definitiva;
 6. auditoría de la aplicación completa y emisión de un candidato local.
 
-Esta continuidad no autoriza servicios externos, publicación ni decisiones
-funcionales todavía ausentes. Cada superficie necesita su contrato acotado y se
-detiene ante una decisión material abierta.
+La decisión de Joaquin del 2026-08-23 reemplaza la apertura automática de esa
+cadena: MAIN recomienda el siguiente bloque, pero sólo prepara su prompt o abre
+su tarea cuando Joaquin lo indica. Una vez recibido el handoff, la auditoría,
+integración, validación, documentación y checkpoint local quedan a cargo de
+MAIN. Este orden no autoriza servicios externos, publicación ni decisiones
+funcionales todavía ausentes.
