@@ -1,7 +1,11 @@
 # ADR 0020: modelo laboral personalizable y vigencia por fecha
 
-- Estado: aceptada
+- Estado: aceptada; compatibilidad de datos V1 reemplazada por ADR 0024
 - Fecha: 2026-08-21
+
+> Actualización 2026-08-23: el dominio personalizable y la vigencia por fecha
+> siguen aceptados. Se elimina únicamente la obligación de migrar datos de 1.0
+> y conservar un motor legado.
 
 ## Contexto
 
@@ -44,9 +48,9 @@ representan el producto aprobado.
 ### Persistencia
 
 - Room guarda fuentes e historia, no agregados mensuales opacos.
-- La actualización desde v5 usa migraciones explícitas y no destructivas.
-- El motor legado continúa disponible para la historia de 1.0 hasta una
-  activación V2 consciente y fechada.
+- V2 define una base limpia propia; no existe actualización de datos desde v5.
+- La vigencia por fecha se aplica a cambios realizados dentro de V2, sin motor
+  legado ni activación V1→V2.
 - Las preferencias puramente visuales permanecen en DataStore.
 
 ## Consecuencias
@@ -78,8 +82,9 @@ porque los contratos dependen de institución, función y modalidad.
 Se descarta porque una diferencia sobre la referencia no demuestra por sí sola
 que el tiempo sea extra. La clasificación requiere una decisión consciente.
 
-### Destruir los datos de 1.0
+### Preservar una instalación 1.0
 
-Joaquin autorizó reemplazar el comportamiento heredado si fuera necesario, pero
-no existe una ventaja técnica que justifique borrar historia. Se adopta la
-migración no destructiva como decisión obligatoria.
+Esta alternativa histórica quedó reemplazada por ADR 0024: no existen usuarios
+ni datos 1.0 que deban migrarse. La aplicación no borra silenciosamente una
+prueba instalada; se valida V2 desde una instalación limpia mediante una acción
+expresa fuera del arranque normal.

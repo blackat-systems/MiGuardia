@@ -1,7 +1,12 @@
 # ADR 0022: catálogo laboral y fotografía histórica en Room v7
 
-- Estado: aceptada
+- Estado: aceptada para catálogo y fotografías V2; adopción V1 reemplazada por
+  ADR 0024
 - Fecha: 2026-08-22
+
+> Actualización 2026-08-23: permanecen el catálogo separado y la fotografía de
+> cada jornada V2. Se retiran del producto final la adopción de objetivos u
+> horarios V1 y la obligación de preservar una base 1.0.
 
 ## Contexto
 

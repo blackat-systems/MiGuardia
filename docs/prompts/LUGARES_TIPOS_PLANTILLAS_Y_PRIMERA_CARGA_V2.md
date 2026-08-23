@@ -6,6 +6,10 @@
 - Dependencias cerradas: dominio laboral configurable y Room v6
 - Nombre humano: **Elegir el sector, preparar el primer lugar y cargar jornadas**
 
+> Actualización 2026-08-23: ADR 0024 reemplaza las cláusulas de instalación
+> migrada y activación V1→V2 de este contrato de referencia. El catálogo, los
+> lugares, tipos, plantillas y fotografías V2 continúan vigentes.
+
 ## TASK
 
 Construir el primer recorrido utilizable de MiGuardia 2.0:

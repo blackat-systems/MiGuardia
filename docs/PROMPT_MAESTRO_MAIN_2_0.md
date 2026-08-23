@@ -53,7 +53,9 @@ de convertirla en una implementación amplia.
 
 - El proyecto mantiene `:app`, `:core:domain` y `:core:database`.
 - Kotlin y Compose continúan como base.
-- Room parte de v5, trece entidades, esquemas v1–v5 y migraciones explícitas.
+- El código parte de MiGuardia 1.0 y puede reutilizar sus componentes probados.
+- El árbol actual heredó Room v1–v7 y rutas V1, pero no existe un contrato de
+  migración de datos desde una instalación 1.0.
 - Se conservan inicialmente `minSdk 26`, `targetSdk 37`, `compileSdk 37` y Java
   17.
 - `Objective`, `ScheduleCombination` y `Shift` son bases históricas útiles.
@@ -69,7 +71,8 @@ de convertirla en una implementación amplia.
 - Una sola configuración laboral, con cambios desde una fecha concreta.
 - Sin perfiles laborales simultáneos.
 - Instalación nueva: sector, Calendario vacío, primer lugar y primera plantilla.
-- Migración 1.0: historia intacta y activación V2 consciente.
+- MiGuardia 1.0 es base de código, no una instalación con datos que deban
+  trasladarse. V2 comienza limpia y no posee activación V1→V2.
 - Total trabajado = habitual + todas las extras.
 - Cada clase extra decide si ayuda al cumplimiento.
 - Una referencia desconocida o no usada nunca equivale a cero.
@@ -107,7 +110,8 @@ duraciones.
 Contiene:
 
 - entidades, DAO, mapeos y repositorios;
-- migraciones no destructivas;
+- una base exclusiva de V2 y, una vez estabilizada, migraciones entre versiones
+  V2;
 - índices, claves y transacciones;
 - esquemas exportados y pruebas de migración.
 
@@ -130,21 +134,22 @@ una decisión documentada.
 
 1. Regularizar documentación, diff previo y Git.
 2. Implementar reglas puras de configuración, fechas y horas V2.
-3. Diseñar e implementar Room v6 y la configuración inicial completa.
+3. Diseñar e implementar la configuración inicial completa.
 4. Construir lugares, tipos, plantillas y carga manual de jornadas nuevas.
-5. Activar V2 desde una instalación anterior y permitir cambios de sector desde
-   una fecha.
-6. Agregar planes recurrentes y edición puntual/masiva.
-7. Agregar horario real, extras y avance contra la referencia.
-8. Agregar disponibilidad y situaciones especiales, y consolidar después el
+5. Retirar el modo V1 y establecer una persistencia exclusiva de V2 sin perder
+   código útil.
+6. Permitir cambios de sector desde una fecha dentro de V2.
+7. Agregar planes recurrentes y edición puntual/masiva.
+8. Agregar horario real, extras y avance contra la referencia.
+9. Agregar disponibilidad y situaciones especiales, y consolidar después el
    motor final de horas y cumplimiento.
-9. Terminar Calendario y tarjeta superior desplegable.
-10. Construir Resumen personalizable.
-11. Adaptar próximo evento y notificaciones.
-12. Ejecutar auditoría integral y compatibilidad Android.
-13. Construir la segunda capa local: widget, informes, copias, bloqueo y
+10. Terminar Calendario y tarjeta superior desplegable.
+11. Construir Resumen personalizable.
+12. Adaptar próximo evento y notificaciones.
+13. Ejecutar auditoría integral y compatibilidad Android.
+14. Construir la segunda capa local: widget, informes, copias, bloqueo y
     Ayuda/recorrido inicial.
-14. Auditar la aplicación completa y emitir el candidato local.
+15. Auditar la aplicación completa y emitir el candidato local.
 
 No se abre el siguiente bloque hasta que el anterior tenga pruebas, revisión de
 diff y un checkpoint coherente, y Joaquin indique que quiere preparar o abrir
@@ -178,25 +183,27 @@ contratos públicos. MAIN audita el diff y repite las pruebas relevantes.
 Pedir un prompt no abre por sí solo la tarea: esa apertura también requiere una
 indicación expresa de Joaquin.
 
-## 8. Persistencia y migraciones
+## 8. Persistencia V2
 
-Todo cambio de Room debe:
+La cadena Room v1–v7 y el origen `MIGRATED_V1` describen el estado técnico
+actual, no un requisito final. Un bloque específico debe definir la base limpia
+de V2 y retirar el modo legado. Hasta entonces no se borran esquemas ni código
+de forma oportunista.
 
-- conservar las trece familias heredadas;
-- agregar una migración desde la versión inmediatamente anterior;
-- conservar la cadena completa desde v1;
-- exportar el esquema nuevo;
-- probar base vacía y base con datos representativos;
-- probar reapertura y rollback;
-- conservar UUID, claves, índices, relaciones e instantáneas;
-- demostrar que un usuario 1.0 conserva resultados históricos;
-- demostrar que una instalación nueva no recibe 204 h ni 21:00–06:00 por
-  accidente;
-- evitar `fallbackToDestructiveMigration`, `allowMainThreadQueries` y bases en
-  memoria en producción.
+Esa transición debe:
 
-Los números de versiones posteriores a v6 se deciden cuando el esquema de cada
-bloque esté realmente diseñado; no se reservan migraciones vacías.
+- partir de una instalación limpia y del selector de sector V2;
+- conservar código, entidades o repositorios heredados sólo cuando sigan siendo
+  útiles para el producto nuevo;
+- eliminar la activación, adopción y bifurcación de motor V1 que ya no tienen
+  usuario real;
+- probar base vacía, primera configuración, reapertura y rollback;
+- no ejecutar una limpieza silenciosa sobre el teléfono ni sobre producción;
+- evitar `allowMainThreadQueries` y bases en memoria en producción.
+
+Después de fijar la primera base pública de V2, todo cambio de Room debe exportar
+su esquema, migrar desde la versión V2 inmediatamente anterior y preservar UUID,
+claves, índices, relaciones e instantáneas V2. No se reservan migraciones vacías.
 
 ## 9. Calendario
 

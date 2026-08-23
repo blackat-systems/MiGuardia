@@ -1,5 +1,9 @@
 # Configuración persistente y migración Room v6
 
+> **ESTADO HISTÓRICO:** este bloque documenta la implementación que existe en
+> el árbol. ADR 0024 reemplazó la obligación de migrar datos 1.0, el origen
+> `MIGRATED_V1` y la futura activación V1→V2. No reejecutar este prompt.
+
 - Estado: **CERRADO**
 - Responsable: MAIN o especialista de persistencia
 - Dependencias: dominio `core/domain/.../work/` cerrado y ADR 0021

@@ -57,7 +57,7 @@ prevalecen para el estado operativo.
 | `UX_UI_CALENDARIO_ADAPTABLE_2_0.md` | **CERRADO** | El Calendario ya se adapta y conserva todo su contenido alcanzable |
 | `REGLAS_CONFIGURACION_LABORAL_POR_MES.md` | **DESCARTADO / HISTÓRICO** | El código candidato no está en el árbol y no debe recuperarse; la vigencia mensual fue reemplazada por cambios desde una fecha concreta |
 | `REGLAS_DOMINIO_CONFIGURACION_Y_HORAS_V2.md` | **CERRADO** | Reglas puras verificadas de sector, vigencia por fecha, referencias de horas, extras y reglas por lugar, sin Room ni pantallas |
-| `CONFIGURACION_PERSISTENTE_Y_MIGRACION_ROOM_V6.md` | **CERRADO** | La configuración global ya se guarda y Room migra 5→6 sin alterar las trece familias históricas |
+| `CONFIGURACION_PERSISTENTE_Y_MIGRACION_ROOM_V6.md` | **CERRADO / IMPLEMENTACIÓN HISTÓRICA** | La configuración global ya se guarda; la raíz migrada y la obligación de conservar datos V1 fueron reemplazadas por ADR 0024 |
 | `LUGARES_TIPOS_PLANTILLAS_Y_PRIMERA_CARGA_V2.md` | **PAUSADO / REFERENCIA** | Contrato marco ya dividido: Corte A y primera apertura están cerrados; no debe reejecutarse completo |
 | `PRIMERA_APERTURA_Y_CONFIGURACION_LABORAL_VISIBLE_V2.md` | **CERRADO** | Primera pantalla de rubro y creación visible del primer lugar y horario integradas en `1f048643` |
 | `CARGA_MANUAL_DE_JORNADAS_V2.md` | **CERRADO** | La carga de jornadas nuevas desde horarios guardados fue auditada, probada e integrada por MAIN |
@@ -65,15 +65,15 @@ prevalecen para el estado operativo.
 ## Contratos históricos de MiGuardia 1.0
 
 Todos los archivos de esta tabla están rotulados `HISTÓRICO V1 — NO
-EJECUTAR`. Sus cuerpos se conservan para entender decisiones, pruebas y
-compatibilidad.
+EJECUTAR`. Sus cuerpos se conservan para entender y reutilizar código ya
+probado, no para sostener compatibilidad de datos o un modo V1 en el producto.
 
 | Archivo | Qué construyó o documentó | Situación en 2.0 |
 |---|---|---|
 | `DATA_LOCAL.md` | Primer Room local | Integrado y evolucionado hasta Room v5 |
 | `CALENDARIO_MENSUAL.md` | Primera grilla mensual | Reemplazado por la experiencia de Calendario actual |
 | `OBJETIVOS_Y_GUARDIAS.md` | Lugares, horarios y cargas | Herencia funcional; adaptar sólo vocabulario visible |
-| `MOTOR_BASICO_DE_HORAS.md` | Horas V1 de Vigilancia | Conservar únicamente como cálculo histórico de 1.0 |
+| `MOTOR_BASICO_DE_HORAS.md` | Horas V1 de Vigilancia | Fuente técnica reutilizable; no constituye un motor legado que deba permanecer visible |
 | `NOVEDADES_FERIADOS_Y_NOTAS.md` | Novedades y Room v2 | Integrado; notas antiguas no se convierten en extras V2 |
 | `VACACIONES.md` | Vacaciones y Room v3 | Integrado; su tratamiento de horas en V2 se define en las reglas nuevas |
 | `FOTOS_MENSUALES_DEL_CRONOGRAMA.md` | Fotos privadas y Room v4 | Integrado; no repetir migración ni reglas de borrado antiguas |
@@ -102,18 +102,19 @@ Joaquin indicó que quiere preparar o abrir la siguiente:
 2. **Cerrado:** lugares, tipos, plantillas y primera apertura visible — Corte A
    de contratos y Room v7, más la configuración inicial, verificados;
 3. **Cerrado:** carga manual V2 de jornadas nuevas sobre la única grilla;
-4. **Próximo recomendado, no habilitado:** activación V2 desde una instalación
-   anterior y cambios de sector desde una fecha;
-5. recurrencias y edición puntual/masiva;
-6. horario real, extras y avance contra la referencia;
-7. disponibilidad, situaciones especiales y consolidación final del motor de
+4. **Próximo recomendado, no habilitado:** retirar el modo V1 y establecer una
+   base exclusiva de V2, conservando el código útil;
+5. cambios de sector desde una fecha dentro de V2;
+6. recurrencias y edición puntual/masiva;
+7. horario real, extras y avance contra la referencia;
+8. disponibilidad, situaciones especiales y consolidación final del motor de
    horas y cumplimiento;
-8. Calendario final y tarjeta superior;
-9. Resumen personalizable;
-10. adaptación de próximo evento y notificaciones;
-11. auditoría integral del núcleo;
-12. segunda capa: widget, informes, copias, bloqueo y Ayuda/recorrido inicial;
-13. auditoría de la aplicación completa y candidato local.
+9. Calendario final y tarjeta superior;
+10. Resumen personalizable;
+11. adaptación de próximo evento y notificaciones;
+12. auditoría integral del núcleo;
+13. segunda capa: widget, informes, copias, bloqueo y Ayuda/recorrido inicial;
+14. auditoría de la aplicación completa y candidato local.
 
 Cuando Joaquin pide un prompt, MAIN lo habilita en este índice después de cerrar
 su contrato y dependencias, y crea automáticamente el checkpoint documental

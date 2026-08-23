@@ -102,9 +102,12 @@ producto.
 
 ## 4. Decisiones que ninguna dependencia puede reabrir
 
-- MiGuardia 2.0 es una actualización de la misma aplicación Android y nace del
-  tag inmutable `v1.0.0`.
-- Se preservan `applicationId`, historia local y cadena de migraciones.
+- MiGuardia 2.0 continúa sobre el código que nació del tag inmutable `v1.0.0`;
+  ese tag se protege como fuente técnica.
+- MiGuardia 1.0 fue una prueba interna sin usuarios: no se preservan sus datos,
+  no existe activación V1→V2 y toda experiencia 2.0 comienza limpia.
+- `applicationId` se mantiene por ahora, pero no representa una promesa de
+  compatibilidad. Cambiarlo continúa siendo una puerta separada.
 - Existen exactamente cuatro sectores: Vigilancia privada, Policía, Enfermería
   y Medicina. No existen `Salud`, `Otro` ni perfiles laborales simultáneos.
 - Hay una sola configuración laboral con cambios vigentes desde una fecha
@@ -211,26 +214,29 @@ La secuencia conocida al redactar este prompt es:
 
 6. Elegir días y cargar jornadas desde horarios guardados —cerrado en
    `ae57686`.
-7. Activar MiGuardia 2.0 desde una instalación anterior y cambiar de rubro
-   desde una fecha —próximo bloque recomendado, todavía no habilitado.
-8. Repetir jornadas y editar una fecha o todo lo futuro.
-9. Registrar el horario realmente trabajado y las horas adicionales.
-10. Calcular trabajo activo, extras y avance contra la referencia por mes,
+7. Retirar el modo V1 y establecer una base de persistencia exclusiva de V2,
+   conservando el código útil —próximo bloque recomendado, todavía no
+   habilitado.
+8. Cambiar de rubro desde una fecha dentro de V2.
+9. Repetir jornadas y editar una fecha o todo lo futuro.
+10. Registrar el horario realmente trabajado y las horas adicionales.
+11. Calcular trabajo activo, extras y avance contra la referencia por mes,
     semana o ciclo.
-11. Registrar guardias pasivas y descontar sólo el trabajo coincidente.
-12. Registrar situaciones especiales sin convertirlas automáticamente en
+12. Registrar guardias pasivas y descontar sólo el trabajo coincidente.
+13. Registrar situaciones especiales sin convertirlas automáticamente en
     horas.
-13. Consolidar el motor final de horas y cumplimiento con trabajo activo,
+14. Consolidar el motor final de horas y cumplimiento con trabajo activo,
     extras, guardias pasivas y situaciones especiales.
-14. Terminar el Calendario y desplegar todas las jornadas del día.
-15. Mostrar y personalizar el Resumen de horas.
-16. Adaptar el motor de próximo evento a MiGuardia 2.0.
-17. Adaptar las notificaciones a todos los eventos compatibles.
-18. Auditar integralmente el núcleo y su compatibilidad Android.
+15. Terminar el Calendario y desplegar todas las jornadas del día.
+16. Mostrar y personalizar el Resumen de horas.
+17. Adaptar el motor de próximo evento a MiGuardia 2.0.
+18. Adaptar las notificaciones a todos los eventos compatibles.
+19. Auditar integralmente el núcleo y su compatibilidad Android.
 
 El motor de próximo evento debe estabilizarse antes de adaptar notificaciones.
-La activación desde una instalación 1.0 y los cambios de sector no pueden
-quedar como un hueco oculto entre la carga manual y los flujos posteriores.
+El retiro del modo V1 debe cerrar la falsa compatibilidad de datos sin descartar
+componentes de código útiles. El cambio de sector desde una fecha sigue siendo
+una capacidad propia de V2 y se implementa después de esa limpieza.
 
 MAIN puede dividir uno de estos objetivos si su riesgo exige dos contratos
 ejecutables, pero no puede fusionar bloques de manera que se pierdan aislamiento
@@ -241,12 +247,12 @@ mayor autoridad cambia, se actualizan primero el grafo, el índice y el estado.
 
 Sólo después de cerrar y auditar el núcleo laboral:
 
-19. Adaptar el widget al motor final de próximo evento.
-20. Generar informes locales de jornadas y horas.
-21. Crear y restaurar copias locales seguras.
-22. Proteger el acceso local a MiGuardia.
-23. Completar la Ayuda y el recorrido inicial sobre la interfaz definitiva.
-24. Auditar la aplicación completa y emitir el candidato local MiGuardia 2.0.
+20. Adaptar el widget al motor final de próximo evento.
+21. Generar informes locales de jornadas y horas.
+22. Crear y restaurar copias locales seguras.
+23. Proteger el acceso local a MiGuardia.
+24. Completar la Ayuda y el recorrido inicial sobre la interfaz definitiva.
+25. Auditar la aplicación completa y emitir el candidato local MiGuardia 2.0.
 
 Estas cinco superficies locales permanecen en la hoja de ruta después del
 checkpoint del núcleo. Cada una se prepara sólo cuando Joaquin pida su prompt o
@@ -369,8 +375,8 @@ MAIN realiza una verificación independiente antes de aceptar el resultado:
    secretos y material monetario o sindical prohibido;
 5. verifica que no cambiaron Room, Gradle, manifiesto, permisos, versión,
    dependencias o contratos compartidos fuera del alcance;
-6. comprueba migraciones, esquemas e historia cuando el bloque sí autoriza
-   persistencia;
+6. comprueba esquema, base limpia, reapertura e historia V2 cuando el bloque sí
+   autoriza persistencia;
 7. ejecuta pruebas nuevas y regresiones vecinas desde MAIN;
 8. realiza QA física proporcional cuando la superficie modificada lo exige;
 9. encarga una revisión independiente de sólo lectura después de cada bloque
@@ -404,8 +410,9 @@ Como mínimo, todo bloque ejecuta:
 Además:
 
 - dominio puro: JVM y límites temporales relevantes;
-- Room: prueba de migración desde la versión inmediata y cadena histórica,
-  esquema exportado, reapertura y datos representativos;
+- Room: durante la limpieza pre-release, prueba de base V2 vacía, esquema,
+  reapertura y rollback; después de fijar esa base, migración desde la versión
+  V2 inmediata y datos representativos;
 - Compose: instrumentación compilada y, cuando corresponda, ejecutada;
 - interfaz, permisos, notificaciones, widget, biometría, archivos o sistema:
   QA física con paquete QA, datos ficticios y producción intacta;
@@ -465,7 +472,7 @@ condiciones:
 - falta un handoff verificable y tampoco existe un diff atribuible con evidencia
   suficiente para una auditoría independiente;
 - fallan pruebas, lint, empaquetado, instrumentación requerida o una migración;
-- Room cambia sin esquema, migración y pruebas históricas;
+- Room cambia sin esquema y pruebas de la transición autorizada;
 - falta QA física requerida por el comportamiento modificado;
 - el mismo defecto persiste después de dos rondas de corrección sin evidencia
   nueva;
@@ -490,7 +497,8 @@ MAIN puede declarar **candidato local completo** únicamente cuando:
 - no queda un prompt **de implementación** `HABILITADO`, un candidato sin
   auditar ni una tarea abierta; los prompts rectores pueden continuar activos
   como fuentes de verdad;
-- V1 sigue intacta y una actualización representativa conserva su historia;
+- `v1.0.0` sigue intacto como base de código y el producto final no contiene un
+  modo migrado ni una activación V1→V2;
 - las cuatro experiencias sectoriales respetan sus contratos y no se
   homologaron por analogía;
 - Calendario, Resumen, horas, disponibilidad, situaciones especiales, próximo
@@ -499,8 +507,8 @@ MAIN puede declarar **candidato local completo** únicamente cuando:
 - la batería global, lint, ensamblado, instrumentación y matriz Android exigida
   están documentados con resultados reales;
 - privacidad, secretos, permisos, logs y contenido prohibido fueron auditados;
-- no quedan placeholders accidentales, migraciones destructivas ni datos
-  reales;
+- no quedan placeholders accidentales, borrados silenciosos de datos V2 ni
+  datos reales;
 - documentación, ADR, índice de prompts, auditorías y Git describen el mismo
   estado;
 - el árbol integrador está limpio en un checkpoint local identificable.
@@ -517,6 +525,7 @@ acción sobre producción.
 ## 17. Estado inmediato
 
 La carga manual V2 quedó cerrada en `ae57686`. El próximo bloque recomendado es
-**Activar MiGuardia 2.0 desde una instalación anterior y cambiar de rubro desde
-una fecha**, pero no existe una orden vigente para escribir su prompt ni abrir
-su tarea. MAIN espera que Joaquin pida el prompt o entregue un nuevo handoff.
+**dejar MiGuardia como V2 única y retirar la compatibilidad de datos con la
+prueba 1.0**, conservando el código útil. No existe una orden vigente para
+escribir su prompt ni abrir su tarea. MAIN espera que Joaquin pida el prompt o
+entregue un nuevo handoff.

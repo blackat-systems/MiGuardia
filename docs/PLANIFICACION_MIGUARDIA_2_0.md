@@ -3,7 +3,7 @@
 - Estado: **cerrada y aprobada para ejecución**
 - Fecha de cierre: 2026-08-21
 - Propietario del producto: Joaquin
-- Base: MiGuardia `v1.0.0`
+- Base técnica de código: MiGuardia `v1.0.0`
 - Ejecutor: MAIN 2.0 por bloques verificables
 
 ## 1. Objetivo
@@ -21,18 +21,21 @@ reglas reales las configura cada usuario.
 - Android es la plataforma inicial.
 - Los datos permanecen locales, sin cuenta, nube, sincronización, analítica ni
   telemetría.
-- Se conserva `applicationId = "com.blackatsystems.miguardia"`.
+- Se mantiene por ahora `applicationId = "com.blackatsystems.miguardia"`, sin
+  convertirlo en una promesa de migración desde 1.0.
 - El tag `v1.0.0` no se mueve ni reescribe.
-- Las migraciones desde Room v5 son explícitas y no destructivas.
+- MiGuardia 1.0 fue una prueba interna sin usuarios externos: no se migran sus
+  datos, preferencias, permisos, alarmas ni archivos a 2.0.
 - No se guardan DNI, correo, teléfono, matrícula ni domicilio personal.
 - No se guardan imágenes de certificados médicos.
 - No se incorporan montos, escalas, salarios, liquidaciones ni deducciones.
 - No se incorporan agenda de pacientes ni datos clínicos.
 - No se incorporan ubicación automática, OCR ni importación directa de Excel.
 
-Joaquin autorizó reemplazar comportamiento heredado cuando permita una 2.0
-mejor. MAIN preservará datos e historia siempre que no exista una razón técnica
-concreta para cambiar esa decisión; no se destruye información por comodidad.
+MiGuardia 1.0 continúa como base de código: sus componentes útiles se adaptan en
+lugar de reescribirlos sin motivo. Esa continuidad técnica no crea un modo V1
+dentro del producto final ni obliga a conservar una base de datos de prueba.
+Tampoco autoriza borrados silenciosos en el teléfono de Joaquin.
 
 ## 3. Una configuración con historia
 
@@ -46,8 +49,6 @@ concreta para cambiar esa decisión; no se destruye información por comodidad.
   cargas, pero conservan todo su historial.
 - Una instalación nueva no recibe automáticamente 204 horas ni una franja
   nocturna.
-- Un usuario actualizado desde 1.0 conserva la semántica histórica de
-  Vigilancia hasta activar conscientemente V2 desde una fecha.
 
 ## 4. Piezas que se guardan separadas
 
@@ -132,11 +133,14 @@ Todo plan requiere inicio, finalización y vista previa de fechas.
 No se pide al comienzo una fórmula completa de horas. Las opciones avanzadas
 aparecen cuando la persona realmente las necesita.
 
-### Actualización desde 1.0
+### Reemplazo de la prueba 1.0
 
-- No se fuerza una elección inicial que bloquee el Calendario.
-- El historial y los cálculos anteriores permanecen comprensibles.
-- La activación de V2 es una acción consciente y fechada.
+- No existe actualización de datos ni un estado `migrado` que deba mostrarse.
+- Toda primera apertura de 2.0 comienza con el selector de los cuatro sectores.
+- Una instalación de prueba anterior se desinstala o limpia únicamente mediante
+  una acción expresa antes de validar 2.0; la app no borra datos silenciosamente.
+- El código útil de 1.0 puede seguir siendo la implementación de base después
+  de adaptarlo a los contratos V2.
 
 ## 6. Horas de trabajo
 
@@ -414,27 +418,33 @@ No recuerda automáticamente esas respuestas para la próxima ocasión.
 - Room guarda datos fuente e historia, nunca totales mensuales opacos.
 - Nombre/apodo y preferencias simples permanecen en sus DataStore dueños.
 - Preferencias de presentación del Resumen se guardan en DataStore.
-- `Objective`, `ScheduleCombination` y `Shift` se conservan como base histórica
-  cuando sea seguro; V2 agrega relaciones en lugar de reinterpretar columnas.
-- Toda versión de Room posee esquema exportado, migración explícita y prueba de
-  actualización con las trece familias heredadas.
-- No se permite `fallbackToDestructiveMigration`.
+- La implementación actual heredó tablas, esquemas y migraciones de 1.0, pero
+  ya no son un requisito de compatibilidad del producto.
+- Antes de ampliar Room nuevamente se define una base exclusiva de V2 y se
+  retiran el origen `MIGRATED_V1`, la activación V1→V2 y las rutas de adopción
+  histórica que no tengan otro uso real.
+- Esa limpieza puede reutilizar entidades o repositorios útiles; no exige
+  empezar el código desde cero.
+- Una vez fijada la primera base pública de V2, cada versión posterior sí debe
+  exportar esquema, migrar explícitamente y preservar todos los datos V2.
+- No se permite una limpieza silenciosa de datos desde la aplicación.
 
 ## 17. Orden aprobado de implementación
 
 1. Regularizar documentación y Git.
 2. Reglas puras de configuración, fechas y horas.
-3. Configuración persistente y migración Room v5→v6.
-4. Primera apertura, lugares, tipos, plantillas, carga manual y activación
-   consciente desde una instalación anterior.
-5. Planes recurrentes y edición puntual/masiva.
-6. Horario real, extras y avance contra la referencia.
-7. Disponibilidad, situaciones especiales y consolidación final del motor de
+3. Configuración persistente y primera apertura V2.
+4. Lugares, tipos, plantillas y carga manual.
+5. Retiro del modo V1 y definición de una base de persistencia exclusiva de V2.
+6. Cambio de sector desde una fecha dentro de V2.
+7. Planes recurrentes y edición puntual/masiva.
+8. Horario real, extras y avance contra la referencia.
+9. Disponibilidad, situaciones especiales y consolidación final del motor de
    horas y cumplimiento.
-8. Calendario final y tarjeta superior desplegable.
-9. Resumen personalizable.
-10. Próximo evento y notificaciones.
-11. Auditoría global, actualización QA y compatibilidad Android.
+10. Calendario final y tarjeta superior desplegable.
+11. Resumen personalizable.
+12. Próximo evento y notificaciones.
+13. Auditoría global, actualización QA y compatibilidad Android.
 
 Cada bloque requiere un prompt acotado, pruebas proporcionales, revisión del
 diff y un checkpoint local antes de avanzar. Joaquin indica cuándo preparar el
@@ -455,7 +465,8 @@ Se conservan inicialmente:
 Validación por impacto:
 
 - JVM para dominio y ViewModels;
-- instrumentación Room para migraciones;
+- instrumentación Room para la base limpia V2 y, después de fijarla, para sus
+  migraciones internas;
 - Compose instrumentado para recorridos visibles;
 - API 26 como piso, API 33 para permisos modernos, Samsung API 36 como
   dispositivo principal y API 37 antes del candidato final;

@@ -4,6 +4,10 @@
 - Fecha: 2026-08-20
 - Actualización de sectores: 2026-08-21
 
+> Actualización 2026-08-23: ADR 0024 reemplaza también toda obligación de
+> preservar una instalación 1.0, crear una raíz migrada o mantener un motor V1.
+> El catálogo, la configuración única y el vocabulario sectorial permanecen.
+
 ## Contexto
 
 Actualización del 2026-08-21: se conservan el catálogo cerrado, una sola

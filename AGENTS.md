@@ -2,8 +2,9 @@
 
 ## 0. Estado de MiGuardia 2.0
 
-Esta rama desarrolla **MiGuardia 2.0** como actualización de la misma aplicación
-Android. Nace exactamente del tag inmutable `v1.0.0`, commit
+Esta rama desarrolla **MiGuardia 2.0** como evolución del código de la prueba
+MiGuardia 1.0 hacia un producto nuevo sin migración de datos. Nace técnicamente
+del tag inmutable `v1.0.0`, commit
 `82db6fd8eb2c511205968894dc9857a96b16ed20`, en la rama
 `codex/miguardia-2.0`.
 
@@ -16,10 +17,15 @@ siendo puertas separadas.
 Reglas obligatorias durante la transición:
 
 - no mover, reemplazar ni reescribir el tag `v1.0.0`;
-- conservar `applicationId = "com.blackatsystems.miguardia"` para que 2.0 pueda
-  actualizar 1.0;
-- preservar todos los datos locales existentes mediante migraciones explícitas
-  y no destructivas desde Room v5;
+- mantener por ahora `applicationId = "com.blackatsystems.miguardia"`; esto no
+  implica compatibilidad ni traspaso desde 1.0 y cualquier cambio de paquete
+  sigue siendo una puerta separada;
+- tratar MiGuardia 2.0 como instalación limpia: no existe un recorrido de
+  activación, adopción ni migración de datos desde 1.0;
+- considerar el modo `MIGRATED_V1`, el motor V1 y la cadena Room heredada como
+  deuda temporal del árbol actual, no como comportamiento que deba preservarse;
+- no borrar ni limpiar datos del teléfono de forma silenciosa: toda
+  desinstalación o limpieza de una prueba anterior requiere una acción expresa;
 - no recuperar código desde worktrees históricos como sustituto de la base
   sellada;
 - mantener una sola configuración laboral por usuario; no crear múltiples
@@ -34,9 +40,11 @@ Reglas obligatorias durante la transición:
 ## 1. Propósito y alcance
 
 Este repositorio contiene **MiGuardia**, una aplicación Android para organizar
-jornadas laborales. MiGuardia 1.0.0 está especializada en Vigilancia privada.
-MiGuardia 2.0 conserva ese núcleo y lo amplía a un catálogo cerrado de cuatro
-sectores: Vigilancia privada, Policía, Enfermería y Medicina.
+jornadas laborales. MiGuardia 1.0.0 fue una prueba interna de Joaquin,
+especializada en Vigilancia privada y sin usuarios externos. MiGuardia 2.0
+reutiliza esa base de código, reemplaza la experiencia funcional de aquella
+prueba y comienza con datos vacíos para un catálogo cerrado de cuatro sectores:
+Vigilancia privada, Policía, Enfermería y Medicina.
 
 El Calendario, la privacidad local y las capacidades comunes se comparten. Las
 reglas de horas y el vocabulario se validan por sector; no se copian por
@@ -128,7 +136,10 @@ Módulos conceptuales previstos: datos locales; objetivos y guardias; calendario
 - Mantener la lógica de negocio independiente de Compose y de Android cuando sea razonable, especialmente fechas, turnos, horas, feriados y resúmenes.
 - Usar fechas y horas con semántica explícita. Una guardia debe tener instante local de inicio y fin; nunca inferir cruces de medianoche solo desde texto visual.
 - Guardar instantáneas históricas de objetivo, abreviatura, horario, color y puesto en cada guardia; editar una plantilla no altera el pasado.
-- Diseñar migraciones de datos antes de cambiar esquemas persistentes. No usar migración destructiva en datos reales.
+- Definir una base Room exclusiva de V2 antes de seguir ampliando persistencia.
+  Como 1.0 no tiene datos que deban conservarse, no se exige una migración desde
+  ella. Una vez fijada la primera base pública de V2, todo cambio posterior sí
+  debe preservar sus datos mediante migraciones explícitas.
 - No añadir dependencias de producción sin justificar necesidad, mantenimiento, licencia, privacidad, tamaño y alternativa nativa.
 - MiGuardia organiza jornadas y horas. No incorporar tablas salariales, montos,
   estimaciones remunerativas, liquidaciones, deducciones ni datos sindicales.
@@ -151,7 +162,7 @@ Un cambio no está terminado hasta que:
 
 Las pruebas pueden recorrer el zoom interno de MiGuardia, pero no deben consultar ni modificar `font_scale`, zoom, tamaño de visualización ni densidad del dispositivo. No implementar variantes automáticas basadas en esos valores del sistema.
 
-Priorizar pruebas de límites: medianoche, fin de mes/año, febrero bisiesto, cambio de mes, dos guardias excepcionales, descanso menor a 12 horas, referencias de horas configuradas por el usuario, franjas nocturnas configuradas por lugar, feriado que corta una guardia nocturna, reprogramación de alertas, restauración parcial y datos históricos. Conservar 204 horas y 21:00–06:00 sólo como casos de compatibilidad histórica de Vigilancia V1, nunca como valores predeterminados de V2.
+Priorizar pruebas de límites: medianoche, fin de mes/año, febrero bisiesto, cambio de mes, dos guardias excepcionales, descanso menor a 12 horas, referencias de horas configuradas por el usuario, franjas nocturnas configuradas por lugar, feriado que corta una guardia nocturna, reprogramación de alertas, restauración parcial y datos históricos creados dentro de V2. Usar 204 horas y 21:00–06:00 sólo como valores explícitos de prueba, nunca como valores predeterminados de V2.
 
 ## 7. Privacidad y seguridad
 

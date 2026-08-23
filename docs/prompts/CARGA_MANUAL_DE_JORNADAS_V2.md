@@ -8,6 +8,10 @@
 - HEAD de entrada: el commit documental exacto que MAIN informe al abrir la tarea
 - Nombre humano: **Elegir días y cargar jornadas desde horarios guardados**
 
+> Actualización 2026-08-23: la carga manual V2 integrada continúa vigente. ADR
+> 0024 reemplaza únicamente las condiciones especiales y las regresiones de
+> una raíz `MIGRATED_V1`; su retiro pertenece a un bloque posterior.
+
 ## ROL
 
 Sos una dependencia especializada de MAIN 2.0. No sos MAIN y no podés

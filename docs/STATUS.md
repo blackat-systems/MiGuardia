@@ -15,6 +15,12 @@ fijó en el remoto privado la base `836d908` de `Cargar jornadas` y quedó
 consumido. No están autorizados otros pushes, tags, un Release, `main`, la
 publicación ni ninguna acción sobre el paquete o los datos de producción.
 
+Decisión de producto del 2026-08-23: MiGuardia 1.0 fue una prueba interna sin
+usuarios y continúa únicamente como base de código. MiGuardia 2.0 no migra datos
+de 1.0, no necesita un modo `MIGRATED_V1` ni una activación V1→V2 y comienza con
+una configuración limpia. Esta decisión no autoriza borrar la prueba instalada
+en el teléfono: cualquier limpieza física continúa siendo una acción expresa.
+
 Para una explicación sin jerga de tareas, ramas, commits y push, consultar
 `docs/GUIA_DE_TRABAJO_CODEX_2_0.md`.
 
@@ -27,6 +33,10 @@ La auditoría de reactivación y Puerta 0 está registrada en
 `docs/audits/2026-08-21-reactivacion-main-y-puerta-cero.md`.
 El flujo vigente de handoffs y checkpoints está registrado en
 `docs/audits/2026-08-23-flujo-handoffs-y-checkpoints-main.md`.
+La separación entre continuidad de código y ausencia de migración de datos V1
+está registrada en `docs/adr/0024-continuidad-de-codigo-sin-migracion-de-datos-v1.md`
+y auditada en
+`docs/audits/2026-08-23-continuidad-codigo-sin-migracion-datos-v1.md`.
 
 ## Base verificada
 
@@ -35,16 +45,16 @@ El flujo vigente de handoffs y checkpoints está registrado en
 - Base: tag anotado `v1.0.0`
 - Commit base: `82db6fd8eb2c511205968894dc9857a96b16ed20`
 - `main`, `origin/main` y `v1.0.0^{}` coincidían en ese commit al crear el worktree.
-- Aplicación heredada: `com.blackatsystems.miguardia`
-- Persistencia heredada: Room v5, trece entidades y migraciones explícitas
+- Identificador técnico actual: `com.blackatsystems.miguardia`
+- Base de código heredada: Room v5, trece entidades y migraciones explícitas
   `1→2→3→4→5`.
 
 ## Terminado
 
 - MiGuardia 1.0.0 fue sellada y publicada como fuente estable.
 - Se creó un worktree independiente y limpio para 2.0.
-- Se decidió que 2.0 será una actualización de la misma aplicación y conservará
-  los datos de 1.0.
+- La decisión anterior de conservar datos 1.0 quedó reemplazada: se conserva el
+  código útil, no una instalación ni sus datos de prueba.
 - Se rechazaron múltiples perfiles laborales: existe una sola configuración
   laboral por usuario.
 - Se cerró la etapa de decisiones funcionales sobre base, horas adicionales,
@@ -71,9 +81,9 @@ El flujo vigente de handoffs y checkpoints está registrado en
   genérico Salud ni una opción Otro.
 - Las reglas confirmadas distinguen trabajo habitual, clases de horas extras y
   disponibilidad; el trabajo activo reemplaza sólo el tramo pasivo superpuesto.
-- Room evoluciona desde v5 mediante migraciones explícitas y no destructivas.
-  La configuración laboral ya está en Room v6 y el catálogo laboral del Corte
-  A ya está en Room v7; las tablas heredadas permanecen sin cambios.
+- El árbol actual evolucionó técnicamente desde Room v5 hasta v7. La
+  configuración laboral y el catálogo ya están persistidos, pero la cadena
+  heredada y el modo V1 dejaron de ser requisitos del producto final.
 - `docs/PROMPT_MAESTRO_MAIN_2_0.md` vuelve a ser el traspaso rector activo. MAIN
   debe concretar cada bloque sin presentar propuestas antiguas como código
   vigente.
@@ -123,14 +133,15 @@ El flujo vigente de handoffs y checkpoints está registrado en
     configuración laboral visible integradas.
   - `ca029d1`: coordinador documental secuencial.
   - `ae57686`: carga manual V2 auditada, probada e integrada.
+  - `fe911e2`: flujo de handoffs y checkpoints locales de MAIN.
 - Al iniciar la preparación documental, la rama todavía no poseía upstream. El
   push puntual posterior fue ejecutado y verificado: rama local y remoto privado
   coincidían en `836d908`; esa autorización no puede reutilizarse.
 - El dominio nuevo vive en `core/domain/.../work/`; no se recuperó el candidato
   mensual descartado. Room v7 ya persiste su Corte A, la primera configuración
-  visible y la carga manual V2 están integradas. El siguiente hueco funcional
-  es activar V2 conscientemente desde una instalación anterior y cambiar de
-  sector desde una fecha.
+  visible y la carga manual V2 están integradas. El siguiente hueco técnico es
+  retirar la bifurcación V1 y establecer una base exclusiva de V2; después queda
+  el cambio de sector desde una fecha dentro de V2.
 
 ## Antecedente histórico descartado: candidato mensual
 
@@ -183,6 +194,10 @@ La auditoría no encontró defectos concretos y quedó registrada en
 `docs/audits/2026-08-21-reglas-configuracion-laboral-por-mes-y-estado-git.md`.
 
 ## Configuración persistente y Room v6
+
+> Estado actual: la evidencia siguiente describe correctamente lo que se
+> implementó, pero la raíz `MIGRATED_V1` y su activación futura quedaron
+> obsoletas por la decisión de reemplazo limpio del 2026-08-23.
 
 El segundo bloque de MAIN 2.0 quedó implementado y verificado el 2026-08-21:
 
@@ -273,8 +288,8 @@ jornadas.
 - se pueden agregar horarios reutilizando lugar y tipo, y también lugares
   adicionales con sus reglas; cada operación usa el contrato atómico público
   correspondiente;
-- una raíz V1 conserva el recorrido heredado sin selector bloqueante, mientras
-  V2 oculta Resumen, Perfil, Objetivos y carga manual estructural de V1;
+- el código todavía conserva una raíz V1 y un recorrido heredado; esa rama ya no
+  pertenece al producto final y queda pendiente de retiro en el bloque V2-only;
 - los borradores no confirmados se conservan mediante `SavedStateHandle` y los
   estados de carga o error nunca se confunden con una instalación nueva;
 - catálogo y objetivos se cargan como una sola operación observable: si
@@ -336,8 +351,9 @@ con las jornadas visibles.
   borrador y un éxito se consume una sola vez;
 - si otra escritura cambia la ocupación después de revisar, Room rechaza el
   lote antes de mutar y obliga a revisar de nuevo;
-- V1 conserva su recorrido y V2 no habilita edición, eliminación, recurrencias,
-  horario real, extras ni Novedades V1.
+- el código todavía conserva un recorrido V1 que ahora debe retirarse; V2 no
+  habilita edición, eliminación, recurrencias, horario real, extras ni
+  Novedades V1.
 
 Validación final de MAIN:
 
@@ -399,8 +415,9 @@ dependencia `Cargar jornadas`.
 
 ## Todavía no implementado
 
-- activación consciente de V2 desde una instalación migrada y cambios de sector
-  efectivos desde una fecha;
+- retiro del origen `MIGRATED_V1`, la activación, la adopción V1 y el gating de
+  interfaz legado, junto con una base de persistencia exclusiva de V2;
+- cambios de sector efectivos desde una fecha dentro de V2;
 - persistencia de guardias pasivas o extras V2;
 - motor completo de trabajo habitual, extras exactas y disponibilidad, con su
   presentación en Resumen y Calendario;
@@ -409,13 +426,15 @@ dependencia `Cargar jornadas`.
 
 ## Próximo paso
 
-El siguiente incremento recomendado es **activar MiGuardia 2.0 desde una
-instalación anterior y cambiar de rubro desde una fecha**. Todavía no existe una
-orden vigente para escribir su prompt ni abrir su tarea: MAIN espera la
-indicación de Joaquin o un nuevo handoff. No forma parte de ese futuro paso la
-recurrencia ni la edición de jornadas.
+El siguiente incremento recomendado es **dejar MiGuardia como V2 única y retirar
+la compatibilidad de datos con la prueba 1.0**, conservando el código útil. No
+existe todavía una orden para escribir su prompt ni abrir su tarea: MAIN espera
+la indicación de Joaquin o un nuevo handoff. El cambio de sector desde una fecha
+queda inmediatamente después y tampoco incluye recurrencia ni edición de
+jornadas.
 
 Quedan como verificaciones separadas el recorrido físico de alarma exacta
-—sólo con permiso explícito—, API 26 y una migración V1 real en el Samsung.
+—sólo con permiso explícito— y API 26. Ya no corresponde una migración V1 real
+en el Samsung.
 Después del sello remoto ya consumido, cualquier otro push, tag, Release y toda
 operación sobre `main` o producción continúan prohibidos.

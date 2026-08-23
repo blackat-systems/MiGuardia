@@ -1,7 +1,7 @@
 # Mapa maestro de MiGuardia 2.0
 
 - Estado: fuente activa de producto
-- Fecha: 2026-08-21
+- Fecha: 2026-08-23
 - Propietario del producto: Joaquin
 - Alcance: explicar el producto aprobado y el orden de construcción
 
@@ -16,7 +16,8 @@ una misma regla laboral sobre los cuatro sectores.
 
 ## 2. De dónde parte
 
-MiGuardia 1.0.0 ya resuelve el caso de Vigilancia privada:
+MiGuardia 1.0.0 fue la prueba interna y la base de código que ya resolvió el
+caso de Vigilancia privada:
 
 - calendario mensual;
 - objetivos, horarios y guardias;
@@ -25,9 +26,11 @@ MiGuardia 1.0.0 ya resuelve el caso de Vigilancia privada:
 - horas, próximo evento, notificaciones, clima y resumen mensual;
 - datos locales, sin cuenta ni nube.
 
-MiGuardia 2.0 actualiza esa misma aplicación. Debe conservar el
-`applicationId`, el historial local y la semántica de los datos 1.0 mediante
-migraciones no destructivas.
+MiGuardia 2.0 continúa desde ese código y puede reutilizar todo componente que
+siga siendo correcto. No existe, en cambio, una población usuaria ni datos 1.0
+que deban migrarse: la experiencia 2.0 comienza como instalación limpia. El tag
+`v1.0.0` se conserva como base técnica y evidencia, no como contrato de
+compatibilidad de datos.
 
 ## 3. Los cuatro sectores exactos
 
@@ -94,12 +97,11 @@ plan o regla desde una fecha no reescribe el pasado.
 
 ## 7. Decisiones confirmadas
 
-- MiGuardia 2.0 actualiza la misma aplicación, conserva el `applicationId` y
-  protege el tag `v1.0.0`.
+- MiGuardia 2.0 continúa sobre el código de 1.0 y protege el tag `v1.0.0`.
+- No hay traspaso de datos, modo migrado ni activación V1→V2: toda experiencia
+  2.0 comienza con configuración nueva.
 - Existe una sola configuración laboral, con cambios desde una fecha concreta.
 - Una instalación nueva elige primero el sector y entra al Calendario vacío.
-- Un usuario actualizado desde 1.0 conserva su comportamiento histórico hasta
-  activar conscientemente la configuración 2.0.
 - Todo trabajo activo suma al total trabajado.
 - Las horas extras se declaran expresamente, poseen inicio y fin exactos y se
   muestran separadas sin dejar de integrar el total.
@@ -144,11 +146,15 @@ bloquear la arquitectura personalizable aprobada.
 ```text
 Reglas puras y pruebas
         ↓
-Configuración y migración segura
+Configuración local V2
         ↓
 Lugares, tipos, plantillas y primera configuración
         ↓
-Carga manual y activación consciente desde una instalación anterior
+Carga manual
+        ↓
+Retiro del modo V1 y base de datos exclusiva de V2
+        ↓
+Cambio de rubro desde una fecha
         ↓
 Planes recurrentes y edición del Calendario
         ↓

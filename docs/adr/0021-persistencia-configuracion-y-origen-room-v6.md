@@ -1,7 +1,12 @@
 # ADR 0021: persistencia de configuración y origen en Room v6
 
-- Estado: aceptada
+- Estado: implementación histórica; origen `MIGRATED_V1` reemplazado por ADR
+  0024
 - Fecha: 2026-08-21
+
+> Actualización 2026-08-23: las tablas y pruebas aquí descriptas existen en el
+> árbol actual. Ya no representan el contrato final: no habrá instalación
+> migrada, activación V1→V2 ni obligación de conservar datos 1.0.
 
 ## Contexto
 

@@ -5,6 +5,10 @@
 > etapa de investigación, pero ya no habilita una tarea ni prevalece sobre
 > `docs/PLANIFICACION_MIGUARDIA_2_0.md` y
 > `docs/PROMPT_MAESTRO_MAIN_2_0.md` vigentes.
+>
+> Actualización 2026-08-23: ADR 0024 reemplaza cualquier instrucción de este
+> cuerpo que exija migrar o conservar datos de 1.0. MiGuardia 1.0 continúa sólo
+> como base de código reutilizable.
 
 > Estado histórico al 2026-08-21: PLANIFICACIÓN estaba activa. Joaquin retiró el
 > cierre anterior porque necesita comprender y ordenar cada bloque en lenguaje

@@ -7,6 +7,10 @@
 - Dependencia cerrada: Corte A de catálogo laboral y Room v7
 - Nombre humano: **Elegir el rubro y preparar el primer lugar de trabajo**
 
+> Actualización 2026-08-23: la primera apertura V2 y su configuración visible
+> permanecen vigentes. ADR 0024 reemplaza únicamente el recorrido especial para
+> una raíz `MIGRATED_V1`, que debe retirarse en un bloque posterior.
+
 ## ROL
 
 Sos una dependencia especializada de MAIN 2.0. No sos MAIN y no podés

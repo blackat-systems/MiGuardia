@@ -5,17 +5,18 @@
 
 ## Evidencia heredada verificada
 
-- MiGuardia 1.0.0 está especializada en Vigilancia privada y su historial debe
-  permanecer intacto.
+- MiGuardia 1.0.0 está especializada en Vigilancia privada y continúa como base
+  de código reutilizable; no existe una instalación o historial de usuario que
+  deba migrarse a 2.0.
 - El cálculo histórico 1.0 utiliza una referencia mensual de 204 horas y una
   franja nocturna de 21:00 a 06:00.
 - El vocabulario heredado utiliza `Objetivo`, `Guardia`, `Horario` y `Puesto`.
 - Retén, cubrefranco o una guardia cubierta completa no se transforma
   automáticamente en horas extras.
 
-Los valores 204 horas y 21:00–06:00 explican los datos migrados de 1.0. No son
-valores predeterminados para toda persona que elija Vigilancia privada en una
-instalación nueva de 2.0.
+Los valores 204 horas y 21:00–06:00 documentan el comportamiento de la prueba
+1.0 y pueden usarse como casos explícitos de prueba. No son valores
+predeterminados para una persona que elija Vigilancia privada en 2.0.
 
 ## Decisiones confirmadas para MiGuardia 2.0
 
@@ -42,8 +43,9 @@ instalación nueva de 2.0.
 
 - Una instalación nueva pregunta la configuración real de la persona y no
   presenta 204 horas o 21:00–06:00 como una verdad universal.
-- Una actualización desde 1.0 conserva esos valores dentro del motor histórico
-  hasta que el usuario realice un cambio consciente para una fecha futura.
+- Toda primera apertura V2 comienza con el selector de rubro y sin 204 horas ni
+  21:00–06:00 precargados. El código de cálculo V1 puede reutilizarse cuando
+  respete la configuración elegida en V2.
 - El Calendario admite varias guardias por día y abre el detalle completo al
   tocar la fecha.
 - El Resumen incluye el total trabajado y separa extras, disponibilidad y

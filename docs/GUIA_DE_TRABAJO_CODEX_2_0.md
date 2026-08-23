@@ -25,6 +25,10 @@ No hace falta crear otro MAIN. La tarea actual mantiene la continuidad del
 proyecto. MAIN no crea sola el prompt ni la tarea siguiente: Joaquin indica
 cuándo quiere prepararla y luego entrega su handoff para integrar.
 
+MiGuardia 1.0 sí se conserva como base de código. Lo que se canceló es el
+traspaso de datos de una instalación 1.0: no hay usuarios que migrar y V2
+comienza limpia.
+
 ## 2. Carpeta y rama correctas
 
 Toda tarea de MiGuardia 2.0 trabaja en:
@@ -133,18 +137,20 @@ separado.
 
 1. documentación y árbol actual;
 2. reglas internas por fecha y referencias de horas;
-3. Room v6 y configuración inicial;
+3. configuración persistente y primera apertura V2;
 4. lugares, tipos, plantillas y carga manual;
-5. activación V2 desde 1.0 y cambios de sector desde una fecha;
-6. recurrencias y edición del Calendario;
-7. horario real, extras y avance contra la referencia;
-8. disponibilidad, situaciones especiales y consolidación final del motor;
-9. Calendario final y tarjeta superior;
-10. Resumen personalizable;
-11. próximo evento y notificaciones;
-12. auditoría integral del núcleo;
-13. widget, informes, copias, bloqueo y Ayuda 2.0;
-14. auditoría de la aplicación completa y candidato local.
+5. retirar el modo V1 y dejar una base exclusiva de V2, reutilizando el código
+   que sirve;
+6. cambios de sector desde una fecha dentro de V2;
+7. recurrencias y edición del Calendario;
+8. horario real, extras y avance contra la referencia;
+9. disponibilidad, situaciones especiales y consolidación final del motor;
+10. Calendario final y tarjeta superior;
+11. Resumen personalizable;
+12. próximo evento y notificaciones;
+13. auditoría integral del núcleo;
+14. widget, informes, copias, bloqueo y Ayuda 2.0;
+15. auditoría de la aplicación completa y candidato local.
 
 ## 9. Qué no tiene que hacer Joaquin
 
