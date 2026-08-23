@@ -1,6 +1,7 @@
 package com.blackatsystems.miguardia.core.domain.repository
 
 import com.blackatsystems.miguardia.core.domain.model.ShiftWorkSnapshot
+import com.blackatsystems.miguardia.core.domain.model.ShiftOccupancyExpectation
 import com.blackatsystems.miguardia.core.domain.model.V2ShiftBatchMutation
 import com.blackatsystems.miguardia.core.domain.model.V2ShiftWrite
 import java.util.UUID
@@ -17,5 +18,8 @@ interface V2ShiftRepository {
 
     suspend fun deleteShift(shiftId: UUID)
 
-    suspend fun applyV2Batch(mutation: V2ShiftBatchMutation)
+    suspend fun applyV2Batch(
+        mutation: V2ShiftBatchMutation,
+        expectedOccupancy: ShiftOccupancyExpectation,
+    )
 }

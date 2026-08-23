@@ -1,6 +1,7 @@
 package com.blackatsystems.miguardia.core.domain.shift
 
 import com.blackatsystems.miguardia.core.domain.model.Objective
+import com.blackatsystems.miguardia.core.domain.model.ShiftOccupancyExpectation
 import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
 import com.blackatsystems.miguardia.core.domain.model.ShiftWorkSnapshot
 import com.blackatsystems.miguardia.core.domain.model.V2ShiftBatchMutation
@@ -25,6 +26,7 @@ import java.time.LocalTime
 import java.time.ZoneId
 import java.util.UUID
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
@@ -163,6 +165,43 @@ class V2ShiftPlanningTest {
         )
         assertThrows(IllegalArgumentException::class.java) {
             V2ShiftBatchMutation(shiftsToInsert = listOf(first, anotherTimeline))
+        }
+    }
+
+    @Test
+    fun occupancyExpectationCapturesTheExactReviewedShiftVersion() {
+        val shift = build().shift
+        val reviewed = ShiftOccupancyExpectation.capture(
+            startDateInclusive = DATE.minusDays(2),
+            endDateInclusive = DATE.plusDays(2),
+            shifts = listOf(shift),
+        )
+        val changed = ShiftOccupancyExpectation.capture(
+            startDateInclusive = DATE.minusDays(2),
+            endDateInclusive = DATE.plusDays(2),
+            shifts = listOf(shift.copy(updatedAt = shift.updatedAt.plusSeconds(1))),
+        )
+
+        assertEquals(setOf(shift.id), reviewed.observedShifts.map { it.shiftId }.toSet())
+        assertNotEquals(reviewed, changed)
+    }
+
+    @Test
+    fun occupancyExpectationRejectsRowsOutsideItsWindowOrRepeatedIds() {
+        val shift = build().shift
+        assertThrows(IllegalArgumentException::class.java) {
+            ShiftOccupancyExpectation.capture(
+                startDateInclusive = DATE.plusDays(1),
+                endDateInclusive = DATE.plusDays(2),
+                shifts = listOf(shift),
+            )
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            ShiftOccupancyExpectation.capture(
+                startDateInclusive = DATE.minusDays(2),
+                endDateInclusive = DATE.plusDays(2),
+                shifts = listOf(shift, shift),
+            )
         }
     }
 

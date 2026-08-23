@@ -122,9 +122,10 @@ La auditoría de reactivación y Puerta 0 está registrada en
   push puntual posterior fue ejecutado y verificado: rama local y remoto privado
   coincidían en `836d908`; esa autorización no puede reutilizarse.
 - El dominio nuevo vive en `core/domain/.../work/`; no se recuperó el candidato
-  mensual descartado. Room v7 ya persiste su Corte A y la primera configuración
-  visible está integrada; la carga manual V2 existe como candidato local y
-  todavía requiere auditoría, validación e integración de MAIN.
+  mensual descartado. Room v7 ya persiste su Corte A, la primera configuración
+  visible y la carga manual V2 están integradas. El siguiente hueco funcional
+  es activar V2 conscientemente desde una instalación anterior y cambiar de
+  sector desde una fecha.
 
 ## Antecedente histórico descartado: candidato mensual
 
@@ -311,6 +312,55 @@ Validación final repetida por MAIN:
 Evidencia completa en
 `docs/audits/2026-08-22-primera-apertura-configuracion-laboral-visible.md`.
 
+## Carga manual de jornadas V2 — integrada por MAIN
+
+La persona con una configuración `V2Ready` puede usar `Cargar jornadas` desde
+la única grilla mensual, elegir una o varias fechas del mismo mes, seleccionar
+un lugar, tipo y horario guardados, revisar el resultado y volver al Calendario
+con las jornadas visibles.
+
+- cada fecha resuelve su configuración y reglas vigentes;
+- una retrocarga `NEW_V2` exige confirmación y no activa una raíz V1;
+- fechas ocupadas permiten reemplazar, conservar o agregar una segunda jornada;
+- superposición, descanso menor a 12 horas y carpeta médica conservan sus
+  confirmaciones;
+- cada `Shift` se guarda junto con su `ShiftWorkSnapshot` mediante una sola
+  transacción pública;
+- la limpieza de `F/?` alcanza únicamente las fechas realmente insertadas;
+- selección, formulario y etapa sobreviven a recreación; un error conserva el
+  borrador y un éxito se consume una sola vez;
+- si otra escritura cambia la ocupación después de revisar, Room rechaza el
+  lote antes de mutar y obliga a revisar de nuevo;
+- V1 conserva su recorrido y V2 no habilita edición, eliminación, recurrencias,
+  horario real, extras ni Novedades V1.
+
+Validación final de MAIN:
+
+- JVM: 317/317 —219 de dominio, 5 de base de datos y 93 de aplicación—;
+- lint: 0 errores, 2 advertencias de versiones y 3 sugerencias heredadas;
+- APK Debug y APK de AndroidTest QA: compilados correctamente;
+- Samsung `SM-S938B`, API 36: 60/60 pruebas afectadas de aplicación, 14/14 de
+  persistencia Room V2 y 1/1 recorrido integral separado con `MainActivity`,
+  raíz `NEW_V2`, recreación, rotación, guardado y reapertura;
+- revisión física con datos ficticios: una y varias fechas, retrocarga,
+  ocupadas, segunda jornada, superposición, persistencia, claro/oscuro y zoom
+  interno 100 %, 150 % y 200 %;
+- Room continúa en versión 7 y `7.json` conserva el SHA-256
+  `E3DA609D63A26609C9679DF49766714A74809CF2259CDA14FEBDF4E11D753C03`;
+- no cambiaron entidades, esquemas, migraciones, Gradle, manifiesto, permisos,
+  `applicationId`, versión ni SDK;
+- QA y QA.test fueron desinstaladas; producción permaneció únicamente en el
+  usuario 10, cerrada, no iniciada y sin modificaciones;
+- API 26 física queda pendiente por falta de un dispositivo disponible.
+
+La tarjeta heredada de próximo evento conserva temporalmente el motor y
+vocabulario V1: su adaptación V2 pertenece a un bloque posterior y no fue
+ampliada en esta integración.
+
+Evidencia completa en
+`docs/audits/2026-08-23-carga-manual-de-jornadas-v2.md` y decisión técnica en
+`docs/adr/0023-precondicion-transaccional-para-lotes-v2.md`.
+
 ## Ejecución autorizada de MAIN
 
 - avanzar de a un bloque pequeño y con nombre humano;
@@ -347,23 +397,17 @@ dependencia `Cargar jornadas`.
 - persistencia de guardias pasivas o extras V2;
 - motor completo de trabajo habitual, extras exactas y disponibilidad, con su
   presentación en Resumen y Calendario;
+- adaptación V2 de la tarjeta de próximo evento y de las notificaciones;
 - cambio de `versionName`/`versionCode` para una futura entrega 2.0.
 
 ## Próximo paso
 
-El siguiente incremento es la carga manual V2 sobre la única grilla existente.
-Debe reutilizar el catálogo ya configurado y seguir fuera de recurrencias,
-extras, disponibilidad y pantallas de Resumen. Quedan como verificaciones
-separadas el recorrido físico de alarma exacta —sólo con permiso explícito— y
-una migración V1 real en el Samsung; ninguna bloquea este incremento visible.
-Su contrato candidato es
-`docs/prompts/CARGA_MANUAL_DE_JORNADAS_V2.md`: crea jornadas nuevas y deja la
-edición estructural y las recurrencias para el bloque siguiente. Después del
-sello remoto ya consumido, cualquier otro push, tag, Release y toda operación
-sobre `main` o producción continúan prohibidos.
+El siguiente incremento es **activar MiGuardia 2.0 desde una instalación
+anterior y cambiar de rubro desde una fecha**. MAIN debe estabilizar primero su
+contrato durable y recién después abrir una única dependencia implementadora.
+No forma parte de este paso la recurrencia ni la edición de jornadas.
 
-Al redactar el coordinador existe un resultado local sin checkpoint de esta
-carga manual. MAIN debe auditar e integrar ese candidato antes de abrir otra
-tarea. Después deberá cerrar el hueco funcional de activación V2 desde una
-instalación anterior y cambios de sector vigentes desde una fecha; recién luego
-avanzará a recurrencias y edición.
+Quedan como verificaciones separadas el recorrido físico de alarma exacta
+—sólo con permiso explícito—, API 26 y una migración V1 real en el Samsung.
+Después del sello remoto ya consumido, cualquier otro push, tag, Release y toda
+operación sobre `main` o producción continúan prohibidos.

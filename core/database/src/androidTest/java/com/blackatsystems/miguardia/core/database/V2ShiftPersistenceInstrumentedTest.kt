@@ -10,6 +10,7 @@ import com.blackatsystems.miguardia.core.domain.model.ShiftBatchMutation
 import com.blackatsystems.miguardia.core.domain.model.ShiftNovelty
 import com.blackatsystems.miguardia.core.domain.model.ShiftNoveltyMutation
 import com.blackatsystems.miguardia.core.domain.model.ShiftNoveltyType
+import com.blackatsystems.miguardia.core.domain.model.ShiftOccupancyExpectation
 import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
 import com.blackatsystems.miguardia.core.domain.model.V2ShiftBatchMutation
 import com.blackatsystems.miguardia.core.domain.model.V2ShiftWrite
@@ -462,7 +463,7 @@ class V2ShiftPersistenceInstrumentedTest {
         )
 
         assertSuspendThrows<InvalidLocalDataException> {
-            store.v2Shifts.applyV2Batch(
+            applyBatch(
                 V2ShiftBatchMutation(
                     shiftIdsToDelete = setOf(existing.shift.id),
                     shiftsToInsert = listOf(replacement),
@@ -474,6 +475,52 @@ class V2ShiftPersistenceInstrumentedTest {
         assertEquals(existing.snapshot, store.v2Shifts.getWorkSnapshot(existing.shift.id))
         assertNull(store.shifts.getById(replacement.shift.id))
         assertNull(store.v2Shifts.getWorkSnapshot(replacement.shift.id))
+    }
+
+    @Test
+    fun staleOccupancyExpectationRejectsASecondWriterInsideTheTransaction() = runBlocking {
+        val fixture = createCatalog()
+        val date = LocalDate.of(2026, 1, 6)
+        val configuration = resolvedConfigurationAt(date)
+        val first = write(
+            id = uuid(405),
+            date = date,
+            fixture = fixture,
+            configuration = configuration,
+            createdAt = FIXED_INSTANT.plusSeconds(1),
+        )
+        val staleSecond = write(
+            id = uuid(406),
+            date = date,
+            fixture = fixture,
+            configuration = configuration,
+            createdAt = FIXED_INSTANT.plusSeconds(2),
+        )
+        val emptyExpectation = ShiftOccupancyExpectation.capture(
+            startDateInclusive = date.minusDays(2),
+            endDateInclusive = date.plusDays(2),
+            shifts = emptyList(),
+        )
+
+        store.v2Shifts.applyV2Batch(
+            V2ShiftBatchMutation(
+                shiftsToInsert = listOf(first),
+            ),
+            emptyExpectation,
+        )
+        assertSuspendThrows<ConflictingLocalWriteException> {
+            store.v2Shifts.applyV2Batch(
+                V2ShiftBatchMutation(
+                    shiftsToInsert = listOf(staleSecond),
+                ),
+                emptyExpectation,
+            )
+        }
+
+        assertEquals(first.shift, store.shifts.getById(first.shift.id))
+        assertEquals(first.snapshot, store.v2Shifts.getWorkSnapshot(first.shift.id))
+        assertNull(store.shifts.getById(staleSecond.shift.id))
+        assertNull(store.v2Shifts.getWorkSnapshot(staleSecond.shift.id))
     }
 
     @Test
@@ -513,7 +560,7 @@ class V2ShiftPersistenceInstrumentedTest {
         store.v2Shifts.insert(previousV2)
         store.v2Shifts.insert(unrelated)
 
-        store.v2Shifts.applyV2Batch(
+        applyBatch(
             V2ShiftBatchMutation(
                 shiftIdsToDelete = setOf(legacy.shift.id, previousV2.shift.id),
                 shiftsToInsert = listOf(replacement),
@@ -534,7 +581,7 @@ class V2ShiftPersistenceInstrumentedTest {
             createdAt = FIXED_INSTANT.plusSeconds(5),
         )
         assertSuspendThrows<InvalidLocalDataException> {
-            store.v2Shifts.applyV2Batch(
+            applyBatch(
                 V2ShiftBatchMutation(
                     shiftIdsToDelete = setOf(unrelated.shift.id),
                     shiftsToInsert = listOf(rejected),
@@ -552,7 +599,7 @@ class V2ShiftPersistenceInstrumentedTest {
             createdAt = FIXED_INSTANT.plusSeconds(6),
         )
         assertSuspendThrows<InvalidLocalDataException> {
-            store.v2Shifts.applyV2Batch(
+            applyBatch(
                 V2ShiftBatchMutation(
                     shiftsToInsert = listOf(clearRejected),
                     explicitDayStatusDatesToClear = setOf(date.plusDays(4)),
@@ -626,7 +673,7 @@ class V2ShiftPersistenceInstrumentedTest {
             createdAt = FIXED_INSTANT.plusSeconds(2),
         )
 
-        store.v2Shifts.applyV2Batch(
+        applyBatch(
             V2ShiftBatchMutation(
                 shiftIdsToDelete = setOf(historicalMedicine.shift.id),
                 shiftsToInsert = listOf(replacement),
@@ -845,6 +892,37 @@ class V2ShiftPersistenceInstrumentedTest {
             requireNotNull(store.workConfiguration.get()),
             date,
         )
+
+    private suspend fun applyBatch(mutation: V2ShiftBatchMutation) {
+        store.v2Shifts.applyV2Batch(
+            mutation = mutation,
+            expectedOccupancy = currentOccupancyFor(mutation),
+        )
+    }
+
+    private suspend fun currentOccupancyFor(
+        mutation: V2ShiftBatchMutation,
+    ): ShiftOccupancyExpectation {
+        val writeDates = (mutation.shiftsToInsert + mutation.shiftsToUpdate)
+            .map { write -> write.shift.localStartDate }
+        val deletedDates = mutation.shiftIdsToDelete.map { id ->
+            requireNotNull(store.shifts.getById(id)) {
+                "No existe la jornada $id necesaria para capturar su ocupacion"
+            }.localStartDate
+        }
+        val dates = writeDates + deletedDates
+        require(dates.isNotEmpty()) { "El lote de prueba debe tocar al menos una jornada" }
+        val startDateInclusive = requireNotNull(dates.minOrNull()).minusDays(2)
+        val endDateInclusive = requireNotNull(dates.maxOrNull()).plusDays(2)
+        return ShiftOccupancyExpectation.capture(
+            startDateInclusive = startDateInclusive,
+            endDateInclusive = endDateInclusive,
+            shifts = store.shifts.observeStartingBetween(
+                startDateInclusive,
+                endDateInclusive,
+            ).first(),
+        )
+    }
 
     private fun configurationRevision(
         id: UUID,

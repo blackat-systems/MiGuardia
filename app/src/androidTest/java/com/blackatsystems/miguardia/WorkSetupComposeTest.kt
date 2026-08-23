@@ -121,6 +121,7 @@ class WorkSetupComposeTest {
         compose.onNodeWithText("Todavía no cargaste ningún lugar de trabajo").assertIsDisplayed()
         compose.onNodeWithText("Cargar datos").assertDoesNotExist()
         compose.onNodeWithText("Editar calendario").assertDoesNotExist()
+        compose.onNodeWithText("Cargar jornadas").assertDoesNotExist()
         compose.onNodeWithText("Crear primer lugar").performClick()
         compose.runOnIdle { assertEquals(true, opened) }
     }
@@ -226,6 +227,7 @@ class WorkSetupComposeTest {
 
         compose.onNodeWithText("Próximo evento").assertIsDisplayed()
         compose.onNodeWithText("¿En qué rubro trabajás?").assertDoesNotExist()
+        compose.onNodeWithText("Cargar jornadas").assertDoesNotExist()
         compose.onNodeWithContentDescription("Abrir menú").performClick()
         compose.onNodeWithText("Resumen").assertIsDisplayed()
         compose.onNodeWithText("Perfil laboral").assertIsDisplayed()

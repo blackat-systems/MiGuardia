@@ -116,6 +116,11 @@ import com.blackatsystems.miguardia.ui.management.ManagementSurface
 import com.blackatsystems.miguardia.ui.management.ManagementSurfaceHost
 import com.blackatsystems.miguardia.ui.management.ManagementUiState
 import com.blackatsystems.miguardia.ui.management.ManagementViewModel
+import com.blackatsystems.miguardia.ui.management.V2ManualShiftLoadActions
+import com.blackatsystems.miguardia.ui.management.V2ManualShiftLoadContent
+import com.blackatsystems.miguardia.ui.management.V2ManualShiftLoadStage
+import com.blackatsystems.miguardia.ui.management.V2ManualShiftLoadUiState
+import com.blackatsystems.miguardia.ui.management.V2ManualShiftLoadViewModel
 import com.blackatsystems.miguardia.ui.nextevent.NextEventCard
 import com.blackatsystems.miguardia.ui.nextevent.NextEventUiState
 import com.blackatsystems.miguardia.ui.nextevent.NextEventViewModel
@@ -368,6 +373,7 @@ fun MiGuardiaApp(
     calendarViewModel: CalendarViewModel,
     nextEventViewModel: NextEventViewModel,
     managementViewModel: ManagementViewModel,
+    v2ManualShiftLoadViewModel: V2ManualShiftLoadViewModel,
     summaryViewModel: SummaryViewModel,
     exceptionsViewModel: ExceptionsViewModel,
     vacationViewModel: VacationViewModel,
@@ -386,6 +392,7 @@ fun MiGuardiaApp(
     val calendarState by calendarViewModel.uiState.collectAsStateWithLifecycle()
     val nextEventState by nextEventViewModel.uiState.collectAsStateWithLifecycle()
     val managementState by managementViewModel.uiState.collectAsStateWithLifecycle()
+    val v2ManualShiftLoadState by v2ManualShiftLoadViewModel.uiState.collectAsStateWithLifecycle()
     val summaryState by summaryViewModel.uiState.collectAsStateWithLifecycle()
     val exceptionsState by exceptionsViewModel.uiState.collectAsStateWithLifecycle()
     val vacationState by vacationViewModel.uiState.collectAsStateWithLifecycle()
@@ -416,6 +423,8 @@ fun MiGuardiaApp(
         onSummaryRetry = summaryViewModel::retry,
         managementState = managementState,
         managementActions = ManagementActions.from(managementViewModel),
+        v2ManualShiftLoadState = v2ManualShiftLoadState,
+        v2ManualShiftLoadActions = V2ManualShiftLoadActions.from(v2ManualShiftLoadViewModel),
         exceptionsState = exceptionsState,
         exceptionsActions = ExceptionsActions.from(exceptionsViewModel),
         vacationState = vacationState,
@@ -460,6 +469,8 @@ fun MiGuardiaApp(
     onNextEventRetry: () -> Unit = {},
     managementState: ManagementUiState = ManagementUiState(),
     managementActions: ManagementActions = ManagementActions(),
+    v2ManualShiftLoadState: V2ManualShiftLoadUiState = V2ManualShiftLoadUiState(),
+    v2ManualShiftLoadActions: V2ManualShiftLoadActions = V2ManualShiftLoadActions(),
     summaryState: SummaryUiState = SummaryUiState(
         visibleMonth = calendarState.visibleMonth,
         referenceInstant = calendarState.referenceInstant,
@@ -500,9 +511,13 @@ fun MiGuardiaApp(
     val isV2Mode = workSetupState.rootState is WorkSetupState.V2NeedsFirstSet ||
         workSetupState.rootState is WorkSetupState.V2Ready
     val needsFirstWorkSet = workSetupState.rootState is WorkSetupState.V2NeedsFirstSet
+    val v2ReadyState = workSetupState.rootState as? WorkSetupState.V2Ready
+    val v2ManualLoadActive = v2ReadyState != null &&
+        v2ManualShiftLoadState.isActive &&
+        v2ReadyState.timelineId == v2ManualShiftLoadState.timelineId
     var destination by rememberSaveable { androidx.compose.runtime.mutableStateOf(MainDestination.CALENDAR) }
     val displayedCalendarState = if (
-        isV2Mode && calendarState.interactionMode == CalendarInteractionMode.EDIT
+        isV2Mode && !v2ManualLoadActive && calendarState.interactionMode == CalendarInteractionMode.EDIT
     ) {
         calendarState.copy(
             interactionMode = CalendarInteractionMode.VIEW,
@@ -536,7 +551,8 @@ fun MiGuardiaApp(
         notificationState.surface != NotificationSurface.NONE ||
         weatherState.surface != WeatherSurface.NONE ||
         (!isV2Mode && profileState.surface != ProfileSurface.NONE) ||
-        workSetupState.surface != WorkSetupSurface.NONE
+        workSetupState.surface != WorkSetupSurface.NONE ||
+        v2ManualLoadActive
     val canOpenDrawer = !hasBlockingSurface && selectedDay == null
     LaunchedEffect(calendarNavigationRequest) {
         if (calendarNavigationRequest > 0) {
@@ -552,12 +568,43 @@ fun MiGuardiaApp(
             destination = MainDestination.CALENDAR
         }
     }
-    LaunchedEffect(isV2Mode, calendarState.interactionMode) {
+    LaunchedEffect(isV2Mode, managementState.surface) {
+        if (isV2Mode && managementState.surface != ManagementSurface.NONE) {
+            managementActions.close()
+        }
+    }
+    LaunchedEffect(
+        v2ManualShiftLoadState.isActive,
+        v2ManualShiftLoadState.timelineId,
+        v2ManualShiftLoadState.isLoading,
+        v2ManualShiftLoadState.isSaving,
+        v2ReadyState?.timelineId,
+    ) {
         if (
+            v2ManualShiftLoadState.isActive &&
+            !v2ManualLoadActive &&
+            !v2ManualShiftLoadState.isLoading &&
+            !v2ManualShiftLoadState.isSaving
+        ) {
+            v2ManualShiftLoadActions.discardIncompatible()
+        }
+    }
+    LaunchedEffect(isV2Mode, v2ManualLoadActive, calendarState.interactionMode) {
+        if (v2ManualLoadActive && calendarState.interactionMode == CalendarInteractionMode.VIEW) {
+            onEnterCalendarEditMode(null)
+        } else if (
             isV2Mode &&
+            !v2ManualLoadActive &&
             calendarState.interactionMode == CalendarInteractionMode.EDIT
         ) {
             onFinishCalendarEditMode()
+        }
+    }
+    LaunchedEffect(v2ManualShiftLoadState.successSequence) {
+        val successSequence = v2ManualShiftLoadState.successSequence
+        if (successSequence > 0) {
+            v2ManualShiftLoadActions.consumeSuccess(successSequence)
+            destination = MainDestination.CALENDAR
         }
     }
     LaunchedEffect(hasBlockingSurface) {
@@ -701,6 +748,8 @@ fun MiGuardiaApp(
                     },
                     managementState = managementState,
                     managementActions = managementActions,
+                    v2ManualShiftLoadState = v2ManualShiftLoadState,
+                    v2ManualShiftLoadActions = v2ManualShiftLoadActions,
                     onOpenNotifications = notificationActions.openShift,
                     onOpenExceptions = exceptionsActions.openShift,
                     onOpenWeather = weatherActions.openShift,
@@ -711,6 +760,10 @@ fun MiGuardiaApp(
                     needsFirstWorkSet = needsFirstWorkSet,
                     onOpenWorkSetup = workSetupActions.openOverview,
                     onCreateFirstWorkSet = workSetupActions.openFirstWorkSet,
+                    onStartV2ManualLoad = {
+                        v2ManualShiftLoadActions.start(workSetupState.rootState)
+                        onEnterCalendarEditMode(null)
+                    },
                 )
 
                 MainDestination.SUMMARY -> SummaryScreen(
@@ -733,6 +786,24 @@ fun MiGuardiaApp(
         }
     }
 
+    BackHandler(
+        enabled = destination == MainDestination.CALENDAR &&
+            v2ManualLoadActive,
+        onBack = {
+            if (v2ManualShiftLoadState.isLoading || v2ManualShiftLoadState.isSaving) {
+                Unit
+            } else if (
+                v2ManualShiftLoadState.stage == V2ManualShiftLoadStage.SELECT_DATES &&
+                !calendarState.editSelectionConfirmed
+            ) {
+                v2ManualShiftLoadActions.cancel()
+                onFinishCalendarEditMode()
+            } else {
+                v2ManualShiftLoadActions.backToDateSelection()
+                onResumeEditSelection()
+            }
+        },
+    )
     BackHandler(
         enabled = destination != MainDestination.CALENDAR && !hasBlockingSurface,
         onBack = { destination = MainDestination.CALENDAR },
@@ -965,6 +1036,8 @@ private fun CalendarScreen(
     onOpenPhotos: () -> Unit,
     managementState: ManagementUiState,
     managementActions: ManagementActions,
+    v2ManualShiftLoadState: V2ManualShiftLoadUiState,
+    v2ManualShiftLoadActions: V2ManualShiftLoadActions,
     onOpenNotifications: (com.blackatsystems.miguardia.core.domain.model.Shift) -> Unit,
     onOpenExceptions: (com.blackatsystems.miguardia.core.domain.model.Shift) -> Unit,
     onOpenWeather: (java.util.UUID) -> Unit,
@@ -974,6 +1047,7 @@ private fun CalendarScreen(
     needsFirstWorkSet: Boolean,
     onOpenWorkSetup: () -> Unit,
     onCreateFirstWorkSet: () -> Unit,
+    onStartV2ManualLoad: () -> Unit,
 ) {
     val today = state.referenceInstant.atZone(AppDefaults.zoneId()).toLocalDate()
     val verticalScrollState = rememberScrollState()
@@ -985,6 +1059,16 @@ private fun CalendarScreen(
     }
     val initialDataPreparationOpen = !isV2Mode &&
         managementState.surface == ManagementSurface.INITIAL_DATA_PREPARATION
+    val v2ManualLoadOpen = isV2Mode && v2ManualShiftLoadState.isActive
+    val v2DateSelectionOpen = v2ManualLoadOpen &&
+        v2ManualShiftLoadState.stage == V2ManualShiftLoadStage.SELECT_DATES
+    val v2CalendarSelectionReady = state.loadState == CalendarLoadState.CONTENT &&
+        state.editSelectedDates.all { selectedDate -> state.days.any { day -> day.date == selectedDate } }
+    val v2DateSelectionInteractive = v2DateSelectionOpen &&
+        v2CalendarSelectionReady &&
+        !state.editSelectionConfirmed &&
+        !v2ManualShiftLoadState.isLoading &&
+        !v2ManualShiftLoadState.isSaving
     val requestMonthChange: (String, () -> Unit) -> Unit = { key, action ->
         if (state.interactionMode == CalendarInteractionMode.EDIT && state.editSelectedDates.isNotEmpty()) {
             pendingMonthChange = key
@@ -998,11 +1082,16 @@ private fun CalendarScreen(
         if (state.visibleMonth == YearMonth.from(today)) onToday() else requestMonthChange("today", onToday)
     }
     TransientConfirmation(
-        message = managementState.infoMessage.takeIf {
-            !isV2Mode &&
-            managementState.surface in setOf(ManagementSurface.NONE, ManagementSurface.INITIAL_DATA_PREPARATION)
+        message = v2ManualShiftLoadState.infoMessage
+            ?: managementState.infoMessage.takeIf {
+                !isV2Mode &&
+                    managementState.surface in setOf(ManagementSurface.NONE, ManagementSurface.INITIAL_DATA_PREPARATION)
+            },
+        onDismiss = if (v2ManualShiftLoadState.infoMessage != null) {
+            v2ManualShiftLoadActions.clearMessage
+        } else {
+            managementActions.clearMessage
         },
-        onDismiss = managementActions.clearMessage,
     ) {
         BoxWithConstraints(
             modifier = Modifier
@@ -1017,12 +1106,16 @@ private fun CalendarScreen(
                 NextEventCard(state = nextEventState, onRetry = onNextEventRetry)
                 if (state.interactionMode == CalendarInteractionMode.EDIT) {
                     Text(
-                        text = "Editando calendario",
+                        text = if (v2ManualLoadOpen) "Cargando jornadas" else "Editando calendario",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.vigiliaColors.active,
                         modifier = Modifier.semantics {
-                            contentDescription = "Editando calendario. Las acciones para modificar están habilitadas."
+                            contentDescription = if (v2ManualLoadOpen) {
+                                "Cargando jornadas. Elegí los días y revisá antes de guardar."
+                            } else {
+                                "Editando calendario. Las acciones para modificar están habilitadas."
+                            }
                         },
                     )
                 }
@@ -1032,9 +1125,9 @@ private fun CalendarScreen(
                     onNext = nextMonth,
                     onToday = currentMonth,
                     onPhotos = onOpenPhotos,
-                    showPhotos = state.interactionMode == CalendarInteractionMode.EDIT,
+                    showPhotos = state.interactionMode == CalendarInteractionMode.EDIT && !v2ManualLoadOpen,
                     appZoom = appZoom,
-                    navigationEnabled = !formOpen,
+                    navigationEnabled = !formOpen && (!v2ManualLoadOpen || v2DateSelectionInteractive),
                 )
 
                 when (state.loadState) {
@@ -1058,9 +1151,16 @@ private fun CalendarScreen(
                         interactionMode = state.interactionMode,
                         selectedDates = state.editSelectedDates,
                         onEditSelectionChange = onEditSelectionChange,
-                        selectionEnabled = !formOpen && !initialDataPreparationOpen,
+                        selectionEnabled = !formOpen && !initialDataPreparationOpen &&
+                            (!v2ManualLoadOpen || v2DateSelectionInteractive),
                         selectionConfirmed = state.editSelectionConfirmed,
-                        monthSwipeEnabled = !formOpen,
+                        monthSwipeEnabled = !formOpen && (!v2ManualLoadOpen || v2DateSelectionInteractive),
+                        selectedDateDescription = if (v2ManualLoadOpen) {
+                            "seleccionado para cargar jornadas"
+                        } else {
+                            "seleccionado para editar"
+                        },
+                        shiftDescription = if (isV2Mode) "jornada" else "guardia",
                         appZoom = appZoom,
                     )
                 }
@@ -1070,12 +1170,30 @@ private fun CalendarScreen(
                 }
 
                 if (state.interactionMode == CalendarInteractionMode.EDIT) {
-                    if (initialDataPreparationOpen) {
+                    if (v2ManualLoadOpen) {
+                        V2ManualShiftLoadContent(
+                            state = v2ManualShiftLoadState,
+                            calendarSelectedDates = state.editSelectedDates,
+                            calendarSelectionConfirmed = state.editSelectionConfirmed,
+                            calendarContentReady = v2CalendarSelectionReady,
+                            actions = v2ManualShiftLoadActions,
+                            onConfirmCalendarSelection = {
+                                if (v2CalendarSelectionReady) {
+                                    onConfirmEditSelection()
+                                    v2ManualShiftLoadActions.confirmDates(state.editSelectedDates)
+                                }
+                            },
+                            onModifyCalendarSelection = {
+                                v2ManualShiftLoadActions.backToDateSelection()
+                                onResumeEditSelection()
+                            },
+                        )
+                    } else if (initialDataPreparationOpen) {
                         InitialDataPreparationContent(
                             state = managementState,
                             actions = managementActions,
                         )
-                    } else if (!formOpen) {
+                    } else if (!formOpen && !isV2Mode) {
                         CalendarEditTools(
                             state = state,
                             managementActions = managementActions,
@@ -1099,13 +1217,33 @@ private fun CalendarScreen(
                 if (!formOpen) {
                     if (state.interactionMode == CalendarInteractionMode.EDIT) {
                         OutlinedButton(
-                            onClick = onFinishEditMode,
+                            onClick = {
+                                if (v2ManualLoadOpen) v2ManualShiftLoadActions.cancel()
+                                onFinishEditMode()
+                            },
+                            enabled = !v2ManualShiftLoadState.isLoading && !v2ManualShiftLoadState.isSaving,
                             modifier = Modifier.fillMaxWidth(),
                         ) {
-                            Text(if (initialDataPreparationOpen) "Salir por ahora" else "Salir de edición")
+                            Text(
+                                when {
+                                    v2ManualLoadOpen -> "Salir de la carga"
+                                    initialDataPreparationOpen -> "Salir por ahora"
+                                    else -> "Salir de edición"
+                                },
+                            )
                         }
                     } else if (isV2Mode) {
                         if (!needsFirstWorkSet) {
+                            Button(
+                                onClick = onStartV2ManualLoad,
+                                enabled = state.loadState == CalendarLoadState.CONTENT,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(min = 56.dp)
+                                    .testTag("calendar-v2-load-shifts"),
+                            ) {
+                                Text("Cargar jornadas")
+                            }
                             OutlinedButton(
                                 onClick = onOpenWorkSetup,
                                 modifier = Modifier
@@ -1114,13 +1252,6 @@ private fun CalendarScreen(
                             ) {
                                 Text("Mi forma de trabajar")
                             }
-                            Text(
-                                "La carga manual de jornadas para esta configuración se habilitará más adelante.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center,
-                                modifier = Modifier.fillMaxWidth(),
-                            )
                         }
                     } else {
                         if (!state.hasAnyShiftsLoaded && state.shiftPresenceError) {
@@ -1367,6 +1498,8 @@ private fun CalendarGridViewport(
     selectionEnabled: Boolean,
     selectionConfirmed: Boolean,
     monthSwipeEnabled: Boolean,
+    selectedDateDescription: String,
+    shiftDescription: String,
     appZoom: AppZoom,
 ) {
     BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
@@ -1400,6 +1533,8 @@ private fun CalendarGridViewport(
                     selectionEnabled = selectionEnabled,
                     selectionConfirmed = selectionConfirmed,
                     enableMonthSwipe = !isEnlarged && monthSwipeEnabled,
+                    selectedDateDescription = selectedDateDescription,
+                    shiftDescription = shiftDescription,
                 )
             }
         }
@@ -1578,6 +1713,8 @@ private fun MonthGrid(
     selectionEnabled: Boolean,
     selectionConfirmed: Boolean,
     enableMonthSwipe: Boolean,
+    selectedDateDescription: String,
+    shiftDescription: String,
 ) {
     val dayByDate = remember(days) { days.associateBy { it.date } }
     val offset = month.atDay(1).dayOfWeek.value - 1
@@ -1634,6 +1771,8 @@ private fun MonthGrid(
                             isSelected = day.date in selectedDates,
                             enabled = interactionMode == CalendarInteractionMode.VIEW ||
                                 (selectionEnabled && !selectionConfirmed),
+                            selectedDateDescription = selectedDateDescription,
+                            shiftDescription = shiftDescription,
                             onClick = {
                                 if (interactionMode == CalendarInteractionMode.VIEW) {
                                     onSelectDate(day.date)
@@ -1658,10 +1797,12 @@ private fun DayCell(
     isToday: Boolean,
     isSelected: Boolean,
     enabled: Boolean,
+    selectedDateDescription: String,
+    shiftDescription: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val description = day.accessibilityDescription(isToday)
+    val description = day.accessibilityDescription(isToday, shiftDescription)
     val isCompletedDay = day.vacation == null &&
         day.shifts.isNotEmpty() &&
         day.shifts.all { it.temporalStatus == ShiftTemporalStatus.COMPLETED }
@@ -1692,7 +1833,7 @@ private fun DayCell(
             )
             .testTag(if (isCompletedDay) "completed-day-${day.date}" else "day-${day.date}")
             .clearAndSetSemantics {
-                contentDescription = if (isSelected) "$description, seleccionado para editar" else description
+                contentDescription = if (isSelected) "$description, $selectedDateDescription" else description
                 role = Role.Button
                 selected = isSelected
                 if (enabled) {
@@ -1714,7 +1855,6 @@ private fun DayCell(
             style = MaterialTheme.typography.labelMedium,
             fontWeight = if (isToday) FontWeight.Bold else FontWeight.Medium,
         )
-        val firstShift = day.shifts.firstOrNull()
         if (day.vacation != null) {
             Text(
                 text = "V",
@@ -1722,37 +1862,40 @@ private fun DayCell(
                 fontWeight = FontWeight.Bold,
                 color = vigilia.vacation,
             )
-        } else if (firstShift != null) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(6.dp)
-                    .clip(MaterialTheme.shapes.extraSmall)
-                    .background(Color(firstShift.shift.colorArgbSnapshot)),
-            )
+        } else if (day.shifts.size > 1) {
             AutoSizeSingleLineText(
-                text = firstShift.shift.objectiveAbbreviationSnapshot,
+                text = "${day.shifts.size} turnos",
                 maximum = 12.sp,
-                minimum = 8.sp,
+                minimum = 7.sp,
                 fontWeight = FontWeight.Bold,
             )
-            AutoSizeSingleLineText(
-                text = firstShift.shift.timeRange(),
-                maximum = 10.sp,
-                minimum = 6.sp,
-                letterSpacing = (-0.4).sp,
-            )
-            AutoSizeSingleLineText(
-                text = firstShift.temporalStatus.shortLabel(),
-                maximum = 9.sp,
-                minimum = 6.sp,
-                fontWeight = FontWeight.SemiBold,
-            )
-            if (day.shifts.size > 1) {
-                Text(
-                    text = "+${day.shifts.size - 1}",
-                    style = MaterialTheme.typography.labelSmall,
+        } else {
+            val firstShift = day.shifts.singleOrNull()
+            if (firstShift != null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(6.dp)
+                        .clip(MaterialTheme.shapes.extraSmall)
+                        .background(Color(firstShift.shift.colorArgbSnapshot)),
+                )
+                AutoSizeSingleLineText(
+                    text = firstShift.shift.objectiveAbbreviationSnapshot,
+                    maximum = 12.sp,
+                    minimum = 8.sp,
                     fontWeight = FontWeight.Bold,
+                )
+                AutoSizeSingleLineText(
+                    text = firstShift.shift.timeRange(),
+                    maximum = 10.sp,
+                    minimum = 6.sp,
+                    letterSpacing = (-0.4).sp,
+                )
+                AutoSizeSingleLineText(
+                    text = firstShift.temporalStatus.shortLabel(),
+                    maximum = 9.sp,
+                    minimum = 6.sp,
+                    fontWeight = FontWeight.SemiBold,
                 )
             }
         }
@@ -2129,12 +2272,16 @@ private fun ShiftTemporalStatus.shortLabel(): String = when (this) {
     ShiftTemporalStatus.ABSENT -> "Aus."
 }
 
-private fun CalendarDay.accessibilityDescription(isToday: Boolean): String {
+private fun CalendarDay.accessibilityDescription(
+    isToday: Boolean,
+    shiftDescription: String,
+): String {
     val parts = mutableListOf(date.fullDisplayName())
     if (isToday) parts += "hoy"
     shifts.forEach { calendarShift ->
         parts += buildString {
-            append("guardia ")
+            append(shiftDescription)
+            append(" ")
             append(calendarShift.shift.objectiveAbbreviationSnapshot)
             append(" de ")
             append(calendarShift.shift.startTimeSnapshot.format(ShiftTimeFormatter))

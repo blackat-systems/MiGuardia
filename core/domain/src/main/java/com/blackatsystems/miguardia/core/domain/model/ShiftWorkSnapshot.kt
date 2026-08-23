@@ -3,6 +3,7 @@ package com.blackatsystems.miguardia.core.domain.model
 import com.blackatsystems.miguardia.core.domain.work.WorkSector
 import com.blackatsystems.miguardia.core.domain.work.WorkTypeBehavior
 import com.blackatsystems.miguardia.core.domain.work.normalizeRequiredWorkText
+import java.time.Instant
 import java.time.LocalDate
 import java.util.UUID
 
@@ -41,6 +42,55 @@ data class V2ShiftWrite(
         }
     }
 }
+
+data class ShiftOccupancyVersion(
+    val shiftId: UUID,
+    val localStartDate: LocalDate,
+    val startAt: Instant,
+    val endAt: Instant,
+    val status: ShiftStatus,
+    val updatedAt: Instant,
+)
+
+@ConsistentCopyVisibility
+data class ShiftOccupancyExpectation private constructor(
+    val startDateInclusive: LocalDate,
+    val endDateInclusive: LocalDate,
+    val observedShifts: Set<ShiftOccupancyVersion>,
+) {
+    companion object {
+        fun capture(
+            startDateInclusive: LocalDate,
+            endDateInclusive: LocalDate,
+            shifts: Iterable<Shift>,
+        ): ShiftOccupancyExpectation {
+            require(!endDateInclusive.isBefore(startDateInclusive)) {
+                "La ventana de ocupacion no puede terminar antes de empezar"
+            }
+            val versions = shifts.map(Shift::toOccupancyVersion)
+            require(versions.map { it.shiftId }.distinct().size == versions.size) {
+                "Una ocupacion observada no puede repetir una jornada"
+            }
+            require(versions.all { it.localStartDate in startDateInclusive..endDateInclusive }) {
+                "Las jornadas observadas deben pertenecer a la ventana de ocupacion"
+            }
+            return ShiftOccupancyExpectation(
+                startDateInclusive = startDateInclusive,
+                endDateInclusive = endDateInclusive,
+                observedShifts = versions.toSet(),
+            )
+        }
+    }
+}
+
+private fun Shift.toOccupancyVersion(): ShiftOccupancyVersion = ShiftOccupancyVersion(
+    shiftId = id,
+    localStartDate = localStartDate,
+    startAt = startAt,
+    endAt = endAt,
+    status = status,
+    updatedAt = updatedAt,
+)
 
 data class V2ShiftBatchMutation(
     val shiftIdsToDelete: Set<UUID> = emptySet(),

@@ -1,6 +1,6 @@
 # Carga manual de jornadas V2
 
-- Estado: **CANDIDATO / EN AUDITORÍA DE MAIN — NO REEJECUTAR**
+- Estado: **CERRADO — INTEGRADO POR MAIN**
 - Fecha: 2026-08-22
 - Rama obligatoria: `codex/miguardia-2.0`
 - Proyecto obligatorio: `C:\Users\Joaquin\Desktop\chatgptprojects\MiGuardia-2.0`
@@ -286,6 +286,30 @@ Se permite modificar solamente:
 - `app/src/androidTest/**`;
 - textos y test tags estrictamente necesarios.
 
+### Ajuste de integración autorizado por MAIN
+
+La auditoría posterior al handoff detectó una ventana entre la revisión y el
+guardado: otra escritura local podía cambiar las jornadas ocupadas antes de que
+el lote entrara en su transacción. Joaquin autorizó la recomendación de MAIN
+para cerrar exclusivamente ese riesgo.
+
+Esta autorización posterior reemplaza sólo la prohibición original de tocar
+`core` y DAO en los siguientes puntos acotados:
+
+- una expectativa inmutable de ocupación en `core/domain`, separada del lote a
+  mutar y obligatoria en `V2ShiftRepository.applyV2Batch(...)`;
+- una lectura suspendida en `ShiftDao` equivalente a la observación existente;
+- comparación de esa expectativa dentro de la misma transacción de
+  `RoomV2ShiftRepository`, antes de borrar, insertar, actualizar o limpiar
+  `F/?`;
+- pruebas puras y Room específicas de este contrato.
+
+El coordinador captura la ocupación de la ventana necesaria para evaluar las
+fechas elegidas y el descanso vecino. Si cambió, conserva el borrador pero
+descarta la revisión y sus confirmaciones, de modo que la persona deba revisar
+otra vez. No se agregó tabla, columna, entidad, índice, migración ni cambio de
+versión de Room.
+
 Preferí extender el recorrido de `ui/management/` y la grilla existentes. Si
 separar un coordinador V2 mejora las pruebas, mantenelo dentro de esa frontera y
 no dupliques la navegación ni el Calendario.
@@ -300,8 +324,9 @@ no dupliques ni traslades su responsabilidad al coordinador de carga.
 
 - no asumir el rol de MAIN;
 - no crear otro proyecto, rama o worktree;
-- no modificar `core/domain`, `core/database`, Room v7, entidades, DAO,
-  esquemas o migraciones;
+- fuera del ajuste de integración autorizado y documentado arriba, no modificar
+  `core/domain`, `core/database`, Room v7, entidades, DAO, esquemas o
+  migraciones;
 - no cambiar DataStore, Gradle, manifiesto, permisos, `applicationId`, versión
   o SDK;
 - no implementar edición estructural ni eliminación individual de jornadas
@@ -435,3 +460,32 @@ La dependencia está lista para entregar a MAIN solamente cuando:
 - errores y recreación conservan el trabajo no confirmado;
 - las pruebas proporcionales pasan;
 - el diff queda sin commit y sin push para auditoría de MAIN.
+
+## CIERRE DE MAIN — 2026-08-23
+
+MAIN auditó el candidato, aplicó el ajuste transaccional autorizado, corrigió
+los bordes de carga/error, recreación, éxito consumible, semántica y varias
+jornadas por día, y ejecutó una auditoría independiente de sólo lectura. No se
+encontraron defectos bloqueantes en el diff final.
+
+Verificación final:
+
+- JVM: 317/317 —219 de dominio, 5 de base de datos y 93 de aplicación—;
+- lint: 0 errores, 2 advertencias de versiones y 3 sugerencias heredadas;
+- APK Debug y APK de AndroidTest QA: compilados;
+- Samsung `SM-S938B`, API 36: 60/60 pruebas Compose y de actividad afectadas,
+  14/14 pruebas Room V2 y 1/1 recorrido integral separado `MainActivity +
+  Room` para una raíz `NEW_V2` limpia;
+- recorrido físico con datos ficticios: carga de una y varias fechas,
+  retrocarga, ocupadas, segunda jornada, superposición, recreación, rotación,
+  reapertura y zoom interno;
+- Room continúa en versión 7 y `7.json` conserva el SHA-256
+  `E3DA609D63A26609C9679DF49766714A74809CF2259CDA14FEBDF4E11D753C03`;
+- Gradle, manifiesto, permisos, `applicationId`, versión, SDK y producción no
+  cambiaron;
+- QA fue desinstalada al terminar; no hubo push.
+
+La adaptación de próximo evento y notificaciones conserva por ahora el motor
+V1, de acuerdo con el índice canónico, y sigue reservada para su bloque futuro.
+API 26 física permanece pendiente porque el único dispositivo disponible fue
+el Samsung API 36.

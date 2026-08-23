@@ -60,7 +60,7 @@ prevalecen para el estado operativo.
 | `CONFIGURACION_PERSISTENTE_Y_MIGRACION_ROOM_V6.md` | **CERRADO** | La configuración global ya se guarda y Room migra 5→6 sin alterar las trece familias históricas |
 | `LUGARES_TIPOS_PLANTILLAS_Y_PRIMERA_CARGA_V2.md` | **PAUSADO / REFERENCIA** | Contrato marco ya dividido: Corte A y primera apertura están cerrados; no debe reejecutarse completo |
 | `PRIMERA_APERTURA_Y_CONFIGURACION_LABORAL_VISIBLE_V2.md` | **CERRADO** | Primera pantalla de rubro y creación visible del primer lugar y horario integradas en `1f048643` |
-| `CARGA_MANUAL_DE_JORNADAS_V2.md` | **CANDIDATO / EN AUDITORÍA** | Existe una implementación local que MAIN debe auditar; no volver a crear esta dependencia |
+| `CARGA_MANUAL_DE_JORNADAS_V2.md` | **CERRADO** | La carga de jornadas nuevas desde horarios guardados fue auditada, probada e integrada por MAIN |
 
 ## Contratos históricos de MiGuardia 1.0
 
@@ -100,10 +100,9 @@ dependencia nueva se habilita únicamente cuando la anterior está cerrada:
 1. Room v6 y configuración inicial: **cerrado**;
 2. **Cerrado:** lugares, tipos, plantillas y primera apertura visible — Corte A
    de contratos y Room v7, más la configuración inicial, verificados;
-3. **Candidato en auditoría:** carga manual V2 de jornadas nuevas sobre la
-   única grilla; no reejecutar la dependencia;
-4. activación V2 desde una instalación anterior y cambios de sector desde una
-   fecha;
+3. **Cerrado:** carga manual V2 de jornadas nuevas sobre la única grilla;
+4. **Siguiente:** activación V2 desde una instalación anterior y cambios de
+   sector desde una fecha;
 5. recurrencias y edición puntual/masiva;
 6. horario real, extras y avance contra la referencia;
 7. disponibilidad, situaciones especiales y consolidación final del motor de

@@ -15,8 +15,10 @@ import com.blackatsystems.miguardia.core.database.validation.requireValidV2Local
 import com.blackatsystems.miguardia.core.database.validation.requireExactShiftSnapshotInstants
 import com.blackatsystems.miguardia.core.database.validation.validated
 import com.blackatsystems.miguardia.core.domain.model.ShiftWorkSnapshot
+import com.blackatsystems.miguardia.core.domain.model.ShiftOccupancyExpectation
 import com.blackatsystems.miguardia.core.domain.model.V2ShiftBatchMutation
 import com.blackatsystems.miguardia.core.domain.model.V2ShiftWrite
+import com.blackatsystems.miguardia.core.domain.repository.ConflictingLocalWriteException
 import com.blackatsystems.miguardia.core.domain.repository.InvalidLocalDataException
 import com.blackatsystems.miguardia.core.domain.repository.LegacyShiftCannotBeUpdatedAsV2Exception
 import com.blackatsystems.miguardia.core.domain.repository.V2ShiftRepository
@@ -90,13 +92,39 @@ internal class RoomV2ShiftRepository(
         database.requireValidV2LocalData()
     }
 
-    override suspend fun applyV2Batch(mutation: V2ShiftBatchMutation): Unit = writeShiftData(
+    override suspend fun applyV2Batch(
+        mutation: V2ShiftBatchMutation,
+        expectedOccupancy: ShiftOccupancyExpectation,
+    ): Unit = writeShiftData(
         "No se pudo guardar el lote de jornadas 2.0.",
     ) {
         database.requireValidV2LocalData()
 
         val writeDates = (mutation.shiftsToInsert + mutation.shiftsToUpdate)
             .mapTo(hashSetOf()) { write -> write.shift.localStartDate }
+        val expectedIds = expectedOccupancy.observedShifts
+            .mapTo(hashSetOf()) { version -> version.shiftId }
+        if (
+            writeDates.any { it !in expectedOccupancy.startDateInclusive..expectedOccupancy.endDateInclusive } ||
+            !expectedIds.containsAll(mutation.shiftIdsToDelete) ||
+            !expectedIds.containsAll(mutation.shiftsToUpdate.map { it.shift.id })
+        ) {
+            invalid("La ocupacion revisada no cubre todas las jornadas del lote.")
+        }
+        val currentOccupancy = ShiftOccupancyExpectation.capture(
+            startDateInclusive = expectedOccupancy.startDateInclusive,
+            endDateInclusive = expectedOccupancy.endDateInclusive,
+            shifts = database.shiftDao().getStartingBetween(
+                expectedOccupancy.startDateInclusive.toString(),
+                expectedOccupancy.endDateInclusive.toString(),
+            ).map { entity -> entity.toDomain() },
+        )
+        if (currentOccupancy != expectedOccupancy) {
+            throw ConflictingLocalWriteException(
+                "Las jornadas cambiaron mientras revisabas la carga. Revisalas nuevamente antes de guardar.",
+            )
+        }
+
         if (!writeDates.containsAll(mutation.explicitDayStatusDatesToClear)) {
             invalid("Una carga V2 sólo puede limpiar estados de las fechas que guarda.")
         }

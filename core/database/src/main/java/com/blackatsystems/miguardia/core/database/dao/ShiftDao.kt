@@ -25,6 +25,16 @@ internal interface ShiftDao {
 
     @Query(
         """SELECT * FROM shifts
+            WHERE localStartDate BETWEEN :startDateInclusive AND :endDateInclusive
+            ORDER BY startEpochMillis, id""",
+    )
+    suspend fun getStartingBetween(
+        startDateInclusive: String,
+        endDateInclusive: String,
+    ): List<ShiftEntity>
+
+    @Query(
+        """SELECT * FROM shifts
             WHERE endEpochMillis > :instantEpochMillisExclusive
             ORDER BY startEpochMillis, endEpochMillis, id""",
     )
