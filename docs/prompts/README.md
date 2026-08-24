@@ -18,9 +18,10 @@
 - **Push puntual anterior de la rama 2.0:** ejecutado y verificado hasta
   `836d908`; esa autorización quedó consumida al fijar la base de
   `Cargar jornadas`.
-- **Push de este cierre:** Joaquin autorizó el 2026-08-23 un único push
-  adicional para publicar el checkpoint estable V2-only y la recomendación
-  futura de Agenda profesional. Se consume con este cierre.
+- **Push del cierre V2-only:** Joaquin autorizó y MAIN ejecutó el 2026-08-23 un
+  único push adicional para publicar el checkpoint estable V2-only y la
+  recomendación futura de Agenda profesional. Esa autorización quedó
+  consumida en `0364b83`.
 - **Pushes posteriores, tag, Release, `main` y producción:** no autorizados.
 
 El prompt rector activo es `docs/PROMPT_MAESTRO_MAIN_2_0.md`. El mapa del
@@ -67,6 +68,7 @@ prevalecen para el estado operativo.
 | `CARGA_MANUAL_DE_JORNADAS_V2.md` | **CERRADO** | La carga de jornadas nuevas desde horarios guardados fue auditada, probada e integrada por MAIN |
 | `EDICION_Y_ELIMINACION_DE_JORNADAS_V2.md` | **CERRADO** | La edición y eliminación exacta de una jornada V2 fue auditada, probada e integrada por MAIN |
 | `RETIRAR_MODO_V1_Y_FIJAR_BASE_EXCLUSIVA_V2.md` | **CERRADO** | MiGuardia ya ejecuta una sola experiencia V2 sobre `MiGuardiaV2Database` versión 1; Samsung API 36 y emulador API 26 quedaron verificados |
+| `REPETIR_JORNADAS_Y_CAMBIAR_DESDE_UNA_FECHA_V2.md` | **HABILITADO** | Crear planes finitos y elegir si una corrección afecta sólo una jornada o todo lo futuro; espera que Joaquin abra la tarea |
 
 ## Contratos históricos de MiGuardia 1.0
 
@@ -112,8 +114,9 @@ Joaquin indicó que quiere preparar o abrir la siguiente:
    original;
 5. **Cerrado:** modo V1 retirado, código común preservado y Room V2 versión 1
    fijada y verificada;
-6. **Próximo recomendado, todavía no habilitado:** recurrencias y edición de
-   una fecha o de todo lo futuro;
+6. **Habilitado, todavía no abierto:** repetir jornadas y decidir si un cambio
+   afecta sólo una fecha o todo lo futuro, mediante
+   `REPETIR_JORNADAS_Y_CAMBIAR_DESDE_UNA_FECHA_V2.md`;
 7. horario real, extras y avance contra la referencia;
 8. disponibilidad, situaciones especiales y consolidación final del motor de
    horas y cumplimiento;

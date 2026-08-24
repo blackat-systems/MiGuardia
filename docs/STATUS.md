@@ -13,10 +13,10 @@ cuenta. Después de una integración verde, MAIN crea automáticamente el commit
 local que funciona como checkpoint. El push puntual autorizado el 2026-08-22 ya
 fijó en el remoto privado la base `836d908` de `Cargar jornadas` y quedó
 consumido. Joaquin autorizó el 2026-08-23 un único push adicional para publicar
-el checkpoint estable V2-only y esta recomendación futura. Esa autorización se
-consume con este cierre y no se extiende a pushes posteriores, tags, un
-Release, `main`, la publicación de la aplicación ni ninguna acción sobre el
-paquete o los datos de producción.
+el checkpoint estable V2-only y esta recomendación futura. MAIN lo ejecutó y
+verificó hasta `0364b83`; esa autorización quedó consumida y no se extiende a
+pushes posteriores, tags, un Release, `main`, la publicación de la aplicación
+ni ninguna acción sobre el paquete o los datos de producción.
 
 Decisión de producto del 2026-08-23: MiGuardia 1.0 fue una prueba interna sin
 usuarios y continúa únicamente como base de código. MiGuardia 2.0 no migra datos
@@ -508,6 +508,33 @@ El contrato quedó `CERRADO` en
 `docs/prompts/RETIRAR_MODO_V1_Y_FIJAR_BASE_EXCLUSIVA_V2.md`. Evidencia completa
 en `docs/audits/2026-08-23-retiro-modo-v1-y-base-room-v2.md`.
 
+## Repetir jornadas y cambiar una fecha o todo lo futuro — prompt habilitado
+
+Por pedido expreso de Joaquin del 2026-08-23, MAIN preparó el contrato durable
+`docs/prompts/REPETIR_JORNADAS_Y_CAMBIAR_DESDE_UNA_FECHA_V2.md`. La base
+funcional cerrada es
+`0364b835d07883708e137a7057f235fad9113b38`; el HEAD de entrada será el
+checkpoint documental que contiene ese prompt y MAIN deberá informarlo al
+abrir la tarea.
+
+ADR 0027 fija la arquitectura necesaria sin implementar todavía el bloque:
+
+- un plan estable, revisiones futuras y ocurrencias protegidas;
+- patrones por días de semana, cada N días o semanas y mensual por ordinal;
+- inicio y final inclusivos, sólo desde hoy y vista previa completa, sin un
+  máximo de producto inventado ni truncamiento silencioso;
+- excepciones durables para que una jornada retocada o eliminada no reaparezca;
+- `Cambiar sólo esta jornada`, `Cambiar desde esta fecha`,
+  `Eliminar sólo esta jornada` y `Finalizar desde esta fecha`;
+- una única transacción consciente para plan, ocurrencias y pares
+  `Shift + ShiftWorkSnapshot`;
+- migración explícita de Room V2 `1→2`, con esquema `2.json` y preservación de
+  todos los datos creados en la versión 1.
+
+El prompt está `HABILITADO`, pero no existe todavía tarea implementadora ni
+código candidato. Pedir el prompt no autoriza otro push ni permite tocar
+producción.
+
 ## Flujo vigente de MAIN
 
 - Joaquin entrega un handoff o pide preparar el prompt de una nueva tarea;
@@ -550,7 +577,8 @@ cierre documentado arriba y no habilita acciones posteriores.
 
 ## Todavía no implementado
 
-- recurrencias y edición de una fecha o de todo lo futuro;
+- recurrencias y edición de una fecha o de todo lo futuro: contrato habilitado,
+  implementación todavía no abierta;
 - persistencia de guardias pasivas o extras V2;
 - motor completo de trabajo habitual, extras exactas y disponibilidad, con su
   presentación en Resumen y Calendario;
@@ -559,13 +587,15 @@ cierre documentado arriba y no habilita acciones posteriores.
 
 ## Próximo paso
 
-La base exclusiva V2 quedó cerrada. No existe ahora otro prompt de
-implementación habilitado. El siguiente bloque recomendado es **repetir
-jornadas automáticamente y decidir si un cambio afecta sólo una fecha o todo
-lo futuro**. MAIN preparará su contrato únicamente cuando Joaquin lo pida.
+La base exclusiva V2 quedó cerrada y el prompt de **repetir jornadas y decidir
+si un cambio afecta sólo una fecha o todo lo futuro** quedó habilitado. Joaquin
+puede entregarlo a una única dependencia o pedirle a MAIN que abra esa tarea.
+La implementación debe partir del checkpoint documental informado por MAIN y
+volver sin commit para auditoría e integración.
 
 Quedan como verificaciones separadas el recorrido físico de alarma exacta
 —sólo con permiso explícito— y API 37 antes del candidato final. API 26 ya fue
 verificada; no corresponde una migración V1 real en el Samsung.
-Después del push adicional autorizado para este cierre, cualquier otro push,
-tag, Release y toda operación sobre `main` o producción continúan prohibidos.
+La autorización de push de este cierre ya fue consumida en `0364b83`.
+Cualquier otro push, tag, Release y toda operación sobre `main` o producción
+continúan prohibidos.

@@ -26,13 +26,13 @@ Joaquin autorizó:
   auditoría verde, sin pedir una autorización adicional para ese commit local;
 - conservar como consumida la publicación puntual de
   `codex/miguardia-2.0` que fijó la base `836d908` de `Cargar jornadas`;
-- ejecutar el único push adicional autorizado por Joaquin el 2026-08-23 para
-  publicar el checkpoint estable V2-only y la recomendación futura de Agenda
-  profesional.
+- conservar como ejecutado y consumido en `0364b83` el único push adicional
+  autorizado por Joaquin el 2026-08-23 para publicar el checkpoint estable
+  V2-only y la recomendación futura de Agenda profesional.
 
-La autorización adicional se consume con este cierre. No habilita pushes
-posteriores, tag, Release, operación sobre `main`, cambio en producción ni otra
-acción externa irreversible. Esas puertas continúan separadas.
+La autorización adicional ya quedó consumida. No habilita pushes posteriores,
+tag, Release, operación sobre `main`, cambio en producción ni otra acción
+externa irreversible. Esas puertas continúan separadas.
 
 ## 2. Autoridad
 
@@ -57,16 +57,18 @@ de convertirla en una implementación amplia.
 - El proyecto mantiene `:app`, `:core:domain` y `:core:database`.
 - Kotlin y Compose continúan como base.
 - El código parte de MiGuardia 1.0 y puede reutilizar sus componentes probados.
-- El árbol actual heredó Room v1–v7 y rutas V1, pero no existe un contrato de
-  migración de datos desde una instalación 1.0.
+- El runtime actual abre únicamente `MiGuardiaV2Database`, archivo
+  `miguardia-v2.db`, Room versión 1; la cadena Room histórica y las rutas V1 ya
+  no forman parte de la ejecución.
 - Se conservan inicialmente `minSdk 26`, `targetSdk 37`, `compileSdk 37` y Java
   17.
-- `Objective`, `ScheduleCombination` y `Shift` son bases históricas útiles.
+- `Objective`, `Shift`, la configuración laboral, el catálogo y las
+  fotografías V2 son contratos vigentes; `ScheduleCombination` fue retirado.
 - El Calendario ya posee modos `VIEW` y `EDIT`, una sola grilla y carga múltiple.
 - Próximo evento y notificaciones poseen motores reutilizables.
 - El cálculo monetario anterior está retirado y no se reintroduce.
-- El supuesto código `core/domain/.../workconfig` descripto por documentos
-  anteriores no existe en el árbol actual y no se recupera de worktrees viejos.
+- La configuración laboral pura y persistente ya existe en el árbol actual; no
+  se recupera ninguna variante desde worktrees viejos.
 
 ## 4. Reglas centrales
 
@@ -284,8 +286,8 @@ mayor al planificado.
 - Una autorización de ejecución permite esos checkpoints locales verificados.
 - El push puntual que fijó la base de `Cargar jornadas` ya fue ejecutado y
   verificado en `836d908`; su autorización está consumida.
-- El único push adicional del 2026-08-23 publica este cierre estable V2-only y
-  consume también su autorización.
+- El único push adicional del 2026-08-23 publicó el cierre estable V2-only en
+  `0364b83`; su autorización también quedó consumida.
 - No hacer pushes posteriores, merge a `main`, tag, Release ni publicación de
   la aplicación.
 - No usar `reset --hard`, no limpiar worktrees históricos y no descartar cambios

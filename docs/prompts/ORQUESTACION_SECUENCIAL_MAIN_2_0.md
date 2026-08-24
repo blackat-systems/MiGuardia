@@ -54,9 +54,9 @@ Joaquin, que autoriza a MAIN a:
 - ejecutar comprobaciones proporcionales y QA con el paquete autorizado;
 - crear automáticamente commits locales pequeños como checkpoints después de
   una auditoría verde, sin pedir otra autorización para ese commit local;
-- ejecutar el único push adicional autorizado por Joaquin el 2026-08-23 para
-  publicar el checkpoint estable V2-only y la recomendación futura de Agenda
-  profesional; esa autorización se consume con este cierre;
+- conservar como ejecutado y consumido en `0364b83` el único push adicional
+  autorizado por Joaquin el 2026-08-23 para publicar el checkpoint estable
+  V2-only y la recomendación futura de Agenda profesional;
 - preparar el prompt de una nueva tarea únicamente cuando Joaquin lo pida;
 - abrir o crear una tarea especializada únicamente cuando Joaquin lo pida.
 
@@ -219,8 +219,9 @@ La secuencia conocida al redactar este prompt es:
    `ae57686`.
 7. Corregir o eliminar una jornada V2 individual —cerrado en `4646f66`.
 8. Retirar el modo V1 antes de ampliar nuevamente la persistencia, conservando
-   el código útil —prompt habilitado; pendiente de implementación y handoff.
-9. Repetir jornadas y editar una fecha o todo lo futuro.
+   el código útil —cerrado en `b04dd59`.
+9. Repetir jornadas y editar una fecha o todo lo futuro —prompt habilitado;
+   implementación todavía no abierta.
 10. Registrar el horario realmente trabajado y las horas adicionales.
 11. Calcular trabajo activo, extras y avance contra la referencia por mes,
     semana o ciclo.
@@ -531,6 +532,7 @@ verificado y cerrado por MAIN. `MiGuardiaV2Database`, `miguardia-v2.db` y Room
 V2 versión 1 son ahora la única base activa; Samsung API 36 y emulador API 26
 quedaron verdes.
 
-No existe otro prompt de implementación habilitado. El próximo bloque
-recomendado es recurrencias y edición de una fecha o de todo lo futuro. MAIN
-espera que Joaquin pida su prompt antes de prepararlo o abrir una nueva tarea.
+El prompt `REPETIR_JORNADAS_Y_CAMBIAR_DESDE_UNA_FECHA_V2.md` quedó habilitado
+por pedido expreso de Joaquin. La implementación todavía no está abierta. MAIN
+espera que Joaquin entregue el contrato a una única dependencia o pida abrir
+esa tarea desde el checkpoint documental correspondiente.
