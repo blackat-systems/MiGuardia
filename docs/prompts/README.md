@@ -15,9 +15,13 @@
   la tarea siguiente por su cuenta.
 - **Commits locales:** MAIN los crea automáticamente como checkpoints de
   bloques comprobados.
-- **Push puntual de la rama 2.0:** ejecutado y verificado hasta `836d908`; la
-  autorización quedó consumida al fijar la base de `Cargar jornadas`.
-- **Otros pushes, tag, Release, `main` y producción:** no autorizados.
+- **Push puntual anterior de la rama 2.0:** ejecutado y verificado hasta
+  `836d908`; esa autorización quedó consumida al fijar la base de
+  `Cargar jornadas`.
+- **Push de este cierre:** Joaquin autorizó el 2026-08-23 un único push
+  adicional para publicar el checkpoint estable V2-only y la recomendación
+  futura de Agenda profesional. Se consume con este cierre.
+- **Pushes posteriores, tag, Release, `main` y producción:** no autorizados.
 
 El prompt rector activo es `docs/PROMPT_MAESTRO_MAIN_2_0.md`. El mapa del
 producto está en `docs/MAPA_MAESTRO_MIGUARDIA_2_0.md`, la planificación cerrada
@@ -123,8 +127,8 @@ Joaquin indicó que quiere preparar o abrir la siguiente:
 Cuando Joaquin pide un prompt, MAIN lo habilita en este índice después de cerrar
 su contrato y dependencias, y crea automáticamente el checkpoint documental
 local verificado. Pedir el prompt no abre por sí solo la tarea. La autorización
-puntual de publicación indicada arriba se agotó al fijar esta base; cualquier
-otra publicación requiere una autorización nueva.
+adicional indicada arriba sólo cubre el push de este cierre; cualquier
+publicación posterior requiere una autorización nueva.
 
 El coordinador secuencial no habilita paralelismo entre implementadores. Si ya
 existe un resultado candidato o una tarea abierta, MAIN debe cerrarlo antes de

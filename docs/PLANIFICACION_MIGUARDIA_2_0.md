@@ -508,3 +508,28 @@ su tarea cuando Joaquin lo indica. Una vez recibido el handoff, la auditoría,
 integración, validación, documentación y checkpoint local quedan a cargo de
 MAIN. Este orden no autoriza servicios externos, publicación ni decisiones
 funcionales todavía ausentes.
+
+## 21. Idea futura guardada: agenda profesional
+
+Joaquin pidió conservar para una etapa posterior la posibilidad de agregar un
+apartado opcional de **Agenda profesional** para Medicina y para una eventual
+incorporación de Psicología.
+
+La recomendación de orden es terminar primero el núcleo laboral vigente y,
+antes de almacenar datos de pacientes, cerrar las copias locales seguras y el
+bloqueo de acceso de MiGuardia. Recién después conviene diseñar e implementar
+esta ampliación.
+
+Si se aprueba, su primer alcance debería limitarse a pacientes y turnos. No
+incluiría historias clínicas, diagnósticos, tratamientos, evoluciones,
+certificados ni archivos clínicos. La información continuaría siendo local y
+requeriría decisiones explícitas sobre privacidad, eliminación, exportación,
+copias y migraciones de la base V2.
+
+Psicología sería un sector independiente, no una variante de Medicina o
+Enfermería. Incorporarla ampliaría el catálogo actual de cuatro a cinco
+sectores y, por lo tanto, necesita una decisión de producto separada antes de
+modificar documentación canónica, Room, pantallas o comportamiento.
+
+Esta sección guarda una recomendación futura. No habilita un prompt, una tarea,
+un cambio de esquema ni una implementación dentro de la secuencia actual.

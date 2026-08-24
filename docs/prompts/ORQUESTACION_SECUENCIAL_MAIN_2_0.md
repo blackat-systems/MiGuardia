@@ -54,6 +54,9 @@ Joaquin, que autoriza a MAIN a:
 - ejecutar comprobaciones proporcionales y QA con el paquete autorizado;
 - crear automáticamente commits locales pequeños como checkpoints después de
   una auditoría verde, sin pedir otra autorización para ese commit local;
+- ejecutar el único push adicional autorizado por Joaquin el 2026-08-23 para
+  publicar el checkpoint estable V2-only y la recomendación futura de Agenda
+  profesional; esa autorización se consume con este cierre;
 - preparar el prompt de una nueva tarea únicamente cuando Joaquin lo pida;
 - abrir o crear una tarea especializada únicamente cuando Joaquin lo pida.
 
@@ -67,8 +70,8 @@ Esta autorización **no** permite:
 - agregar dependencias de producción, servicios externos, cuentas, nube,
   telemetría o permisos por conveniencia;
 - usar datos reales del usuario;
-- hacer otro push, merge, rebase, tocar `main`, crear tag, Release o
-  publicación;
+- hacer un push posterior al cierre autorizado, merge, rebase, tocar `main`,
+  crear tag, Release o publicar la aplicación;
 - abrir o modificar la aplicación productiva del Samsung;
 - cambiar `versionCode`, `versionName`, `applicationId` o la referencia
   `v1.0.0` sin una puerta nueva y expresa de Joaquin;
@@ -479,8 +482,8 @@ condiciones:
 - existe una contradicción funcional o una decisión material abierta;
 - haría falta agregar una dependencia de producción o servicio externo no
   autorizado;
-- haría falta otro push, tocar `main`, cambiar versión, crear tag o Release,
-  publicar o actuar sobre producción;
+- haría falta un push posterior al cierre autorizado, tocar `main`, cambiar
+  versión, crear tag o Release, publicar o actuar sobre producción;
 - el bloque anterior no quedó integrado, documentado y controlado;
 - la colaboración interna no permite crear o recuperar el subagente real.
 

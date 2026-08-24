@@ -25,11 +25,14 @@ Joaquin autorizó:
 - crear automáticamente commits locales como checkpoints después de una
   auditoría verde, sin pedir una autorización adicional para ese commit local;
 - conservar como consumida la publicación puntual de
-  `codex/miguardia-2.0` que fijó la base `836d908` de `Cargar jornadas`.
+  `codex/miguardia-2.0` que fijó la base `836d908` de `Cargar jornadas`;
+- ejecutar el único push adicional autorizado por Joaquin el 2026-08-23 para
+  publicar el checkpoint estable V2-only y la recomendación futura de Agenda
+  profesional.
 
-Esa publicación puntual ya quedó consumida. No hay otro push autorizado, ni
-tag, Release, operación sobre `main`, cambio en producción o acción externa
-irreversible. Esas puertas continúan separadas.
+La autorización adicional se consume con este cierre. No habilita pushes
+posteriores, tag, Release, operación sobre `main`, cambio en producción ni otra
+acción externa irreversible. Esas puertas continúan separadas.
 
 ## 2. Autoridad
 
@@ -281,7 +284,10 @@ mayor al planificado.
 - Una autorización de ejecución permite esos checkpoints locales verificados.
 - El push puntual que fijó la base de `Cargar jornadas` ya fue ejecutado y
   verificado en `836d908`; su autorización está consumida.
-- No hacer otros pushes, merge a `main`, tag, Release ni publicación.
+- El único push adicional del 2026-08-23 publica este cierre estable V2-only y
+  consume también su autorización.
+- No hacer pushes posteriores, merge a `main`, tag, Release ni publicación de
+  la aplicación.
 - No usar `reset --hard`, no limpiar worktrees históricos y no descartar cambios
   ajenos.
 

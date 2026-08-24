@@ -12,8 +12,11 @@ prompt de una nueva tarea y cuándo abrirla; MAIN no encadena dependencias por s
 cuenta. Después de una integración verde, MAIN crea automáticamente el commit
 local que funciona como checkpoint. El push puntual autorizado el 2026-08-22 ya
 fijó en el remoto privado la base `836d908` de `Cargar jornadas` y quedó
-consumido. No están autorizados otros pushes, tags, un Release, `main`, la
-publicación ni ninguna acción sobre el paquete o los datos de producción.
+consumido. Joaquin autorizó el 2026-08-23 un único push adicional para publicar
+el checkpoint estable V2-only y esta recomendación futura. Esa autorización se
+consume con este cierre y no se extiende a pushes posteriores, tags, un
+Release, `main`, la publicación de la aplicación ni ninguna acción sobre el
+paquete o los datos de producción.
 
 Decisión de producto del 2026-08-23: MiGuardia 1.0 fue una prueba interna sin
 usuarios y continúa únicamente como base de código. MiGuardia 2.0 no migra datos
@@ -523,16 +526,23 @@ solo handoff o una sola tarea implementadora por vez. La decisión del 2026-08-2
 reemplaza únicamente la creación automática de prompts y dependencias; mantiene
 la integración, pruebas, documentación y checkpoints locales a cargo de MAIN.
 
-Esta autorización no permite recuperar el candidato mensual descartado ni
-amplía el alcance a otros pushes, tags, Release, `main`, publicación o
-producción. La excepción puntual de la rama 2.0 se agota al fijar la base de la
-dependencia `Cargar jornadas`.
+Esta autorización de flujo no permite recuperar el candidato mensual descartado
+ni amplía el alcance a tags, Release, `main`, publicación de la aplicación o
+producción. La excepción original de la rama 2.0 se agotó al fijar la base de
+`Cargar jornadas`. El único push adicional del 2026-08-23 está limitado al
+cierre documentado arriba y no habilita acciones posteriores.
 
 ## Backlog posterior
 
 - cualquier cálculo monetario o liquidación permanece fuera del producto;
 - un eventual cambio de profesión después de la selección inicial de rubro;
   no forma parte de la secuencia actual y sólo se abre si aparece un caso real;
+- recomendación futura, todavía no habilitada: después de cerrar el núcleo
+  laboral, las copias locales seguras y el bloqueo de acceso, evaluar una
+  `Agenda profesional` opcional para Medicina y una posible Psicología. Su
+  primer alcance sería pacientes y turnos, sin historias clínicas,
+  diagnósticos, tratamientos ni evoluciones. Psicología requeriría aprobar por
+  separado la ampliación del catálogo actual de cuatro sectores;
 - monetización y distribución;
 - orden fino de widgets, informes, copias/restauración y bloqueo después del
   núcleo de configuración y horas;
@@ -557,5 +567,5 @@ lo futuro**. MAIN preparará su contrato únicamente cuando Joaquin lo pida.
 Quedan como verificaciones separadas el recorrido físico de alarma exacta
 —sólo con permiso explícito— y API 37 antes del candidato final. API 26 ya fue
 verificada; no corresponde una migración V1 real en el Samsung.
-Después del sello remoto ya consumido, cualquier otro push, tag, Release y toda
-operación sobre `main` o producción continúan prohibidos.
+Después del push adicional autorizado para este cierre, cualquier otro push,
+tag, Release y toda operación sobre `main` o producción continúan prohibidos.
