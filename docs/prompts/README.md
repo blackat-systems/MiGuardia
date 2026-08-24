@@ -62,7 +62,7 @@ prevalecen para el estado operativo.
 | `PRIMERA_APERTURA_Y_CONFIGURACION_LABORAL_VISIBLE_V2.md` | **CERRADO** | Primera pantalla de rubro y creación visible del primer lugar y horario integradas en `1f048643` |
 | `CARGA_MANUAL_DE_JORNADAS_V2.md` | **CERRADO** | La carga de jornadas nuevas desde horarios guardados fue auditada, probada e integrada por MAIN |
 | `EDICION_Y_ELIMINACION_DE_JORNADAS_V2.md` | **CERRADO** | La edición y eliminación exacta de una jornada V2 fue auditada, probada e integrada por MAIN |
-| `RETIRAR_MODO_V1_Y_FIJAR_BASE_EXCLUSIVA_V2.md` | **HABILITADO** | Deja una sola experiencia V2 y crea su primera base Room propia sin migrar ni borrar los datos de la prueba 1.0 |
+| `RETIRAR_MODO_V1_Y_FIJAR_BASE_EXCLUSIVA_V2.md` | **CERRADO** | MiGuardia ya ejecuta una sola experiencia V2 sobre `MiGuardiaV2Database` versión 1; Samsung API 36 y emulador API 26 quedaron verificados |
 
 ## Contratos históricos de MiGuardia 1.0
 
@@ -106,9 +106,10 @@ Joaquin indicó que quiere preparar o abrir la siguiente:
 3. **Cerrado:** carga manual V2 de jornadas nuevas sobre la única grilla;
 4. **Cerrado:** edición y eliminación individual de una jornada V2 en su fecha
    original;
-5. **Habilitado:** retirar el modo V1 antes de ampliar nuevamente la
-   persistencia, conservando el código útil y fijando Room V2 versión 1;
-6. recurrencias y edición de una fecha o de todo lo futuro;
+5. **Cerrado:** modo V1 retirado, código común preservado y Room V2 versión 1
+   fijada y verificada;
+6. **Próximo recomendado, todavía no habilitado:** recurrencias y edición de
+   una fecha o de todo lo futuro;
 7. horario real, extras y avance contra la referencia;
 8. disponibilidad, situaciones especiales y consolidación final del motor de
    horas y cumplimiento;

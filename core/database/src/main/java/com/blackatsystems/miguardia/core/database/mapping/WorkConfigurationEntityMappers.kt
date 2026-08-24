@@ -18,7 +18,6 @@ import com.blackatsystems.miguardia.core.domain.work.PerPeriodHoursValues
 import com.blackatsystems.miguardia.core.domain.work.PositiveMinutes
 import com.blackatsystems.miguardia.core.domain.work.WorkConfiguration
 import com.blackatsystems.miguardia.core.domain.work.WorkConfigurationHistory
-import com.blackatsystems.miguardia.core.domain.work.WorkConfigurationOrigin
 import com.blackatsystems.miguardia.core.domain.work.WorkSector
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -32,7 +31,6 @@ internal data class EncodedWorkConfigurationRevision(
 internal fun newWorkConfigurationRoot(timelineId: UUID) = WorkConfigurationRootEntity(
     timelineId = timelineId.toString(),
     singletonSlot = WORK_CONFIGURATION_SINGLETON_SLOT,
-    origin = ORIGIN_NEW_V2,
 )
 
 internal fun EffectiveRevision<WorkConfiguration>.toEntity(
@@ -113,7 +111,6 @@ internal fun List<WorkConfigurationRootWithRelations>.toDomainOrNull(
         }
 
         WorkConfigurationHistory(
-            origin = aggregate.root.origin.decodeOrigin(),
             timeline = EffectiveDateTimeline(timelineId, revisions),
             perPeriodHoursValues = PerPeriodHoursValues(values),
         )
@@ -363,12 +360,6 @@ private fun String.decodeAvailabilityLabel(): AvailabilityLabel = when (this) {
     else -> error("Código de disponibilidad desconocido: $this")
 }
 
-private fun String.decodeOrigin(): WorkConfigurationOrigin = when (this) {
-    ORIGIN_MIGRATED_V1 -> WorkConfigurationOrigin.MIGRATED_V1
-    ORIGIN_NEW_V2 -> WorkConfigurationOrigin.NEW_V2
-    else -> error("Código de origen de configuración desconocido: $this")
-}
-
 private inline fun <T> decodeWorkConfigurationRows(block: () -> T): T = try {
     block()
 } catch (error: RuntimeException) {
@@ -376,8 +367,6 @@ private inline fun <T> decodeWorkConfigurationRows(block: () -> T): T = try {
 }
 
 internal const val WORK_CONFIGURATION_SINGLETON_SLOT: Int = 1
-internal const val ORIGIN_MIGRATED_V1: String = "MIGRATED_V1"
-internal const val ORIGIN_NEW_V2: String = "NEW_V2"
 
 private const val SECTOR_PRIVATE_SECURITY: String = "PRIVATE_SECURITY"
 private const val SECTOR_POLICE: String = "POLICE"

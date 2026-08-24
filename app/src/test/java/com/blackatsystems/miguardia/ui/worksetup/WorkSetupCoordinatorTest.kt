@@ -18,10 +18,7 @@ import com.blackatsystems.miguardia.core.domain.work.RecentWorkTemplate
 import com.blackatsystems.miguardia.core.domain.work.WorkCatalog
 import com.blackatsystems.miguardia.core.domain.work.WorkConfiguration
 import com.blackatsystems.miguardia.core.domain.work.WorkConfigurationHistory
-import com.blackatsystems.miguardia.core.domain.work.WorkConfigurationOrigin
 import com.blackatsystems.miguardia.core.domain.work.WorkPlace
-import com.blackatsystems.miguardia.core.domain.work.WorkPlaceAdoption
-import com.blackatsystems.miguardia.core.domain.work.WorkPlaceAdoptionResult
 import com.blackatsystems.miguardia.core.domain.work.WorkPlaceUpdate
 import com.blackatsystems.miguardia.core.domain.work.WorkSector
 import com.blackatsystems.miguardia.core.domain.work.WorkSetupState
@@ -176,35 +173,9 @@ class WorkSetupCoordinatorTest {
         assertEquals(UUID(0L, 1L), configurations.createdTimelineId)
         assertEquals(UUID(0L, 2L), configurations.createdRevision?.id)
         assertEquals(LocalDate.of(2026, 8, 22), configurations.createdRevision?.effectiveFrom)
-        assertEquals(WorkConfigurationOrigin.NEW_V2, configurations.currentHistory?.origin)
+        assertEquals(UUID(0L, 1L), configurations.currentHistory?.timeline?.id)
         assertTrue(coordinator.uiState.value.rootState is WorkSetupState.V2NeedsFirstSet)
         assertFalse(coordinator.uiState.value.isSavingSector)
-    }
-
-    @Test
-    fun migratedV1HistoryNeverShowsBlockingFreshSelector() {
-        val coordinator = coordinator(
-            configurations = FakeWorkConfigurationRepository(legacyHistory()),
-        )
-
-        assertTrue(coordinator.uiState.value.rootState is WorkSetupState.LegacyV1)
-        assertFalse(coordinator.uiState.value.rootState is WorkSetupState.FreshInstall)
-
-        val activationClock = MutableClock(Instant.parse("2026-08-22T12:00:00Z"), ZoneOffset.UTC)
-        val futureActivation = coordinator(
-            configurations = FakeWorkConfigurationRepository(legacyFutureHistory()),
-            clock = activationClock,
-        )
-        assertTrue(futureActivation.uiState.value.rootState is WorkSetupState.LegacyV1WithFutureActivation)
-        assertFalse(futureActivation.uiState.value.rootState is WorkSetupState.FreshInstall)
-        futureActivation.openOverview()
-        assertEquals(WorkSetupSurface.LEGACY_INFORMATION, futureActivation.uiState.value.surface)
-
-        activationClock.currentInstant = Instant.parse("2026-08-23T12:00:00Z")
-        futureActivation.refreshReferenceDate()
-
-        assertTrue(futureActivation.uiState.value.rootState is WorkSetupState.V2NeedsFirstSet)
-        assertEquals(WorkSetupSurface.OVERVIEW, futureActivation.uiState.value.surface)
     }
 
     @Test
@@ -771,28 +742,10 @@ class WorkSetupCoordinatorTest {
         )
         return V2Context(
             history = WorkConfigurationHistory(
-                origin = WorkConfigurationOrigin.NEW_V2,
                 timeline = EffectiveDateTimeline(UUID(9L, 1L), listOf(revision)),
                 perPeriodHoursValues = PerPeriodHoursValues(emptyList()),
             ),
             revision = revision,
-        )
-    }
-
-    private fun legacyHistory() = WorkConfigurationHistory(
-        origin = WorkConfigurationOrigin.MIGRATED_V1,
-        timeline = EffectiveDateTimeline(UUID(8L, 1L), emptyList()),
-        perPeriodHoursValues = PerPeriodHoursValues(emptyList()),
-    )
-
-    private fun legacyFutureHistory(): WorkConfigurationHistory {
-        val futureRevision = EffectiveRevision(
-            id = UUID(8L, 2L),
-            effectiveFrom = LocalDate.of(2026, 8, 23),
-            value = WorkConfiguration(WorkSector.PRIVATE_SECURITY, HoursReference.PendingSetup, null),
-        )
-        return legacyHistory().copy(
-            timeline = EffectiveDateTimeline(UUID(8L, 1L), listOf(futureRevision)),
         )
     }
 
@@ -865,7 +818,6 @@ private class FakeWorkConfigurationRepository(
         createInitialFailure?.let { throw it }
         if (emitCreatedHistory) {
             histories.value = WorkConfigurationHistory(
-                origin = WorkConfigurationOrigin.NEW_V2,
                 timeline = EffectiveDateTimeline(timelineId, listOf(firstRevision)),
                 perPeriodHoursValues = PerPeriodHoursValues(emptyList()),
             )
@@ -951,7 +903,6 @@ private class FakeWorkCatalogRepository : WorkCatalogRepository {
             workplaceRuleRevisions = current.workplaceRuleRevisions + newWorkPlace.firstRuleRevision,
         )
     }
-    override suspend fun adoptWorkPlace(adoption: WorkPlaceAdoption): WorkPlaceAdoptionResult = error("No se usa")
     override suspend fun updateWorkPlace(update: WorkPlaceUpdate) = error("No se usa")
     override suspend fun setWorkPlaceActive(id: UUID, isActive: Boolean, updatedAt: Instant) = error("No se usa")
     override suspend fun createWorkType(workType: WorkType) = error("No se usa")
@@ -1000,12 +951,4 @@ private class FakeObjectiveRepository : ObjectiveRepository {
         emitAll(objectives)
     }
     override suspend fun getById(id: UUID): Objective? = objectives.value.firstOrNull { it.id == id }
-    override suspend fun create(objective: Objective) {
-        objectives.value = objectives.value + objective
-    }
-    override suspend fun update(objective: Objective) {
-        objectives.value = objectives.value.map { if (it.id == objective.id) objective else it }
-    }
-    override suspend fun hide(id: UUID, updatedAt: Instant) = error("No se usa")
-    override suspend fun delete(id: UUID) = error("No se usa")
 }

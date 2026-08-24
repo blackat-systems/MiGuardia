@@ -16,15 +16,6 @@ sealed interface WorkSetupState {
     data object LoadError : WorkSetupState
     data object FreshInstall : WorkSetupState
 
-    data class LegacyV1(
-        val timelineId: UUID,
-    ) : WorkSetupState
-
-    data class LegacyV1WithFutureActivation(
-        val timelineId: UUID,
-        val activationRevision: EffectiveRevision<WorkConfiguration>,
-    ) : WorkSetupState
-
     data class V2NeedsFirstSet(
         val timelineId: UUID,
         val configurationRevision: EffectiveRevision<WorkConfiguration>,
@@ -45,19 +36,7 @@ fun projectLoadedWorkSetupState(
     if (history == null) return WorkSetupState.FreshInstall
     val applicableRevision = history.timeline.revisionAt(referenceDate)
     if (applicableRevision == null) {
-        return when (history.origin) {
-            WorkConfigurationOrigin.MIGRATED_V1 -> history.timeline.revisions
-                .firstOrNull { it.effectiveFrom.isAfter(referenceDate) }
-                ?.let { future ->
-                    WorkSetupState.LegacyV1WithFutureActivation(
-                        timelineId = history.timeline.id,
-                        activationRevision = future,
-                    )
-                }
-                ?: WorkSetupState.LegacyV1(history.timeline.id)
-
-            WorkConfigurationOrigin.NEW_V2 -> WorkSetupState.LoadError
-        }
+        return WorkSetupState.LoadError
     }
     if (
         catalog == null ||
@@ -93,10 +72,6 @@ fun projectLoadedWorkSetupState(
 sealed interface WorkDateSelection {
     val dates: Set<LocalDate>
 
-    data class LegacyV1(
-        override val dates: Set<LocalDate>,
-    ) : WorkDateSelection
-
     data class V2(
         override val dates: Set<LocalDate>,
         val sector: WorkSector,
@@ -123,14 +98,7 @@ fun classifyWorkDateSelection(
     }.toMap()
     val unconfiguredDates = revisionsByDate.filterValues { it == null }.keys
 
-    if (history.origin == WorkConfigurationOrigin.MIGRATED_V1) {
-        if (configured.isEmpty()) return WorkDateSelection.LegacyV1(selectedDates.toSet())
-        if (unconfiguredDates.isNotEmpty()) {
-            throw InvalidV2SelectionException(
-                "La seleccion mezcla fechas de MiGuardia 1.0 y 2.0. Cargalas por separado.",
-            )
-        }
-    } else if (unconfiguredDates.isNotEmpty()) {
+    if (unconfiguredDates.isNotEmpty()) {
         val firstRevision = history.timeline.revisions.first()
         val sectors = configured.values.map { it.value.sector }.toSet() + firstRevision.value.sector
         if (sectors.size != 1) {

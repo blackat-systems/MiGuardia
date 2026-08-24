@@ -523,10 +523,11 @@ acción sobre producción.
 
 ## 17. Estado inmediato
 
-La edición y eliminación individual quedó cerrada en `4646f66`. Joaquin
-autorizó preparar el prompt **Dejar MiGuardia únicamente en modo 2.0**. Su
-contrato está habilitado en
-`RETIRAR_MODO_V1_Y_FIJAR_BASE_EXCLUSIVA_V2.md`; la implementación comienza sólo
-cuando Joaquin abra esa tarea o entregue su handoff. ADR 0026 fija para ese
-bloque `MiGuardiaV2Database`, `miguardia-v2.db` y Room V2 versión 1, sin una
-migración desde la cadena histórica.
+El bloque **Dejar MiGuardia únicamente en modo 2.0** quedó auditado, corregido,
+verificado y cerrado por MAIN. `MiGuardiaV2Database`, `miguardia-v2.db` y Room
+V2 versión 1 son ahora la única base activa; Samsung API 36 y emulador API 26
+quedaron verdes.
+
+No existe otro prompt de implementación habilitado. El próximo bloque
+recomendado es recurrencias y edición de una fecha o de todo lo futuro. MAIN
+espera que Joaquin pida su prompt antes de prepararlo o abrir una nueva tarea.

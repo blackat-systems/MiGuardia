@@ -7,7 +7,6 @@ import com.blackatsystems.miguardia.core.database.LocalDataStore
 import com.blackatsystems.miguardia.core.domain.AppDefaults
 import com.blackatsystems.miguardia.core.domain.model.ExplicitDayStatusType
 import com.blackatsystems.miguardia.core.domain.model.ExplicitDayStatus
-import com.blackatsystems.miguardia.core.domain.model.ShiftBatchMutation
 import com.blackatsystems.miguardia.core.domain.model.Shift
 import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
 import com.blackatsystems.miguardia.core.domain.model.Vacation
@@ -80,7 +79,9 @@ class NextEventObserverInstrumentedTest {
         assertEquals(NextEventPrimary.NONE, withTimeout(5_000) { emissions.receive() }.primaryEvent)
 
         val shift = futureShift()
-        store.shifts.insert(shift)
+        store.v2Shifts.insert(
+            V2AppTestFixture.writeFor(store, shift, LocalDate.of(2026, 8, 1)),
+        )
         val upcoming = receiveUntil(emissions) { it.primaryEvent == NextEventPrimary.UPCOMING_SHIFT }
         assertEquals(shift.id, upcoming.upcomingShifts.single().id)
 
@@ -195,8 +196,7 @@ class NextEventObserverInstrumentedTest {
             colorArgbSnapshot = 0xFF315DA8.toInt(),
             position = null,
             status = ShiftStatus.PLANNED,
-            sourceObjectiveId = null,
-            sourceScheduleCombinationId = null,
+            sourceObjectiveId = V2AppTestFixture.PLACEHOLDER_OBJECTIVE_ID,
             createdAt = NOW,
             updatedAt = NOW,
         )
@@ -220,10 +220,6 @@ class NextEventObserverInstrumentedTest {
         ): Flow<List<Shift>> = MutableStateFlow(emptyList())
 
         override suspend fun getById(id: UUID): Shift? = null
-        override suspend fun insert(shift: Shift) = Unit
-        override suspend fun update(shift: Shift) = Unit
-        override suspend fun delete(id: UUID) = Unit
-        override suspend fun applyBatch(mutation: ShiftBatchMutation) = Unit
     }
 
     private class StaticShiftRepository(
@@ -240,10 +236,6 @@ class NextEventObserverInstrumentedTest {
         ): Flow<List<Shift>> = MutableStateFlow(emptyList())
 
         override suspend fun getById(id: UUID): Shift? = values.firstOrNull { it.id == id }
-        override suspend fun insert(shift: Shift) = Unit
-        override suspend fun update(shift: Shift) = Unit
-        override suspend fun delete(id: UUID) = Unit
-        override suspend fun applyBatch(mutation: ShiftBatchMutation) = Unit
     }
 
     private class AdvancingClock(

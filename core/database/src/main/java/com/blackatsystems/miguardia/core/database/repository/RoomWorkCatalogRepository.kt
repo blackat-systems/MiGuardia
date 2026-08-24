@@ -2,7 +2,7 @@ package com.blackatsystems.miguardia.core.database.repository
 
 import android.database.sqlite.SQLiteConstraintException
 import androidx.room.withTransaction
-import com.blackatsystems.miguardia.core.database.MiGuardiaDatabase
+import com.blackatsystems.miguardia.core.database.MiGuardiaV2Database
 import com.blackatsystems.miguardia.core.database.dao.WorkCatalogDao
 import com.blackatsystems.miguardia.core.database.mapping.encodeSector
 import com.blackatsystems.miguardia.core.database.mapping.toDomain
@@ -32,8 +32,6 @@ import com.blackatsystems.miguardia.core.domain.work.ResolvedWorkConfigurationRe
 import com.blackatsystems.miguardia.core.domain.work.WorkCatalog
 import com.blackatsystems.miguardia.core.domain.work.WorkConfigurationHistory
 import com.blackatsystems.miguardia.core.domain.work.WorkPlace
-import com.blackatsystems.miguardia.core.domain.work.WorkPlaceAdoption
-import com.blackatsystems.miguardia.core.domain.work.WorkPlaceAdoptionResult
 import com.blackatsystems.miguardia.core.domain.work.WorkPlaceUpdate
 import com.blackatsystems.miguardia.core.domain.work.WorkSector
 import com.blackatsystems.miguardia.core.domain.work.WorkTemplate
@@ -50,7 +48,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 
 internal class RoomWorkCatalogRepository(
-    private val database: MiGuardiaDatabase,
+    private val database: MiGuardiaV2Database,
 ) : WorkCatalogRepository {
     private val dao: WorkCatalogDao = database.workCatalogDao()
 
@@ -146,69 +144,6 @@ internal class RoomWorkCatalogRepository(
         database.requireValidV2LocalData()
     }
 
-    override suspend fun adoptWorkPlace(adoption: WorkPlaceAdoption): WorkPlaceAdoptionResult =
-        writeCatalog(
-            genericMessage = "No se pudo adoptar el lugar de MiGuardia 1.0.",
-            type = adoption.workTypeToCreate,
-            template = adoption.workTemplateToCreate,
-        ) {
-            requireConfigurationContext(adoption.configurationContext)
-            val objectiveId = adoption.workPlaceCandidate.objectiveId.toString()
-            database.objectiveDao().getById(objectiveId)
-                ?: invalid("No existe el lugar de MiGuardia 1.0 que se quiere adoptar.")
-            val existing = dao.getWorkPlaceByContext(
-                adoption.workPlaceCandidate.timelineId.toString(),
-                adoption.workPlaceCandidate.sector.encodeSector(),
-                objectiveId,
-            )?.toDomainWorkPlace()
-            val resolved = try {
-                adoption.resolve(existing)
-            } catch (error: IllegalArgumentException) {
-                throw InvalidLocalDataException("La adopción solicitada no es válida.", error)
-            }
-            resolved.workPlaceToCreate?.let { dao.insertWorkPlace(it.toEntity()) }
-            resolved.firstRuleRevisionToCreate?.let { dao.insertWorkplaceRuleRevision(it.toEntity()) }
-            if (resolved.reusedExisting) {
-                val expectedFirstRule = adoption.firstRuleRevisionCandidate.copy(
-                    workPlaceId = resolved.workPlace.id,
-                    objectiveId = resolved.workPlace.objectiveId,
-                )
-                val preservesOriginalAdoption = dao
-                    .getRuleRevisionsForWorkPlace(resolved.workPlace.id.toString())
-                    .map { it.toDomainRuleRevision() }
-                    .any { storedRule -> storedRule == expectedFirstRule }
-                if (!preservesOriginalAdoption) {
-                    invalid("La adopción existente no conserva la regla originalmente solicitada.")
-                }
-            }
-            resolved.workTypeToCreate?.let { type ->
-                val storedType = dao.getWorkTypeById(type.id.toString())?.toDomainWorkType()
-                when {
-                    storedType == null -> dao.insertWorkType(type.toEntity())
-                    storedType != type -> invalid("El tipo adoptado ya existe con otros datos.")
-                }
-            }
-            resolved.workTemplateToCreate?.let { template ->
-                val storedTemplate = dao.getWorkTemplateById(template.id.toString())
-                    ?.toDomainWorkTemplate()
-                when {
-                    storedTemplate == null -> {
-                        requireSelectableParents(template)
-                        validateLegacySchedule(adoption, template)
-                        dao.insertWorkTemplate(template.toEntity())
-                    }
-                    storedTemplate != template ->
-                        invalid("La plantilla adoptada ya existe con otros datos.")
-                }
-            }
-            database.requireValidV2LocalData()
-            if (resolved.reusedExisting) {
-                WorkPlaceAdoptionResult.Reused(resolved.workPlace)
-            } else {
-                WorkPlaceAdoptionResult.Created(resolved.workPlace)
-            }
-        }
-
     override suspend fun updateWorkPlace(update: WorkPlaceUpdate): Unit = writeCatalog(
         genericMessage = "No se pudo actualizar el lugar laboral.",
         objectiveAbbreviation = update.updatedObjective.abbreviation,
@@ -282,7 +217,6 @@ internal class RoomWorkCatalogRepository(
     ) {
         database.requireValidV2LocalData()
         requireSelectableParents(workTemplate)
-        validateLegacyTemplateProvenance(workTemplate)
         dao.insertWorkTemplate(workTemplate.toEntity())
         database.requireValidV2LocalData()
     }
@@ -440,41 +374,8 @@ internal class RoomWorkCatalogRepository(
         }
     }
 
-    private suspend fun validateLegacyTemplateProvenance(template: WorkTemplate) {
-        val legacyId = template.legacyScheduleCombinationId ?: return
-        val legacy = database.scheduleCombinationDao().getById(legacyId.toString())?.toDomain()
-            ?: invalid("No existe el horario de MiGuardia 1.0 indicado como procedencia.")
-        if (
-            legacy.objectiveId != template.objectiveId ||
-            legacy.startTime != template.startTime ||
-            legacy.endTime != template.endTime
-        ) {
-            invalid("El horario de procedencia no coincide con la plantilla.")
-        }
-    }
-
-    private suspend fun validateLegacySchedule(
-        adoption: WorkPlaceAdoption,
-        resolvedTemplate: WorkTemplate?,
-    ) {
-        val expected = adoption.expectedLegacyScheduleCombination ?: return
-        val stored = database.scheduleCombinationDao().getById(expected.id.toString())?.toDomain()
-            ?: invalid("El horario de MiGuardia 1.0 ya no existe.")
-        if (
-            stored.objectiveId != adoption.workPlaceCandidate.objectiveId ||
-            stored.startTime != expected.startTime ||
-            stored.endTime != expected.endTime ||
-            resolvedTemplate?.legacyScheduleCombinationId != stored.id ||
-            resolvedTemplate.startTime != stored.startTime ||
-            resolvedTemplate.endTime != stored.endTime
-        ) {
-            invalid("El horario de MiGuardia 1.0 cambió antes de confirmar la adopción.")
-        }
-    }
-
     private fun sameHistory(first: WorkConfigurationHistory, second: WorkConfigurationHistory): Boolean =
-        first.origin == second.origin &&
-            first.timeline.id == second.timeline.id &&
+        first.timeline.id == second.timeline.id &&
             first.timeline.revisions == second.timeline.revisions &&
             first.perPeriodHoursValues.entries == second.perPeriodHoursValues.entries
 

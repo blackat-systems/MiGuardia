@@ -133,8 +133,7 @@ class NotificationVisibilityTest {
             colorArgbSnapshot = 0xff336699.toInt(),
             position = null,
             status = status,
-            sourceObjectiveId = null,
-            sourceScheduleCombinationId = null,
+            sourceObjectiveId = UUID.fromString("00000000-0000-0000-0000-000000000099"),
             createdAt = NOW,
             updatedAt = NOW,
         )

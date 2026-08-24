@@ -2,10 +2,14 @@ package com.blackatsystems.miguardia.ui.worksetup
 
 import com.blackatsystems.miguardia.core.domain.model.Objective
 import com.blackatsystems.miguardia.core.domain.work.WorkCatalog
+import com.blackatsystems.miguardia.core.domain.work.EffectiveRevision
+import com.blackatsystems.miguardia.core.domain.work.HoursReference
+import com.blackatsystems.miguardia.core.domain.work.WorkConfiguration
 import com.blackatsystems.miguardia.core.domain.work.WorkSector
 import com.blackatsystems.miguardia.core.domain.work.WorkSetupState
 import com.blackatsystems.miguardia.core.domain.work.normalizeNewWorkPlaceAbbreviation
 import java.time.LocalTime
+import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
 import java.time.format.ResolverStyle
@@ -15,7 +19,6 @@ import java.util.UUID
 enum class WorkSetupSurface {
     NONE,
     OVERVIEW,
-    LEGACY_INFORMATION,
     FIRST_WORK_SET,
     ADDITIONAL_PLACE,
     ADDITIONAL_TEMPLATE,
@@ -208,11 +211,23 @@ internal val WORK_SECTOR_OPTIONS: List<WorkSector> = listOf(
     WorkSector.MEDICINE,
 )
 
-fun legacyWorkSetupUiState(): WorkSetupUiState = WorkSetupUiState(
-    rootState = WorkSetupState.LegacyV1(PREVIEW_TIMELINE_ID),
-)
+fun previewV2WorkSetupUiState(): WorkSetupUiState {
+    val timelineId = UUID(0L, 0L)
+    val sector = WorkSector.PRIVATE_SECURITY
+    return WorkSetupUiState(
+        rootState = WorkSetupState.V2Ready(
+            timelineId = timelineId,
+            configurationRevision = EffectiveRevision(
+                id = UUID(0L, 1L),
+                effectiveFrom = LocalDate.of(1970, 1, 1),
+                value = WorkConfiguration(sector, HoursReference.PendingSetup, null),
+            ),
+        ),
+        selectedSector = sector,
+        catalog = WorkCatalog(timelineId, sector, emptyList(), emptyList(), emptyList(), emptyList()),
+    )
+}
 
 private val WORK_TIME_FORMATTER: DateTimeFormatter = DateTimeFormatter
     .ofPattern("HH:mm")
     .withResolverStyle(ResolverStyle.STRICT)
-private val PREVIEW_TIMELINE_ID: UUID = UUID(0L, 0L)

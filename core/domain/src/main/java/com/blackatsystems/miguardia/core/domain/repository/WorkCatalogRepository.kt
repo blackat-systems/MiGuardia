@@ -7,8 +7,6 @@ import com.blackatsystems.miguardia.core.domain.work.RecentWorkTemplate
 import com.blackatsystems.miguardia.core.domain.work.WorkCatalog
 import com.blackatsystems.miguardia.core.domain.work.WorkConfigurationHistory
 import com.blackatsystems.miguardia.core.domain.work.WorkPlace
-import com.blackatsystems.miguardia.core.domain.work.WorkPlaceAdoption
-import com.blackatsystems.miguardia.core.domain.work.WorkPlaceAdoptionResult
 import com.blackatsystems.miguardia.core.domain.work.WorkPlaceUpdate
 import com.blackatsystems.miguardia.core.domain.work.WorkSector
 import com.blackatsystems.miguardia.core.domain.work.WorkTemplate
@@ -39,8 +37,6 @@ interface WorkCatalogRepository {
     suspend fun createFirstWorkSet(firstWorkSet: FirstWorkSet)
 
     suspend fun createWorkPlace(newWorkPlace: NewWorkPlace)
-
-    suspend fun adoptWorkPlace(adoption: WorkPlaceAdoption): WorkPlaceAdoptionResult
 
     suspend fun updateWorkPlace(update: WorkPlaceUpdate)
 

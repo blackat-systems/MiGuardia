@@ -3,7 +3,7 @@ package com.blackatsystems.miguardia.core.database
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.blackatsystems.miguardia.core.domain.model.Objective
+import com.blackatsystems.miguardia.core.database.entity.ObjectiveEntity
 import com.blackatsystems.miguardia.core.domain.model.SchedulePhoto
 import com.blackatsystems.miguardia.core.domain.repository.ConflictingLocalWriteException
 import java.time.Instant
@@ -21,8 +21,13 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class SchedulePhotoPersistenceInstrumentedTest {
     private val context: Context = ApplicationProvider.getApplicationContext()
+    private lateinit var database: MiGuardiaV2Database
     private lateinit var store: LocalDataStore
-    @Before fun setup() { context.deleteDatabase(DB); store = LocalDataStore.create(context, DB) }
+    @Before fun setup() {
+        context.deleteDatabase(DB)
+        database = MiGuardiaV2Database.build(context, DB)
+        store = LocalDataStore(database)
+    }
     @After fun cleanup() { store.close(); context.deleteDatabase(DB) }
 
     @Test fun crudOrderMonthsAndReopen() = runBlocking {
@@ -43,8 +48,17 @@ class SchedulePhotoPersistenceInstrumentedTest {
 
     @Test fun photoAndSnapshotsSurviveObjectiveDeletion() = runBlocking {
         val objectiveId = UUID.fromString("20000000-0000-0000-0000-000000000001")
-        store.objectives.create(
-            Objective(objectiveId, "Objetivo QA", "QA", null, null, true, Instant.EPOCH, Instant.EPOCH),
+        database.objectiveDao().insert(
+            ObjectiveEntity(
+                objectiveId.toString(),
+                "Objetivo QA",
+                "QA",
+                null,
+                null,
+                true,
+                Instant.EPOCH.toEpochMilli(),
+                Instant.EPOCH.toEpochMilli(),
+            ),
         )
         val linked = photo(1, Instant.EPOCH).copy(
             objectiveId = objectiveId,
@@ -53,7 +67,7 @@ class SchedulePhotoPersistenceInstrumentedTest {
         )
         store.schedulePhotos.insert(linked)
 
-        store.objectives.delete(objectiveId)
+        database.objectiveDao().delete(objectiveId.toString())
 
         assertNull(store.objectives.getById(objectiveId))
         assertEquals(linked, store.schedulePhotos.getById(linked.id))

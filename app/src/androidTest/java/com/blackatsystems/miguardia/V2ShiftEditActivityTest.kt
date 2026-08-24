@@ -47,10 +47,7 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 
-/**
- * Recorrido integral NEW_V2. Esta clase requiere una instalación QA limpia y
- * nunca debe ejecutarse contra el applicationId de producción.
- */
+/** Recorrido integral V2 sobre un fixture que limpia únicamente la base QA. */
 class V2ShiftEditActivityTest {
     @get:Rule
     val compose = createEmptyComposeRule()
@@ -72,9 +69,10 @@ class V2ShiftEditActivityTest {
         selectedDate = LocalDate.now(AppDefaults.zoneId())
         val timestamp = Instant.now().minusSeconds(10)
         val store = (context.applicationContext as MiGuardiaApplication).localDataStore
+        store.clearAllDataForInstrumentation()
         runBlocking {
             check(store.workConfiguration.get() == null) {
-                "La prueba integral de edición V2 requiere una instalación QA limpia."
+                "La preparación QA debe dejar una base sin configuración."
             }
             val revision = EffectiveRevision(
                 REVISION_ID,
@@ -124,7 +122,7 @@ class V2ShiftEditActivityTest {
         requireNotNull(scenario).onActivity { activity ->
             originalRequestedOrientation = activity.requestedOrientation
         }
-        waitForTag("day-$selectedDate")
+        waitForCalendarDay()
     }
 
     @After
@@ -136,7 +134,7 @@ class V2ShiftEditActivityTest {
 
     @Test
     fun editRecreateChangeTemplateCancelDeleteAndDeleteOneJourneyEndToEnd() {
-        compose.onNodeWithTag("day-$selectedDate").performScrollTo()
+        compose.onNodeWithTag(waitForCalendarDay()).performScrollTo()
         compose.onNodeWithText("2 turnos", useUnmergedTree = true).assertExists()
         openDayActions()
         compose.onNodeWithTag("v2-edit-shift-$FIRST_SHIFT_ID").performScrollTo().performClick()
@@ -200,7 +198,7 @@ class V2ShiftEditActivityTest {
 
         requireNotNull(scenario).close()
         scenario = ActivityScenario.launch(MainActivity::class.java)
-        waitForTag("day-$selectedDate")
+        waitForCalendarDay()
         openDayActions()
         compose.onNodeWithTag("v2-shift-row-$FIRST_SHIFT_ID").assertIsDisplayed()
         compose.onNodeWithTag("v2-shift-row-$SECOND_SHIFT_ID").assertDoesNotExist()
@@ -208,8 +206,7 @@ class V2ShiftEditActivityTest {
     }
 
     private fun openDayActions() {
-        waitForTag("day-$selectedDate")
-        compose.onNodeWithTag("day-$selectedDate").performScrollTo().performClick()
+        compose.onNodeWithTag(waitForCalendarDay()).performScrollTo().performClick()
         waitForTag("v2-edit-day-action")
         compose.onNodeWithTag("v2-edit-day-action").performClick()
         waitForTag("v2-shift-edit-surface")
@@ -244,6 +241,20 @@ class V2ShiftEditActivityTest {
     private fun waitForTag(tag: String) {
         compose.waitUntil(WAIT_MILLIS) {
             compose.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty()
+        }
+    }
+
+    private fun waitForCalendarDay(): String {
+        val regularTag = "day-$selectedDate"
+        val completedTag = "completed-day-$selectedDate"
+        compose.waitUntil(WAIT_MILLIS) {
+            compose.onAllNodesWithTag(regularTag).fetchSemanticsNodes().isNotEmpty() ||
+                compose.onAllNodesWithTag(completedTag).fetchSemanticsNodes().isNotEmpty()
+        }
+        return if (compose.onAllNodesWithTag(regularTag).fetchSemanticsNodes().isNotEmpty()) {
+            regularTag
+        } else {
+            completedTag
         }
     }
 
@@ -286,7 +297,6 @@ class V2ShiftEditActivityTest {
             LocalTime.of(16, 0),
             0xFF336699.toInt(),
             true,
-            null,
             timestamp,
             timestamp,
         )
@@ -320,7 +330,6 @@ class V2ShiftEditActivityTest {
         LocalTime.of(23, 0),
         0xFF884422.toInt(),
         true,
-        null,
         timestamp,
         timestamp,
     )

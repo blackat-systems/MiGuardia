@@ -6,9 +6,7 @@ import org.junit.Test
 
 class AppDefaultsTest {
     @Test
-    fun approvedV1DefaultsAreStable() {
-        assertEquals("Inforce", AppDefaults.COMPANY_NAME)
-        assertEquals(204, AppDefaults.MONTHLY_HOURS_THRESHOLD)
+    fun applicationZoneIsStable() {
         assertEquals(
             ZoneId.of("America/Argentina/Cordoba"),
             AppDefaults.zoneId(),

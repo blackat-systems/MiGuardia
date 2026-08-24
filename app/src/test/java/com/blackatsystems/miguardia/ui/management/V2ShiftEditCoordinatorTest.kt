@@ -4,7 +4,6 @@ import androidx.lifecycle.SavedStateHandle
 import com.blackatsystems.miguardia.core.domain.model.MedicalLeave
 import com.blackatsystems.miguardia.core.domain.model.Objective
 import com.blackatsystems.miguardia.core.domain.model.Shift
-import com.blackatsystems.miguardia.core.domain.model.ShiftBatchMutation
 import com.blackatsystems.miguardia.core.domain.model.ShiftOccupancyExpectation
 import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
 import com.blackatsystems.miguardia.core.domain.model.ShiftWorkSnapshot
@@ -35,10 +34,7 @@ import com.blackatsystems.miguardia.core.domain.work.ResolvedWorkConfigurationRe
 import com.blackatsystems.miguardia.core.domain.work.WorkCatalog
 import com.blackatsystems.miguardia.core.domain.work.WorkConfiguration
 import com.blackatsystems.miguardia.core.domain.work.WorkConfigurationHistory
-import com.blackatsystems.miguardia.core.domain.work.WorkConfigurationOrigin
 import com.blackatsystems.miguardia.core.domain.work.WorkPlace
-import com.blackatsystems.miguardia.core.domain.work.WorkPlaceAdoption
-import com.blackatsystems.miguardia.core.domain.work.WorkPlaceAdoptionResult
 import com.blackatsystems.miguardia.core.domain.work.WorkPlaceUpdate
 import com.blackatsystems.miguardia.core.domain.work.WorkSector
 import com.blackatsystems.miguardia.core.domain.work.WorkSetupState
@@ -81,21 +77,19 @@ class V2ShiftEditCoordinatorTest {
     }
 
     @Test
-    fun inspectionSeparatesV2FromLegacyAndNeverMutatesLegacyOrMissingRows() {
+    fun inspectionRejectsAnOrphanShiftAndNeverOffersEditActions() {
         val fixture = fixture()
-        val legacy = legacyShift(uuid(90), DATE, LocalTime.of(18, 0), LocalTime.of(22, 0))
-        val harness = harness(fixture, writes = listOf(fixture.original), legacy = listOf(legacy))
+        val orphan = neighborShift(uuid(90), DATE, LocalTime.of(18, 0), LocalTime.of(22, 0))
+        val harness = harness(fixture, writes = listOf(fixture.original), otherShifts = listOf(orphan))
 
-        harness.inspectAndOpenActions()
+        harness.coordinator.inspectDay(fixture.ready, DATE)
 
-        assertEquals(listOf(true, false), harness.coordinator.uiState.value.dayRows.map(V2ShiftEditDayRow::isV2))
-        harness.coordinator.editShift(legacy.id)
-        assertEquals(V2ShiftEditStage.DAY_ACTIONS, harness.coordinator.uiState.value.stage)
-        assertTrue(harness.coordinator.uiState.value.errorMessage.orEmpty().contains("no es una jornada V2"))
+        assertEquals(V2ShiftDayInspectionState.ERROR, harness.coordinator.uiState.value.inspectionState)
+        assertTrue(harness.coordinator.uiState.value.dayRows.isEmpty())
+        assertTrue(harness.coordinator.uiState.value.errorMessage.orEmpty().contains("cambiaron"))
+        harness.coordinator.beginDayEditing()
+        assertEquals(V2ShiftEditStage.IDLE, harness.coordinator.uiState.value.stage)
         assertEquals(0, harness.v2.updateCalls)
-
-        harness.coordinator.requestDelete(uuid(999))
-        assertEquals(V2ShiftEditStage.DAY_ACTIONS, harness.coordinator.uiState.value.stage)
         assertEquals(0, harness.v2.deleteCalls)
     }
 
@@ -201,12 +195,12 @@ class V2ShiftEditCoordinatorTest {
                 endTimeSnapshot = LocalTime.of(14, 0),
             ),
         )
-        val previous = legacyShift(uuid(13), DATE.minusDays(1), LocalTime.of(20, 0), LocalTime.of(4, 0))
+        val previous = neighborShift(uuid(13), DATE.minusDays(1), LocalTime.of(20, 0), LocalTime.of(4, 0))
         val medical = MedicalLeave(uuid(14), DATE, DATE, "dato privado ficticio", OLD, OLD)
         val harness = harness(
             fixture,
             writes = listOf(fixture.original, sameDate),
-            legacy = listOf(previous),
+            otherShifts = listOf(previous),
             medicalLeaves = listOf(medical),
         )
 
@@ -243,7 +237,7 @@ class V2ShiftEditCoordinatorTest {
     @Test
     fun staleFullPairAndStaleNeighborBothRejectWithoutOverwritingTheDraft() {
         val fixture = fixture()
-        val neighbor = legacyShift(uuid(15), DATE.plusDays(1), LocalTime.of(8, 0), LocalTime.of(16, 0))
+        val neighbor = neighborShift(uuid(15), DATE.plusDays(1), LocalTime.of(8, 0), LocalTime.of(16, 0))
         val pairHarness = harness(fixture)
         pairHarness.openEditor(fixture.original.shift.id)
         pairHarness.coordinator.updatePosition("Mi borrador")
@@ -260,7 +254,7 @@ class V2ShiftEditCoordinatorTest {
         assertEquals(concurrentPair, pairHarness.v2.writes.getValue(fixture.original.shift.id))
         assertEquals(0, pairHarness.v2.successfulUpdates)
 
-        val neighborHarness = harness(fixture, legacy = listOf(neighbor))
+        val neighborHarness = harness(fixture, otherShifts = listOf(neighbor))
         neighborHarness.openEditor(fixture.original.shift.id)
         neighborHarness.coordinator.updatePosition("Otro borrador")
         neighborHarness.coordinator.requestReview()
@@ -282,8 +276,8 @@ class V2ShiftEditCoordinatorTest {
     @Test
     fun neighborConflictRequiresWarningConfirmationAgain() {
         val fixture = fixture()
-        val neighbor = legacyShift(uuid(155), DATE.plusDays(1), LocalTime.of(2, 0), LocalTime.of(10, 0))
-        val harness = harness(fixture, legacy = listOf(neighbor))
+        val neighbor = neighborShift(uuid(155), DATE.plusDays(1), LocalTime.of(2, 0), LocalTime.of(10, 0))
+        val harness = harness(fixture, otherShifts = listOf(neighbor))
         harness.openEditor(fixture.original.shift.id)
         harness.coordinator.updatePosition("Borrador con descanso corto")
         harness.coordinator.requestReview()
@@ -607,7 +601,7 @@ class V2ShiftEditCoordinatorTest {
     private fun harness(
         fixture: Fixture,
         writes: List<V2ShiftWrite> = listOf(fixture.original),
-        legacy: List<Shift> = emptyList(),
+        otherShifts: List<Shift> = emptyList(),
         medicalLeaves: List<MedicalLeave> = emptyList(),
         initial: V2ShiftEditPersistedState = V2ShiftEditPersistedState(),
         persist: (V2ShiftEditPersistedState) -> Unit = {},
@@ -616,7 +610,7 @@ class V2ShiftEditCoordinatorTest {
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined).also(scopes::add)
         val configurations = EditFakeConfigurations(fixture.history)
         val catalog = EditFakeCatalog(fixture.catalog)
-        val shifts = EditFakeShifts(writes.map { it.shift } + legacy)
+        val shifts = EditFakeShifts(writes.map { it.shift } + otherShifts)
         val v2 = EditFakeV2Shifts(shifts, writes)
         val coordinator = V2ShiftEditCoordinator(
             configurationRepository = configurations,
@@ -691,7 +685,6 @@ class V2ShiftEditCoordinatorTest {
             value = WorkConfiguration(WorkSector.NURSING, HoursReference.PendingSetup, null),
         )
         val history = WorkConfigurationHistory(
-            origin = WorkConfigurationOrigin.NEW_V2,
             timeline = EffectiveDateTimeline(timelineId, listOf(revision)),
             perPeriodHoursValues = PerPeriodHoursValues(emptyList()),
         )
@@ -700,11 +693,11 @@ class V2ShiftEditCoordinatorTest {
         val type = WorkType.create(uuid(5), timelineId, WorkSector.NURSING, "Turno asistencial", OLD)
         val template = WorkTemplate(
             uuid(6), timelineId, WorkSector.NURSING, place.id, objective.id, type.id,
-            LocalTime.of(8, 0), LocalTime.of(16, 0), 0xFF336699.toInt(), true, null, OLD, OLD,
+            LocalTime.of(8, 0), LocalTime.of(16, 0), 0xFF336699.toInt(), true, OLD, OLD,
         )
         val alternative = WorkTemplate(
             uuid(7), timelineId, WorkSector.NURSING, place.id, objective.id, type.id,
-            LocalTime.of(18, 0), LocalTime.of(23, 0), 0xFF884422.toInt(), true, null, OLD, OLD,
+            LocalTime.of(18, 0), LocalTime.of(23, 0), 0xFF884422.toInt(), true, OLD, OLD,
         )
         val rule = WorkplaceRuleRevision(
             uuid(8), timelineId, WorkSector.NURSING, place.id, objective.id,
@@ -727,7 +720,7 @@ class V2ShiftEditCoordinatorTest {
 
         fun uuid(value: Long): UUID = UUID(0L, value)
 
-        fun legacyShift(id: UUID, date: LocalDate, start: LocalTime, end: LocalTime): Shift {
+        fun neighborShift(id: UUID, date: LocalDate, start: LocalTime, end: LocalTime): Shift {
             val endDate = if (end > start) date else date.plusDays(1)
             return Shift(
                 id = id,
@@ -743,8 +736,7 @@ class V2ShiftEditCoordinatorTest {
                 colorArgbSnapshot = 0xFF222222.toInt(),
                 position = null,
                 status = ShiftStatus.PLANNED,
-                sourceObjectiveId = null,
-                sourceScheduleCombinationId = null,
+                sourceObjectiveId = uuid(3),
                 createdAt = OLD,
                 updatedAt = OLD,
             )
@@ -778,7 +770,6 @@ private class EditFakeCatalog(
         catalog.workplaceRuleRevisions.filter { it.workPlaceId == workPlaceId }
     override suspend fun createFirstWorkSet(firstWorkSet: FirstWorkSet) = error("No se usa")
     override suspend fun createWorkPlace(newWorkPlace: NewWorkPlace) = error("No se usa")
-    override suspend fun adoptWorkPlace(adoption: WorkPlaceAdoption): WorkPlaceAdoptionResult = error("No se usa")
     override suspend fun updateWorkPlace(update: WorkPlaceUpdate) = error("No se usa")
     override suspend fun setWorkPlaceActive(id: UUID, isActive: Boolean, updatedAt: Instant) = error("No se usa")
     override suspend fun createWorkType(workType: WorkType) = error("No se usa")
@@ -796,10 +787,6 @@ private class EditFakeObjectives(initial: List<Objective>) : ObjectiveRepository
     override fun observeActive(): Flow<List<Objective>> = MutableStateFlow(values.filter(Objective::isActive))
     override fun observeAll(): Flow<List<Objective>> = MutableStateFlow(values.toList())
     override suspend fun getById(id: UUID): Objective? = values.firstOrNull { it.id == id }
-    override suspend fun create(objective: Objective) = error("No se usa")
-    override suspend fun update(objective: Objective) = error("No se usa")
-    override suspend fun hide(id: UUID, updatedAt: Instant) = error("No se usa")
-    override suspend fun delete(id: UUID) = error("No se usa")
 }
 
 private class EditFakeMedicalLeaves(
@@ -823,10 +810,6 @@ private class EditFakeShifts(initial: List<Shift>) : ShiftRepository {
     override fun observeEndingAfter(instantExclusive: Instant): Flow<List<Shift>> =
         values.map { shifts -> shifts.filter { it.endAt > instantExclusive } }
     override suspend fun getById(id: UUID): Shift? = current.firstOrNull { it.id == id }
-    override suspend fun insert(shift: Shift) = error("No se usa")
-    override suspend fun update(shift: Shift) = error("No se usa")
-    override suspend fun delete(id: UUID) = error("No se usa")
-    override suspend fun applyBatch(mutation: ShiftBatchMutation) = error("La ruta V1 no debe usarse")
 
     fun replace(shift: Shift) {
         values.value = current.map { if (it.id == shift.id) shift else it }
@@ -859,11 +842,9 @@ private class EditFakeV2Shifts(
         getCalls++
         lookupGate?.await()
         return writes[shiftId]?.let(V2ShiftLookup::V2)
-            ?: shifts.current.firstOrNull { it.id == shiftId }?.let(V2ShiftLookup::LegacyV1)
             ?: V2ShiftLookup.Missing
     }
     override suspend fun insert(write: V2ShiftWrite) = error("No se usa")
-    override suspend fun update(write: V2ShiftWrite) = error("No se usa")
 
     override suspend fun deleteShift(expected: V2ShiftWrite) {
         deleteCalls++

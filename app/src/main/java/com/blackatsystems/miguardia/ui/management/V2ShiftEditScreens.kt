@@ -316,7 +316,7 @@ private fun DayActionCard(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .semantics { contentDescription = "$identity. ${row.shift.visibleSummary(row.snapshot?.workTypeNameSnapshot)}" }
+            .semantics { contentDescription = "$identity. ${row.shift.visibleSummary(row.snapshot.workTypeNameSnapshot)}" }
             .testTag("v2-shift-row-${row.shift.id}"),
         color = MaterialTheme.colorScheme.surfaceContainerLow,
         shape = MaterialTheme.shapes.medium,
@@ -327,39 +327,29 @@ private fun DayActionCard(
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             Text(identity, fontWeight = FontWeight.Bold)
-            row.snapshot?.let { snapshot ->
-                HistoricalSummary(write = V2ShiftWrite(row.shift, snapshot))
-            } ?: LegacySummary(row.shift)
-            if (row.isV2) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+            HistoricalSummary(write = V2ShiftWrite(row.shift, row.snapshot))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                OutlinedButton(
+                    onClick = onEdit,
+                    enabled = enabled,
+                    modifier = Modifier
+                        .weight(1f)
+                        .testTag("v2-edit-shift-${row.shift.id}"),
                 ) {
-                    OutlinedButton(
-                        onClick = onEdit,
-                        enabled = enabled,
-                        modifier = Modifier
-                            .weight(1f)
-                            .testTag("v2-edit-shift-${row.shift.id}"),
-                    ) {
-                        Text("Editar jornada")
-                    }
-                    TextButton(
-                        onClick = onDelete,
-                        enabled = enabled,
-                        modifier = Modifier
-                            .weight(1f)
-                            .testTag("v2-delete-shift-${row.shift.id}"),
-                    ) {
-                        Text("Eliminar jornada", color = MaterialTheme.colorScheme.error)
-                    }
+                    Text("Editar jornada")
                 }
-            } else {
-                Text(
-                    "Fila heredada: se muestra para identificarla, sin acciones V2.",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.testTag("v2-legacy-shift-${row.shift.id}"),
-                )
+                TextButton(
+                    onClick = onDelete,
+                    enabled = enabled,
+                    modifier = Modifier
+                        .weight(1f)
+                        .testTag("v2-delete-shift-${row.shift.id}"),
+                ) {
+                    Text("Eliminar jornada", color = MaterialTheme.colorScheme.error)
+                }
             }
         }
     }
@@ -653,14 +643,6 @@ private fun HistoricalSummary(write: V2ShiftWrite?) {
     Text("Horario: ${write.shift.timeRange()}")
     Text("Color: #${write.shift.colorArgbSnapshot.colorHex()}")
     write.shift.position?.let { Text("Puesto o función: $it") }
-}
-
-@Composable
-private fun LegacySummary(shift: Shift) {
-    Text("Lugar: ${shift.objectiveNameSnapshot} (${shift.objectiveAbbreviationSnapshot})")
-    shift.objectiveAddressSnapshot?.let { Text("Dirección: $it") }
-    Text("Horario: ${shift.timeRange()}")
-    shift.position?.let { Text("Puesto o función: $it") }
 }
 
 @Composable

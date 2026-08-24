@@ -1,5 +1,6 @@
 package com.blackatsystems.miguardia.core.domain.work
 
+import com.blackatsystems.miguardia.core.domain.model.Objective
 import com.blackatsystems.miguardia.core.domain.repository.InvalidV2SelectionException
 import java.time.Instant
 import java.time.LocalDate
@@ -12,149 +13,119 @@ import org.junit.Test
 
 class WorkSetupStateTest {
     @Test
-    fun absentHistoryMeansFreshInstallWithoutLookingAtShifts() {
-        assertEquals(
-            WorkSetupState.FreshInstall,
-            projectLoadedWorkSetupState(history = null, catalog = null, referenceDate = TODAY),
-        )
+    fun absentHistoryMeansFreshInstall() {
+        assertEquals(WorkSetupState.FreshInstall, projectLoadedWorkSetupState(null, null, TODAY))
     }
 
     @Test
-    fun migratedV1WithoutRevisionsRemainsLegacyEvenWithoutAnyCatalog() {
-        assertEquals(
-            WorkSetupState.LegacyV1(TIMELINE_ID),
-            projectLoadedWorkSetupState(migratedHistory(emptyList()), null, TODAY),
-        )
+    fun historyWithoutApplicableRevisionOrCatalogIsAControlledLoadError() {
+        val futureHistory = history(listOf(revision(date = TODAY.plusDays(1))))
+        assertEquals(WorkSetupState.LoadError, projectLoadedWorkSetupState(futureHistory, null, TODAY))
+        assertEquals(WorkSetupState.LoadError, projectLoadedWorkSetupState(history(), null, TODAY))
     }
 
     @Test
-    fun futureV2ActivationDoesNotAdvanceMigratedUserMode() {
-        val future = revision(REVISION_ID, TODAY.plusDays(10), WorkSector.POLICE)
-
-        assertEquals(
-            WorkSetupState.LegacyV1WithFutureActivation(TIMELINE_ID, future),
-            projectLoadedWorkSetupState(migratedHistory(listOf(future)), null, TODAY),
-        )
-    }
-
-    @Test
-    fun applicableV2NeedsARealCatalogAndNeverTreatsLoadFailureAsEmpty() {
-        val history = newHistory(listOf(revision()))
-
-        assertEquals(WorkSetupState.LoadError, projectLoadedWorkSetupState(history, null, TODAY))
-        val state = projectLoadedWorkSetupState(history, emptyCatalog(), TODAY)
+    fun emptyCatalogReportsEveryMissingRequirement() {
+        val state = projectLoadedWorkSetupState(history(), emptyCatalog(), TODAY)
         assertTrue(state is WorkSetupState.V2NeedsFirstSet)
+        assertEquals(MissingWorkSetupRequirement.entries.toSet(), (state as WorkSetupState.V2NeedsFirstSet).missing)
+    }
+
+    @Test
+    fun readyRequiresAnActiveCoherentTemplateAndApplicableRule() {
+        val revision = revision()
         assertEquals(
-            MissingWorkSetupRequirement.entries.toSet(),
-            (state as WorkSetupState.V2NeedsFirstSet).missing,
+            WorkSetupState.V2Ready(TIMELINE_ID, revision),
+            projectLoadedWorkSetupState(history(listOf(revision)), readyCatalog(), TODAY),
         )
     }
 
     @Test
-    fun readyRequiresOneCoherentActiveTemplateAndApplicablePlaceRule() {
-        val configuration = revision()
-        val state = projectLoadedWorkSetupState(
-            history = newHistory(listOf(configuration)),
-            catalog = readyCatalog(),
-            referenceDate = TODAY,
-        )
-
-        assertEquals(WorkSetupState.V2Ready(TIMELINE_ID, configuration), state)
-    }
-
-    @Test
-    fun readinessFiltersPlaceTypeAndTemplateActivityIndependently() {
-        val history = newHistory(listOf(revision()))
-
-        val archivedPlace = projectLoadedWorkSetupState(
-            history,
+    fun placeTypeTemplateAndRuleAvailabilityAreEvaluatedIndependently() {
+        val noActivePlace = projectLoadedWorkSetupState(
+            history(),
             readyCatalog(placeActive = false),
             TODAY,
         ) as WorkSetupState.V2NeedsFirstSet
-        assertTrue(MissingWorkSetupRequirement.ACTIVE_WORK_PLACE in archivedPlace.missing)
-        assertTrue(MissingWorkSetupRequirement.ACTIVE_WORK_TEMPLATE in archivedPlace.missing)
+        assertEquals(
+            setOf(
+                MissingWorkSetupRequirement.ACTIVE_WORK_PLACE,
+                MissingWorkSetupRequirement.APPLICABLE_WORKPLACE_RULE,
+                MissingWorkSetupRequirement.ACTIVE_WORK_TEMPLATE,
+            ),
+            noActivePlace.missing,
+        )
 
-        val archivedType = projectLoadedWorkSetupState(
-            history,
+        val noActiveType = projectLoadedWorkSetupState(
+            history(),
             readyCatalog(typeActive = false),
             TODAY,
         ) as WorkSetupState.V2NeedsFirstSet
-        assertTrue(MissingWorkSetupRequirement.ACTIVE_WORK_TYPE in archivedType.missing)
-        assertTrue(MissingWorkSetupRequirement.ACTIVE_WORK_TEMPLATE in archivedType.missing)
+        assertEquals(
+            setOf(
+                MissingWorkSetupRequirement.ACTIVE_WORK_TYPE,
+                MissingWorkSetupRequirement.ACTIVE_WORK_TEMPLATE,
+            ),
+            noActiveType.missing,
+        )
 
-        val archivedTemplate = projectLoadedWorkSetupState(
-            history,
+        val noActiveTemplate = projectLoadedWorkSetupState(
+            history(),
             readyCatalog(templateActive = false),
             TODAY,
         ) as WorkSetupState.V2NeedsFirstSet
         assertEquals(
             setOf(MissingWorkSetupRequirement.ACTIVE_WORK_TEMPLATE),
-            archivedTemplate.missing,
+            noActiveTemplate.missing,
+        )
+
+        val noApplicableRule = projectLoadedWorkSetupState(
+            history(),
+            readyCatalog(ruleDate = TODAY.plusDays(1)),
+            TODAY,
+        ) as WorkSetupState.V2NeedsFirstSet
+        assertEquals(
+            setOf(
+                MissingWorkSetupRequirement.APPLICABLE_WORKPLACE_RULE,
+                MissingWorkSetupRequirement.ACTIVE_WORK_TEMPLATE,
+            ),
+            noApplicableRule.missing,
         )
     }
 
     @Test
-    fun migratedSelectionCannotMixLegacyAndV2Dates() {
-        val history = migratedHistory(listOf(revision(date = TODAY)))
-
-        assertThrows(InvalidV2SelectionException::class.java) {
-            classifyWorkDateSelection(history, setOf(TODAY.minusDays(1), TODAY))
-        }
-    }
-
-    @Test
-    fun sameSectorMayUseDifferentConfigurationRevisionForEachDate() {
-        val first = revision(REVISION_ID, TODAY)
-        val second = revision(OTHER_REVISION_ID, TODAY.plusDays(10))
+    fun selectionUsesTheApplicableRevisionForEveryDateAndRejectsMixedSectors() {
+        val first = revision(REVISION_ID, TODAY, WorkSector.PRIVATE_SECURITY)
+        val second = revision(OTHER_REVISION_ID, TODAY.plusDays(10), WorkSector.PRIVATE_SECURITY)
         val selection = classifyWorkDateSelection(
-            newHistory(listOf(first, second)),
+            history(listOf(first, second)),
             setOf(TODAY, TODAY.plusDays(12)),
         ) as WorkDateSelection.V2
-
         assertEquals(first, selection.configurationRevisionsByDate[TODAY])
         assertEquals(second, selection.configurationRevisionsByDate[TODAY.plusDays(12)])
-    }
-
-    @Test
-    fun differentSectorsMustBeLoadedSeparately() {
-        val first = revision(REVISION_ID, TODAY, WorkSector.PRIVATE_SECURITY)
-        val second = revision(OTHER_REVISION_ID, TODAY.plusDays(10), WorkSector.POLICE)
 
         assertThrows(InvalidV2SelectionException::class.java) {
             classifyWorkDateSelection(
-                newHistory(listOf(first, second)),
+                history(listOf(first, second.copy(value = second.value.copy(sector = WorkSector.POLICE)))),
                 setOf(TODAY, TODAY.plusDays(12)),
             )
         }
     }
 
     @Test
-    fun newV2DateBeforeFirstRevisionRequestsConsciousBackfillInsteadOfBecomingV1() {
+    fun dateBeforeFirstRevisionRequestsConsciousV2Backfill() {
         val selection = classifyWorkDateSelection(
-            newHistory(listOf(revision(date = TODAY))),
+            history(),
             setOf(TODAY.minusDays(3), TODAY),
         ) as WorkDateSelection.NeedsNewV2Backfill
 
         assertEquals(TODAY.minusDays(3), selection.earliestDate)
         assertEquals(WorkSector.PRIVATE_SECURITY, selection.sector)
-        assertEquals(setOf(TODAY.minusDays(3), TODAY), selection.dates)
     }
 
-    private fun migratedHistory(revisions: List<EffectiveRevision<WorkConfiguration>>) = history(
-        WorkConfigurationOrigin.MIGRATED_V1,
-        revisions,
-    )
-
-    private fun newHistory(revisions: List<EffectiveRevision<WorkConfiguration>>) = history(
-        WorkConfigurationOrigin.NEW_V2,
-        revisions,
-    )
-
     private fun history(
-        origin: WorkConfigurationOrigin,
-        revisions: List<EffectiveRevision<WorkConfiguration>>,
+        revisions: List<EffectiveRevision<WorkConfiguration>> = listOf(revision()),
     ) = WorkConfigurationHistory(
-        origin = origin,
         timeline = EffectiveDateTimeline(TIMELINE_ID, revisions),
         perPeriodHoursValues = PerPeriodHoursValues(emptyList()),
     )
@@ -182,12 +153,14 @@ class WorkSetupStateTest {
         placeActive: Boolean = true,
         typeActive: Boolean = true,
         templateActive: Boolean = true,
+        ruleDate: LocalDate = TODAY,
     ): WorkCatalog {
+        val objective = Objective(OBJECTIVE_ID, "Hospital", "HOS", null, null, true, NOW, NOW)
         val place = WorkPlace(
             PLACE_ID,
             TIMELINE_ID,
             WorkSector.PRIVATE_SECURITY,
-            OBJECTIVE_ID,
+            objective.id,
             placeActive,
             NOW,
             NOW,
@@ -203,14 +176,13 @@ class WorkSetupStateTest {
             TEMPLATE_ID,
             TIMELINE_ID,
             WorkSector.PRIVATE_SECURITY,
-            PLACE_ID,
-            OBJECTIVE_ID,
-            TYPE_ID,
+            place.id,
+            objective.id,
+            type.id,
             LocalTime.of(8, 0),
             LocalTime.of(16, 0),
             0xFF336699.toInt(),
             templateActive,
-            null,
             NOW,
             NOW,
         )
@@ -218,24 +190,13 @@ class WorkSetupStateTest {
             RULE_ID,
             TIMELINE_ID,
             WorkSector.PRIVATE_SECURITY,
-            PLACE_ID,
-            OBJECTIVE_ID,
-            TODAY,
-            WorkplaceRules(
-                NightHoursRule.Disabled,
-                WeekendRule.None,
-                HolidayRule(false, false),
-            ),
+            place.id,
+            objective.id,
+            ruleDate,
+            WorkplaceRules(NightHoursRule.Disabled, WeekendRule.None, HolidayRule(false, false)),
             NOW,
         )
-        return WorkCatalog(
-            TIMELINE_ID,
-            WorkSector.PRIVATE_SECURITY,
-            listOf(place),
-            listOf(type),
-            listOf(template),
-            listOf(rule),
-        )
+        return WorkCatalog(TIMELINE_ID, WorkSector.PRIVATE_SECURITY, listOf(place), listOf(type), listOf(template), listOf(rule))
     }
 
     private companion object {

@@ -24,8 +24,7 @@ internal data class ShiftEntity(
     val colorArgbSnapshot: Int,
     val position: String?,
     val status: String,
-    val sourceObjectiveId: String?,
-    val sourceScheduleCombinationId: String?,
+    val sourceObjectiveId: String,
     val createdAtEpochMillis: Long,
     val updatedAtEpochMillis: Long,
 )

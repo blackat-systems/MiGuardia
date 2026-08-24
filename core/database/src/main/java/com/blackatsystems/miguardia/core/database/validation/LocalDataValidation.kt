@@ -2,7 +2,6 @@ package com.blackatsystems.miguardia.core.database.validation
 
 import com.blackatsystems.miguardia.core.domain.model.MedicalLeave
 import com.blackatsystems.miguardia.core.domain.model.Objective
-import com.blackatsystems.miguardia.core.domain.model.ScheduleCombination
 import com.blackatsystems.miguardia.core.domain.model.Shift
 import com.blackatsystems.miguardia.core.domain.model.Vacation
 import com.blackatsystems.miguardia.core.domain.repository.InvalidLocalDataException
@@ -25,11 +24,6 @@ internal fun Objective.validated(): Objective {
         address = address.normalizedOptional(),
         note = note.normalizedOptional(),
     )
-}
-
-internal fun ScheduleCombination.validated(): ScheduleCombination {
-    validateTimestamps(createdAt, updatedAt)
-    return this
 }
 
 internal fun Shift.validated(): Shift {

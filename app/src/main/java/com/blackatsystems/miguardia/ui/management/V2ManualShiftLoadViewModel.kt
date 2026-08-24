@@ -831,9 +831,6 @@ internal class V2ManualShiftLoadCoordinator(
         }
         val selection = classifyWorkDateSelection(history, dates)
         val sector = when (selection) {
-            is WorkDateSelection.LegacyV1 -> throw IllegalStateException(
-                "Estas fechas pertenecen al recorrido de MiGuardia 1.0 y no se pueden cargar como jornadas V2.",
-            )
             is WorkDateSelection.V2 -> selection.sector
             is WorkDateSelection.NeedsNewV2Backfill -> selection.sector
         }
@@ -848,7 +845,6 @@ internal class V2ManualShiftLoadCoordinator(
         val configuredDates = when (selection) {
             is WorkDateSelection.V2 -> dates
             is WorkDateSelection.NeedsNewV2Backfill -> selection.configuredRevisionsByDate.keys
-            is WorkDateSelection.LegacyV1 -> emptySet()
         }
         val needsBackfill = selection is WorkDateSelection.NeedsNewV2Backfill
         val placesById = catalog.workPlaces.filter(WorkPlace::isActive).associateBy(WorkPlace::id)
@@ -988,7 +984,6 @@ internal class V2ManualShiftLoadCoordinator(
                     option.template.startTime,
                     option.template.endTime,
                     option.template.colorArgb,
-                    option.template.legacyScheduleCombinationId,
                     option.template.isActive,
                 ).joinToString("|"),
             )

@@ -1,6 +1,6 @@
 # Retirar el modo V1 y fijar la primera base exclusiva V2
 
-- Estado: **HABILITADO — PENDIENTE DE IMPLEMENTACIÓN**
+- Estado: **CERRADO — INTEGRADO Y VERIFICADO POR MAIN**
 - Fecha: 2026-08-23
 - Proyecto obligatorio:
   `C:\Users\Joaquin\Desktop\chatgptprojects\MiGuardia-2.0`
@@ -596,3 +596,53 @@ Detenete y devolvé el hallazgo a MAIN si:
 - la QA obligatoria no puede ejecutarse;
 - una tabla o campo no puede clasificarse sin una decisión material;
 - haría falta tocar producción, publicar o hacer push.
+
+## CIERRE DE MAIN — 2026-08-23
+
+MAIN auditó el candidato recibido sobre `a306221`, revisó las 164 rutas de
+código y pruebas que componían el diff final previo a documentación y encargó
+una revisión independiente de sólo lectura. No quedaron defectos bloqueantes.
+
+Durante la integración se corrigieron, dentro del alcance:
+
+- la preservación visible de Feriados y Notas como capacidades comunes V2;
+- la validación global de objetivos, revisiones históricas y pares
+  `Shift + ShiftWorkSnapshot`;
+- la frontera única y atómica de escritura mediante `V2ShiftRepository`;
+- fixtures QA deterministas y protegidos contra ejecución fuera del paquete
+  exacto de pruebas;
+- pruebas de recreación, calendario, selector RGB y compatibilidad API 26;
+- esperas deterministas de Compose y notificaciones sin debilitar los
+  contratos funcionales.
+
+La base resultante es `MiGuardiaV2Database`, archivo `miguardia-v2.db`, Room
+versión 1, con 19 tablas. El esquema exportado tiene identity hash
+`d583ce68e247cba7574a9e3b25b29e69` y SHA-256
+`5769C0F57667F7FA5A7C1C1DA5474474537094A759F8FA4A0D66E6EF37C1287E`.
+La comparación estructural contra Room v7 no encontró diferencias fuera de
+las tres tablas, tres columnas y nulabilidad autorizadas por ADR 0026.
+
+Validación final:
+
+- JVM: 283/283 —168 de dominio, 5 de base y 110 de aplicación—;
+- lint: 0 errores y 2 avisos de actualización ya conocidos;
+- APK Debug, APK QA, AndroidTest QA y AndroidTest de base: compilados;
+- Samsung `SM-S938B`, API 36: runner verde `OK (148 tests)`; 147 aprobadas y
+  una omitida conscientemente porque requiere acceso especial a alarmas
+  exactas, no habilitado por este contrato;
+- Room en Samsung: 61/61;
+- emulador Android 8.0, API 26: 148/148 de aplicación y 61/61 de Room;
+- revisión visual directa en Samsung y API 26 con instalación limpia y los
+  cuatro rubros exactos;
+- `git diff --check`: correcto.
+
+Los paquetes QA y de prueba quedaron desinstalados en ambos dispositivos. El
+emulador quedó apagado, el Samsung recuperó su rotación original y producción
+no fue abierta ni modificada. No se consultaron ni cambiaron `font_scale`,
+densidad o tamaño visual del sistema. No hubo push, tag, Release ni cambios en
+`main`.
+
+La evidencia durable está en
+`docs/audits/2026-08-23-retiro-modo-v1-y-base-room-v2.md`. El siguiente bloque
+recomendado es recurrencias y edición de una fecha o de todo lo futuro; no está
+habilitado hasta que Joaquin pida su prompt.

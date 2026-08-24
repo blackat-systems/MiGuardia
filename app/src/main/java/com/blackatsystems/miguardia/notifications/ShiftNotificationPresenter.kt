@@ -68,7 +68,6 @@ internal class ShiftNotificationPresenter(private val context: Context) {
             .setDeleteIntent(dismissPendingIntent)
             .addAction(secureAction("Ver detalles", MainActivity.ACTION_VIEW_SHIFT, shift, now))
             .addAction(secureAction("Cómo llegar", MainActivity.ACTION_DIRECTIONS, shift, now))
-            .addAction(secureAction("Informar novedad", MainActivity.ACTION_REPORT_NOVELTY, shift, now))
         if (silentUpdate) builder.setSilent(true)
         applyPrivacy(builder, channelId, card)
         notifySafely(shift.id.toString(), NOTIFICATION_ID, builder.build())

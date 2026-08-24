@@ -15,7 +15,6 @@ import com.blackatsystems.miguardia.core.domain.work.PerPeriodHoursValues
 import com.blackatsystems.miguardia.core.domain.work.ResolvedWorkConfigurationRevision
 import com.blackatsystems.miguardia.core.domain.work.WorkConfiguration
 import com.blackatsystems.miguardia.core.domain.work.WorkConfigurationHistory
-import com.blackatsystems.miguardia.core.domain.work.WorkConfigurationOrigin
 import com.blackatsystems.miguardia.core.domain.work.WorkPlace
 import com.blackatsystems.miguardia.core.domain.work.WorkSector
 import com.blackatsystems.miguardia.core.domain.work.WorkTemplate
@@ -40,7 +39,6 @@ class V2ShiftPlanningTest {
         val write = build()
 
         assertEquals(OBJECTIVE_ID, write.shift.sourceObjectiveId)
-        assertNull(write.shift.sourceScheduleCombinationId)
         assertEquals("Hospital Norte", write.shift.objectiveNameSnapshot)
         assertEquals("HN", write.shift.objectiveAbbreviationSnapshot)
         assertEquals(PLACE_ID, write.snapshot.workPlaceId)
@@ -245,6 +243,29 @@ class V2ShiftPlanningTest {
     }
 
     @Test
+    fun occupancyExpectationKeepsAnImmutableDefensiveCopy() {
+        val first = build().shift
+        val second = first.copy(
+            id = OTHER_SHIFT_ID,
+            localStartDate = DATE.plusDays(1),
+            startAt = first.startAt.plusSeconds(24 * 3_600),
+            endAt = first.endAt.plusSeconds(24 * 3_600),
+        )
+        val expectation = ShiftOccupancyExpectation.capture(
+            startDateInclusive = DATE,
+            endDateInclusive = DATE.plusDays(1),
+            shifts = listOf(first, second),
+        )
+
+        @Suppress("UNCHECKED_CAST")
+        val exposedCapture = expectation.observedShifts as MutableSet<Any>
+        assertThrows(UnsupportedOperationException::class.java) {
+            exposedCapture.clear()
+        }
+        assertEquals(setOf(first.id, second.id), expectation.observedShifts.map { it.shiftId }.toSet())
+    }
+
+    @Test
     fun occupancyExpectationRejectsRowsOutsideItsWindowOrRepeatedIds() {
         val shift = build().shift
         assertThrows(IllegalArgumentException::class.java) {
@@ -440,7 +461,6 @@ class V2ShiftPlanningTest {
         end,
         0xFF336699.toInt(),
         true,
-        null,
         NOW,
         NOW,
     )
@@ -464,7 +484,6 @@ class V2ShiftPlanningTest {
         revisions: List<EffectiveRevision<WorkConfiguration>> = listOf(revision()),
     ): ResolvedWorkConfigurationRevision = ResolvedWorkConfigurationRevision.resolve(
         history = WorkConfigurationHistory(
-            origin = WorkConfigurationOrigin.NEW_V2,
             timeline = EffectiveDateTimeline(timelineId, revisions),
             perPeriodHoursValues = PerPeriodHoursValues(emptyList()),
         ),

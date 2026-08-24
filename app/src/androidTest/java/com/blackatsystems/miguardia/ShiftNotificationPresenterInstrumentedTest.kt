@@ -7,6 +7,7 @@ import android.app.NotificationManager
 import android.content.Context
 import android.graphics.drawable.ColorDrawable
 import android.net.Uri
+import android.os.Build
 import android.os.SystemClock
 import android.view.View
 import android.widget.Chronometer
@@ -45,11 +46,14 @@ class ShiftNotificationPresenterInstrumentedTest {
     @Before
     fun grantQaPermission() {
         assumeTrue("Las notificaciones instrumentadas sólo pueden tocar el paquete QA.", context.packageName.endsWith(".qa"))
-        InstrumentationRegistry.getInstrumentation().uiAutomation.grantRuntimePermission(
-            context.packageName,
-            Manifest.permission.POST_NOTIFICATIONS,
-        )
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            InstrumentationRegistry.getInstrumentation().uiAutomation.grantRuntimePermission(
+                context.packageName,
+                Manifest.permission.POST_NOTIFICATIONS,
+            )
+        }
         manager.cancelAll()
+        waitForNotifications { manager.activeNotifications.isEmpty() }
     }
 
     @After
@@ -58,17 +62,19 @@ class ShiftNotificationPresenterInstrumentedTest {
     }
 
     @Test
-    fun completeReminderUsesStableUuidIdentityHistoricalContentAndThreeActions() {
+    fun completeReminderUsesStableUuidIdentityHistoricalContentAndTwoActions() {
         val shift = shift(SHIFT_ONE)
         presenter.show(shift, NOW, NotificationPreferences(enabled = true))
 
         val posted = notificationForTag(shift.id)
         assertEquals("PRÓXIMA GUARDIA · Objetivo ficticio", posted.extras.getString(Notification.EXTRA_TITLE))
         assertEquals("QA · 19:00–07:00", posted.extras.getString(Notification.EXTRA_TEXT))
-        assertEquals(3, posted.actions.size)
-        assertEquals(listOf("Ver detalles", "Cómo llegar", "Informar novedad"), posted.actions.map { it.title.toString() })
-        assertEquals(3, posted.actions.map { it.actionIntent }.toSet().size)
-        assertTrue(posted.actions.all { it.isAuthenticationRequired })
+        assertEquals(2, posted.actions.size)
+        assertEquals(listOf("Ver detalles", "Cómo llegar"), posted.actions.map { it.title.toString() })
+        assertEquals(2, posted.actions.map { it.actionIntent }.toSet().size)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            assertTrue(posted.actions.all { it.isAuthenticationRequired })
+        }
         assertTrue(posted.deleteIntent != null)
         assertEquals(ShiftNotificationPresenter.GROUP_KEY, posted.group)
         assertTrue(posted.flags and Notification.FLAG_ONGOING_EVENT != 0)
@@ -167,7 +173,9 @@ class ShiftNotificationPresenterInstrumentedTest {
             NotificationPreferences(enabled = true, privacy = NotificationPrivacy.REDUCED),
             weatherText = "Clima: dato que debe omitirse",
         )
-        posted = notificationForTag(shift.id)
+        posted = notificationForTag(shift.id) {
+            it.publicVersion?.extras?.getString(Notification.EXTRA_TEXT) == "Horario 19:00–07:00"
+        }
         expanded = posted.bigContentView.apply(context, null)
         assertEquals(View.GONE, expanded.findViewById<View>(R.id.notification_weather).visibility)
         assertFalse(posted.publicVersion.extras.getString(Notification.EXTRA_TEXT).orEmpty().contains("Clima:"))
@@ -190,10 +198,20 @@ class ShiftNotificationPresenterInstrumentedTest {
         presenter.show(second, NOW, custom)
         presenter.updateGroupSummary(2, custom)
 
-        val individual = manager.activeNotifications.filter { it.tag == first.id.toString() || it.tag == second.id.toString() }
+        val expectedIndividualTags = setOf(first.id.toString(), second.id.toString())
+        waitForNotifications {
+            val active = manager.activeNotifications
+            expectedIndividualTags.all { expectedTag -> active.any { it.tag == expectedTag } } &&
+                active.any {
+                    it.notification.flags and Notification.FLAG_GROUP_SUMMARY != 0 &&
+                        it.notification.group == ShiftNotificationPresenter.GROUP_KEY
+                }
+        }
+        val active = manager.activeNotifications
+        val individual = active.filter { it.tag == first.id.toString() || it.tag == second.id.toString() }
         assertEquals(2, individual.size)
         assertTrue(individual.all { it.notification.group == ShiftNotificationPresenter.GROUP_KEY })
-        assertTrue(manager.activeNotifications.any { it.notification.flags and Notification.FLAG_GROUP_SUMMARY != 0 })
+        assertTrue(active.any { it.notification.flags and Notification.FLAG_GROUP_SUMMARY != 0 })
         assertTrue(channelBefore.startsWith(ShiftNotificationPresenter.CHANNEL_PREFIX))
         assertTrue(manager.getNotificationChannel(channelBefore).shouldVibrate())
         assertNotNull(manager.getNotificationChannel(channelBefore).sound)
@@ -263,8 +281,7 @@ class ShiftNotificationPresenterInstrumentedTest {
         colorArgbSnapshot = 0xff336699.toInt(),
         position = "Acceso",
         status = ShiftStatus.PLANNED,
-        sourceObjectiveId = null,
-        sourceScheduleCombinationId = null,
+        sourceObjectiveId = UUID(0L, 266L),
         createdAt = NOW,
         updatedAt = NOW,
     )
@@ -287,6 +304,14 @@ class ShiftNotificationPresenterInstrumentedTest {
             SystemClock.sleep(50)
         }
         error("No se publicó la notificación QA esperada para la identidad $tag/$id.")
+    }
+
+    private fun waitForNotifications(condition: () -> Boolean) {
+        repeat(200) {
+            if (condition()) return
+            SystemClock.sleep(50)
+        }
+        assertTrue("Las notificaciones QA no alcanzaron el estado esperado.", condition())
     }
 
     private companion object {

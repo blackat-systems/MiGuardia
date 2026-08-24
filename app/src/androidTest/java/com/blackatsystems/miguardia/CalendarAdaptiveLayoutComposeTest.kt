@@ -2,7 +2,7 @@ package com.blackatsystems.miguardia
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -53,7 +53,7 @@ class CalendarAdaptiveLayoutComposeTest {
     val compose = createComposeRule()
 
     @Test
-    fun standardZoomTallPhysicalViewportShowsWholeHierarchyWithoutOverflow() {
+    fun standardZoomPhysicalViewportKeepsWholeHierarchyReachable() {
         setCalendarViewport(height = 1_080.dp, referenceNow = AFTER_SHIFTS_NOW)
 
         val root = compose.onNodeWithTag("calendar-test-root").bounds()
@@ -62,17 +62,17 @@ class CalendarAdaptiveLayoutComposeTest {
 
         val scrollRange = compose.onNodeWithTag("calendar-scroll-container").verticalScrollRange()
         assertEquals(0f, scrollRange.value(), 0.001f)
-        assertEquals(0f, scrollRange.maxValue(), 0.001f)
-        compose.onNodeWithTag("calendar-scrollbar-track").assertDoesNotExist()
-        compose.onNodeWithTag("calendar-scrollbar-thumb").assertDoesNotExist()
+        assertTrue(scrollRange.maxValue() > 0f)
+        compose.onNodeWithTag("calendar-scrollbar-track").assertIsDisplayed()
+        compose.onNodeWithTag("calendar-scrollbar-thumb").assertIsDisplayed()
 
         compose.onNodeWithTag("next-event-card").assertIsDisplayed()
         compose.onNodeWithTag("month-grid").assertIsDisplayed()
-        compose.onNodeWithTag("calendar-bottom-action").assertIsDisplayed()
         val viewport = compose.onNodeWithTag("calendar-scroll-viewport").bounds()
         assertContained(viewport, compose.onNodeWithTag("next-event-card").bounds())
-        assertContained(viewport, compose.onNodeWithTag("month-grid").bounds())
-        assertContained(viewport, compose.onNodeWithTag("calendar-bottom-action").bounds())
+        compose.onNodeWithTag("calendar-v2-load-shifts").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("calendar-work-setup-action").performScrollTo().assertIsDisplayed()
+        assertTrue(scrollRange.value() > 0f)
     }
 
     @Test
@@ -85,7 +85,7 @@ class CalendarAdaptiveLayoutComposeTest {
         compose.onNodeWithTag("calendar-scrollbar-track").assertIsDisplayed()
         val initialThumbTop = compose.onNodeWithTag("calendar-scrollbar-thumb").bounds().top
 
-        compose.onNodeWithTag("calendar-bottom-action").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("calendar-work-setup-action").performScrollTo().assertIsDisplayed()
         assertTrue(container.verticalScrollRange().value() > 0f)
         val movedThumb = compose.onNodeWithTag("calendar-scrollbar-thumb").bounds()
         val track = compose.onNodeWithTag("calendar-scrollbar-track").bounds()
@@ -95,7 +95,7 @@ class CalendarAdaptiveLayoutComposeTest {
         compose.runOnIdle { darkTheme = true }
         compose.onNodeWithTag("calendar-scrollbar-track").assertIsDisplayed()
         compose.onNodeWithTag("calendar-scrollbar-thumb").assertIsDisplayed()
-        compose.onNodeWithTag("calendar-bottom-action").assertIsDisplayed()
+        compose.onNodeWithTag("calendar-work-setup-action").assertIsDisplayed()
     }
 
     @Test
@@ -111,7 +111,8 @@ class CalendarAdaptiveLayoutComposeTest {
                 ) {
                     Box(
                         Modifier
-                            .requiredSize(width = 400.dp, height = 760.dp)
+                            .sizeIn(maxWidth = 400.dp, maxHeight = 760.dp)
+                            .fillMaxSize()
                             .testTag("calendar-test-host"),
                     ) {
                         key(zoom) {
@@ -136,7 +137,8 @@ class CalendarAdaptiveLayoutComposeTest {
             gridText("RGT", RIGHTMOST_SHIFT_DATE).performScrollTo().assertIsDisplayed()
             gridText("08:00–16:00", RIGHTMOST_SHIFT_DATE).performScrollTo().assertIsDisplayed()
             gridText("Cancel.", RIGHTMOST_SHIFT_DATE).performScrollTo().assertIsDisplayed()
-            compose.onNodeWithTag("calendar-bottom-action").performScrollTo().assertIsDisplayed()
+            compose.onNodeWithTag("calendar-v2-load-shifts").performScrollTo().assertIsDisplayed()
+            compose.onNodeWithTag("calendar-work-setup-action").performScrollTo().assertIsDisplayed()
         }
     }
 
@@ -155,7 +157,8 @@ class CalendarAdaptiveLayoutComposeTest {
                 ) {
                     Box(
                         Modifier
-                            .requiredSize(width = 400.dp, height = height)
+                            .sizeIn(maxWidth = 400.dp, maxHeight = height)
+                            .fillMaxSize()
                             .testTag("calendar-test-host"),
                     ) {
                         MiGuardiaTheme(darkTheme = darkTheme(), appZoom = AppZoom.STANDARD) {
@@ -261,8 +264,7 @@ class CalendarAdaptiveLayoutComposeTest {
             colorArgbSnapshot = 0xFF315DA8.toInt(),
             position = position,
             status = status,
-            sourceObjectiveId = null,
-            sourceScheduleCombinationId = null,
+            sourceObjectiveId = UUID(0L, 840L),
             createdAt = Instant.EPOCH,
             updatedAt = Instant.EPOCH,
         )

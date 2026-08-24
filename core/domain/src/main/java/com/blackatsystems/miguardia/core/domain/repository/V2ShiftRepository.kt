@@ -18,8 +18,6 @@ interface V2ShiftRepository {
 
     suspend fun insert(write: V2ShiftWrite)
 
-    suspend fun update(write: V2ShiftWrite)
-
     suspend fun deleteShift(expected: V2ShiftWrite)
 
     suspend fun applyV2Batch(

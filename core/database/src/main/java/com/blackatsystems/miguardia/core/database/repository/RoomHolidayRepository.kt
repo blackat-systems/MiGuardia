@@ -2,14 +2,14 @@ package com.blackatsystems.miguardia.core.database.repository
 
 import android.database.sqlite.SQLiteConstraintException
 import androidx.room.withTransaction
-import com.blackatsystems.miguardia.core.database.MiGuardiaDatabase
+import com.blackatsystems.miguardia.core.database.MiGuardiaV2Database
 import com.blackatsystems.miguardia.core.database.mapping.toDomain
 import com.blackatsystems.miguardia.core.database.mapping.toEntity
 import com.blackatsystems.miguardia.core.database.validation.validateRange
 import com.blackatsystems.miguardia.core.domain.model.Holiday
 import com.blackatsystems.miguardia.core.domain.model.HolidayBatchMutation
 import com.blackatsystems.miguardia.core.domain.model.HolidayConflictPolicy
-import com.blackatsystems.miguardia.core.domain.novelty.normalized
+import com.blackatsystems.miguardia.core.domain.model.normalized
 import com.blackatsystems.miguardia.core.domain.repository.DuplicateHolidayDateException
 import com.blackatsystems.miguardia.core.domain.repository.InvalidLocalDataException
 import com.blackatsystems.miguardia.core.domain.repository.HolidayRepository
@@ -18,7 +18,7 @@ import java.util.UUID
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
-internal class RoomHolidayRepository(private val database: MiGuardiaDatabase) : HolidayRepository {
+internal class RoomHolidayRepository(private val database: MiGuardiaV2Database) : HolidayRepository {
     private val dao = database.holidayDao()
 
     override fun observeBetween(startDateInclusive: LocalDate, endDateInclusive: LocalDate): Flow<List<Holiday>> {

@@ -11,5 +11,4 @@ import androidx.room.PrimaryKey
 internal data class WorkConfigurationRootEntity(
     @PrimaryKey val timelineId: String,
     val singletonSlot: Int,
-    val origin: String,
 )

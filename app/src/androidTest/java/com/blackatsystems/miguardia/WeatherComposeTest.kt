@@ -190,8 +190,7 @@ class WeatherComposeTest {
         colorArgbSnapshot = 0xff336699.toInt(),
         position = null,
         status = ShiftStatus.PLANNED,
-        sourceObjectiveId = null,
-        sourceScheduleCombinationId = null,
+        sourceObjectiveId = UUID(0L, 193L),
         createdAt = NOW,
         updatedAt = NOW,
     )

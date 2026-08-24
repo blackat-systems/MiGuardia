@@ -19,7 +19,7 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class GuardProfilePreferencesInstrumentedTest {
     @Test
-    fun defaultsPersistReopenAndOptionalNameCanBeRemoved() = runBlocking {
+    fun optionalDisplayNamePersistsAndCanBeRemoved() = runBlocking {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
         val directory = File(context.cacheDir, "guard-profile-${UUID.randomUUID()}")
         check(directory.mkdirs())
@@ -28,23 +28,20 @@ class GuardProfilePreferencesInstrumentedTest {
         val firstScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         val first = GuardProfileStore(file, firstScope)
         assertNull(first.current().displayName)
-        assertEquals("Inforce", first.current().company)
-        first.save("  Persona ficticia  ", "  Empresa ficticia  ")
+        first.save("  Persona ficticia  ")
         firstScope.cancel()
 
         delay(100)
         val secondScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         val second = GuardProfileStore(file, secondScope)
         assertEquals("Persona ficticia", second.current().displayName)
-        assertEquals("Empresa ficticia", second.current().company)
-        second.save("   ", "Empresa ficticia")
+        second.save("   ")
         secondScope.cancel()
 
         delay(100)
         val thirdScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         val third = GuardProfileStore(file, thirdScope)
         assertNull(third.current().displayName)
-        assertEquals("Empresa ficticia", third.current().company)
         thirdScope.cancel()
         directory.deleteRecursively()
         Unit

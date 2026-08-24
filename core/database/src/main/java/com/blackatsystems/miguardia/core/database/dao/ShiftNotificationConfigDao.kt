@@ -7,6 +7,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Relation
 import androidx.room.Transaction
+import androidx.room.Upsert
 import com.blackatsystems.miguardia.core.database.entity.ShiftNotificationConfigEntity
 import com.blackatsystems.miguardia.core.database.entity.ShiftNotificationReminderEntity
 import kotlinx.coroutines.flow.Flow
@@ -34,7 +35,7 @@ internal interface ShiftNotificationConfigDao {
     @Query("SELECT * FROM shift_notification_configs WHERE shiftId = :shiftId")
     suspend fun getForShift(shiftId: String): ShiftNotificationConfigRow?
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun upsertConfig(entity: ShiftNotificationConfigEntity)
 
     @Insert(onConflict = OnConflictStrategy.ABORT)

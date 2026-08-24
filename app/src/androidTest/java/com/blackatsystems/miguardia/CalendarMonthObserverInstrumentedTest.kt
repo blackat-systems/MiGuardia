@@ -38,8 +38,12 @@ class CalendarMonthObserverInstrumentedTest {
                 id = UUID.fromString("20000000-0000-0000-0000-000000000002"),
                 date = LocalDate.of(2026, 9, 1),
             )
-            dataStore.shifts.insert(augustShift)
-            dataStore.shifts.insert(septemberShift)
+            dataStore.v2Shifts.insert(
+                V2AppTestFixture.writeFor(dataStore, augustShift, LocalDate.of(2026, 8, 1)),
+            )
+            dataStore.v2Shifts.insert(
+                V2AppTestFixture.writeFor(dataStore, septemberShift, LocalDate.of(2026, 8, 1)),
+            )
             dataStore.explicitDayStatuses.set(
                 LocalDate.of(2026, 8, 15),
                 ExplicitDayStatusType.DAY_OFF,
@@ -93,7 +97,9 @@ class CalendarMonthObserverInstrumentedTest {
                     updatedAt = Instant.EPOCH,
                 ),
             )
-            dataStore.shifts.insert(secondAugustShift)
+            dataStore.v2Shifts.insert(
+                V2AppTestFixture.writeFor(dataStore, secondAugustShift, LocalDate.of(2026, 8, 1)),
+            )
             val updated = update.await()
             assertEquals(2, updated.shifts.size)
             assertEquals(LocalDate.of(2026, 8, 10), updated.vacations.single().startDate)
@@ -122,8 +128,7 @@ class CalendarMonthObserverInstrumentedTest {
             colorArgbSnapshot = 0xFF336699.toInt(),
             position = null,
             status = ShiftStatus.PLANNED,
-            sourceObjectiveId = null,
-            sourceScheduleCombinationId = null,
+            sourceObjectiveId = V2AppTestFixture.PLACEHOLDER_OBJECTIVE_ID,
             createdAt = Instant.EPOCH,
             updatedAt = Instant.EPOCH,
         )

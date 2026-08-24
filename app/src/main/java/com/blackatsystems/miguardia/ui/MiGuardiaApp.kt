@@ -109,13 +109,6 @@ import com.blackatsystems.miguardia.ui.components.PersistentMessage
 import com.blackatsystems.miguardia.ui.components.ScreenHeading
 import com.blackatsystems.miguardia.ui.components.SectionCard
 import com.blackatsystems.miguardia.ui.components.TransientConfirmation
-import com.blackatsystems.miguardia.ui.management.CalendarManagementInlineContent
-import com.blackatsystems.miguardia.ui.management.InitialDataPreparationContent
-import com.blackatsystems.miguardia.ui.management.ManagementActions
-import com.blackatsystems.miguardia.ui.management.ManagementSurface
-import com.blackatsystems.miguardia.ui.management.ManagementSurfaceHost
-import com.blackatsystems.miguardia.ui.management.ManagementUiState
-import com.blackatsystems.miguardia.ui.management.ManagementViewModel
 import com.blackatsystems.miguardia.ui.management.V2ManualShiftLoadActions
 import com.blackatsystems.miguardia.ui.management.V2ManualShiftLoadContent
 import com.blackatsystems.miguardia.ui.management.V2ManualShiftLoadStage
@@ -139,19 +132,11 @@ import com.blackatsystems.miguardia.ui.photos.PhotosSurface
 import com.blackatsystems.miguardia.ui.photos.PhotosSurfaceHost
 import com.blackatsystems.miguardia.ui.photos.PhotosUiState
 import com.blackatsystems.miguardia.ui.photos.PhotosViewModel
-import com.blackatsystems.miguardia.ui.profile.ProfileActions
-import com.blackatsystems.miguardia.ui.profile.ProfileSurface
-import com.blackatsystems.miguardia.ui.profile.ProfileSurfaceHost
-import com.blackatsystems.miguardia.ui.profile.ProfileUiState
-import com.blackatsystems.miguardia.ui.profile.ProfileViewModel
 import com.blackatsystems.miguardia.ui.exceptions.ExceptionsActions
 import com.blackatsystems.miguardia.ui.exceptions.ExceptionsSurface
 import com.blackatsystems.miguardia.ui.exceptions.ExceptionsSurfaceHost
 import com.blackatsystems.miguardia.ui.exceptions.ExceptionsUiState
 import com.blackatsystems.miguardia.ui.exceptions.ExceptionsViewModel
-import com.blackatsystems.miguardia.ui.summary.SummaryScreen
-import com.blackatsystems.miguardia.ui.summary.SummaryUiState
-import com.blackatsystems.miguardia.ui.summary.SummaryViewModel
 import com.blackatsystems.miguardia.ui.vacation.VacationActions
 import com.blackatsystems.miguardia.ui.vacation.VacationSurface
 import com.blackatsystems.miguardia.ui.vacation.VacationSurfaceHost
@@ -173,7 +158,7 @@ import com.blackatsystems.miguardia.ui.worksetup.WorkSetupSurfaceHost
 import com.blackatsystems.miguardia.ui.worksetup.WorkSetupUiState
 import com.blackatsystems.miguardia.ui.worksetup.WorkSetupViewModel
 import com.blackatsystems.miguardia.ui.worksetup.WorkSetupStartupScreen
-import com.blackatsystems.miguardia.ui.worksetup.legacyWorkSetupUiState
+import com.blackatsystems.miguardia.ui.worksetup.previewV2WorkSetupUiState
 import com.blackatsystems.miguardia.core.domain.work.WorkSetupState
 import java.time.LocalDate
 import java.time.LocalTime
@@ -194,7 +179,6 @@ private enum class MainDestination(
     val glyph: String,
 ) {
     CALENDAR(R.string.calendar, R.string.drawer_calendar_description, "▦"),
-    SUMMARY(R.string.summary, R.string.drawer_summary_description, "≡"),
     APPEARANCE(R.string.appearance, R.string.drawer_appearance_description, "◐"),
 }
 
@@ -205,22 +189,13 @@ private enum class DrawerAction(
     val testTag: String,
 ) {
     WORK_SETUP(R.string.work_setup, R.string.drawer_work_setup_description, "◇", "drawer-action-work-setup"),
-    PROFILE(R.string.profile, R.string.drawer_profile_description, "◎", "drawer-action-profile"),
-    OBJECTIVES(R.string.objectives_and_schedules, R.string.drawer_objectives_description, "⌖", "drawer-action-objectives"),
     HOLIDAYS(R.string.holidays, R.string.drawer_holidays_description, "✦", "drawer-action-holidays"),
     VACATIONS(R.string.vacations, R.string.drawer_vacations_description, "∿", "drawer-action-vacations"),
     NOTIFICATIONS(R.string.notifications, R.string.drawer_notifications_description, "◌", "drawer-action-notifications"),
     WEATHER(R.string.weather, R.string.drawer_weather_description, "☁", "drawer-action-weather"),
 }
 
-private val LegacyWorkDrawerActions = listOf(
-    DrawerAction.WORK_SETUP,
-    DrawerAction.PROFILE,
-    DrawerAction.OBJECTIVES,
-    DrawerAction.HOLIDAYS,
-    DrawerAction.VACATIONS,
-)
-private val V2WorkDrawerActions = listOf(
+private val WorkDrawerActions = listOf(
     DrawerAction.WORK_SETUP,
     DrawerAction.HOLIDAYS,
     DrawerAction.VACATIONS,
@@ -377,16 +352,13 @@ private fun DrawerGlyph(glyph: String) {
 fun MiGuardiaApp(
     calendarViewModel: CalendarViewModel,
     nextEventViewModel: NextEventViewModel,
-    managementViewModel: ManagementViewModel,
     v2ManualShiftLoadViewModel: V2ManualShiftLoadViewModel,
     v2ShiftEditViewModel: V2ShiftEditViewModel,
-    summaryViewModel: SummaryViewModel,
     exceptionsViewModel: ExceptionsViewModel,
     vacationViewModel: VacationViewModel,
     photosViewModel: PhotosViewModel,
     notificationViewModel: NotificationViewModel,
     weatherViewModel: WeatherViewModel,
-    profileViewModel: ProfileViewModel,
     workSetupViewModel: WorkSetupViewModel,
     modifier: Modifier = Modifier,
     calendarNavigationRequest: Int = 0,
@@ -397,16 +369,13 @@ fun MiGuardiaApp(
 ) {
     val calendarState by calendarViewModel.uiState.collectAsStateWithLifecycle()
     val nextEventState by nextEventViewModel.uiState.collectAsStateWithLifecycle()
-    val managementState by managementViewModel.uiState.collectAsStateWithLifecycle()
     val v2ManualShiftLoadState by v2ManualShiftLoadViewModel.uiState.collectAsStateWithLifecycle()
     val v2ShiftEditState by v2ShiftEditViewModel.uiState.collectAsStateWithLifecycle()
-    val summaryState by summaryViewModel.uiState.collectAsStateWithLifecycle()
     val exceptionsState by exceptionsViewModel.uiState.collectAsStateWithLifecycle()
     val vacationState by vacationViewModel.uiState.collectAsStateWithLifecycle()
     val photosState by photosViewModel.uiState.collectAsStateWithLifecycle()
     val notificationState by notificationViewModel.uiState.collectAsStateWithLifecycle()
     val weatherState by weatherViewModel.uiState.collectAsStateWithLifecycle()
-    val profileState by profileViewModel.uiState.collectAsStateWithLifecycle()
     val workSetupState by workSetupViewModel.uiState.collectAsStateWithLifecycle()
     MiGuardiaApp(
         calendarState = calendarState,
@@ -423,13 +392,6 @@ fun MiGuardiaApp(
         onResumeEditSelection = calendarViewModel::resumeEditSelection,
         onFinishCalendarEditMode = calendarViewModel::finishEditMode,
         onRetry = calendarViewModel::retry,
-        summaryState = summaryState,
-        onSummaryPreviousMonth = summaryViewModel::showPreviousMonth,
-        onSummaryNextMonth = summaryViewModel::showNextMonth,
-        onSummaryToday = summaryViewModel::showCurrentMonth,
-        onSummaryRetry = summaryViewModel::retry,
-        managementState = managementState,
-        managementActions = ManagementActions.from(managementViewModel),
         v2ManualShiftLoadState = v2ManualShiftLoadState,
         v2ManualShiftLoadActions = V2ManualShiftLoadActions.from(v2ManualShiftLoadViewModel),
         v2ShiftEditState = v2ShiftEditState,
@@ -445,8 +407,6 @@ fun MiGuardiaApp(
         notificationActions = NotificationActions.from(notificationViewModel),
         weatherState = weatherState,
         weatherActions = WeatherActions.from(weatherViewModel),
-        profileState = profileState,
-        profileActions = ProfileActions.from(profileViewModel),
         workSetupState = workSetupState,
         workSetupActions = WorkSetupActions.from(workSetupViewModel),
         calendarNavigationRequest = calendarNavigationRequest,
@@ -476,20 +436,10 @@ fun MiGuardiaApp(
     onFinishCalendarEditMode: () -> Unit = {},
     nextEventState: NextEventUiState = NextEventUiState(),
     onNextEventRetry: () -> Unit = {},
-    managementState: ManagementUiState = ManagementUiState(),
-    managementActions: ManagementActions = ManagementActions(),
     v2ManualShiftLoadState: V2ManualShiftLoadUiState = V2ManualShiftLoadUiState(),
     v2ManualShiftLoadActions: V2ManualShiftLoadActions = V2ManualShiftLoadActions(),
     v2ShiftEditState: V2ShiftEditUiState = V2ShiftEditUiState(),
     v2ShiftEditActions: V2ShiftEditActions = V2ShiftEditActions(),
-    summaryState: SummaryUiState = SummaryUiState(
-        visibleMonth = calendarState.visibleMonth,
-        referenceInstant = calendarState.referenceInstant,
-    ),
-    onSummaryPreviousMonth: () -> Unit = {},
-    onSummaryNextMonth: () -> Unit = {},
-    onSummaryToday: () -> Unit = {},
-    onSummaryRetry: () -> Unit = {},
     exceptionsState: ExceptionsUiState = ExceptionsUiState(holidayMonth = calendarState.visibleMonth),
     exceptionsActions: ExceptionsActions = ExceptionsActions(),
     vacationState: VacationUiState = VacationUiState(visibleMonth = calendarState.visibleMonth),
@@ -501,9 +451,7 @@ fun MiGuardiaApp(
     notificationActions: NotificationActions = NotificationActions(),
     weatherState: WeatherUiState = WeatherUiState(),
     weatherActions: WeatherActions = WeatherActions(),
-    profileState: ProfileUiState = ProfileUiState(),
-    profileActions: ProfileActions = ProfileActions(),
-    workSetupState: WorkSetupUiState = legacyWorkSetupUiState(),
+    workSetupState: WorkSetupUiState = previewV2WorkSetupUiState(),
     workSetupActions: WorkSetupActions = WorkSetupActions(),
     calendarNavigationRequest: Int = 0,
     appZoom: AppZoom = AppZoom.STANDARD,
@@ -523,8 +471,6 @@ fun MiGuardiaApp(
         WorkSetupStartupScreen(workSetupState, workSetupActions, modifier)
         return
     }
-    val isV2Mode = workSetupState.rootState is WorkSetupState.V2NeedsFirstSet ||
-        workSetupState.rootState is WorkSetupState.V2Ready
     val needsFirstWorkSet = workSetupState.rootState is WorkSetupState.V2NeedsFirstSet
     val v2ReadyState = workSetupState.rootState as? WorkSetupState.V2Ready
     val v2ManualLoadActive = v2ReadyState != null &&
@@ -537,7 +483,7 @@ fun MiGuardiaApp(
         )
     var destination by rememberSaveable { androidx.compose.runtime.mutableStateOf(MainDestination.CALENDAR) }
     val displayedCalendarState = if (
-        isV2Mode && !v2ManualLoadActive && calendarState.interactionMode == CalendarInteractionMode.EDIT
+        !v2ManualLoadActive && calendarState.interactionMode == CalendarInteractionMode.EDIT
     ) {
         calendarState.copy(
             interactionMode = CalendarInteractionMode.VIEW,
@@ -556,42 +502,19 @@ fun MiGuardiaApp(
     } else {
         null
     }
-    val inlineCalendarManagement = destination == MainDestination.CALENDAR &&
-        displayedCalendarState.interactionMode == CalendarInteractionMode.EDIT &&
-        when (managementState.surface) {
-            ManagementSurface.INITIAL_DATA_PREPARATION -> true
-            ManagementSurface.DAY_OFF_FORM -> managementState.dayOffDraft != null
-            ManagementSurface.SHIFT_FORM -> managementState.shiftDraft?.let { it.editingShift == null } == true
-            else -> false
-        }
-    val hasBlockingSurface = (!isV2Mode && managementState.surface != ManagementSurface.NONE) ||
-        exceptionsState.surface != ExceptionsSurface.NONE ||
+    val hasBlockingSurface = exceptionsState.surface != ExceptionsSurface.NONE ||
         vacationState.surface != VacationSurface.NONE ||
         photosState.surface != PhotosSurface.NONE ||
         notificationState.surface != NotificationSurface.NONE ||
         weatherState.surface != WeatherSurface.NONE ||
-        (!isV2Mode && profileState.surface != ProfileSurface.NONE) ||
         workSetupState.surface != WorkSetupSurface.NONE ||
         v2ManualLoadActive ||
         v2ShiftEditActive
     val canOpenDrawer = !hasBlockingSurface && selectedDay == null
     LaunchedEffect(calendarNavigationRequest) {
         if (calendarNavigationRequest > 0) {
-            if (managementState.surface == ManagementSurface.INITIAL_DATA_PREPARATION) {
-                managementActions.close()
-            }
             drawerState.snapTo(DrawerValue.Closed)
             destination = MainDestination.CALENDAR
-        }
-    }
-    LaunchedEffect(isV2Mode) {
-        if (isV2Mode && destination == MainDestination.SUMMARY) {
-            destination = MainDestination.CALENDAR
-        }
-    }
-    LaunchedEffect(isV2Mode, managementState.surface) {
-        if (isV2Mode && managementState.surface != ManagementSurface.NONE) {
-            managementActions.close()
         }
     }
     LaunchedEffect(workSetupState.rootState) {
@@ -613,11 +536,10 @@ fun MiGuardiaApp(
             v2ManualShiftLoadActions.discardIncompatible()
         }
     }
-    LaunchedEffect(isV2Mode, v2ManualLoadActive, calendarState.interactionMode) {
+    LaunchedEffect(v2ManualLoadActive, calendarState.interactionMode) {
         if (v2ManualLoadActive && calendarState.interactionMode == CalendarInteractionMode.VIEW) {
             onEnterCalendarEditMode(null)
         } else if (
-            isV2Mode &&
             !v2ManualLoadActive &&
             calendarState.interactionMode == CalendarInteractionMode.EDIT
         ) {
@@ -665,8 +587,6 @@ fun MiGuardiaApp(
                     destination = MainDestination.CALENDAR
                     workSetupActions.openOverview()
                 }
-                DrawerAction.PROFILE -> profileActions.open()
-                DrawerAction.OBJECTIVES -> managementActions.openSettings()
                 DrawerAction.HOLIDAYS -> exceptionsActions.openHolidays(calendarState.visibleMonth)
                 DrawerAction.VACATIONS -> vacationActions.openList(calendarState.visibleMonth)
                 DrawerAction.NOTIFICATIONS -> notificationActions.openGlobal()
@@ -696,15 +616,8 @@ fun MiGuardiaApp(
                         selected = destination == MainDestination.CALENDAR,
                         onClick = { selectDestination(MainDestination.CALENDAR) },
                     )
-                    if (!isV2Mode) {
-                        DrawerDestinationItem(
-                            item = MainDestination.SUMMARY,
-                            selected = destination == MainDestination.SUMMARY,
-                            onClick = { selectDestination(MainDestination.SUMMARY) },
-                        )
-                    }
                     DrawerSectionTitle(R.string.drawer_section_work)
-                    (if (isV2Mode) V2WorkDrawerActions else LegacyWorkDrawerActions).forEach { action ->
+                    WorkDrawerActions.forEach { action ->
                         DrawerActionItem(action = action, onClick = { openDrawerAction(action) })
                     }
                     DrawerSectionTitle(R.string.drawer_section_context)
@@ -757,7 +670,7 @@ fun MiGuardiaApp(
                 )
             },
         ) { innerPadding ->
-            when (if (isV2Mode && destination == MainDestination.SUMMARY) MainDestination.CALENDAR else destination) {
+            when (destination) {
                 MainDestination.CALENDAR -> CalendarScreen(
                     state = displayedCalendarState,
                     nextEventState = nextEventState,
@@ -766,40 +679,18 @@ fun MiGuardiaApp(
                     onNextMonth = onNextMonth,
                     onToday = onToday,
                     onSelectDate = onSelectDate,
-                    onEditSelectionChange = { selectedDates ->
-                        onEditSelectionChange(selectedDates)
-                        if (inlineCalendarManagement) {
-                            managementActions.updateCalendarSelection(selectedDates)
-                        }
-                    },
+                    onEditSelectionChange = onEditSelectionChange,
                     onConfirmEditSelection = onConfirmEditSelection,
                     onResumeEditSelection = onResumeEditSelection,
                     onRetry = onRetry,
                     onNextEventRetry = onNextEventRetry,
-                    onEnterEditMode = { onEnterCalendarEditMode(null) },
-                    onFinishEditMode = {
-                        if (managementState.surface == ManagementSurface.INITIAL_DATA_PREPARATION) {
-                            managementActions.close()
-                        }
-                        onFinishCalendarEditMode()
-                    },
-                    onLoadInitialData = {
-                        onEnterCalendarEditMode(null)
-                        managementActions.openInitialDataPreparation()
-                    },
-                    managementState = managementState,
-                    managementActions = managementActions,
+                    onFinishEditMode = onFinishCalendarEditMode,
                     v2ManualShiftLoadState = v2ManualShiftLoadState,
                     v2ManualShiftLoadActions = v2ManualShiftLoadActions,
                     v2ShiftEditState = v2ShiftEditState,
                     v2ShiftEditActions = v2ShiftEditActions,
-                    onOpenNotifications = notificationActions.openShift,
-                    onOpenExceptions = exceptionsActions.openShift,
-                    onOpenWeather = weatherActions.openShift,
-                    weatherState = weatherState,
                     onOpenPhotos = { photosActions.open(calendarState.visibleMonth) },
                     appZoom = appZoom,
-                    isV2Mode = isV2Mode,
                     needsFirstWorkSet = needsFirstWorkSet,
                     onOpenWorkSetup = workSetupActions.openOverview,
                     onCreateFirstWorkSet = workSetupActions.openFirstWorkSet,
@@ -807,15 +698,6 @@ fun MiGuardiaApp(
                         v2ManualShiftLoadActions.start(workSetupState.rootState)
                         onEnterCalendarEditMode(null)
                     },
-                )
-
-                MainDestination.SUMMARY -> SummaryScreen(
-                    state = summaryState,
-                    contentPadding = innerPadding,
-                    onPreviousMonth = onSummaryPreviousMonth,
-                    onNextMonth = onSummaryNextMonth,
-                    onToday = onSummaryToday,
-                    onRetry = onSummaryRetry,
                 )
 
                 MainDestination.APPEARANCE -> AppearanceScreen(
@@ -865,15 +747,6 @@ fun MiGuardiaApp(
         },
     )
     BackHandler(
-        enabled = destination == MainDestination.CALENDAR &&
-            displayedCalendarState.interactionMode == CalendarInteractionMode.EDIT &&
-            managementState.surface == ManagementSurface.INITIAL_DATA_PREPARATION,
-        onBack = {
-            managementActions.close()
-            onFinishCalendarEditMode()
-        },
-    )
-    BackHandler(
         enabled = drawerState.isOpen && !hasBlockingSurface,
         onBack = { coroutineScope.launch { drawerState.close() } },
     )
@@ -895,8 +768,7 @@ fun MiGuardiaApp(
         .calculateBottomPadding()
     if (
         selectedDay != null &&
-        !v2ShiftEditActive &&
-        (isV2Mode || managementState.surface == ManagementSurface.NONE)
+        !v2ShiftEditActive
     ) {
         ModalBottomSheet(
             onDismissRequest = onDismissDate,
@@ -905,26 +777,15 @@ fun MiGuardiaApp(
             DayDetailSheet(
                 day = selectedDay,
                 referenceInstant = calendarState.referenceInstant,
-                editEnabled = calendarState.hasAnyShiftsLoaded,
-                onEditDay = if (v2ReadyState != null) {
-                    v2ShiftEditActions.beginDayEditing
-                } else if (!isV2Mode) {
-                    {
-                        onDismissDate()
-                        val hasUsableSchedule = managementState.scheduleOptions.any {
-                            it.objective.isActive && it.combination.isActive
-                        }
-                        if (!calendarState.hasAnyShifts && !hasUsableSchedule) {
-                            onEnterCalendarEditMode(null)
-                            managementActions.openInitialDataPreparation()
-                        } else {
-                            onEnterCalendarEditMode(selectedDay.date)
-                        }
-                    }
-                } else {
-                    null
+                onEditDay = v2ReadyState?.let { v2ShiftEditActions.beginDayEditing },
+                onOpenNotes = { shift ->
+                    onDismissDate()
+                    exceptionsActions.openNotes(shift)
                 },
-                onOpenWeather = weatherActions.openShift,
+                onOpenWeather = { shiftId ->
+                    onDismissDate()
+                    weatherActions.openShift(shiftId)
+                },
                 weatherState = weatherState,
                 v2ShiftEditState = v2ShiftEditState.takeIf { v2ReadyState != null },
                 onRetryV2Inspection = v2ShiftEditActions.retryInspection,
@@ -932,19 +793,6 @@ fun MiGuardiaApp(
         }
     }
 
-    if (!isV2Mode && profileState.surface != ProfileSurface.NONE) {
-        ProfileSurfaceHost(
-            state = profileState,
-            actions = profileActions.copy(openObjectives = managementActions.openSettings),
-        )
-    }
-    if (!isV2Mode && managementState.surface != ManagementSurface.NONE && !inlineCalendarManagement) {
-        ManagementSurfaceHost(
-            state = managementState,
-            actions = managementActions,
-            onOpenNotifications = notificationActions.openShift,
-        )
-    }
     if (exceptionsState.surface != ExceptionsSurface.NONE) {
         ExceptionsSurfaceHost(exceptionsState, exceptionsActions)
     }
@@ -1084,22 +932,13 @@ private fun CalendarScreen(
     onResumeEditSelection: () -> Unit,
     onRetry: () -> Unit,
     onNextEventRetry: () -> Unit,
-    onEnterEditMode: () -> Unit,
     onFinishEditMode: () -> Unit,
-    onLoadInitialData: () -> Unit,
     onOpenPhotos: () -> Unit,
-    managementState: ManagementUiState,
-    managementActions: ManagementActions,
     v2ManualShiftLoadState: V2ManualShiftLoadUiState,
     v2ManualShiftLoadActions: V2ManualShiftLoadActions,
     v2ShiftEditState: V2ShiftEditUiState,
     v2ShiftEditActions: V2ShiftEditActions,
-    onOpenNotifications: (com.blackatsystems.miguardia.core.domain.model.Shift) -> Unit,
-    onOpenExceptions: (com.blackatsystems.miguardia.core.domain.model.Shift) -> Unit,
-    onOpenWeather: (java.util.UUID) -> Unit,
-    weatherState: WeatherUiState,
     appZoom: AppZoom,
-    isV2Mode: Boolean,
     needsFirstWorkSet: Boolean,
     onOpenWorkSetup: () -> Unit,
     onCreateFirstWorkSet: () -> Unit,
@@ -1108,14 +947,7 @@ private fun CalendarScreen(
     val today = state.referenceInstant.atZone(AppDefaults.zoneId()).toLocalDate()
     val verticalScrollState = rememberScrollState()
     var pendingMonthChange by rememberSaveable { mutableStateOf<String?>(null) }
-    val formOpen = !isV2Mode && when (managementState.surface) {
-        ManagementSurface.SHIFT_FORM -> managementState.shiftDraft?.let { it.editingShift == null } == true
-        ManagementSurface.DAY_OFF_FORM -> managementState.dayOffDraft != null
-        else -> false
-    }
-    val initialDataPreparationOpen = !isV2Mode &&
-        managementState.surface == ManagementSurface.INITIAL_DATA_PREPARATION
-    val v2ManualLoadOpen = isV2Mode && v2ManualShiftLoadState.isActive
+    val v2ManualLoadOpen = v2ManualShiftLoadState.isActive
     val v2DateSelectionOpen = v2ManualLoadOpen &&
         v2ManualShiftLoadState.stage == V2ManualShiftLoadStage.SELECT_DATES
     val v2CalendarSelectionReady = state.loadState == CalendarLoadState.CONTENT &&
@@ -1139,18 +971,12 @@ private fun CalendarScreen(
     }
     TransientConfirmation(
         message = v2ShiftEditState.infoMessage
-            ?: v2ManualShiftLoadState.infoMessage
-            ?: managementState.infoMessage.takeIf {
-                !isV2Mode &&
-                    managementState.surface in setOf(ManagementSurface.NONE, ManagementSurface.INITIAL_DATA_PREPARATION)
-            },
+            ?: v2ManualShiftLoadState.infoMessage,
         onDismiss = if (v2ShiftEditState.infoMessage != null) {
             v2ShiftEditActions.clearMessage
         } else if (v2ManualShiftLoadState.infoMessage != null) {
             v2ManualShiftLoadActions.clearMessage
-        } else {
-            managementActions.clearMessage
-        },
+        } else v2ManualShiftLoadActions.clearMessage,
     ) {
         BoxWithConstraints(
             modifier = Modifier
@@ -1184,9 +1010,9 @@ private fun CalendarScreen(
                     onNext = nextMonth,
                     onToday = currentMonth,
                     onPhotos = onOpenPhotos,
-                    showPhotos = state.interactionMode == CalendarInteractionMode.EDIT && !v2ManualLoadOpen,
+                    showPhotos = state.interactionMode == CalendarInteractionMode.VIEW,
                     appZoom = appZoom,
-                    navigationEnabled = !formOpen && (!v2ManualLoadOpen || v2DateSelectionInteractive),
+                    navigationEnabled = !v2ManualLoadOpen || v2DateSelectionInteractive,
                 )
 
                 when (state.loadState) {
@@ -1210,16 +1036,15 @@ private fun CalendarScreen(
                         interactionMode = state.interactionMode,
                         selectedDates = state.editSelectedDates,
                         onEditSelectionChange = onEditSelectionChange,
-                        selectionEnabled = !formOpen && !initialDataPreparationOpen &&
-                            (!v2ManualLoadOpen || v2DateSelectionInteractive),
+                        selectionEnabled = !v2ManualLoadOpen || v2DateSelectionInteractive,
                         selectionConfirmed = state.editSelectionConfirmed,
-                        monthSwipeEnabled = !formOpen && (!v2ManualLoadOpen || v2DateSelectionInteractive),
+                        monthSwipeEnabled = !v2ManualLoadOpen || v2DateSelectionInteractive,
                         selectedDateDescription = if (v2ManualLoadOpen) {
                             "seleccionado para cargar jornadas"
                         } else {
                             "seleccionado para editar"
                         },
-                        shiftDescription = if (isV2Mode) "jornada" else "guardia",
+                        shiftDescription = "jornada",
                         appZoom = appZoom,
                     )
                 }
@@ -1247,34 +1072,10 @@ private fun CalendarScreen(
                                 onResumeEditSelection()
                             },
                         )
-                    } else if (initialDataPreparationOpen) {
-                        InitialDataPreparationContent(
-                            state = managementState,
-                            actions = managementActions,
-                        )
-                    } else if (!formOpen && !isV2Mode) {
-                        CalendarEditTools(
-                            state = state,
-                            managementActions = managementActions,
-                            onConfirmSelection = onConfirmEditSelection,
-                            onResumeSelection = onResumeEditSelection,
-                            onOpenExceptions = onOpenExceptions,
-                            onOpenWeather = onOpenWeather,
-                            weatherState = weatherState,
-                        )
-                    }
-                    if (formOpen) {
-                        CalendarManagementInlineContent(
-                            state = managementState,
-                            actions = managementActions,
-                            onOpenNotifications = onOpenNotifications,
-                            onReturnToDateSelection = onResumeEditSelection,
-                        )
                     }
                 }
 
-                if (!formOpen) {
-                    if (state.interactionMode == CalendarInteractionMode.EDIT) {
+                if (state.interactionMode == CalendarInteractionMode.EDIT) {
                         OutlinedButton(
                             onClick = {
                                 if (v2ManualLoadOpen) v2ManualShiftLoadActions.cancel()
@@ -1286,12 +1087,11 @@ private fun CalendarScreen(
                             Text(
                                 when {
                                     v2ManualLoadOpen -> "Salir de la carga"
-                                    initialDataPreparationOpen -> "Salir por ahora"
                                     else -> "Salir de edición"
                                 },
                             )
                         }
-                    } else if (isV2Mode) {
+                    } else {
                         if (!needsFirstWorkSet) {
                             Button(
                                 onClick = onStartV2ManualLoad,
@@ -1312,35 +1112,6 @@ private fun CalendarScreen(
                                 Text("Mi forma de trabajar")
                             }
                         }
-                    } else {
-                        if (!state.hasAnyShiftsLoaded && state.shiftPresenceError) {
-                            OutlinedButton(
-                                onClick = onRetry,
-                                modifier = Modifier.fillMaxWidth(),
-                            ) {
-                                Text("Reintentar carga")
-                            }
-                        } else if (!state.hasAnyShiftsLoaded) {
-                            Button(
-                                onClick = {},
-                                enabled = false,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .testTag("calendar-shift-presence-loading"),
-                            ) {
-                                Text("Cargando datos…")
-                            }
-                        } else {
-                            Button(
-                                onClick = if (state.hasAnyShifts) onEnterEditMode else onLoadInitialData,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .testTag("calendar-bottom-action"),
-                            ) {
-                                Text(if (state.hasAnyShifts) "Editar calendario" else "Cargar datos")
-                            }
-                        }
-                    }
                 }
             }
         }
@@ -1362,183 +1133,6 @@ private fun CalendarScreen(
                 }) { Text("Cambiar de mes") }
             },
             dismissButton = { TextButton(onClick = { pendingMonthChange = null }) { Text("Conservar selección") } },
-        )
-    }
-}
-
-@Composable
-private fun CalendarEditTools(
-    state: CalendarUiState,
-    managementActions: ManagementActions,
-    onConfirmSelection: () -> Unit,
-    onResumeSelection: () -> Unit,
-    onOpenExceptions: (com.blackatsystems.miguardia.core.domain.model.Shift) -> Unit,
-    onOpenWeather: (java.util.UUID) -> Unit,
-    weatherState: WeatherUiState,
-) {
-    val selectedDays = state.days.filter { it.date in state.editSelectedDates }
-    val selectionReady = state.loadState == CalendarLoadState.CONTENT &&
-        selectedDays.size == state.editSelectedDates.size
-    val selectionStatusMessage = if (state.loadState == CalendarLoadState.ERROR) {
-        "No pudimos preparar los días elegidos. Reintentá arriba."
-    } else {
-        "Cargando los días elegidos…"
-    }
-    var pendingDeleteId by rememberSaveable { mutableStateOf<String?>(null) }
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .testTag("calendar-edit-tools"),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        if (state.editSelectedDates.isEmpty()) {
-            Text(
-                text = "Elegí uno o varios días",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-            )
-            Text(
-                text = "Tocá las fechas que querés modificar",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.testTag("calendar-edit-empty-instruction"),
-            )
-        } else if (!state.editSelectionConfirmed) {
-            Text(
-                text = "Elegí uno o varios días",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-            )
-            Text(
-                text = if (state.editSelectedDates.size == 1) {
-                    "1 día seleccionado"
-                } else {
-                    "${state.editSelectedDates.size} días seleccionados"
-                },
-                modifier = Modifier.testTag("calendar-edit-selection-count"),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Button(
-                onClick = onConfirmSelection,
-                enabled = selectionReady,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 56.dp)
-                    .testTag("calendar-confirm-date-selection"),
-            ) {
-                Text("Terminar de elegir días")
-            }
-            if (!selectionReady) {
-                Text(
-                    text = selectionStatusMessage,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        } else {
-            Text(
-                text = "¿Qué querés cargar?",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-            )
-            Text(
-                text = if (state.editSelectedDates.size == 1) {
-                    "1 día elegido"
-                } else {
-                    "${state.editSelectedDates.size} días elegidos"
-                },
-                modifier = Modifier.testTag("calendar-edit-selection-count"),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-            )
-            if (selectionReady) {
-                Button(
-                    onClick = {
-                        managementActions.openAddShiftForDates(state.visibleMonth, state.editSelectedDates)
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 56.dp)
-                        .testTag("calendar-add-shift"),
-                ) { Text("Agregar guardia") }
-                if (selectedDays.none { it.shifts.isNotEmpty() }) {
-                    OutlinedButton(
-                        onClick = {
-                            managementActions.openDayOffsForDates(state.visibleMonth, state.editSelectedDates)
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(min = 56.dp)
-                            .testTag("calendar-add-day-offs"),
-                    ) { Text("Agregar francos") }
-                }
-            } else {
-                Text(
-                    text = selectionStatusMessage,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            OutlinedButton(
-                onClick = onResumeSelection,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 48.dp)
-                    .testTag("calendar-change-date-selection"),
-            ) {
-                Text("Modificar días elegidos")
-            }
-        }
-    }
-
-    if (state.editSelectionConfirmed && selectedDays.size == 1 && selectedDays.single().shifts.isNotEmpty()) {
-        val day = selectedDays.single()
-        SectionCard(
-            title = "Acciones del ${day.date.dayOfMonth}",
-            supportingText = "Cada guardia conserva sus acciones individuales.",
-        ) {
-            day.shifts.forEachIndexed { index, calendarShift ->
-                if (index > 0) HorizontalDivider()
-                ShiftDetail(
-                    calendarShift = calendarShift,
-                    excludedByVacation = day.vacation != null && calendarShift.shift.status == ShiftStatus.PLANNED,
-                    onEdit = managementActions.openEditShift,
-                    onAddAnotherShift = if (index == 0) {
-                        {
-                            managementActions.openAddShiftForDates(state.visibleMonth, setOf(day.date))
-                        }
-                    } else {
-                        null
-                    },
-                    addAnotherShiftLabel = if (day.shifts.size == 1) {
-                        "Agregar una segunda guardia"
-                    } else {
-                        "Agregar otra guardia"
-                    },
-                    onDelete = { id -> pendingDeleteId = id.toString() },
-                    onOpenExceptions = onOpenExceptions,
-                    onOpenWeather = onOpenWeather,
-                    weatherEnabled = weatherState.preferences.enabled,
-                    weatherUnit = weatherState.preferences.unitSystem,
-                    weatherBrief = weatherState.shiftBriefs[calendarShift.shift.id],
-                    weatherLoading = calendarShift.shift.id in weatherState.loadingBriefIds,
-                )
-            }
-        }
-    }
-    pendingDeleteId?.let { id ->
-        AlertDialog(
-            onDismissRequest = { pendingDeleteId = null },
-            title = { Text("Eliminar guardia") },
-            text = { Text("Se eliminará solamente esta guardia. ¿Querés continuar?") },
-            confirmButton = {
-                TextButton(onClick = {
-                    managementActions.deleteShift(java.util.UUID.fromString(id))
-                    pendingDeleteId = null
-                }) { Text("Eliminar") }
-            },
-            dismissButton = { TextButton(onClick = { pendingDeleteId = null }) { Text("Cancelar") } },
         )
     }
 }
@@ -2014,8 +1608,8 @@ private fun AutoSizeSingleLineText(
 private fun DayDetailSheet(
     day: CalendarDay,
     referenceInstant: java.time.Instant,
-    editEnabled: Boolean,
     onEditDay: (() -> Unit)?,
+    onOpenNotes: (com.blackatsystems.miguardia.core.domain.model.Shift) -> Unit,
     onOpenWeather: (java.util.UUID) -> Unit,
     weatherState: WeatherUiState,
     v2ShiftEditState: V2ShiftEditUiState? = null,
@@ -2043,6 +1637,7 @@ private fun DayDetailSheet(
             ShiftDetail(
                 calendarShift = calendarShift,
                 excludedByVacation = day.vacation != null && calendarShift.shift.status == ShiftStatus.PLANNED,
+                onOpenNotes = onOpenNotes,
                 onOpenWeather = if (
                     calendarShift.shift.isEligibleUpcomingWork(referenceInstant, listOfNotNull(day.vacation))
                 ) {
@@ -2080,18 +1675,6 @@ private fun DayDetailSheet(
                 onBegin = onEditDay,
                 onRetry = onRetryV2Inspection,
             )
-        } else {
-            onEditDay?.let { editDay ->
-            Button(
-                onClick = editDay,
-                enabled = editEnabled,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("edit-day-action"),
-            ) {
-                Text("Editar día")
-            }
-            }
         }
     }
 }
@@ -2100,11 +1683,7 @@ private fun DayDetailSheet(
 private fun ShiftDetail(
     calendarShift: CalendarShift,
     excludedByVacation: Boolean = false,
-    onEdit: ((com.blackatsystems.miguardia.core.domain.model.Shift) -> Unit)? = null,
-    onAddAnotherShift: (() -> Unit)? = null,
-    addAnotherShiftLabel: String = "Agregar otra guardia",
-    onDelete: ((java.util.UUID) -> Unit)? = null,
-    onOpenExceptions: ((com.blackatsystems.miguardia.core.domain.model.Shift) -> Unit)? = null,
+    onOpenNotes: (com.blackatsystems.miguardia.core.domain.model.Shift) -> Unit,
     onOpenWeather: ((java.util.UUID) -> Unit)? = null,
     weatherEnabled: Boolean = false,
     weatherUnit: WeatherUnitSystem = WeatherUnitSystem.CELSIUS,
@@ -2135,10 +1714,8 @@ private fun ShiftDetail(
             shift.objectiveAddressSnapshot?.takeIf { it.isNotBlank() }?.let { address ->
                 Text(address)
             }
-            if (onOpenExceptions != null) {
-                OutlinedButton(onClick = { onOpenExceptions(shift) }, modifier = Modifier.fillMaxWidth()) {
-                    Text("Informar novedad / notas")
-                }
+            OutlinedButton(onClick = { onOpenNotes(shift) }, modifier = Modifier.fillMaxWidth()) {
+                Text("Notas")
             }
             if (onOpenWeather != null) {
                 ShiftWeatherBriefCard(
@@ -2148,19 +1725,6 @@ private fun ShiftDetail(
                     unit = weatherUnit,
                     onOpen = { onOpenWeather(shift.id) },
                 )
-            }
-            if (onEdit != null && onDelete != null) {
-                OutlinedButton(onClick = { onEdit(shift) }, modifier = Modifier.fillMaxWidth()) {
-                    Text("Editar")
-                }
-                if (onAddAnotherShift != null) {
-                    OutlinedButton(onClick = onAddAnotherShift, modifier = Modifier.fillMaxWidth()) {
-                        Text(addAnotherShiftLabel)
-                    }
-                }
-                OutlinedButton(onClick = { onDelete(shift.id) }, modifier = Modifier.fillMaxWidth()) {
-                    Text("Eliminar", color = MaterialTheme.colorScheme.error)
-                }
             }
             if (excludedByVacation) {
                 Text(

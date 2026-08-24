@@ -310,8 +310,7 @@ class ShiftNotificationPlanTest {
             colorArgbSnapshot = 0xff336699.toInt(),
             position = null,
             status = status,
-            sourceObjectiveId = null,
-            sourceScheduleCombinationId = null,
+            sourceObjectiveId = UUID.fromString("10000000-0000-0000-0000-000000000099"),
             createdAt = now,
             updatedAt = now,
         )

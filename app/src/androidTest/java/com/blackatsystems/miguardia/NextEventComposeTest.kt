@@ -288,8 +288,7 @@ class NextEventComposeTest {
         colorArgbSnapshot = 0xFF315DA8.toInt(),
         position = position,
         status = ShiftStatus.PLANNED,
-        sourceObjectiveId = null,
-        sourceScheduleCombinationId = null,
+        sourceObjectiveId = UUID(0L, 291L),
         createdAt = Instant.EPOCH,
         updatedAt = Instant.EPOCH,
     )

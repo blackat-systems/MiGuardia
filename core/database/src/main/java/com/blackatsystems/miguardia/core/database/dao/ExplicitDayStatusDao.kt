@@ -1,10 +1,9 @@
 package com.blackatsystems.miguardia.core.database.dao
 
 import androidx.room.Dao
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
+import androidx.room.Upsert
 import com.blackatsystems.miguardia.core.database.entity.ExplicitDayStatusEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -27,7 +26,7 @@ internal interface ExplicitDayStatusDao {
     )
     fun observeFrom(startDateInclusive: String): Flow<List<ExplicitDayStatusEntity>>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun set(entity: ExplicitDayStatusEntity)
 
     @Transaction

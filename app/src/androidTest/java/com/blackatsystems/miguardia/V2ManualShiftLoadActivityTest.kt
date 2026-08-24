@@ -41,16 +41,11 @@ import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 
-/**
- * End-to-end QA fixture for NEW_V2. Run this class by itself after uninstalling
- * the QA package; the historical V1 activity fixtures intentionally use a
- * separate clean installation.
- */
+/** Recorrido integral de carga V2 sobre un fixture que limpia únicamente la base QA. */
 class V2ManualShiftLoadActivityTest {
     @get:Rule
     val compose = createEmptyComposeRule()
@@ -72,9 +67,10 @@ class V2ManualShiftLoadActivityTest {
         selectedDate = LocalDate.now(AppDefaults.zoneId())
         val timestamp = Instant.now()
         val store = (context.applicationContext as MiGuardiaApplication).localDataStore
+        store.clearAllDataForInstrumentation()
         runBlocking {
             check(store.workConfiguration.get() == null) {
-                "La prueba integral V2 requiere una instalación QA limpia."
+                "La preparación QA debe dejar una base sin configuración."
             }
             val revision = EffectiveRevision(
                 id = REVISION_ID,
@@ -139,7 +135,11 @@ class V2ManualShiftLoadActivityTest {
             expectedConfigurationOrientation = Configuration.ORIENTATION_PORTRAIT,
         )
         compose.onNodeWithTag("v2-manual-review").performScrollTo().performClick()
-        compose.onNodeWithTag("v2-manual-save").performScrollTo().performClick()
+        compose.waitUntil(WAIT_MILLIS) {
+            compose.onAllNodesWithTag("v2-manual-save", useUnmergedTree = true)
+                .fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.onNodeWithTag("v2-manual-save", useUnmergedTree = true).performClick()
 
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val store = (context.applicationContext as MiGuardiaApplication).localDataStore
@@ -158,7 +158,6 @@ class V2ManualShiftLoadActivityTest {
         assertEquals(saved.id, snapshot?.shiftId)
         assertEquals(TEMPLATE_ID, snapshot?.templateId)
         assertEquals(WorkSector.NURSING, snapshot?.sector)
-        assertNull(saved.sourceScheduleCombinationId)
 
         compose.waitUntil(WAIT_MILLIS) {
             compose.onAllNodesWithText(ABBREVIATION, useUnmergedTree = true)
@@ -240,7 +239,6 @@ class V2ManualShiftLoadActivityTest {
             endTime = LocalTime.of(16, 0),
             colorArgb = 0xFF336699.toInt(),
             isActive = true,
-            legacyScheduleCombinationId = null,
             createdAt = timestamp,
             updatedAt = timestamp,
         )

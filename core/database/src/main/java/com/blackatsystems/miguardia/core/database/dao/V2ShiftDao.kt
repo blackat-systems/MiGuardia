@@ -78,6 +78,9 @@ internal interface V2ShiftDao {
     @Query("DELETE FROM shifts WHERE id = :shiftId")
     suspend fun deleteShiftAndOwnedSnapshot(shiftId: String): Int
 
+    @Query("DELETE FROM shifts WHERE id IN (:shiftIds)")
+    suspend fun deleteShiftsAndOwnedSnapshots(shiftIds: List<String>): Int
+
     @Transaction
     suspend fun insertPair(
         shift: ShiftEntity,

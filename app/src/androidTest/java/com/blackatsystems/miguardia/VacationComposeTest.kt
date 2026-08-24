@@ -306,8 +306,7 @@ class VacationComposeTest {
             colorArgbSnapshot = 0xFF336699.toInt(),
             position = null,
             status = ShiftStatus.PLANNED,
-            sourceObjectiveId = null,
-            sourceScheduleCombinationId = null,
+            sourceObjectiveId = UUID(0L, 309L),
             createdAt = Instant.EPOCH,
             updatedAt = Instant.EPOCH,
         )

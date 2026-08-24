@@ -20,8 +20,7 @@ data class Shift(
     val colorArgbSnapshot: Int,
     val position: String?,
     val status: ShiftStatus,
-    val sourceObjectiveId: UUID?,
-    val sourceScheduleCombinationId: UUID?,
+    val sourceObjectiveId: UUID,
     val createdAt: Instant,
     val updatedAt: Instant,
 )

@@ -63,7 +63,6 @@ fun buildV2ShiftWrite(
         position = normalizeOptionalWorkText(position),
         status = ShiftStatus.PLANNED,
         sourceObjectiveId = objective.id,
-        sourceScheduleCombinationId = template.legacyScheduleCombinationId,
         createdAt = timestamp,
         updatedAt = timestamp,
     )
@@ -169,15 +168,31 @@ fun planV2ShiftBatch(
     policy: OccupiedDatePolicy,
     editingShiftId: UUID? = null,
 ): V2ShiftBatchPlan {
-    val legacyPlan = planShiftBatch(
-        selectedDates = selectedDates,
-        existingShifts = existingShifts,
-        candidates = candidates.map(V2ShiftWrite::shift),
-        policy = policy,
-        editingShiftId = editingShiftId,
-    )
-    val plannedIds = legacyPlan.mutation.shiftsToInsert.mapTo(hashSetOf()) { it.id }
-    val plannedWrites = candidates.filter { it.shift.id in plannedIds }
+    validateSingleMonth(selectedDates)
+    if (candidates.map { it.shift.localStartDate }.toSet() != selectedDates) {
+        throw InvalidLocalDataException("Las jornadas preparadas no coinciden con las fechas seleccionadas.")
+    }
+    val relevantExisting = existingShifts.filterNot { it.id == editingShiftId }
+    val occupiedDates = relevantExisting
+        .filter { it.localStartDate in selectedDates }
+        .mapTo(linkedSetOf()) { it.localStartDate }
+    if (policy == OccupiedDatePolicy.CANCEL) {
+        return V2ShiftBatchPlan(
+            mutation = V2ShiftBatchMutation(),
+            occupiedDates = occupiedDates,
+            omittedDates = selectedDates,
+            warnings = emptyList(),
+        )
+    }
+    val omittedDates = if (policy == OccupiedDatePolicy.KEEP_OCCUPIED) occupiedDates else emptySet()
+    val plannedWrites = candidates.filterNot { it.shift.localStartDate in omittedDates }
+    val deletions = buildSet {
+        if (policy == OccupiedDatePolicy.REPLACE) {
+            relevantExisting
+                .filter { it.localStartDate in occupiedDates }
+                .mapTo(this) { it.id }
+        }
+    }
     val (insertions, updates) = if (editingShiftId == null) {
         plannedWrites to emptyList()
     } else {
@@ -188,14 +203,16 @@ fun planV2ShiftBatch(
     }
     return V2ShiftBatchPlan(
         mutation = V2ShiftBatchMutation(
-            shiftIdsToDelete = legacyPlan.mutation.shiftIdsToDelete,
+            shiftIdsToDelete = deletions,
             shiftsToInsert = insertions,
             shiftsToUpdate = updates,
-            explicitDayStatusDatesToClear = legacyPlan.mutation.explicitDayStatusDatesToClear,
         ),
-        occupiedDates = legacyPlan.occupiedDates,
-        omittedDates = legacyPlan.omittedDates,
-        warnings = legacyPlan.warnings,
+        occupiedDates = occupiedDates,
+        omittedDates = omittedDates,
+        warnings = evaluateShiftWarnings(
+            existingShifts = relevantExisting.filterNot { it.id in deletions },
+            candidateShifts = plannedWrites.map(V2ShiftWrite::shift),
+        ),
     )
 }
 

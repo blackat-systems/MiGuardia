@@ -236,8 +236,7 @@ class NotificationComposeTest {
         colorArgbSnapshot = 0xff336699.toInt(),
         position = null,
         status = ShiftStatus.PLANNED,
-        sourceObjectiveId = null,
-        sourceScheduleCombinationId = null,
+        sourceObjectiveId = UUID(0L, 239L),
         createdAt = Instant.parse("2026-08-15T00:00:00Z"),
         updatedAt = Instant.parse("2026-08-15T00:00:00Z"),
     )

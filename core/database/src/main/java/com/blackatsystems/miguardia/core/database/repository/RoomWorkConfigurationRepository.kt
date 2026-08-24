@@ -2,7 +2,7 @@ package com.blackatsystems.miguardia.core.database.repository
 
 import android.database.sqlite.SQLiteConstraintException
 import androidx.room.withTransaction
-import com.blackatsystems.miguardia.core.database.MiGuardiaDatabase
+import com.blackatsystems.miguardia.core.database.MiGuardiaV2Database
 import com.blackatsystems.miguardia.core.database.entity.PerPeriodHoursDefinitionEntity
 import com.blackatsystems.miguardia.core.database.mapping.newWorkConfigurationRoot
 import com.blackatsystems.miguardia.core.database.mapping.toDomainOrNull
@@ -16,13 +16,12 @@ import com.blackatsystems.miguardia.core.domain.work.PerPeriodHoursEntry
 import com.blackatsystems.miguardia.core.domain.work.PerPeriodHoursValues
 import com.blackatsystems.miguardia.core.domain.work.WorkConfiguration
 import com.blackatsystems.miguardia.core.domain.work.WorkConfigurationHistory
-import com.blackatsystems.miguardia.core.domain.work.WorkConfigurationOrigin
 import java.util.UUID
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 
 internal class RoomWorkConfigurationRepository(
-    private val database: MiGuardiaDatabase,
+    private val database: MiGuardiaV2Database,
 ) : WorkConfigurationRepository {
     private val dao = database.workConfigurationDao()
 
@@ -43,7 +42,6 @@ internal class RoomWorkConfigurationRepository(
     ) {
         validateHistory("La configuración laboral inicial no es válida.") {
             WorkConfigurationHistory(
-                origin = WorkConfigurationOrigin.NEW_V2,
                 timeline = EffectiveDateTimeline(timelineId, listOf(firstRevision)),
                 perPeriodHoursValues = PerPeriodHoursValues(emptyList()),
             )
@@ -164,7 +162,6 @@ internal class RoomWorkConfigurationRepository(
     ) {
         validateHistory("La revisión de configuración laboral no es válida.") {
             WorkConfigurationHistory(
-                origin = current.origin,
                 timeline = EffectiveDateTimeline(
                     id = current.timeline.id,
                     revisions = current.timeline.revisions + revision,
@@ -180,7 +177,6 @@ internal class RoomWorkConfigurationRepository(
     ) {
         validateHistory("El valor de horas del período no es válido.") {
             WorkConfigurationHistory(
-                origin = current.origin,
                 timeline = current.timeline,
                 perPeriodHoursValues = PerPeriodHoursValues(values),
             )

@@ -448,10 +448,11 @@ Evidencia completa en
 `docs/audits/2026-08-23-edicion-eliminacion-jornadas-v2.md` y decisión técnica
 en `docs/adr/0025-cas-par-historico-edicion-eliminacion-v2.md`.
 
-## Base exclusiva V2 y retiro del modo V1 — prompt habilitado
+## Base exclusiva V2 y retiro del modo V1 — cerrado
 
-Joaquin autorizó preparar el siguiente contrato. Todavía no existe una
-implementación ni una tarea especializada abierta.
+MAIN auditó, corrigió y verificó el candidato **Dejar MiGuardia únicamente en
+modo 2.0**. El runtime ya no contiene una bifurcación V1/V2 ni abre la base
+histórica.
 
 ADR 0026 resolvió la decisión arquitectónica que faltaba:
 
@@ -470,11 +471,39 @@ ADR 0026 resolvió la decisión arquitectónica que faltaba:
   próximo evento, notificaciones, clima y las demás capacidades comunes, pero
   retira Perfil, Resumen, Objetivos/horarios, guardias/francos y Novedades V1.
 
-El contrato ejecutable está en
-`docs/prompts/RETIRAR_MODO_V1_Y_FIJAR_BASE_EXCLUSIVA_V2.md`, estado
-`HABILITADO`. Parte de la base funcional `4646f66`; MAIN informará el checkpoint
-documental exacto al abrir la tarea. Pedir y preparar el prompt no abrió todavía
-otra dependencia.
+El resultado verificado agrega además:
+
+- validación global de objetivos, configuración, catálogo y jornadas, incluidas
+  sus fotografías históricas;
+- una única frontera transaccional `V2ShiftRepository` para crear, editar o
+  eliminar jornadas;
+- Feriados, Notas, Vacaciones, carpetas médicas, fotos, próximo evento,
+  notificaciones, clima y apariencia preservados como funciones comunes V2;
+- primera apertura con los cuatro rubros exactos y navegación sin Perfil,
+  Resumen, gestión estructural ni Novedades V1.
+
+Room quedó fijado como `MiGuardiaV2Database`, archivo `miguardia-v2.db`, versión
+1 y 19 tablas. Su esquema tiene identity hash
+`d583ce68e247cba7574a9e3b25b29e69` y SHA-256
+`5769C0F57667F7FA5A7C1C1DA5474474537094A759F8FA4A0D66E6EF37C1287E`.
+
+Validación de cierre:
+
+- JVM: 283/283 —168 de dominio, 5 de base y 110 de aplicación—;
+- lint: 0 errores y 2 avisos de actualización ya conocidos;
+- APK Debug, QA y ambos APK AndroidTest: compilados;
+- Samsung `SM-S938B`, API 36: runner verde `OK (148 tests)`, con 147
+  aprobadas y una omisión consciente por no habilitar acceso especial a
+  alarmas exactas; Room 61/61;
+- emulador Android 8.0, API 26: aplicación 148/148 y Room 61/61;
+- revisión visual directa en ambos entornos: primera apertura limpia, cuatro
+  rubros exactos y `Continuar` deshabilitado sin selección;
+- paquetes QA retirados, emulador apagado, Samsung con rotación original y
+  producción intacta.
+
+El contrato quedó `CERRADO` en
+`docs/prompts/RETIRAR_MODO_V1_Y_FIJAR_BASE_EXCLUSIVA_V2.md`. Evidencia completa
+en `docs/audits/2026-08-23-retiro-modo-v1-y-base-room-v2.md`.
 
 ## Flujo vigente de MAIN
 
@@ -511,8 +540,7 @@ dependencia `Cargar jornadas`.
 
 ## Todavía no implementado
 
-- el bloque habilitado de retiro del origen `MIGRATED_V1`, activación, adopción,
-  gating legado y fijación de la base exclusiva V2;
+- recurrencias y edición de una fecha o de todo lo futuro;
 - persistencia de guardias pasivas o extras V2;
 - motor completo de trabajo habitual, extras exactas y disponibilidad, con su
   presentación en Resumen y Calendario;
@@ -521,17 +549,13 @@ dependencia `Cargar jornadas`.
 
 ## Próximo paso
 
-La edición y eliminación individual quedó cerrada. El prompt del siguiente
-bloque, **Dejar MiGuardia únicamente en modo 2.0**, ya está habilitado. Es una
-limpieza del código heredado y la fijación de una base Room V2 propia, no una
-migración de datos ni un regreso a la experiencia anterior: la configuración,
-el Calendario, la carga y la edición V2 ya integradas deben conservarse.
-
-La tarea implementadora todavía no fue abierta. MAIN espera una indicación
-expresa de Joaquin para crearla o recibir después su handoff.
+La base exclusiva V2 quedó cerrada. No existe ahora otro prompt de
+implementación habilitado. El siguiente bloque recomendado es **repetir
+jornadas automáticamente y decidir si un cambio afecta sólo una fecha o todo
+lo futuro**. MAIN preparará su contrato únicamente cuando Joaquin lo pida.
 
 Quedan como verificaciones separadas el recorrido físico de alarma exacta
-—sólo con permiso explícito— y API 26. Ya no corresponde una migración V1 real
-en el Samsung.
+—sólo con permiso explícito— y API 37 antes del candidato final. API 26 ya fue
+verificada; no corresponde una migración V1 real en el Samsung.
 Después del sello remoto ya consumido, cualquier otro push, tag, Release y toda
 operación sobre `main` o producción continúan prohibidos.

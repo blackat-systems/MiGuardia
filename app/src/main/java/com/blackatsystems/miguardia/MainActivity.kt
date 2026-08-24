@@ -24,15 +24,12 @@ import com.blackatsystems.miguardia.notifications.NotificationSystemAccess
 import com.blackatsystems.miguardia.ui.MiGuardiaApp
 import com.blackatsystems.miguardia.ui.calendar.CalendarViewModel
 import com.blackatsystems.miguardia.ui.exceptions.ExceptionsViewModel
-import com.blackatsystems.miguardia.ui.management.ManagementViewModel
 import com.blackatsystems.miguardia.ui.management.V2ManualShiftLoadViewModel
 import com.blackatsystems.miguardia.ui.management.V2ShiftEditViewModel
 import com.blackatsystems.miguardia.ui.nextevent.NextEventViewModel
 import com.blackatsystems.miguardia.ui.notifications.NotificationViewModel
 import com.blackatsystems.miguardia.ui.photos.PhotosViewModel
 import com.blackatsystems.miguardia.ui.photos.SchedulePhotoFileStore
-import com.blackatsystems.miguardia.ui.profile.ProfileViewModel
-import com.blackatsystems.miguardia.ui.summary.SummaryViewModel
 import com.blackatsystems.miguardia.ui.theme.AppThemeMode
 import com.blackatsystems.miguardia.ui.theme.AppZoom
 import com.blackatsystems.miguardia.ui.theme.MiGuardiaTheme
@@ -92,17 +89,6 @@ class MainActivity : ComponentActivity() {
         VacationViewModel.Factory(dataStore.vacations)
     }
 
-    private val managementViewModel: ManagementViewModel by viewModels {
-        val dataStore = (application as MiGuardiaApplication).localDataStore
-        ManagementViewModel.Factory(
-            objectiveRepository = dataStore.objectives,
-            scheduleRepository = dataStore.scheduleCombinations,
-            shiftRepository = dataStore.shifts,
-            explicitDayStatusRepository = dataStore.explicitDayStatuses,
-            medicalLeaveRepository = dataStore.medicalLeaves,
-        )
-    }
-
     private val v2ManualShiftLoadViewModel: V2ManualShiftLoadViewModel by viewModels {
         val dataStore = (application as MiGuardiaApplication).localDataStore
         V2ManualShiftLoadViewModel.Factory(
@@ -137,35 +123,12 @@ class MainActivity : ComponentActivity() {
         )
     }
 
-    private val profileViewModel: ProfileViewModel by viewModels {
-        val application = application as MiGuardiaApplication
-        ProfileViewModel.Factory(
-            store = application.guardProfile,
-            objectives = application.localDataStore.objectives,
-            schedules = application.localDataStore.scheduleCombinations,
-        )
-    }
-
     private val exceptionsViewModel: ExceptionsViewModel by viewModels {
         val dataStore = (application as MiGuardiaApplication).localDataStore
         ExceptionsViewModel.Factory(
             holidays = dataStore.holidays,
             notes = dataStore.shiftNotes,
-            novelties = dataStore.shiftNovelties,
             shifts = dataStore.shifts,
-            objectives = dataStore.objectives,
-            schedules = dataStore.scheduleCombinations,
-        )
-    }
-
-    private val summaryViewModel: SummaryViewModel by viewModels {
-        val dataStore = (application as MiGuardiaApplication).localDataStore
-        SummaryViewModel.Factory(
-            shiftRepository = dataStore.shifts,
-            explicitDayStatusRepository = dataStore.explicitDayStatuses,
-            medicalLeaveRepository = dataStore.medicalLeaves,
-            holidayRepository = dataStore.holidays,
-            vacationRepository = dataStore.vacations,
         )
     }
 
@@ -205,16 +168,13 @@ class MainActivity : ComponentActivity() {
                 MiGuardiaApp(
                     calendarViewModel = calendarViewModel,
                     nextEventViewModel = nextEventViewModel,
-                    managementViewModel = managementViewModel,
                     v2ManualShiftLoadViewModel = v2ManualShiftLoadViewModel,
                     v2ShiftEditViewModel = v2ShiftEditViewModel,
-                    summaryViewModel = summaryViewModel,
                     exceptionsViewModel = exceptionsViewModel,
                     vacationViewModel = vacationViewModel,
                     photosViewModel = photosViewModel,
                     notificationViewModel = notificationViewModel,
                     weatherViewModel = weatherViewModel,
-                    profileViewModel = profileViewModel,
                     workSetupViewModel = workSetupViewModel,
                     calendarNavigationRequest = calendarNavigationRequest,
                     appZoom = appZoom,
@@ -264,7 +224,6 @@ class MainActivity : ComponentActivity() {
                     calendarViewModel.openDate(shift.localStartDate)
                     calendarNavigationRequest++
                 }
-                ACTION_REPORT_NOVELTY -> exceptionsViewModel.openShift(shift)
                 ACTION_DIRECTIONS -> {
                     val address = shift.objectiveAddressSnapshot?.takeIf(String::isNotBlank)
                     val opened = address?.let {
@@ -292,11 +251,10 @@ class MainActivity : ComponentActivity() {
     companion object {
         const val ACTION_VIEW_SHIFT = "com.blackatsystems.miguardia.action.VIEW_SHIFT"
         const val ACTION_DIRECTIONS = "com.blackatsystems.miguardia.action.DIRECTIONS"
-        const val ACTION_REPORT_NOVELTY = "com.blackatsystems.miguardia.action.REPORT_NOVELTY"
         const val EXTRA_SHIFT_ID = "shift_id"
         const val DISPLAY_PREFERENCES = "miguardia_display_preferences"
         const val APP_ZOOM_PERCENT = "app_zoom_percent"
         const val APP_THEME_MODE = "app_theme_mode"
-        private val NotificationActions = setOf(ACTION_VIEW_SHIFT, ACTION_DIRECTIONS, ACTION_REPORT_NOVELTY)
+        private val NotificationActions = setOf(ACTION_VIEW_SHIFT, ACTION_DIRECTIONS)
     }
 }

@@ -59,7 +59,6 @@ internal fun WorkTemplate.toEntity() = WorkTemplateEntity(
     endTime = endTime.toString(),
     colorArgb = colorArgb,
     isActive = isActive,
-    legacyScheduleCombinationId = legacyScheduleCombinationId?.toString(),
     createdAtEpochMillis = createdAt.toEpochMilli(),
     updatedAtEpochMillis = updatedAt.toEpochMilli(),
 )
@@ -145,7 +144,6 @@ internal fun WorkTemplateEntity.toDomainWorkTemplate(): WorkTemplate = decodeCat
         endTime = LocalTime.parse(endTime),
         colorArgb = colorArgb,
         isActive = isActive,
-        legacyScheduleCombinationId = legacyScheduleCombinationId?.let(UUID::fromString),
         createdAt = Instant.ofEpochMilli(createdAtEpochMillis),
         updatedAt = Instant.ofEpochMilli(updatedAtEpochMillis),
     )

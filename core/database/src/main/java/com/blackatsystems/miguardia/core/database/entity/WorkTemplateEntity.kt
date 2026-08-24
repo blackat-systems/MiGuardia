@@ -29,19 +29,11 @@ import androidx.room.PrimaryKey
             onDelete = ForeignKey.RESTRICT,
             onUpdate = ForeignKey.NO_ACTION,
         ),
-        ForeignKey(
-            entity = ScheduleCombinationEntity::class,
-            parentColumns = ["id"],
-            childColumns = ["legacyScheduleCombinationId"],
-            onDelete = ForeignKey.SET_NULL,
-            onUpdate = ForeignKey.NO_ACTION,
-        ),
     ],
     indices = [
         Index(value = ["timelineId"]),
         Index(value = ["workPlaceId", "timelineId", "sector", "objectiveId"]),
         Index(value = ["workTypeId", "timelineId", "sector"]),
-        Index(value = ["legacyScheduleCombinationId"]),
         Index(value = ["workPlaceId", "workTypeId", "startTime", "endTime"], unique = true),
         Index(
             value = ["id", "timelineId", "sector", "workPlaceId", "objectiveId", "workTypeId"],
@@ -60,7 +52,6 @@ internal data class WorkTemplateEntity(
     val endTime: String,
     val colorArgb: Int,
     val isActive: Boolean,
-    val legacyScheduleCombinationId: String?,
     val createdAtEpochMillis: Long,
     val updatedAtEpochMillis: Long,
 )

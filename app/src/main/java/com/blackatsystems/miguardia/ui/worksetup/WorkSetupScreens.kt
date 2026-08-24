@@ -142,7 +142,6 @@ fun WorkSetupSurfaceHost(
     ) {
         when (state.surface) {
             WorkSetupSurface.OVERVIEW -> WorkSetupOverview(state, actions)
-            WorkSetupSurface.LEGACY_INFORMATION -> LegacyWorkSetupInformation(state, actions)
             WorkSetupSurface.FIRST_WORK_SET -> FirstWorkSetScreen(state, actions)
             WorkSetupSurface.ADDITIONAL_PLACE -> AdditionalPlaceScreen(state, actions)
             WorkSetupSurface.ADDITIONAL_TEMPLATE -> AdditionalTemplateScreen(state, actions)
@@ -347,32 +346,6 @@ private fun WorkSetupOverview(state: WorkSetupUiState, actions: WorkSetupActions
                         onClick = actions.startAnotherPlace,
                         modifier = Modifier.fillMaxWidth(),
                     ) { Text("Agregar otro lugar") }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun LegacyWorkSetupInformation(state: WorkSetupUiState, actions: WorkSetupActions) {
-    Column(Modifier.fillMaxSize().safeDrawingPadding()) {
-        SurfaceHeader("Mi forma de trabajar", "Cerrar", actions.requestBack)
-        HorizontalDivider()
-        Column(
-            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            ScreenHeading(
-                title = "MiGuardia 1.0 sigue disponible",
-                supportingText = "Tu Calendario y tus datos heredados no quedan bloqueados ni se convierten automáticamente.",
-            )
-            SectionCard(
-                title = "Configurar MiGuardia 2.0",
-                supportingText = "La activación consciente con fecha y rubro se habilitará en una próxima actualización.",
-            ) {
-                Text("Esta pantalla informa el estado real y no modifica tus datos.")
-                if (state.rootState is WorkSetupState.LegacyV1WithFutureActivation) {
-                    Text("Ya existe una activación futura guardada.")
                 }
             }
         }

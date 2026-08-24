@@ -20,39 +20,32 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.blackatsystems.miguardia.core.domain.model.Holiday
 import com.blackatsystems.miguardia.core.domain.model.HolidayConflictPolicy
-import com.blackatsystems.miguardia.core.domain.model.ShiftNote
 import com.blackatsystems.miguardia.core.domain.model.Shift
-import com.blackatsystems.miguardia.core.domain.model.ShiftNovelty
-import com.blackatsystems.miguardia.core.domain.model.ShiftNoveltyType
-import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
-import com.blackatsystems.miguardia.ui.components.TransientConfirmation
+import com.blackatsystems.miguardia.core.domain.model.ShiftNote
 import com.blackatsystems.miguardia.ui.components.DestructiveAction
 import com.blackatsystems.miguardia.ui.components.EmptyState
 import com.blackatsystems.miguardia.ui.components.MonthNavigator
 import com.blackatsystems.miguardia.ui.components.PersistentMessage
 import com.blackatsystems.miguardia.ui.components.PrimaryAction
+import com.blackatsystems.miguardia.ui.components.ScreenHeading
 import com.blackatsystems.miguardia.ui.components.SectionCard
 import com.blackatsystems.miguardia.ui.components.SelectableMonthCalendar
 import com.blackatsystems.miguardia.ui.components.SurfaceHeader
+import com.blackatsystems.miguardia.ui.components.TransientConfirmation
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
@@ -61,114 +54,128 @@ import java.util.Locale
 import java.util.UUID
 
 data class ExceptionsActions(
-    val close: () -> Unit = {},
     val openHolidays: (YearMonth) -> Unit = {},
-    val openShift: (Shift) -> Unit = {},
+    val openNotes: (Shift) -> Unit = {},
+    val close: () -> Unit = {},
     val previousHolidayMonth: () -> Unit = {},
     val nextHolidayMonth: () -> Unit = {},
     val updateHolidayDraft: ((HolidayDraft) -> HolidayDraft) -> Unit = {},
     val editHoliday: (Holiday) -> Unit = {},
+    val cancelHolidayEdit: () -> Unit = {},
     val saveHolidays: (HolidayConflictPolicy?) -> Unit = {},
     val cancelHolidayConflict: () -> Unit = {},
     val deleteHoliday: (UUID) -> Unit = {},
     val updateNoteDraft: ((NoteDraft) -> NoteDraft) -> Unit = {},
     val editNote: (ShiftNote) -> Unit = {},
+    val cancelNoteEdit: () -> Unit = {},
     val saveNote: () -> Unit = {},
     val deleteNote: (UUID) -> Unit = {},
-    val updateNoveltyDraft: ((NoveltyDraft) -> NoveltyDraft) -> Unit = {},
-    val editNovelty: (ShiftNovelty) -> Unit = {},
-    val saveInformative: () -> Unit = {},
-    val deleteInformative: (UUID) -> Unit = {},
-    val changeStatus: (ShiftStatus, String) -> Unit = { _, _ -> },
-    val applyFormalChange: (UUID, String) -> Unit = { _, _ -> },
-    val restoreOriginal: () -> Unit = {},
-    val createSecondShift: (UUID, String) -> Unit = { _, _ -> },
-    val deleteSecondShift: (ShiftNovelty) -> Unit = {},
-    val confirmPlanningWarnings: () -> Unit = {},
-    val dismissPlanningWarnings: () -> Unit = {},
-    val clearMessage: () -> Unit = {},
     val retry: () -> Unit = {},
+    val clearMessage: () -> Unit = {},
 ) {
     companion object {
-        fun from(vm: ExceptionsViewModel) = ExceptionsActions(
-            close = vm::close,
-            openHolidays = vm::openHolidays,
-            openShift = vm::openShift,
-            previousHolidayMonth = vm::previousHolidayMonth,
-            nextHolidayMonth = vm::nextHolidayMonth,
-            updateHolidayDraft = vm::updateHolidayDraft,
-            editHoliday = vm::editHoliday,
-            saveHolidays = vm::saveHolidays,
-            cancelHolidayConflict = vm::cancelHolidayConflict,
-            deleteHoliday = vm::deleteHoliday,
-            updateNoteDraft = vm::updateNoteDraft,
-            editNote = vm::editNote,
-            saveNote = vm::saveNote,
-            deleteNote = vm::deleteNote,
-            updateNoveltyDraft = vm::updateNoveltyDraft,
-            editNovelty = vm::editNovelty,
-            saveInformative = vm::saveInformativeNovelty,
-            deleteInformative = vm::deleteInformativeNovelty,
-            changeStatus = vm::changeStatus,
-            applyFormalChange = vm::applyFormalChange,
-            restoreOriginal = vm::restoreOriginalPlan,
-            createSecondShift = vm::createSecondShift,
-            deleteSecondShift = vm::deleteSecondShift,
-            confirmPlanningWarnings = vm::confirmPlanningWarnings,
-            dismissPlanningWarnings = vm::dismissPlanningWarnings,
-            clearMessage = vm::clearMessage,
-            retry = vm::retry,
+        fun from(viewModel: ExceptionsViewModel) = ExceptionsActions(
+            openHolidays = viewModel::openHolidays,
+            openNotes = viewModel::openNotes,
+            close = viewModel::close,
+            previousHolidayMonth = viewModel::showPreviousHolidayMonth,
+            nextHolidayMonth = viewModel::showNextHolidayMonth,
+            updateHolidayDraft = viewModel::updateHolidayDraft,
+            editHoliday = viewModel::editHoliday,
+            cancelHolidayEdit = viewModel::cancelHolidayEdit,
+            saveHolidays = viewModel::saveHolidays,
+            cancelHolidayConflict = viewModel::cancelHolidayConflict,
+            deleteHoliday = viewModel::deleteHoliday,
+            updateNoteDraft = viewModel::updateNoteDraft,
+            editNote = viewModel::editNote,
+            cancelNoteEdit = viewModel::cancelNoteEdit,
+            saveNote = viewModel::saveNote,
+            deleteNote = viewModel::deleteNote,
+            retry = viewModel::retry,
+            clearMessage = viewModel::clearMessage,
         )
     }
 }
 
 @Composable
-fun ExceptionsSurfaceHost(state: ExceptionsUiState, actions: ExceptionsActions) {
-    BackHandler(onBack = actions.close)
+fun ExceptionsSurfaceHost(
+    state: ExceptionsUiState,
+    actions: ExceptionsActions,
+) {
+    if (state.surface == ExceptionsSurface.NONE) return
+    var confirmDiscard by rememberSaveable { mutableStateOf(false) }
+    val hasUnsavedChanges = when (state.surface) {
+        ExceptionsSurface.HOLIDAYS -> state.holidayDraft.editingId != null ||
+            state.holidayDraft.datesText.isNotBlank() ||
+            state.holidayDraft.name.isNotBlank()
+        ExceptionsSurface.NOTES -> state.noteDraft.editingId != null || state.noteDraft.body.isNotBlank()
+        ExceptionsSurface.NONE -> false
+    }
+    val requestClose = {
+        if (!state.isSaving) {
+            if (hasUnsavedChanges) confirmDiscard = true else actions.close()
+        }
+    }
+    BackHandler(onBack = requestClose)
     TransientConfirmation(state.infoMessage, actions.clearMessage) {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             Column(Modifier.fillMaxSize().safeDrawingPadding()) {
-            SurfaceHeader(
-                title = if (state.surface == ExceptionsSurface.HOLIDAYS) "Feriados" else "Notas y novedades",
-                navigationLabel = "Cerrar",
-                onNavigation = actions.close,
-            )
-            HorizontalDivider()
-            state.errorMessage?.let {
-                PersistentMessage(
-                    message = it,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                    onDismiss = actions.clearMessage,
-                    onRetry = actions.retry,
+                SurfaceHeader(
+                    title = if (state.surface == ExceptionsSurface.HOLIDAYS) "Feriados" else "Notas",
+                    navigationLabel = "Cerrar",
+                    onNavigation = requestClose,
                 )
-            }
-            when (state.surface) {
-                ExceptionsSurface.NONE -> Unit
-                ExceptionsSurface.HOLIDAYS -> HolidayScreen(state, actions)
-                ExceptionsSurface.SHIFT -> ShiftExceptionsScreen(state, actions)
+                HorizontalDivider()
+                state.errorMessage?.let {
+                    PersistentMessage(
+                        message = it,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                        onDismiss = actions.clearMessage,
+                        onRetry = actions.retry,
+                    )
+                }
+                when (state.surface) {
+                    ExceptionsSurface.HOLIDAYS -> HolidayContent(state, actions)
+                    ExceptionsSurface.NOTES -> NotesContent(state, actions)
+                    ExceptionsSurface.NONE -> Unit
                 }
             }
         }
     }
-}
-
-@Composable
-private fun Message(text: String, error: Boolean, dismiss: () -> Unit) {
-    PersistentMessage(message = text, modifier = Modifier.padding(8.dp), onDismiss = dismiss)
-}
-
-@Composable
-private fun HolidayScreen(state: ExceptionsUiState, actions: ExceptionsActions) {
-    var pendingDelete by rememberSaveable { mutableStateOf<String?>(null) }
-    var confirmDiscard by rememberSaveable { mutableStateOf(false) }
-    val selectedDates = state.holidayDraft.datesText.toSelectedDates()
-    val hasUnsavedChanges = state.holidayDraft.editingId != null ||
-        state.holidayDraft.datesText.isNotBlank() || state.holidayDraft.name.isNotBlank()
-    BackHandler {
-        if (hasUnsavedChanges) confirmDiscard = true else actions.close()
+    if (confirmDiscard) {
+        AlertDialog(
+            onDismissRequest = { confirmDiscard = false },
+            title = { Text("Descartar cambios") },
+            text = {
+                Text(
+                    if (state.surface == ExceptionsSurface.HOLIDAYS) {
+                        "Hay datos del feriado sin guardar."
+                    } else {
+                        "Hay una nota sin guardar."
+                    },
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        confirmDiscard = false
+                        actions.close()
+                    },
+                ) { Text("Descartar") }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmDiscard = false }) { Text("Seguir editando") }
+            },
+        )
     }
+}
+
+@Composable
+private fun HolidayContent(state: ExceptionsUiState, actions: ExceptionsActions) {
+    var pendingDelete by rememberSaveable { mutableStateOf<String?>(null) }
+    val selectedDates = state.holidayDraft.datesText.toSelectedDates()
     Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         MonthNavigator(
@@ -219,6 +226,7 @@ private fun HolidayScreen(state: ExceptionsUiState, actions: ExceptionsActions) 
             onValueChange = { value -> actions.updateHolidayDraft { it.copy(name = value) } },
             label = { Text("Nombre opcional") },
             supportingText = { Text("Por ejemplo: Día de la Bandera") },
+            enabled = !state.isSaving,
             modifier = Modifier.fillMaxWidth(),
         )
         PrimaryAction(
@@ -227,23 +235,42 @@ private fun HolidayScreen(state: ExceptionsUiState, actions: ExceptionsActions) 
             enabled = !state.isSaving,
             working = state.isSaving,
         )
+        if (state.holidayDraft.editingId != null) {
+            OutlinedButton(
+                onClick = actions.cancelHolidayEdit,
+                enabled = !state.isSaving,
+                modifier = Modifier.fillMaxWidth(),
+            ) { Text("Cancelar edición") }
+        }
         Text("Feriados del mes", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        if (state.isLoading) CircularProgressIndicator()
-        if (!state.isLoading && state.holidays.isEmpty()) {
+        if (state.isLoading) {
+            CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+        } else if (state.holidays.isEmpty()) {
             EmptyState(
                 title = "Sin feriados",
                 message = "No hay feriados manuales cargados en este mes.",
             )
-        }
-        state.holidays.forEach { holiday ->
-            Card(Modifier.fillMaxWidth()) {
-                Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(holiday.date.holidayDisplayName(), fontWeight = FontWeight.Bold)
-                        Text(holiday.name ?: "Feriado")
+        } else {
+            state.holidays.forEach { holiday ->
+                Card(Modifier.fillMaxWidth()) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text(holiday.date.holidayDisplayName(), fontWeight = FontWeight.Bold)
+                            Text(holiday.name ?: "Feriado")
+                        }
+                        TextButton(
+                            onClick = { actions.editHoliday(holiday) },
+                            enabled = !state.isSaving,
+                        ) { Text("Editar") }
+                        DestructiveAction(
+                            label = "Eliminar",
+                            onClick = { pendingDelete = holiday.id.toString() },
+                            enabled = !state.isSaving,
+                        )
                     }
-                    TextButton(onClick = { actions.editHoliday(holiday) }) { Text("Editar") }
-                    DestructiveAction(label = "Eliminar", onClick = { pendingDelete = holiday.id.toString() })
                 }
             }
         }
@@ -259,306 +286,103 @@ private fun HolidayScreen(state: ExceptionsUiState, actions: ExceptionsActions) 
                         "Podés reemplazarlas o conservarlas y crear solo las nuevas.",
                 )
             },
-            confirmButton = { TextButton(onClick = { actions.saveHolidays(HolidayConflictPolicy.REPLACE) }) { Text("Reemplazar") } },
+            confirmButton = {
+                TextButton(onClick = { actions.saveHolidays(HolidayConflictPolicy.REPLACE) }) {
+                    Text("Reemplazar")
+                }
+            },
             dismissButton = {
                 Column {
-                    TextButton(onClick = { actions.saveHolidays(HolidayConflictPolicy.KEEP_EXISTING) }) { Text("Conservar existentes") }
+                    TextButton(onClick = { actions.saveHolidays(HolidayConflictPolicy.KEEP_EXISTING) }) {
+                        Text("Conservar existentes")
+                    }
                     TextButton(onClick = actions.cancelHolidayConflict) { Text("Cancelar") }
                 }
             },
         )
     }
     pendingDelete?.let { raw ->
-        AlertDialog(
-            onDismissRequest = { pendingDelete = null },
-            title = { Text("Eliminar feriado") },
-            text = { Text("El calendario y el Resumen se recalcularán automáticamente.") },
-            confirmButton = { TextButton(onClick = { actions.deleteHoliday(UUID.fromString(raw)); pendingDelete = null }) { Text("Eliminar") } },
-            dismissButton = { TextButton(onClick = { pendingDelete = null }) { Text("Cancelar") } },
-        )
-    }
-    if (confirmDiscard) {
-        AlertDialog(
-            onDismissRequest = { confirmDiscard = false },
-            title = { Text("Descartar cambios") },
-            text = { Text("Hay datos del feriado sin guardar.") },
-            confirmButton = { TextButton(onClick = { confirmDiscard = false; actions.close() }) { Text("Descartar") } },
-            dismissButton = { TextButton(onClick = { confirmDiscard = false }) { Text("Seguir editando") } },
+        ConfirmDeleteDialog(
+            title = "Eliminar feriado",
+            text = "El calendario se actualizará automáticamente.",
+            onConfirm = {
+                actions.deleteHoliday(UUID.fromString(raw))
+                pendingDelete = null
+            },
+            onDismiss = { pendingDelete = null },
         )
     }
 }
 
 @Composable
-private fun ShiftExceptionsScreen(state: ExceptionsUiState, actions: ExceptionsActions) {
+private fun NotesContent(state: ExceptionsUiState, actions: ExceptionsActions) {
     val shift = state.selectedShift ?: return
-    var statusDescription by rememberSaveable { mutableStateOf("") }
-    var pendingStatus by rememberSaveable { mutableStateOf<ShiftStatus?>(null) }
-    var showStatusDescription by rememberSaveable { mutableStateOf(false) }
-    var selectedFormalId by rememberSaveable { mutableStateOf<String?>(null) }
-    var formalDescription by rememberSaveable { mutableStateOf("") }
-    var selectedSecondId by rememberSaveable { mutableStateOf<String?>(null) }
-    var secondDescription by rememberSaveable { mutableStateOf("") }
-    var confirmRestore by rememberSaveable { mutableStateOf(false) }
-    var confirmDiscard by rememberSaveable { mutableStateOf(false) }
-    var pendingDeleteNote by rememberSaveable { mutableStateOf<String?>(null) }
-    var pendingDeleteInformative by rememberSaveable { mutableStateOf<String?>(null) }
-    var pendingDeleteSecond by rememberSaveable { mutableStateOf<String?>(null) }
-    val informativeTypes = listOf(ShiftNoveltyType.ADDITIONAL_TIME, ShiftNoveltyType.EARLY_DEPARTURE, ShiftNoveltyType.OTHER)
-    val hasUnsavedChanges = statusDescription.isNotBlank() || selectedFormalId != null ||
-        formalDescription.isNotBlank() || selectedSecondId != null || secondDescription.isNotBlank() ||
-        state.noteDraft.editingId != null || state.noteDraft.body.isNotBlank() ||
-        state.noveltyDraft.editingId != null || state.noveltyDraft.description.isNotBlank()
-    LaunchedEffect(state.infoMessage) {
-        if (state.infoMessage != null) {
-            statusDescription = ""
-            selectedFormalId = null
-            formalDescription = ""
-            selectedSecondId = null
-            secondDescription = ""
-        }
-    }
-    BackHandler {
-        if (hasUnsavedChanges) confirmDiscard = true else actions.close()
-    }
+    var pendingDelete by rememberSaveable { mutableStateOf<String?>(null) }
     Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        Text("${shift.objectiveNameSnapshot} · ${shift.startTimeSnapshot}–${shift.endTimeSnapshot}", fontWeight = FontWeight.Bold)
-        Text("Todo el contenido de notas y descripciones es privado y local.")
-
-        Section("Estado explícito") {
-            Text(
-                "Estado actual: " + when (shift.status) {
-                    ShiftStatus.PLANNED -> "Normal"
-                    ShiftStatus.ABSENT -> "Ausencia"
-                    ShiftStatus.CANCELLED -> "Cancelada"
-                },
-                fontWeight = FontWeight.Bold,
-            )
-            Text("Ausencia y cancelación llevan las horas trabajadas a cero. Volver a normal restaura el estado derivado del reloj.")
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                OutlinedButton(
-                    onClick = { pendingStatus = ShiftStatus.ABSENT },
-                    modifier = Modifier.fillMaxWidth(),
-                ) { Text("Registrar ausencia") }
-                OutlinedButton(
-                    onClick = { pendingStatus = ShiftStatus.CANCELLED },
-                    modifier = Modifier.fillMaxWidth(),
-                ) { Text("Cancelar guardia") }
-            }
-            OutlinedButton(onClick = { actions.changeStatus(ShiftStatus.PLANNED, "") }, modifier = Modifier.fillMaxWidth()) { Text("Volver a normal") }
-        }
-
-        Section("Notas privadas") {
-            OutlinedTextField(
-                state.noteDraft.body,
-                { value -> actions.updateNoteDraft { it.copy(body = value) } },
-                label = { Text("Nota") },
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Button(onClick = actions.saveNote, enabled = !state.isSaving, modifier = Modifier.fillMaxWidth()) { Text("Guardar nota") }
-            if (state.notes.isEmpty()) Text("No hay notas.")
-            state.notes.forEach { note ->
-                PrivateRow(note.body, { actions.editNote(note) }, { pendingDeleteNote = note.id.toString() })
-            }
-        }
-
-        Section("Novedad informativa") {
-            Text("Tiempo adicional, salida anticipada y otra novedad no modifican las horas.")
-            informativeTypes.forEach { type ->
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    RadioButton(state.noveltyDraft.type == type, onClick = { actions.updateNoveltyDraft { it.copy(type = type) } })
-                    Text(type.label())
-                }
-            }
-            OutlinedTextField(
-                state.noveltyDraft.description,
-                { value -> actions.updateNoveltyDraft { it.copy(description = value) } },
-                label = { Text(if (state.noveltyDraft.type == ShiftNoveltyType.OTHER) "Descripción obligatoria" else "Descripción opcional") },
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Button(onClick = actions.saveInformative, enabled = !state.isSaving, modifier = Modifier.fillMaxWidth()) { Text("Guardar novedad informativa") }
-            state.novelties.filter { it.type in informativeTypes }.forEach { novelty ->
-                PrivateRow(
-                    "${novelty.type.label()}: ${novelty.description.orEmpty()}",
-                    { actions.editNovelty(novelty) },
-                    { pendingDeleteInformative = novelty.id.toString() },
-                )
-            }
-        }
-
-        Section("Cambio formal") {
-            Text("Cambiar objetivo u horario sí modifica las horas. El plan original se conserva.")
-            state.scheduleOptions.filter { it.objective.isActive && it.combination.isActive }.forEach { option ->
-                val id = option.combination.id.toString()
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    RadioButton(selectedFormalId == id, onClick = { selectedFormalId = id })
-                    Text("${option.objective.abbreviation} · ${option.combination.startTime}–${option.combination.endTime}")
-                }
-            }
-            OutlinedTextField(formalDescription, { formalDescription = it }, label = { Text("Motivo opcional") }, modifier = Modifier.fillMaxWidth())
-            Button(
-                onClick = { selectedFormalId?.let { actions.applyFormalChange(UUID.fromString(it), formalDescription) } },
-                enabled = selectedFormalId != null && !state.isSaving,
-                modifier = Modifier.fillMaxWidth(),
-            ) { Text("Aplicar cambio formal") }
-            state.formalChange?.let { formal ->
-                Text("Plan original", fontWeight = FontWeight.Bold)
-                Text("${formal.original.objectiveName} · ${formal.original.startTime}–${formal.original.endTime}")
-                Text("Resultado final", fontWeight = FontWeight.Bold)
-                Text("${formal.final.objectiveName} · ${formal.final.startTime}–${formal.final.endTime}")
-                OutlinedButton(onClick = { confirmRestore = true }, modifier = Modifier.fillMaxWidth()) { Text("Restaurar plan original") }
-            }
-        }
-
-        Section("Segunda guardia") {
-            Text("Se crea como otra guardia real y se computa una sola vez. Confirmá las posibles superposiciones o descansos cortos.")
-            state.scheduleOptions.filter { it.objective.isActive && it.combination.isActive }.forEach { option ->
-                val id = option.combination.id.toString()
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    RadioButton(selectedSecondId == id, onClick = { selectedSecondId = id })
-                    Text("${option.objective.abbreviation} · ${option.combination.startTime}–${option.combination.endTime}")
-                }
-            }
-            OutlinedTextField(secondDescription, { secondDescription = it }, label = { Text("Descripción opcional") }, modifier = Modifier.fillMaxWidth())
-            Button(
-                onClick = { selectedSecondId?.let { actions.createSecondShift(UUID.fromString(it), secondDescription) } },
-                enabled = selectedSecondId != null && !state.isSaving,
-                modifier = Modifier.fillMaxWidth(),
-            ) { Text("Agregar segunda guardia") }
-            state.novelties.filter { it.type == ShiftNoveltyType.SECOND_SHIFT }.forEach { novelty ->
-                PrivateRow(
-                    "Segunda guardia vinculada",
-                    {},
-                    { pendingDeleteSecond = novelty.id.toString() },
-                    showEdit = false,
-                )
-            }
-        }
-        Spacer(Modifier.height(24.dp))
-    }
-    if (confirmRestore) {
-        AlertDialog(
-            onDismissRequest = { confirmRestore = false },
-            title = { Text("Restaurar plan original") },
-            text = { Text("Se verificará que la guardia no haya cambiado por otro flujo antes de restaurarla.") },
-            confirmButton = { TextButton(onClick = { confirmRestore = false; actions.restoreOriginal() }) { Text("Restaurar") } },
-            dismissButton = { TextButton(onClick = { confirmRestore = false }) { Text("Cancelar") } },
+        ScreenHeading(
+            title = "Notas privadas",
+            supportingText = "${shift.objectiveNameSnapshot} · ${shift.startTimeSnapshot}–${shift.endTimeSnapshot}",
         )
-    }
-    pendingStatus?.let { status ->
-        val isAbsence = status == ShiftStatus.ABSENT
-        AlertDialog(
-            onDismissRequest = {
-                pendingStatus = null
-                statusDescription = ""
-                showStatusDescription = false
-            },
-            title = { Text(if (isAbsence) "Registrar ausencia" else "Cancelar guardia") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(
-                        if (isAbsence) {
-                            "La guardia quedará marcada como ausencia y no sumará horas trabajadas."
-                        } else {
-                            "La guardia quedará cancelada y no sumará horas trabajadas."
-                        },
-                    )
-                    if (showStatusDescription) {
-                        OutlinedTextField(
-                            value = statusDescription,
-                            onValueChange = { statusDescription = it },
-                            label = { Text("Descripción opcional") },
-                            modifier = Modifier.fillMaxWidth().testTag("status-description-field"),
-                        )
-                    } else {
+        SectionCard(
+            title = if (state.noteDraft.editingId == null) "Agregar nota" else "Editar nota",
+            supportingText = "La nota queda guardada solamente en este dispositivo.",
+        ) {
+            OutlinedTextField(
+                value = state.noteDraft.body,
+                onValueChange = { value -> actions.updateNoteDraft { it.copy(body = value) } },
+                label = { Text("Nota") },
+                enabled = !state.isSaving,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Button(
+                onClick = actions.saveNote,
+                enabled = !state.isSaving,
+                modifier = Modifier.fillMaxWidth(),
+            ) { Text("Guardar nota") }
+            if (state.noteDraft.editingId != null) {
+                OutlinedButton(
+                    onClick = actions.cancelNoteEdit,
+                    enabled = !state.isSaving,
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text("Cancelar edición") }
+            }
+        }
+        if (state.isLoading) {
+            CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+        } else if (state.notes.isEmpty()) {
+            Text("Todavía no hay notas para esta jornada.")
+        } else {
+            state.notes.forEach { note ->
+                SectionCard(title = "Nota", supportingText = note.body) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedButton(
-                            onClick = { showStatusDescription = true },
-                            modifier = Modifier.fillMaxWidth(),
-                        ) { Text("+ Agregar descripción opcional") }
+                            onClick = { actions.editNote(note) },
+                            enabled = !state.isSaving,
+                            modifier = Modifier.weight(1f),
+                        ) { Text("Editar") }
+                        DestructiveAction(
+                            label = "Eliminar",
+                            onClick = { pendingDelete = note.id.toString() },
+                            enabled = !state.isSaving,
+                            modifier = Modifier.weight(1f),
+                        )
                     }
                 }
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        actions.changeStatus(status, statusDescription)
-                        pendingStatus = null
-                        statusDescription = ""
-                        showStatusDescription = false
-                    },
-                ) { Text("Confirmar") }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = {
-                        pendingStatus = null
-                        statusDescription = ""
-                        showStatusDescription = false
-                    },
-                ) { Text("Volver") }
-            },
-        )
-    }
-    if (state.planningWarnings.isNotEmpty() && state.pendingPlanning != null) {
-        AlertDialog(
-            onDismissRequest = actions.dismissPlanningWarnings,
-            title = {
-                Text(
-                    if (state.pendingPlanning.operation == ExceptionPlanningOperation.SECOND_SHIFT) {
-                        "Confirmar segunda guardia"
-                    } else {
-                        "Confirmar cambio formal"
-                    },
-                )
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    state.planningWarnings.forEach { Text("• $it") }
-                }
-            },
-            confirmButton = { TextButton(onClick = actions.confirmPlanningWarnings) { Text("Continuar") } },
-            dismissButton = { TextButton(onClick = actions.dismissPlanningWarnings) { Text("Volver") } },
-        )
-    }
-    pendingDeleteNote?.let { raw ->
-        ConfirmDeleteDialog(
-            title = "Eliminar nota",
-            text = "La nota privada se eliminará definitivamente.",
-            onConfirm = { actions.deleteNote(UUID.fromString(raw)); pendingDeleteNote = null },
-            onDismiss = { pendingDeleteNote = null },
-        )
-    }
-    pendingDeleteInformative?.let { raw ->
-        ConfirmDeleteDialog(
-            title = "Eliminar novedad",
-            text = "Esta novedad informativa se eliminará.",
-            onConfirm = { actions.deleteInformative(UUID.fromString(raw)); pendingDeleteInformative = null },
-            onDismiss = { pendingDeleteInformative = null },
-        )
-    }
-    pendingDeleteSecond?.let { raw ->
-        val novelty = state.novelties.firstOrNull { it.id.toString() == raw }
-        if (novelty != null) {
-            ConfirmDeleteDialog(
-                title = "Eliminar segunda guardia",
-                text = "Se eliminarán la segunda guardia y su vínculo con la guardia original.",
-                onConfirm = { actions.deleteSecondShift(novelty); pendingDeleteSecond = null },
-                onDismiss = { pendingDeleteSecond = null },
-            )
+            }
         }
     }
-    if (confirmDiscard) {
-        AlertDialog(
-            onDismissRequest = { confirmDiscard = false },
-            title = { Text("Descartar cambios") },
-            text = { Text("Hay datos sin guardar en notas o novedades.") },
-            confirmButton = { TextButton(onClick = { confirmDiscard = false; actions.close() }) { Text("Descartar") } },
-            dismissButton = { TextButton(onClick = { confirmDiscard = false }) { Text("Seguir editando") } },
+    pendingDelete?.let { raw ->
+        ConfirmDeleteDialog(
+            title = "Eliminar nota",
+            text = "La nota privada se eliminará.",
+            onConfirm = {
+                actions.deleteNote(UUID.fromString(raw))
+                pendingDelete = null
+            },
+            onDismiss = { pendingDelete = null },
         )
     }
 }
@@ -577,34 +401,6 @@ private fun ConfirmDeleteDialog(
         confirmButton = { TextButton(onClick = onConfirm) { Text("Eliminar") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } },
     )
-}
-
-@Composable
-private fun Section(title: String, content: @Composable () -> Unit) {
-    SectionCard(title = title, content = content)
-}
-
-@Composable
-private fun PrivateRow(text: String, edit: () -> Unit, delete: () -> Unit, showEdit: Boolean = true) {
-    Column(
-        Modifier.fillMaxWidth().semantics { contentDescription = "Elemento privado de la guardia" },
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        Text(text)
-        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            if (showEdit) TextButton(onClick = edit) { Text("Editar") }
-            DestructiveAction(label = "Eliminar", onClick = delete)
-        }
-    }
-}
-
-private fun ShiftNoveltyType.label(): String = when (this) {
-    ShiftNoveltyType.ADDITIONAL_TIME -> "Tiempo adicional"
-    ShiftNoveltyType.EARLY_DEPARTURE -> "Salida anticipada"
-    ShiftNoveltyType.ABSENCE -> "Ausencia"
-    ShiftNoveltyType.CANCELLATION -> "Cancelación"
-    ShiftNoveltyType.SECOND_SHIFT -> "Segunda guardia"
-    ShiftNoveltyType.OTHER -> "Otra"
 }
 
 private fun YearMonth.label(): String {

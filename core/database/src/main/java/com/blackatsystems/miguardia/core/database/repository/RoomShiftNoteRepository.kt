@@ -5,7 +5,7 @@ import com.blackatsystems.miguardia.core.database.dao.ShiftNoteDao
 import com.blackatsystems.miguardia.core.database.mapping.toDomain
 import com.blackatsystems.miguardia.core.database.mapping.toEntity
 import com.blackatsystems.miguardia.core.domain.model.ShiftNote
-import com.blackatsystems.miguardia.core.domain.novelty.normalized
+import com.blackatsystems.miguardia.core.domain.model.normalized
 import com.blackatsystems.miguardia.core.domain.repository.InvalidLocalDataException
 import com.blackatsystems.miguardia.core.domain.repository.ShiftNoteRepository
 import java.util.UUID

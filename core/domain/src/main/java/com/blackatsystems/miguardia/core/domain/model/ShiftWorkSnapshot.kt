@@ -47,10 +47,6 @@ data class V2ShiftWrite(
 sealed interface V2ShiftLookup {
     data object Missing : V2ShiftLookup
 
-    data class LegacyV1(
-        val shift: Shift,
-    ) : V2ShiftLookup
-
     data class V2(
         val write: V2ShiftWrite,
     ) : V2ShiftLookup
@@ -111,7 +107,7 @@ data class ShiftOccupancyExpectation private constructor(
             return ShiftOccupancyExpectation(
                 startDateInclusive = startDateInclusive,
                 endDateInclusive = endDateInclusive,
-                observedShifts = versions.toSet(),
+                observedShifts = Collections.unmodifiableSet(LinkedHashSet(versions)),
             )
         }
     }

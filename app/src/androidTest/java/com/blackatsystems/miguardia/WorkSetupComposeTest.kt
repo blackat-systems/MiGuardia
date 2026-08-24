@@ -29,14 +29,7 @@ import com.blackatsystems.miguardia.core.domain.work.WorkSector
 import com.blackatsystems.miguardia.core.domain.work.WorkSetupState
 import com.blackatsystems.miguardia.ui.MiGuardiaApp
 import com.blackatsystems.miguardia.ui.calendar.CalendarLoadState
-import com.blackatsystems.miguardia.ui.calendar.CalendarInteractionMode
 import com.blackatsystems.miguardia.ui.calendar.CalendarUiState
-import com.blackatsystems.miguardia.ui.management.DayOffDraft
-import com.blackatsystems.miguardia.ui.management.ManagementSurface
-import com.blackatsystems.miguardia.ui.management.ManagementUiState
-import com.blackatsystems.miguardia.ui.management.ShiftDraft
-import com.blackatsystems.miguardia.ui.profile.ProfileSurface
-import com.blackatsystems.miguardia.ui.profile.ProfileUiState
 import com.blackatsystems.miguardia.ui.theme.AppZoom
 import com.blackatsystems.miguardia.ui.theme.MiGuardiaTheme
 import com.blackatsystems.miguardia.ui.worksetup.WorkPlaceDraft
@@ -127,62 +120,6 @@ class WorkSetupComposeTest {
     }
 
     @Test
-    fun enteringV2FinishesAnyLegacyCalendarEditMode() {
-        var workSetupState by mutableStateOf(
-            WorkSetupUiState(rootState = WorkSetupState.LegacyV1(UUID(30L, 1L))),
-        )
-        var managementState by mutableStateOf(ManagementUiState(surface = ManagementSurface.SETTINGS))
-        val profileState = ProfileUiState(surface = ProfileSurface.EDITOR)
-        var finishCalls = 0
-        setApp(
-            stateProvider = { workSetupState },
-            calendar = calendarState().copy(interactionMode = CalendarInteractionMode.EDIT),
-            managementStateProvider = { managementState },
-            profileStateProvider = { profileState },
-            onFinishCalendarEditMode = { finishCalls++ },
-        )
-
-        compose.runOnIdle { workSetupState = readyState(WorkSector.NURSING) }
-        compose.waitForIdle()
-
-        compose.runOnIdle { assertEquals(1, finishCalls) }
-        compose.onNodeWithText("Objetivos y horarios").assertDoesNotExist()
-        compose.onNodeWithText("Perfil laboral").assertDoesNotExist()
-        compose.runOnIdle {
-            managementState = ManagementUiState(surface = ManagementSurface.INITIAL_DATA_PREPARATION)
-        }
-        compose.onNodeWithText("Cargar datos").assertDoesNotExist()
-
-        compose.runOnIdle {
-            managementState = ManagementUiState(
-                surface = ManagementSurface.SHIFT_FORM,
-                shiftDraft = ShiftDraft(
-                    month = YearMonth.of(2026, 8),
-                    selectedDates = emptySet(),
-                ),
-                infoMessage = "Mensaje heredado V1",
-            )
-        }
-        compose.onNodeWithContentDescription("Mes anterior").assertIsEnabled()
-        compose.onNodeWithTag("calendar-work-setup-action").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("Mensaje heredado V1").assertDoesNotExist()
-
-        compose.runOnIdle {
-            managementState = ManagementUiState(
-                surface = ManagementSurface.DAY_OFF_FORM,
-                dayOffDraft = DayOffDraft(
-                    month = YearMonth.of(2026, 8),
-                    selectedDates = emptySet(),
-                ),
-            )
-        }
-        compose.onNodeWithContentDescription("Mes anterior").assertIsEnabled()
-        compose.onNodeWithTag("calendar-work-setup-action").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithContentDescription("Abrir menú").performClick()
-        compose.onNodeWithTag("drawer-action-work-setup").assertIsDisplayed()
-    }
-
-    @Test
     fun v2DayDetailDoesNotExposeTheLegacyEditAction() {
         val selectedDate = LocalDate.of(2026, 8, 22)
         setApp(
@@ -204,7 +141,7 @@ class WorkSetupComposeTest {
     }
 
     @Test
-    fun v2DrawerReplacesLegacyProfileObjectivesAndSummaryWithWorkSetup() {
+    fun v2DrawerContainsWorkSetupAndNoRemovedV1Destinations() {
         setApp(stateProvider = { readyState(WorkSector.MEDICINE) })
 
         compose.onNodeWithContentDescription("Abrir menú").performClick()
@@ -213,25 +150,6 @@ class WorkSetupComposeTest {
         compose.onNodeWithText("Resumen").assertDoesNotExist()
         compose.onNodeWithText("Perfil laboral").assertDoesNotExist()
         compose.onNodeWithText("Objetivos y horarios").assertDoesNotExist()
-    }
-
-    @Test
-    fun migratedV1OpensCalendarWithoutTheBlockingSelectorAndKeepsLegacyEntries() {
-        setApp(
-            stateProvider = {
-                WorkSetupUiState(
-                    rootState = WorkSetupState.LegacyV1(UUID(30L, 1L)),
-                )
-            },
-        )
-
-        compose.onNodeWithText("Próximo evento").assertIsDisplayed()
-        compose.onNodeWithText("¿En qué rubro trabajás?").assertDoesNotExist()
-        compose.onNodeWithText("Cargar jornadas").assertDoesNotExist()
-        compose.onNodeWithContentDescription("Abrir menú").performClick()
-        compose.onNodeWithText("Resumen").assertIsDisplayed()
-        compose.onNodeWithText("Perfil laboral").assertIsDisplayed()
-        compose.onNodeWithText("Objetivos y horarios").assertIsDisplayed()
     }
 
     @Test
@@ -261,9 +179,9 @@ class WorkSetupComposeTest {
 
         compose.onNodeWithText("Paso 1 de 2").assertIsDisplayed()
         compose.onNodeWithText("Continuar al tipo y horario").performScrollTo().performClick()
-        compose.onNodeWithText("Paso 2 de 2").assertIsDisplayed()
-        compose.onNodeWithText("Guardia habitual").assertIsDisplayed()
-        compose.onNodeWithText("Este horario dura 24 horas.").assertIsDisplayed()
+        compose.onNodeWithText("Paso 2 de 2").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Guardia habitual").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Este horario dura 24 horas.").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Guardar lugar y horario").performScrollTo().assertIsEnabled()
     }
 
@@ -392,9 +310,6 @@ class WorkSetupComposeTest {
         stateProvider: () -> WorkSetupUiState,
         actions: WorkSetupActions = WorkSetupActions(),
         calendar: CalendarUiState = calendarState(),
-        managementStateProvider: () -> ManagementUiState = { ManagementUiState() },
-        profileStateProvider: () -> ProfileUiState = { ProfileUiState() },
-        onFinishCalendarEditMode: () -> Unit = {},
     ) {
         compose.setContent {
             MiGuardiaTheme {
@@ -406,9 +321,6 @@ class WorkSetupComposeTest {
                     onSelectDate = {},
                     onDismissDate = {},
                     onRetry = {},
-                    onFinishCalendarEditMode = onFinishCalendarEditMode,
-                    managementState = managementStateProvider(),
-                    profileState = profileStateProvider(),
                     workSetupState = stateProvider(),
                     workSetupActions = actions,
                 )

@@ -2,7 +2,7 @@ package com.blackatsystems.miguardia.core.database.repository
 
 import android.database.sqlite.SQLiteConstraintException
 import androidx.room.withTransaction
-import com.blackatsystems.miguardia.core.database.MiGuardiaDatabase
+import com.blackatsystems.miguardia.core.database.MiGuardiaV2Database
 import com.blackatsystems.miguardia.core.database.dao.ShiftWithWorkSnapshotRow
 import com.blackatsystems.miguardia.core.database.mapping.toDomain
 import com.blackatsystems.miguardia.core.database.mapping.toDomainRuleRevision
@@ -22,7 +22,6 @@ import com.blackatsystems.miguardia.core.domain.model.V2ShiftWrite
 import com.blackatsystems.miguardia.core.domain.model.V2ShiftWriteExpectation
 import com.blackatsystems.miguardia.core.domain.repository.ConflictingLocalWriteException
 import com.blackatsystems.miguardia.core.domain.repository.InvalidLocalDataException
-import com.blackatsystems.miguardia.core.domain.repository.LegacyShiftCannotBeUpdatedAsV2Exception
 import com.blackatsystems.miguardia.core.domain.repository.V2ShiftRepository
 import com.blackatsystems.miguardia.core.domain.shift.isExactV2PositionOnlyEdit
 import com.blackatsystems.miguardia.core.domain.work.resolveWorkplaceRuleSegments
@@ -32,7 +31,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 
 internal class RoomV2ShiftRepository(
-    private val database: MiGuardiaDatabase,
+    private val database: MiGuardiaV2Database,
 ) : V2ShiftRepository {
     private val dao = database.v2ShiftDao()
 
@@ -56,10 +55,8 @@ internal class RoomV2ShiftRepository(
 
     override suspend fun getShift(shiftId: UUID): V2ShiftLookup = database.withTransaction {
         database.requireValidV2LocalData()
-        val storedShift = database.shiftDao().getById(shiftId.toString())
-            ?: return@withTransaction V2ShiftLookup.Missing
         val pair = dao.getShiftWithSnapshot(shiftId.toString())
-            ?: return@withTransaction V2ShiftLookup.LegacyV1(storedShift.toDomain())
+            ?: return@withTransaction V2ShiftLookup.Missing
         V2ShiftLookup.V2(pair.toDomainWrite())
     }
 
@@ -72,23 +69,6 @@ internal class RoomV2ShiftRepository(
         }
         validateIncomingWrite(write)
         dao.insertPair(write.shift.validated().toEntity(), write.snapshot.toEntity())
-        database.requireValidV2LocalData()
-    }
-
-    override suspend fun update(write: V2ShiftWrite): Unit = writeShiftData(
-        "No se pudo actualizar la jornada 2.0.",
-    ) {
-        database.requireValidV2LocalData()
-        val existing = requireExistingV2Write(write.shift.id)
-        validateUpdateIdentity(existing, write)
-        validateIncomingWrite(write)
-        val (shiftRows, snapshotRows) = dao.updatePair(
-            write.shift.validated().toEntity(),
-            write.snapshot.toEntity(),
-        )
-        if (shiftRows != 1 || snapshotRows != 1) {
-            invalid("La jornada cambió mientras se confirmaba la edición.")
-        }
         database.requireValidV2LocalData()
     }
 
@@ -105,7 +85,6 @@ internal class RoomV2ShiftRepository(
                 "La jornada cambió mientras confirmabas la eliminación. Revisala nuevamente.",
             )
         }
-        database.shiftNoveltyDao().deleteLinksToShift(expected.shift.id.toString())
         if (dao.deleteShiftAndOwnedSnapshot(expected.shift.id.toString()) != 1) {
             missingShift(expected.shift.id)
         }
@@ -181,12 +160,10 @@ internal class RoomV2ShiftRepository(
             }
         }
 
-        mutation.shiftIdsToDelete.forEach { id ->
-            database.shiftNoveltyDao().deleteLinksToShift(id.toString())
-        }
         if (mutation.shiftIdsToDelete.isNotEmpty()) {
-            val deletedRows = database.shiftDao()
-                .deleteByIds(mutation.shiftIdsToDelete.map(UUID::toString))
+            val deletedRows = dao.deleteShiftsAndOwnedSnapshots(
+                mutation.shiftIdsToDelete.map(UUID::toString),
+            )
             if (deletedRows != mutation.shiftIdsToDelete.size) {
                 invalid("Una jornada cambió mientras se confirmaba el reemplazo.")
             }
@@ -259,7 +236,6 @@ internal class RoomV2ShiftRepository(
             shift.startTimeSnapshot != template.startTime ||
             shift.endTimeSnapshot != template.endTime ||
             shift.colorArgbSnapshot != template.colorArgb ||
-            shift.sourceScheduleCombinationId != template.legacyScheduleCombinationId ||
             snapshot.workTypeNameSnapshot != type.name ||
             snapshot.workTypeBehaviorSnapshot != type.behavior
         ) {
@@ -274,9 +250,6 @@ internal class RoomV2ShiftRepository(
     private suspend fun requireExistingV2Write(id: UUID): V2ShiftWrite {
         val pair = dao.getShiftWithSnapshot(id.toString())
         if (pair == null) {
-            if (database.shiftDao().getById(id.toString()) != null) {
-                throw LegacyShiftCannotBeUpdatedAsV2Exception()
-            }
             missingShift(id)
         }
         return pair.toDomainWrite()

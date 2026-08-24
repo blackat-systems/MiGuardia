@@ -1,6 +1,6 @@
 package com.blackatsystems.miguardia.core.database.validation
 
-import com.blackatsystems.miguardia.core.database.MiGuardiaDatabase
+import com.blackatsystems.miguardia.core.database.MiGuardiaV2Database
 import com.blackatsystems.miguardia.core.database.mapping.decodeWorkCatalog
 import com.blackatsystems.miguardia.core.database.mapping.encodeSector
 import com.blackatsystems.miguardia.core.database.mapping.toDomain
@@ -16,6 +16,7 @@ import com.blackatsystems.miguardia.core.domain.work.WorkCatalog
 import com.blackatsystems.miguardia.core.domain.work.WorkConfigurationHistory
 import com.blackatsystems.miguardia.core.domain.work.WorkplaceRuleRevision
 import com.blackatsystems.miguardia.core.domain.work.WorkSector
+import com.blackatsystems.miguardia.core.domain.work.normalizedForNewV2WorkPlace
 import com.blackatsystems.miguardia.core.domain.work.resolveWorkplaceRuleSegments
 import java.util.UUID
 
@@ -24,7 +25,7 @@ import java.util.UUID
  * external restore with foreign keys disabled. Call inside the surrounding
  * repository transaction so validation and writing see the same state.
  */
-internal suspend fun MiGuardiaDatabase.requireValidV2LocalData(): WorkConfigurationHistory? = try {
+internal suspend fun MiGuardiaV2Database.requireValidV2LocalData(): WorkConfigurationHistory? = try {
     auditValidV2LocalData()
 } catch (error: InvalidLocalDataException) {
     throw error
@@ -32,10 +33,20 @@ internal suspend fun MiGuardiaDatabase.requireValidV2LocalData(): WorkConfigurat
     throw InvalidLocalDataException("Los datos laborales 2.0 almacenados son inválidos.", error)
 }
 
-private suspend fun MiGuardiaDatabase.auditValidV2LocalData(): WorkConfigurationHistory? {
+private suspend fun MiGuardiaV2Database.auditValidV2LocalData(): WorkConfigurationHistory? {
     val catalogDao = workCatalogDao()
     if (catalogDao.getInvalidV2RowCount() != 0) {
         invalidV2Data("La base contiene filas laborales huérfanas o incoherentes.")
+    }
+    val objectiveDao = objectiveDao()
+    if (objectiveDao.getInvalidBooleanCount() != 0) {
+        invalidV2Data("La base contiene un objetivo con un estado inválido.")
+    }
+    objectiveDao.getAll().forEach { row ->
+        val objective = row.toDomain()
+        if (objective.normalizedForNewV2WorkPlace() != objective) {
+            invalidV2Data("El objetivo ${objective.id} contiene datos sin normalizar.")
+        }
     }
 
     val history = workConfigurationDao().getRoots().toDomainOrNull(
@@ -109,7 +120,7 @@ private suspend fun MiGuardiaDatabase.auditValidV2LocalData(): WorkConfiguration
     return history
 }
 
-internal suspend fun MiGuardiaDatabase.readCatalog(
+internal suspend fun MiGuardiaV2Database.readCatalog(
     timelineId: UUID,
     sector: WorkSector,
 ): WorkCatalog = decodeWorkCatalog(

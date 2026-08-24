@@ -176,8 +176,8 @@ class V2ManualShiftLoadComposeTest {
                 errorMessage = "Error ficticio recuperable",
             )
         }
-        compose.onNodeWithText("Error ficticio recuperable").assertIsDisplayed()
-        compose.onNodeWithText("Reintentar").assertIsDisplayed()
+        compose.onNodeWithText("Error ficticio recuperable").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Reintentar").performScrollTo().assertIsDisplayed()
         compose.onNodeWithTag("v2-manual-confirm-dates").performScrollTo().assertIsNotEnabled()
 
         compose.runOnIdle {
@@ -627,7 +627,6 @@ class V2ManualShiftLoadComposeTest {
             endTime = end,
             colorArgb = 0xFF336699.toInt(),
             isActive = true,
-            legacyScheduleCombinationId = null,
             createdAt = NOW,
             updatedAt = NOW,
         )
@@ -688,7 +687,6 @@ class V2ManualShiftLoadComposeTest {
             position = null,
             status = ShiftStatus.PLANNED,
             sourceObjectiveId = UUID(0L, 2L),
-            sourceScheduleCombinationId = null,
             createdAt = NOW,
             updatedAt = NOW,
         )

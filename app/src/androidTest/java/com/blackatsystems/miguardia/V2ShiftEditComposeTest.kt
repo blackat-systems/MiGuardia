@@ -165,30 +165,25 @@ class V2ShiftEditComposeTest {
     }
 
     @Test
-    fun mixedAndVisuallyEqualRowsStayDistinctByOrdinalUuidAndAvailableActions() {
+    fun visuallyEqualV2RowsStayDistinctByOrdinalUuidAndAvailableActions() {
         val first = write(uuid(20))
         val second = write(uuid(21))
-        val legacy = first.shift.copy(id = uuid(22), sourceObjectiveId = null)
         val state = V2ShiftEditUiState(
             stage = V2ShiftEditStage.DAY_ACTIONS,
             timelineId = TIMELINE_ID,
             date = DATE,
             inspectionState = V2ShiftDayInspectionState.CONTENT,
             dayRows = listOf(
-                row(first, 1, 3),
-                row(second, 2, 3),
-                V2ShiftEditDayRow(legacy, null, 3, 3),
+                row(first, 1, 2),
+                row(second, 2, 2),
             ),
         )
         compose.setContent { MiGuardiaTheme { V2ShiftEditSurfaceHost(state, V2ShiftEditActions()) } }
 
-        compose.onNodeWithContentDescription("Jornada 1 de 3", substring = true).assertIsDisplayed()
-        compose.onNodeWithContentDescription("Jornada 2 de 3", substring = true).assertIsDisplayed()
+        compose.onNodeWithContentDescription("Jornada 1 de 2", substring = true).assertIsDisplayed()
+        compose.onNodeWithContentDescription("Jornada 2 de 2", substring = true).assertIsDisplayed()
         compose.onNodeWithTag("v2-edit-shift-${first.shift.id}").assertIsDisplayed()
         compose.onNodeWithTag("v2-delete-shift-${second.shift.id}").assertIsDisplayed()
-        compose.onNodeWithTag("v2-legacy-shift-${legacy.id}").assertIsDisplayed()
-        compose.onNodeWithTag("v2-edit-shift-${legacy.id}").assertDoesNotExist()
-        compose.onNodeWithTag("v2-delete-shift-${legacy.id}").assertDoesNotExist()
     }
 
     @Test
@@ -368,7 +363,6 @@ class V2ShiftEditComposeTest {
             position = position,
             status = ShiftStatus.PLANNED,
             sourceObjectiveId = OBJECTIVE_ID,
-            sourceScheduleCombinationId = null,
             createdAt = NOW,
             updatedAt = NOW,
         )
@@ -388,7 +382,7 @@ class V2ShiftEditComposeTest {
         val type = WorkType.create(TYPE_ID, TIMELINE_ID, WorkSector.NURSING, "Turno asistencial", NOW)
         val template = WorkTemplate(
             TEMPLATE_ID, TIMELINE_ID, WorkSector.NURSING, PLACE_ID, OBJECTIVE_ID, TYPE_ID,
-            LocalTime.of(8, 0), LocalTime.of(16, 0), 0xFF336699.toInt(), true, null, NOW, NOW,
+            LocalTime.of(8, 0), LocalTime.of(16, 0), 0xFF336699.toInt(), true, NOW, NOW,
         )
         return V2ShiftEditTemplateOption(
             objective = objective,

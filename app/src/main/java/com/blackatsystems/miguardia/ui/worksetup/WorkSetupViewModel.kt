@@ -197,10 +197,6 @@ internal class WorkSetupCoordinator(
 
     fun openOverview() {
         val surface = when (_uiState.value.rootState) {
-            is WorkSetupState.LegacyV1,
-            is WorkSetupState.LegacyV1WithFutureActivation,
-            -> WorkSetupSurface.LEGACY_INFORMATION
-
             is WorkSetupState.V2NeedsFirstSet,
             is WorkSetupState.V2Ready,
             -> WorkSetupSurface.OVERVIEW
@@ -382,7 +378,6 @@ internal class WorkSetupCoordinator(
             endTime = requireNotNull(parseWorkTimeOrNull(state.templateDraft.endTime)),
             colorArgb = requireNotNull(state.templateDraft.colorArgb),
             isActive = true,
-            legacyScheduleCombinationId = null,
             createdAt = timestamp,
             updatedAt = timestamp,
         )
@@ -616,7 +611,6 @@ internal class WorkSetupCoordinator(
             endTime = requireNotNull(parseWorkTimeOrNull(state.templateDraft.endTime)),
             colorArgb = requireNotNull(state.templateDraft.colorArgb),
             isActive = true,
-            legacyScheduleCombinationId = null,
             createdAt = timestamp,
             updatedAt = timestamp,
         )
@@ -755,15 +749,9 @@ private fun WorkSetupSurface.normalizedFor(rootState: WorkSetupState): WorkSetup
 
     WorkSetupState.FreshInstall -> WorkSetupSurface.NONE
 
-    is WorkSetupState.LegacyV1,
-    is WorkSetupState.LegacyV1WithFutureActivation,
-    -> if (this == WorkSetupSurface.LEGACY_INFORMATION) this else WorkSetupSurface.NONE
-
-    is WorkSetupState.V2NeedsFirstSet ->
-        if (this == WorkSetupSurface.LEGACY_INFORMATION) WorkSetupSurface.OVERVIEW else this
+    is WorkSetupState.V2NeedsFirstSet -> this
 
     is WorkSetupState.V2Ready -> when (this) {
-        WorkSetupSurface.LEGACY_INFORMATION -> WorkSetupSurface.OVERVIEW
         WorkSetupSurface.FIRST_WORK_SET -> WorkSetupSurface.COMPLETION
         else -> this
     }

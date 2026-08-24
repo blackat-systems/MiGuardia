@@ -19,6 +19,12 @@ internal interface ObjectiveDao {
     @Query("SELECT * FROM objectives WHERE id = :id")
     suspend fun getById(id: String): ObjectiveEntity?
 
+    @Query("SELECT * FROM objectives ORDER BY id")
+    suspend fun getAll(): List<ObjectiveEntity>
+
+    @Query("SELECT COUNT(*) FROM objectives WHERE isActive NOT IN (0, 1)")
+    suspend fun getInvalidBooleanCount(): Int
+
     @Query("SELECT id FROM objectives WHERE abbreviation = :abbreviation COLLATE NOCASE LIMIT 1")
     suspend fun findIdByAbbreviation(abbreviation: String): String?
 

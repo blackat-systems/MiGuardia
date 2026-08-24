@@ -4,7 +4,6 @@ import androidx.lifecycle.SavedStateHandle
 import com.blackatsystems.miguardia.core.domain.model.MedicalLeave
 import com.blackatsystems.miguardia.core.domain.model.Objective
 import com.blackatsystems.miguardia.core.domain.model.Shift
-import com.blackatsystems.miguardia.core.domain.model.ShiftBatchMutation
 import com.blackatsystems.miguardia.core.domain.model.ShiftOccupancyExpectation
 import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
 import com.blackatsystems.miguardia.core.domain.model.ShiftWorkSnapshot
@@ -34,10 +33,7 @@ import com.blackatsystems.miguardia.core.domain.work.RecentWorkTemplate
 import com.blackatsystems.miguardia.core.domain.work.WorkCatalog
 import com.blackatsystems.miguardia.core.domain.work.WorkConfiguration
 import com.blackatsystems.miguardia.core.domain.work.WorkConfigurationHistory
-import com.blackatsystems.miguardia.core.domain.work.WorkConfigurationOrigin
 import com.blackatsystems.miguardia.core.domain.work.WorkPlace
-import com.blackatsystems.miguardia.core.domain.work.WorkPlaceAdoption
-import com.blackatsystems.miguardia.core.domain.work.WorkPlaceAdoptionResult
 import com.blackatsystems.miguardia.core.domain.work.WorkPlaceUpdate
 import com.blackatsystems.miguardia.core.domain.work.WorkSector
 import com.blackatsystems.miguardia.core.domain.work.WorkSetupState
@@ -181,15 +177,7 @@ class V2ManualShiftLoadCoordinatorTest {
     }
 
     @Test
-    fun legacyAndMixedSectorSelectionsAreRejectedWithoutWriting() {
-        val migratedFixture = fixture(origin = WorkConfigurationOrigin.MIGRATED_V1)
-        val migratedHarness = harness(migratedFixture)
-        migratedHarness.coordinator.start(migratedFixture.readyState)
-        migratedHarness.coordinator.confirmDates(setOf(DATE.minusDays(1), DATE))
-        assertEquals(V2ManualShiftLoadStage.SELECT_DATES, migratedHarness.coordinator.uiState.value.stage)
-        assertNotNull(migratedHarness.coordinator.uiState.value.errorMessage)
-        assertTrue(migratedHarness.v2Shifts.mutations.isEmpty())
-
+    fun mixedSectorSelectionsAreRejectedWithoutWriting() {
         val mixedFixture = fixture(
             revisions = listOf(
                 revision(uuid(41), DATE, WorkSector.PRIVATE_SECURITY),
@@ -712,13 +700,11 @@ class V2ManualShiftLoadCoordinatorTest {
     }
 
     @Test
-    fun adoptedOvernightAndTwentyFourHourTemplatesKeepExactTemporalSnapshots() {
-        val adoptedId = uuid(88)
+    fun overnightAndTwentyFourHourTemplatesKeepExactTemporalSnapshots() {
         val overnightBase = fixture(sector = WorkSector.POLICE)
         val overnightTemplate = overnightBase.template.copy(
             startTime = LocalTime.of(21, 0),
             endTime = LocalTime.of(6, 0),
-            legacyScheduleCombinationId = adoptedId,
         )
         val overnight = overnightBase.copy(
             template = overnightTemplate,
@@ -731,7 +717,6 @@ class V2ManualShiftLoadCoordinatorTest {
         overnightHarness.coordinator.save()
 
         val overnightWrite = overnightHarness.v2Shifts.mutations.single().shiftsToInsert.single()
-        assertEquals(adoptedId, overnightWrite.shift.sourceScheduleCombinationId)
         assertEquals(LocalTime.of(21, 0), overnightWrite.shift.startTimeSnapshot)
         assertEquals(LocalTime.of(6, 0), overnightWrite.shift.endTimeSnapshot)
         assertEquals(selected.plusDays(1), overnightWrite.shift.endAt.atZone(ZONE).toLocalDate())
@@ -752,7 +737,7 @@ class V2ManualShiftLoadCoordinatorTest {
 
         val fullDayWrite = fullDayHarness.v2Shifts.mutations.single().shiftsToInsert.single()
         assertEquals(24L, java.time.Duration.between(fullDayWrite.shift.startAt, fullDayWrite.shift.endAt).toHours())
-        assertNull(fullDayWrite.shift.sourceScheduleCombinationId)
+        assertEquals(fullDay.objective.id, fullDayWrite.shift.sourceObjectiveId)
     }
 
     private fun harness(
@@ -828,11 +813,9 @@ class V2ManualShiftLoadCoordinatorTest {
         sector: WorkSector = WorkSector.PRIVATE_SECURITY,
         revisions: List<EffectiveRevision<WorkConfiguration>> = listOf(revision(uuid(1), DATE, sector)),
         ruleDate: LocalDate = revisions.first().effectiveFrom,
-        origin: WorkConfigurationOrigin = WorkConfigurationOrigin.NEW_V2,
     ): Fixture {
         val timelineId = TIMELINE_ID
         val history = WorkConfigurationHistory(
-            origin = origin,
             timeline = EffectiveDateTimeline(timelineId, revisions),
             perPeriodHoursValues = PerPeriodHoursValues(emptyList()),
         )
@@ -850,7 +833,6 @@ class V2ManualShiftLoadCoordinatorTest {
             endTime = LocalTime.of(16, 0),
             colorArgb = 0xFF336699.toInt(),
             isActive = true,
-            legacyScheduleCombinationId = null,
             createdAt = NOW,
             updatedAt = NOW,
         )
@@ -884,8 +866,7 @@ class V2ManualShiftLoadCoordinatorTest {
             colorArgbSnapshot = 0xFF123456.toInt(),
             position = null,
             status = ShiftStatus.PLANNED,
-            sourceObjectiveId = null,
-            sourceScheduleCombinationId = null,
+            sourceObjectiveId = uuid(2),
             createdAt = NOW,
             updatedAt = NOW,
         )
@@ -971,7 +952,6 @@ private class FakeCatalog(
     }
     override suspend fun createFirstWorkSet(firstWorkSet: FirstWorkSet) = error("No se usa")
     override suspend fun createWorkPlace(newWorkPlace: NewWorkPlace) = error("No se usa")
-    override suspend fun adoptWorkPlace(adoption: WorkPlaceAdoption): WorkPlaceAdoptionResult = error("No se usa")
     override suspend fun updateWorkPlace(update: WorkPlaceUpdate) = error("No se usa")
     override suspend fun setWorkPlaceActive(id: UUID, isActive: Boolean, updatedAt: Instant) = error("No se usa")
     override suspend fun createWorkType(workType: WorkType) = error("No se usa")
@@ -988,10 +968,6 @@ private class FakeObjectives(initial: List<Objective>) : ObjectiveRepository {
     override fun observeActive(): Flow<List<Objective>> = MutableStateFlow(values.filter(Objective::isActive))
     override fun observeAll(): Flow<List<Objective>> = MutableStateFlow(values.toList())
     override suspend fun getById(id: UUID): Objective? = values.firstOrNull { it.id == id }
-    override suspend fun create(objective: Objective) { values += objective }
-    override suspend fun update(objective: Objective) { values.replaceAll { if (it.id == objective.id) objective else it } }
-    override suspend fun hide(id: UUID, updatedAt: Instant) = error("No se usa")
-    override suspend fun delete(id: UUID) = error("No se usa")
 }
 
 private class FakeShifts(initial: List<Shift>) : ShiftRepository {
@@ -1002,10 +978,6 @@ private class FakeShifts(initial: List<Shift>) : ShiftRepository {
     override fun observeEndingAfter(instantExclusive: Instant): Flow<List<Shift>> =
         MutableStateFlow(current.filter { it.endAt > instantExclusive })
     override suspend fun getById(id: UUID): Shift? = current.firstOrNull { it.id == id }
-    override suspend fun insert(shift: Shift) = error("No se usa")
-    override suspend fun update(shift: Shift) = error("No se usa")
-    override suspend fun delete(id: UUID) = error("No se usa")
-    override suspend fun applyBatch(mutation: ShiftBatchMutation) = error("La ruta V1 no debe usarse")
 }
 
 private class FakeMedicalLeaves(
@@ -1028,7 +1000,6 @@ private class FakeV2Shifts : V2ShiftRepository {
     override suspend fun getWorkSnapshot(shiftId: UUID): ShiftWorkSnapshot? = null
     override suspend fun getShift(shiftId: UUID): V2ShiftLookup = V2ShiftLookup.Missing
     override suspend fun insert(write: V2ShiftWrite) = error("No se usa")
-    override suspend fun update(write: V2ShiftWrite) = error("No se usa")
     override suspend fun deleteShift(expected: V2ShiftWrite) = error("No se usa")
     override suspend fun applyV2Batch(
         mutation: V2ShiftBatchMutation,

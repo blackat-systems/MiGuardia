@@ -12,10 +12,6 @@ class DuplicateObjectiveAbbreviationException(
     cause: Throwable? = null,
 ) : LocalDataException("Ya existe un objetivo con la abreviatura $abbreviation.", cause)
 
-class DuplicateScheduleCombinationException(
-    cause: Throwable? = null,
-) : LocalDataException("Ya existe esa combinación exacta de objetivo y horario.", cause)
-
 class InvalidLocalDataException(
     message: String,
     cause: Throwable? = null,
@@ -25,9 +21,6 @@ class DuplicateHolidayDateException(cause: Throwable? = null) :
     LocalDataException("Ya existe un feriado en esa fecha.", cause)
 
 class EmptyShiftNoteException : LocalDataException("La nota no puede estar vacía.")
-
-class MissingNoveltyDescriptionException :
-    LocalDataException("La descripción es obligatoria para esta novedad.")
 
 class ConflictingLocalWriteException(message: String) : LocalDataException(message)
 
@@ -51,12 +44,6 @@ class DuplicateWorkTypeNameException(
 class DuplicateWorkTemplateException(cause: Throwable? = null) :
     LocalDataException("Ya existe ese lugar, tipo de trabajo y horario.", cause)
 
-class AdoptedObjectiveInUseException(cause: Throwable? = null) :
-    LocalDataException(
-        "Ese lugar forma parte de MiGuardia 2.0. Podés archivarlo, pero no eliminar su historia.",
-        cause,
-    )
-
 class MissingWorkplaceRuleException(
     val date: LocalDate,
     cause: Throwable? = null,
@@ -71,9 +58,3 @@ class RetroactiveWorkplaceRuleException(
 )
 
 class InvalidV2SelectionException(message: String) : LocalDataException(message)
-
-class LegacyShiftCannotBeUpdatedAsV2Exception(cause: Throwable? = null) :
-    LocalDataException(
-        "Esta jornada pertenece a MiGuardia 1.0 y no puede convertirse automáticamente.",
-        cause,
-    )

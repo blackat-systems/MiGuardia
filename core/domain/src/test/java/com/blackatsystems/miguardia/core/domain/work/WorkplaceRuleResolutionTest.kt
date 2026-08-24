@@ -175,13 +175,11 @@ class WorkplaceRuleResolutionTest {
             end,
             0xFF336699.toInt(),
             true,
-            null,
             CREATED_AT,
             CREATED_AT,
         ),
         configurationContext = ResolvedWorkConfigurationRevision.resolve(
             history = WorkConfigurationHistory(
-                origin = WorkConfigurationOrigin.NEW_V2,
                 timeline = EffectiveDateTimeline(
                     TIMELINE_ID,
                     listOf(

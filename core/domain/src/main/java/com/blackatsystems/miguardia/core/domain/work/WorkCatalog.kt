@@ -1,7 +1,6 @@
 package com.blackatsystems.miguardia.core.domain.work
 
 import com.blackatsystems.miguardia.core.domain.model.Objective
-import com.blackatsystems.miguardia.core.domain.model.ScheduleCombination
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
@@ -87,7 +86,6 @@ data class WorkTemplate(
     val endTime: LocalTime,
     val colorArgb: Int,
     val isActive: Boolean,
-    val legacyScheduleCombinationId: UUID?,
     val createdAt: Instant,
     val updatedAt: Instant,
 ) {
@@ -192,9 +190,8 @@ data class WorkTemplateUpdate(
                 previous.workPlaceId == updated.workPlaceId &&
                 previous.objectiveId == updated.objectiveId &&
                 previous.workTypeId == updated.workTypeId &&
-                previous.legacyScheduleCombinationId == updated.legacyScheduleCombinationId &&
                 previous.createdAt == updated.createdAt,
-        ) { "Editar una plantilla no puede cambiar su identidad ni procedencia" }
+        ) { "Editar una plantilla no puede cambiar su identidad" }
         require(previous.isActive == updated.isActive) {
             "Archivar o reactivar una plantilla requiere una accion explicita"
         }
@@ -246,9 +243,6 @@ data class FirstWorkSet(
         requireRuleBelongsToPlace(firstRuleRevision, workPlace)
         requireFirstRuleMatchesConfiguration(firstRuleRevision, workPlace, configurationContext)
         requireTemplateBelongsTo(workTemplate, workPlace, workType)
-        require(workTemplate.legacyScheduleCombinationId == null) {
-            "Un lugar nuevo no puede declarar un horario heredado"
-        }
     }
 }
 
@@ -269,136 +263,6 @@ data class NewWorkPlace(
         requireRuleBelongsToPlace(firstRuleRevision, workPlace)
         requireFirstRuleMatchesConfiguration(firstRuleRevision, workPlace, configurationContext)
     }
-}
-
-data class WorkPlaceAdoption(
-    val workPlaceCandidate: WorkPlace,
-    val firstRuleRevisionCandidate: WorkplaceRuleRevision,
-    val configurationContext: ResolvedWorkConfigurationRevision,
-    val workTypeToCreate: WorkType? = null,
-    val workTemplateToCreate: WorkTemplate? = null,
-    val expectedLegacyScheduleCombination: ScheduleCombination? = null,
-) {
-    init {
-        require(workPlaceCandidate.isActive) { "El lugar adoptado debe crearse activo" }
-        requireRuleBelongsToPlace(firstRuleRevisionCandidate, workPlaceCandidate)
-        requireFirstRuleMatchesConfiguration(
-            firstRuleRevisionCandidate,
-            workPlaceCandidate,
-            configurationContext,
-        )
-        workTypeToCreate?.let { workType ->
-            require(workType.isActive) { "El tipo adoptado debe crearse activo" }
-            require(
-                workType.timelineId == workPlaceCandidate.timelineId &&
-                    workType.sector == workPlaceCandidate.sector,
-            ) {
-                "El tipo adoptado no pertenece al mismo contexto laboral"
-            }
-        }
-        workTemplateToCreate?.let { template ->
-            require(template.isActive) { "La plantilla adoptada debe crearse activa" }
-            require(
-                template.timelineId == workPlaceCandidate.timelineId &&
-                    template.sector == workPlaceCandidate.sector &&
-                    template.workPlaceId == workPlaceCandidate.id &&
-                    template.objectiveId == workPlaceCandidate.objectiveId,
-            ) { "La plantilla adoptada no pertenece al lugar indicado" }
-            workTypeToCreate?.let { workType ->
-                requireTemplateBelongsTo(template, workPlaceCandidate, workType)
-            }
-        }
-        require((expectedLegacyScheduleCombination == null) == (workTemplateToCreate?.legacyScheduleCombinationId == null)) {
-            "La procedencia del horario heredado debe declararse de forma completa"
-        }
-        expectedLegacyScheduleCombination?.let { legacy ->
-            val template = requireNotNull(workTemplateToCreate)
-            require(template.legacyScheduleCombinationId == legacy.id) {
-                "La plantilla no referencia el horario heredado esperado"
-            }
-            require(legacy.objectiveId == workPlaceCandidate.objectiveId) {
-                "El horario heredado no pertenece al objetivo adoptado"
-            }
-            require(legacy.startTime == template.startTime && legacy.endTime == template.endTime) {
-                "El horario heredado no conserva el intervalo esperado"
-            }
-        }
-    }
-
-    /**
-     * Resolves the idempotent adoption after the repository has looked up the
-     * already adopted Objective inside its write transaction.
-     */
-    fun resolve(existingWorkPlace: WorkPlace?): ResolvedWorkPlaceAdoption {
-        existingWorkPlace?.let { existing ->
-            require(
-                existing.timelineId == workPlaceCandidate.timelineId &&
-                    existing.sector == workPlaceCandidate.sector &&
-                    existing.objectiveId == workPlaceCandidate.objectiveId,
-            ) { "El lugar existente no corresponde a la adopcion solicitada" }
-        }
-        val resolvedPlace = existingWorkPlace ?: workPlaceCandidate
-        val resolvedTemplate = workTemplateToCreate?.let { template ->
-            template.copy(
-                timelineId = resolvedPlace.timelineId,
-                sector = resolvedPlace.sector,
-                workPlaceId = resolvedPlace.id,
-                objectiveId = resolvedPlace.objectiveId,
-            )
-        }
-        return ResolvedWorkPlaceAdoption(
-            workPlace = resolvedPlace,
-            workPlaceToCreate = if (existingWorkPlace == null) resolvedPlace else null,
-            firstRuleRevisionToCreate = if (existingWorkPlace == null) firstRuleRevisionCandidate else null,
-            workTypeToCreate = workTypeToCreate,
-            workTemplateToCreate = resolvedTemplate,
-            expectedLegacyScheduleCombination = expectedLegacyScheduleCombination,
-            reusedExisting = existingWorkPlace != null,
-        )
-    }
-}
-
-data class ResolvedWorkPlaceAdoption(
-    val workPlace: WorkPlace,
-    val workPlaceToCreate: WorkPlace?,
-    val firstRuleRevisionToCreate: WorkplaceRuleRevision?,
-    val workTypeToCreate: WorkType?,
-    val workTemplateToCreate: WorkTemplate?,
-    val expectedLegacyScheduleCombination: ScheduleCombination?,
-    val reusedExisting: Boolean,
-) {
-    init {
-        require(reusedExisting == (workPlaceToCreate == null)) {
-            "La resolucion de adopcion debe distinguir creacion de reutilizacion"
-        }
-        require((workPlaceToCreate == null) == (firstRuleRevisionToCreate == null)) {
-            "Una adopcion nueva debe crear lugar y primera regla en conjunto"
-        }
-        workPlaceToCreate?.let { candidate ->
-            require(candidate == workPlace) { "El lugar candidato no coincide con la adopcion resuelta" }
-        }
-        firstRuleRevisionToCreate?.let { rule -> requireRuleBelongsToPlace(rule, workPlace) }
-        workTemplateToCreate?.let { template ->
-            require(
-                template.timelineId == workPlace.timelineId &&
-                    template.sector == workPlace.sector &&
-                    template.workPlaceId == workPlace.id &&
-                    template.objectiveId == workPlace.objectiveId,
-            ) { "La plantilla no fue resuelta para el lugar adoptado" }
-        }
-    }
-}
-
-sealed interface WorkPlaceAdoptionResult {
-    val workPlace: WorkPlace
-
-    data class Created(
-        override val workPlace: WorkPlace,
-    ) : WorkPlaceAdoptionResult
-
-    data class Reused(
-        override val workPlace: WorkPlace,
-    ) : WorkPlaceAdoptionResult
 }
 
 data class WorkplaceRuleBackfill(
@@ -434,9 +298,6 @@ data class NewV2Backfill(
         get() = workplaceRuleBackfills.map(WorkplaceRuleBackfill::earlierRevision)
 
     init {
-        require(currentHistory.origin == WorkConfigurationOrigin.NEW_V2) {
-            "Solo una configuracion NEW_V2 puede extenderse hacia atras"
-        }
         val firstCurrentRevision = currentHistory.timeline.revisions.first()
         require(configurationRevision.effectiveFrom.isBefore(firstCurrentRevision.effectiveFrom)) {
             "La nueva revision debe extender realmente la configuracion hacia atras"
@@ -462,7 +323,7 @@ data class NewV2Backfill(
             workplaceRuleBackfills.all { backfill ->
                 !backfill.sourceRevision.effectiveFrom.isBefore(firstCurrentRevision.effectiveFrom)
             },
-        ) { "La regla de origen debe pertenecer a la configuracion NEW_V2 vigente" }
+        ) { "La regla de origen debe pertenecer a la configuracion vigente" }
         require(workplaceRuleRevisions.map { it.id }.distinct().size == workplaceRuleRevisions.size) {
             "Cada regla anterior necesita un identificador unico"
         }
@@ -499,7 +360,7 @@ data class WorkCatalog(
             "Las reglas no pertenecen al catalogo solicitado"
         }
         require(workPlaces.map { it.objectiveId }.distinct().size == workPlaces.size) {
-            "Un objetivo solo puede adoptarse una vez dentro del mismo catalogo"
+            "Un objetivo solo puede vincularse una vez dentro del mismo catalogo"
         }
         require(workTypes.map { it.normalizedNameKey }.distinct().size == workTypes.size) {
             "Los nombres de tipos de trabajo deben ser unicos dentro del catalogo"

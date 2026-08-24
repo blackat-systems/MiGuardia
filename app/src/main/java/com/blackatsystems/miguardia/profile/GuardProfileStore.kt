@@ -18,20 +18,13 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
-const val DEFAULT_GUARD_COMPANY = "Inforce"
-const val GUARD_PROFESSION = "Vigilancia y seguridad"
-
 data class GuardProfile(
     val displayName: String? = null,
-    val company: String = DEFAULT_GUARD_COMPANY,
 )
 
-internal fun normalizeGuardProfile(displayName: String, company: String): GuardProfile {
-    val normalizedCompany = company.trim()
-    require(normalizedCompany.isNotEmpty()) { "La empresa no puede quedar vacía." }
+internal fun normalizeGuardProfile(displayName: String): GuardProfile {
     return GuardProfile(
         displayName = displayName.trim().takeIf(String::isNotEmpty),
-        company = normalizedCompany,
     )
 }
 
@@ -60,27 +53,24 @@ class GuardProfileStore private constructor(
 
     suspend fun current(): GuardProfile = profile.first()
 
-    suspend fun save(displayName: String, company: String): GuardProfile {
-        val normalized = normalizeGuardProfile(displayName, company)
+    suspend fun save(displayName: String): GuardProfile {
+        val normalized = normalizeGuardProfile(displayName)
         dataStore.edit { values ->
             if (normalized.displayName == null) {
                 values.remove(DisplayName)
             } else {
                 values[DisplayName] = normalized.displayName
             }
-            values[Company] = normalized.company
         }
         return normalized
     }
 
     private fun toProfile(values: Preferences): GuardProfile = GuardProfile(
         displayName = values[DisplayName]?.trim()?.takeIf(String::isNotEmpty),
-        company = values[Company]?.trim()?.takeIf(String::isNotEmpty) ?: DEFAULT_GUARD_COMPANY,
     )
 
     private companion object {
         const val DEFAULT_FILE_NAME = "guard_profile.preferences_pb"
         val DisplayName = stringPreferencesKey("display_name")
-        val Company = stringPreferencesKey("company")
     }
 }

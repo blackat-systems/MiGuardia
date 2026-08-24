@@ -72,13 +72,10 @@ enum class V2ShiftDayInspectionState {
 
 data class V2ShiftEditDayRow(
     val shift: Shift,
-    val snapshot: ShiftWorkSnapshot?,
+    val snapshot: ShiftWorkSnapshot,
     val ordinal: Int,
     val total: Int,
-) {
-    val isV2: Boolean
-        get() = snapshot != null
-}
+)
 
 data class V2ShiftEditTemplateOption(
     val objective: Objective,
@@ -114,7 +111,7 @@ data class V2ShiftEditUiState(
         get() = stage != V2ShiftEditStage.IDLE
 
     val hasEditableRows: Boolean
-        get() = dayRows.any(V2ShiftEditDayRow::isV2)
+        get() = dayRows.isNotEmpty()
 
     val selectedOption: V2ShiftEditTemplateOption?
         get() = if (usesHistoricalTemplate) {
@@ -763,12 +760,6 @@ internal class V2ShiftEditCoordinator(
                 V2ShiftLookup.Missing -> throw IllegalStateException(
                     "Las jornadas cambiaron mientras se abría el detalle. Reintentá.",
                 )
-                is V2ShiftLookup.LegacyV1 -> V2ShiftEditDayRow(
-                    shift = lookup.shift,
-                    snapshot = null,
-                    ordinal = index + 1,
-                    total = sorted.size,
-                )
                 is V2ShiftLookup.V2 -> {
                     require(lookup.write.shift.localStartDate == date) {
                         "La jornada ya no pertenece a este día."
@@ -1169,9 +1160,6 @@ internal class V2ShiftEditCoordinator(
 
     private suspend fun requireTargetWrite(id: UUID): V2ShiftWrite = when (val lookup = v2ShiftRepository.getShift(id)) {
         V2ShiftLookup.Missing -> throw IllegalStateException("La jornada ya no existe.")
-        is V2ShiftLookup.LegacyV1 -> throw IllegalStateException(
-            "Esta fila no es una jornada V2 y no puede editarse desde este recorrido.",
-        )
         is V2ShiftLookup.V2 -> lookup.write
     }
 
@@ -1374,7 +1362,6 @@ internal class V2ShiftEditCoordinator(
                 write.shift.position,
                 write.shift.status,
                 write.shift.sourceObjectiveId,
-                write.shift.sourceScheduleCombinationId,
                 write.shift.createdAt,
                 write.shift.updatedAt,
                 write.snapshot.shiftId,

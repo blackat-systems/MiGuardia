@@ -268,8 +268,7 @@ class CalendarProjectionTest {
             colorArgbSnapshot = 0xFF336699.toInt(),
             position = null,
             status = ShiftStatus.PLANNED,
-            sourceObjectiveId = null,
-            sourceScheduleCombinationId = null,
+            sourceObjectiveId = UUID.fromString("00000000-0000-0000-0000-000000000099"),
             createdAt = Instant.EPOCH,
             updatedAt = Instant.EPOCH,
         )

@@ -33,17 +33,11 @@ import com.blackatsystems.miguardia.ui.calendar.CalendarUiState
 import com.blackatsystems.miguardia.ui.exceptions.ExceptionsSurface
 import com.blackatsystems.miguardia.ui.exceptions.ExceptionsActions
 import com.blackatsystems.miguardia.ui.exceptions.ExceptionsUiState
-import com.blackatsystems.miguardia.ui.management.ManagementActions
-import com.blackatsystems.miguardia.ui.management.ManagementSurface
-import com.blackatsystems.miguardia.ui.management.ManagementUiState
 import com.blackatsystems.miguardia.ui.notifications.NotificationSurface
 import com.blackatsystems.miguardia.ui.notifications.NotificationActions
 import com.blackatsystems.miguardia.ui.notifications.NotificationUiState
 import com.blackatsystems.miguardia.ui.photos.PhotosSurface
 import com.blackatsystems.miguardia.ui.photos.PhotosUiState
-import com.blackatsystems.miguardia.ui.profile.ProfileSurface
-import com.blackatsystems.miguardia.ui.profile.ProfileActions
-import com.blackatsystems.miguardia.ui.profile.ProfileUiState
 import com.blackatsystems.miguardia.ui.theme.AppThemeMode
 import com.blackatsystems.miguardia.ui.theme.AppZoom
 import com.blackatsystems.miguardia.ui.theme.MiGuardiaTheme
@@ -54,6 +48,9 @@ import com.blackatsystems.miguardia.ui.weather.WeatherSurface
 import com.blackatsystems.miguardia.ui.weather.WeatherActions
 import com.blackatsystems.miguardia.ui.weather.WeatherUiState
 import com.blackatsystems.miguardia.ui.worksetup.WorkSetupActions
+import com.blackatsystems.miguardia.ui.worksetup.WorkSetupSurface
+import com.blackatsystems.miguardia.ui.worksetup.WorkSetupUiState
+import com.blackatsystems.miguardia.ui.worksetup.previewV2WorkSetupUiState
 import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
@@ -77,10 +74,7 @@ class NavigationDrawerComposeTest {
 
         listOf(
             "Calendario",
-            "Resumen",
             "Mi forma de trabajar",
-            "Perfil laboral",
-            "Objetivos y horarios",
             "Feriados",
             "Vacaciones",
             "Notificaciones",
@@ -99,20 +93,12 @@ class NavigationDrawerComposeTest {
         }
         compose.onNodeWithText("Configuración").assertDoesNotExist()
         compose.onNodeWithTag("main-destination-calendar").assertIsSelected()
-        compose.onNodeWithTag("main-destination-summary").assertIsNotSelected()
         compose.onNodeWithTag("main-destination-appearance").assertIsNotSelected()
     }
 
     @Test
     fun selectingEachMainDestinationClosesDrawerAndShowsItsScreen() {
         setAppContent()
-
-        openDestination(
-            "main-destination-summary",
-            "Horas y eventos del mes seleccionado.",
-        )
-        compose.onNodeWithText("Horas y eventos del mes seleccionado.").assertExists()
-        compose.onNodeWithTag("main-navigation-drawer").assertIsNotDisplayed()
 
         openDestination("main-destination-appearance", "Tema de MiGuardia")
         listOf(
@@ -141,8 +127,6 @@ class NavigationDrawerComposeTest {
                     onDismissDate = {},
                     onRetry = {},
                     workSetupActions = WorkSetupActions(openOverview = { opened += "work-setup" }),
-                    profileActions = ProfileActions(open = { opened += "profile" }),
-                    managementActions = ManagementActions(openSettings = { opened += "objectives" }),
                     exceptionsActions = ExceptionsActions(
                         openHolidays = { month -> opened += "holidays:$month" },
                     ),
@@ -157,8 +141,6 @@ class NavigationDrawerComposeTest {
 
         listOf(
             "drawer-action-work-setup",
-            "drawer-action-profile",
-            "drawer-action-objectives",
             "drawer-action-holidays",
             "drawer-action-vacations",
             "drawer-action-notifications",
@@ -169,8 +151,6 @@ class NavigationDrawerComposeTest {
             assertEquals(
                 listOf(
                     "work-setup",
-                    "profile",
-                    "objectives",
                     "holidays:$expectedMonth",
                     "vacations:$expectedMonth",
                     "notifications",
@@ -212,10 +192,7 @@ class NavigationDrawerComposeTest {
                 )
             }
         }
-        openDestination(
-            "main-destination-summary",
-            "Horas y eventos del mes seleccionado.",
-        )
+        openDestination("main-destination-appearance", "Tema de MiGuardia")
         compose.onNodeWithContentDescription("Abrir menú").performClick()
 
         compose.runOnIdle {
@@ -231,13 +208,12 @@ class NavigationDrawerComposeTest {
     @Test
     fun everyBlockingSurfaceAndDraftKeepsDrawerClosed() {
         val month = YearMonth.of(2026, 8)
-        var management by mutableStateOf(ManagementUiState())
         var exceptions by mutableStateOf(ExceptionsUiState(holidayMonth = month))
         var vacations by mutableStateOf(VacationUiState(visibleMonth = month))
         var photos by mutableStateOf(PhotosUiState(month = month))
         var notifications by mutableStateOf(NotificationUiState())
         var weather by mutableStateOf(WeatherUiState())
-        var profile by mutableStateOf(ProfileUiState())
+        var workSetup by mutableStateOf(previewV2WorkSetupUiState())
         compose.setContent {
             MiGuardiaTheme {
                 MiGuardiaApp(
@@ -248,22 +224,21 @@ class NavigationDrawerComposeTest {
                     onSelectDate = {},
                     onDismissDate = {},
                     onRetry = {},
-                    managementState = management,
                     exceptionsState = exceptions,
                     vacationState = vacations,
                     photosState = photos,
                     notificationState = notifications,
                     weatherState = weather,
-                    profileState = profile,
+                    workSetupState = workSetup,
                 )
             }
         }
         compose.onNodeWithContentDescription("Abrir menú").performClick()
-        compose.runOnIdle { management = ManagementUiState(surface = ManagementSurface.OBJECTIVE_FORM) }
+        compose.runOnIdle { workSetup = workSetup.copy(surface = WorkSetupSurface.OVERVIEW) }
         assertMenuBlocked()
 
         compose.runOnIdle {
-            management = ManagementUiState()
+            workSetup = workSetup.copy(surface = WorkSetupSurface.NONE)
             exceptions = exceptions.copy(surface = ExceptionsSurface.HOLIDAYS)
         }
         assertMenuBlocked()
@@ -287,11 +262,7 @@ class NavigationDrawerComposeTest {
             weather = weather.copy(surface = WeatherSurface.GLOBAL)
         }
         assertMenuBlocked()
-        compose.runOnIdle {
-            weather = weather.copy(surface = WeatherSurface.NONE)
-            profile = profile.copy(surface = ProfileSurface.EDITOR)
-        }
-        assertMenuBlocked()
+        compose.runOnIdle { weather = weather.copy(surface = WeatherSurface.NONE) }
     }
 
     @Test
@@ -338,7 +309,7 @@ class NavigationDrawerComposeTest {
         compose.runOnIdle { landscape = true }
         compose.onNodeWithContentDescription("Abrir menú").performClick()
         compose.onNodeWithTag("main-destination-calendar").assertIsDisplayed()
-        compose.onNodeWithTag("main-destination-summary").assertIsDisplayed()
+        compose.onNodeWithTag("drawer-action-work-setup").assertIsDisplayed()
         compose.onNodeWithTag("main-destination-appearance").performScrollTo().assertIsDisplayed()
     }
 

@@ -1,18 +1,12 @@
 package com.blackatsystems.miguardia.core.domain.work
 
-enum class WorkConfigurationOrigin {
-    MIGRATED_V1,
-    NEW_V2,
-}
-
 data class WorkConfigurationHistory(
-    val origin: WorkConfigurationOrigin,
     val timeline: EffectiveDateTimeline<WorkConfiguration>,
     val perPeriodHoursValues: PerPeriodHoursValues,
 ) {
     init {
-        require(origin != WorkConfigurationOrigin.NEW_V2 || timeline.revisions.isNotEmpty()) {
-            "Una configuración nueva debe tener al menos una revisión"
+        require(timeline.revisions.isNotEmpty()) {
+            "Una configuración laboral debe tener al menos una revisión"
         }
 
         val periodsByDefinition = timeline.revisions

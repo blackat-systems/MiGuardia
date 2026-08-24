@@ -161,7 +161,7 @@ class VacationPersistenceInstrumentedTest {
     }
 
     private fun openStore() {
-        val database = Room.databaseBuilder(context, MiGuardiaDatabase::class.java, DB).build()
+        val database = Room.databaseBuilder(context, MiGuardiaV2Database::class.java, DB).build()
         store = LocalDataStore(database)
     }
 

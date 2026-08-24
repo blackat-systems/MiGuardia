@@ -2,7 +2,7 @@ package com.blackatsystems.miguardia.core.database.repository
 
 import android.database.sqlite.SQLiteConstraintException
 import androidx.room.withTransaction
-import com.blackatsystems.miguardia.core.database.MiGuardiaDatabase
+import com.blackatsystems.miguardia.core.database.MiGuardiaV2Database
 import com.blackatsystems.miguardia.core.database.dao.ShiftNotificationConfigRow
 import com.blackatsystems.miguardia.core.database.entity.ShiftNotificationConfigEntity
 import com.blackatsystems.miguardia.core.database.entity.ShiftNotificationReminderEntity
@@ -15,7 +15,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
 internal class RoomShiftNotificationConfigRepository(
-    private val database: MiGuardiaDatabase,
+    private val database: MiGuardiaV2Database,
 ) : ShiftNotificationConfigRepository {
     private val dao = database.shiftNotificationConfigDao()
 

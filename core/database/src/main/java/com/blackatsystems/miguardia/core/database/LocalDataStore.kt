@@ -5,11 +5,9 @@ import com.blackatsystems.miguardia.core.database.repository.RoomExplicitDayStat
 import com.blackatsystems.miguardia.core.database.repository.RoomHolidayRepository
 import com.blackatsystems.miguardia.core.database.repository.RoomMedicalLeaveRepository
 import com.blackatsystems.miguardia.core.database.repository.RoomObjectiveRepository
-import com.blackatsystems.miguardia.core.database.repository.RoomScheduleCombinationRepository
 import com.blackatsystems.miguardia.core.database.repository.RoomSchedulePhotoRepository
 import com.blackatsystems.miguardia.core.database.repository.RoomShiftRepository
 import com.blackatsystems.miguardia.core.database.repository.RoomShiftNoteRepository
-import com.blackatsystems.miguardia.core.database.repository.RoomShiftNoveltyRepository
 import com.blackatsystems.miguardia.core.database.repository.RoomShiftNotificationConfigRepository
 import com.blackatsystems.miguardia.core.database.repository.RoomVacationRepository
 import com.blackatsystems.miguardia.core.database.repository.RoomV2ShiftRepository
@@ -19,11 +17,9 @@ import com.blackatsystems.miguardia.core.domain.repository.ExplicitDayStatusRepo
 import com.blackatsystems.miguardia.core.domain.repository.HolidayRepository
 import com.blackatsystems.miguardia.core.domain.repository.MedicalLeaveRepository
 import com.blackatsystems.miguardia.core.domain.repository.ObjectiveRepository
-import com.blackatsystems.miguardia.core.domain.repository.ScheduleCombinationRepository
 import com.blackatsystems.miguardia.core.domain.repository.SchedulePhotoRepository
 import com.blackatsystems.miguardia.core.domain.repository.ShiftRepository
 import com.blackatsystems.miguardia.core.domain.repository.ShiftNoteRepository
-import com.blackatsystems.miguardia.core.domain.repository.ShiftNoveltyRepository
 import com.blackatsystems.miguardia.core.domain.repository.ShiftNotificationConfigRepository
 import com.blackatsystems.miguardia.core.domain.repository.VacationRepository
 import com.blackatsystems.miguardia.core.domain.repository.V2ShiftRepository
@@ -32,11 +28,10 @@ import com.blackatsystems.miguardia.core.domain.repository.WorkConfigurationRepo
 import java.io.Closeable
 
 class LocalDataStore internal constructor(
-    private val database: MiGuardiaDatabase,
+    private val database: MiGuardiaV2Database,
+    private val instrumentationResetAllowed: Boolean = false,
 ) : Closeable {
     val objectives: ObjectiveRepository = RoomObjectiveRepository(database)
-    val scheduleCombinations: ScheduleCombinationRepository =
-        RoomScheduleCombinationRepository(database.scheduleCombinationDao())
     val shifts: ShiftRepository = RoomShiftRepository(database)
     val explicitDayStatuses: ExplicitDayStatusRepository =
         RoomExplicitDayStatusRepository(database.explicitDayStatusDao())
@@ -44,7 +39,6 @@ class LocalDataStore internal constructor(
         RoomMedicalLeaveRepository(database)
     val holidays: HolidayRepository = RoomHolidayRepository(database)
     val shiftNotes: ShiftNoteRepository = RoomShiftNoteRepository(database.shiftNoteDao())
-    val shiftNovelties: ShiftNoveltyRepository = RoomShiftNoveltyRepository(database)
     val vacations: VacationRepository = RoomVacationRepository(database)
     val schedulePhotos: SchedulePhotoRepository = RoomSchedulePhotoRepository(database.schedulePhotoDao())
     val shiftNotificationConfigs: ShiftNotificationConfigRepository =
@@ -54,14 +48,26 @@ class LocalDataStore internal constructor(
     val workCatalog: WorkCatalogRepository = RoomWorkCatalogRepository(database)
     val v2Shifts: V2ShiftRepository = RoomV2ShiftRepository(database)
 
+    /** Clears the isolated QA database between instrumentation scenarios. */
+    fun clearAllDataForInstrumentation() {
+        check(instrumentationResetAllowed) {
+            "La limpieza instrumentada sólo está disponible para la base QA aislada."
+        }
+        database.clearAllTables()
+    }
+
     override fun close() = database.close()
 
     companion object {
         fun create(
             context: Context,
-            databaseName: String = MiGuardiaDatabase.DATABASE_NAME,
+            databaseName: String = MiGuardiaV2Database.DATABASE_NAME,
         ): LocalDataStore = LocalDataStore(
-            MiGuardiaDatabase.build(context, databaseName),
+            database = MiGuardiaV2Database.build(context, databaseName),
+            instrumentationResetAllowed =
+                context.packageName == QA_APPLICATION_ID && databaseName == MiGuardiaV2Database.DATABASE_NAME,
         )
+
+        private const val QA_APPLICATION_ID: String = "com.blackatsystems.miguardia.qa"
     }
 }

@@ -2,7 +2,7 @@ package com.blackatsystems.miguardia.core.database.repository
 
 import android.database.sqlite.SQLiteConstraintException
 import androidx.room.withTransaction
-import com.blackatsystems.miguardia.core.database.MiGuardiaDatabase
+import com.blackatsystems.miguardia.core.database.MiGuardiaV2Database
 import com.blackatsystems.miguardia.core.database.mapping.toDomain
 import com.blackatsystems.miguardia.core.database.mapping.toEntity
 import com.blackatsystems.miguardia.core.database.validation.validateRange
@@ -19,7 +19,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
 internal class RoomVacationRepository(
-    private val database: MiGuardiaDatabase,
+    private val database: MiGuardiaV2Database,
 ) : VacationRepository {
     private val dao = database.vacationDao()
     private val medicalLeaveDao = database.medicalLeaveDao()

@@ -225,7 +225,6 @@ internal interface WorkCatalogDao {
                 template.endTime AS template_endTime,
                 template.colorArgb AS template_colorArgb,
                 template.isActive AS template_isActive,
-                template.legacyScheduleCombinationId AS template_legacyScheduleCombinationId,
                 template.createdAtEpochMillis AS template_createdAtEpochMillis,
                 template.updatedAtEpochMillis AS template_updatedAtEpochMillis,
                 recent_usage.lastUsedAtEpochMillis AS lastUsedAtEpochMillis
@@ -342,12 +341,9 @@ private const val INVALID_V2_ROW_COUNT_QUERY: String = """
                 ON work_type.id = template.workTypeId
                AND work_type.timelineId = template.timelineId
                AND work_type.sector = template.sector
-            LEFT JOIN schedule_combinations AS legacy_schedule
-                ON legacy_schedule.id = template.legacyScheduleCombinationId
             WHERE root.timelineId IS NULL
                OR place.id IS NULL
                OR work_type.id IS NULL
-               OR (template.legacyScheduleCombinationId IS NOT NULL AND legacy_schedule.id IS NULL)
                OR template.isActive NOT IN (0, 1)) +
         (SELECT COUNT(*)
             FROM workplace_rule_revisions AS rule
@@ -416,7 +412,12 @@ private const val INVALID_V2_ROW_COUNT_QUERY: String = """
                OR place.id IS NULL
                OR work_type.id IS NULL
                OR template.id IS NULL
+               OR shift.sourceObjectiveId != snapshot.objectiveId
                OR snapshot.workTypeBehaviorSnapshot != 'ACTIVE_WORK') +
+        (SELECT COUNT(*)
+            FROM shifts AS shift
+            LEFT JOIN shift_work_snapshots AS snapshot ON snapshot.shiftId = shift.id
+            WHERE snapshot.shiftId IS NULL) +
         (SELECT COUNT(*)
             FROM work_places AS place
             WHERE NOT EXISTS (
