@@ -17,6 +17,9 @@ fun normalizeOptionalWorkText(rawValue: String?): String? = rawValue
 fun canonicalWorkTypeNameKey(rawName: String): String =
     normalizeRequiredWorkText(rawName, "El nombre del tipo de trabajo").uppercase(Locale.ROOT)
 
+fun canonicalExtraWorkClassNameKey(rawName: String): String =
+    normalizeRequiredWorkText(rawName, "El nombre de la clase extra").uppercase(Locale.ROOT)
+
 fun normalizeNewWorkPlaceAbbreviation(rawAbbreviation: String): String =
     normalizeWorkPlaceAbbreviation(rawAbbreviation).also(::requireNewAbbreviationLength)
 

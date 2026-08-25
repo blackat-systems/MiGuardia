@@ -34,7 +34,7 @@ class LocalDataStoreInstrumentedTest {
     }
 
     @Test
-    fun v2DatabaseStartsAtVersionTwoWithTheExactTwentyTwoTables() {
+    fun v2DatabaseStartsAtVersionThreeWithTheExactTwentyFiveTables() {
         database = MiGuardiaV2Database.build(context)
         val sqlite = database.openHelper.writableDatabase
         val tables = linkedSetOf<String>()
@@ -45,7 +45,7 @@ class LocalDataStoreInstrumentedTest {
             while (cursor.moveToNext()) tables += cursor.getString(0)
         }
 
-        assertEquals(2, sqlite.version)
+        assertEquals(3, sqlite.version)
         assertEquals(EXPECTED_TABLES, tables)
         assertFalse("schedule_combinations" in tables)
         assertFalse("shift_novelties" in tables)
@@ -78,7 +78,7 @@ class LocalDataStoreInstrumentedTest {
     }
 
     @Test
-    fun exportedV2SchemasKeepVersionOneAndMatchVersionTwo() {
+    fun exportedV2SchemasKeepVersionsOneAndTwoAndMatchVersionThree() {
         val assetRoot = "com.blackatsystems.miguardia.core.database.MiGuardiaV2Database"
         val versionOne = InstrumentationRegistry.getInstrumentation().context.assets.open(
             "$assetRoot/1.json",
@@ -86,9 +86,13 @@ class LocalDataStoreInstrumentedTest {
         val versionTwo = InstrumentationRegistry.getInstrumentation().context.assets.open(
             "$assetRoot/2.json",
         ).use { input -> input.readBytes() }
+        val versionThree = InstrumentationRegistry.getInstrumentation().context.assets.open(
+            "$assetRoot/3.json",
+        ).use { input -> input.readBytes() }
 
         assertEquals(EXPECTED_SCHEMA_ONE_SHA256, sha256(versionOne))
         assertEquals(EXPECTED_SCHEMA_TWO_SHA256, sha256(versionTwo))
+        assertEquals(EXPECTED_SCHEMA_THREE_SHA256, sha256(versionThree))
     }
 
     @Test
@@ -164,6 +168,7 @@ class LocalDataStoreInstrumentedTest {
         const val EXPECTED_SCHEMA_ONE_SHA256 =
             "5769c0f57667f7fa5a7c1c1da5474474537094a759f8fa4a0d66e6ef37c1287e"
         const val EXPECTED_SCHEMA_TWO_SHA256 = "e5a79603a6dd79532ef9f4a8f9ff241a6588424513107837aee707186c046c50"
+        const val EXPECTED_SCHEMA_THREE_SHA256 = "39b7c4aeb0c2098acbe9fe9ffc7fb308c4aa30aa04f30a3a69b770a5cdda9428"
         val EXPECTED_TABLES = linkedSetOf(
             "objectives",
             "shifts",
@@ -187,6 +192,9 @@ class LocalDataStoreInstrumentedTest {
             "recurring_plans",
             "recurring_plan_revisions",
             "recurring_occurrences",
+            "extra_work_classes",
+            "shift_actual_records",
+            "shift_extra_intervals",
         )
     }
 }

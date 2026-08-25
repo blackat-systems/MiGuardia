@@ -50,6 +50,77 @@ class V2DatabaseMigrationInstrumentedTest {
         migrated.close()
     }
 
+    @Test
+    fun migrationTwoToThreePreservesAllTwentyTwoPopulatedTablesAndCreatesExactEmptySchema() {
+        helper.createDatabase(DB_TWO_TO_THREE, 1).apply {
+            seedEveryVersionOneTable()
+            close()
+        }
+        helper.runMigrationsAndValidate(
+            DB_TWO_TO_THREE,
+            2,
+            true,
+            MiGuardiaV2Database.MIGRATION_1_2,
+        ).apply {
+            seedEveryVersionTwoRecurringTable()
+            close()
+        }
+
+        val migrated = helper.runMigrationsAndValidate(
+            DB_TWO_TO_THREE,
+            3,
+            true,
+            MiGuardiaV2Database.MIGRATION_2_3,
+        )
+
+        VERSION_TWO_TABLES.forEach { table ->
+            assertEquals("La migración debe preservar $table", 1, migrated.scalar("SELECT COUNT(*) FROM `$table`"))
+        }
+        VERSION_THREE_TABLES.forEach { table ->
+            assertEquals("La tabla $table debe comenzar vacía", 0, migrated.scalar("SELECT COUNT(*) FROM `$table`"))
+        }
+        assertEquals(
+            25,
+            migrated.scalar(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' " +
+                    "AND name NOT LIKE 'sqlite_%' AND name NOT LIKE 'android_%' " +
+                    "AND name != 'room_master_table'",
+            ),
+        )
+        assertEquals(1, migrated.scalar("SELECT COUNT(*) FROM pragma_index_list('shift_work_snapshots') " +
+            "WHERE name = 'index_shift_work_snapshots_shiftId_timelineId_sector' AND `unique` = 1"))
+        assertForeignKey(migrated, "shift_actual_records", "shift_work_snapshots", "RESTRICT")
+        assertForeignKey(migrated, "shift_extra_intervals", "shift_actual_records", "CASCADE")
+        assertForeignKey(migrated, "shift_extra_intervals", "extra_work_classes", "RESTRICT")
+        assertHealthy(migrated)
+        migrated.close()
+    }
+
+    @Test
+    fun migrationChainOneToTwoToThreePreservesVersionOneData() {
+        helper.createDatabase(DB_CHAIN, 1).apply {
+            seedEveryVersionOneTable()
+            close()
+        }
+
+        val migrated = helper.runMigrationsAndValidate(
+            DB_CHAIN,
+            3,
+            true,
+            MiGuardiaV2Database.MIGRATION_1_2,
+            MiGuardiaV2Database.MIGRATION_2_3,
+        )
+
+        VERSION_ONE_TABLES.forEach { table ->
+            assertEquals("La cadena debe preservar $table", 1, migrated.scalar("SELECT COUNT(*) FROM `$table`"))
+        }
+        (NEW_TABLES + VERSION_THREE_TABLES).forEach { table ->
+            assertEquals("La cadena debe iniciar $table vacía", 0, migrated.scalar("SELECT COUNT(*) FROM `$table`"))
+        }
+        assertHealthy(migrated)
+        migrated.close()
+    }
+
     private fun androidx.sqlite.db.SupportSQLiteDatabase.seedEveryVersionOneTable() {
         execSQL("INSERT INTO work_configuration_roots VALUES ('timeline-1', 1)")
         execSQL("INSERT INTO per_period_hours_definitions VALUES ('definition-1', 'timeline-1', 'MONTHLY', NULL, NULL, NULL)")
@@ -114,6 +185,57 @@ class V2DatabaseMigrationInstrumentedTest {
         execSQL("INSERT INTO shift_notification_reminders VALUES ('shift-1', 30)")
     }
 
+    private fun androidx.sqlite.db.SupportSQLiteDatabase.seedEveryVersionTwoRecurringTable() {
+        execSQL("INSERT INTO recurring_plans VALUES ('plan-1', 'timeline-1', 'PRIVATE_SECURITY', 1)")
+        execSQL(
+            """INSERT INTO recurring_plan_revisions (
+                id, planId, revisionNumber, effectiveFrom, kind, endDateInclusive, patternKind,
+                weekdaysMask, intervalCount, monthlyOrdinal, monthlyDayOfWeek, templateId,
+                workPlaceId, objectiveId, workTypeId, objectiveNameSnapshot,
+                objectiveAbbreviationSnapshot, objectiveAddressSnapshot, workTypeNameSnapshot,
+                workTypeBehaviorSnapshot, startTimeSnapshot, endTimeSnapshot, colorArgbSnapshot,
+                positionSnapshot, zoneId, createdAtEpochMillis
+            ) VALUES (
+                'revision-recurring-1', 'plan-1', 1, '2026-08-23', 'ACTIVE', '2026-08-23',
+                'WEEKDAYS', 64, NULL, NULL, NULL, 'template-1', 'place-1', 'objective-1',
+                'type-1', 'Hospital migrado', 'HMI', 'Dirección ficticia', 'Jornada habitual',
+                'ACTIVE_WORK', '08:00', '16:00', -13408615, NULL, 'America/Argentina/Cordoba', 1
+            )""".trimIndent(),
+        )
+        execSQL(
+            "INSERT INTO recurring_occurrences VALUES " +
+                "('plan-1', '2026-08-23', 'revision-recurring-1', 'shift-1', 'AUTOMATIC', 1, 1)",
+        )
+    }
+
+    private fun assertHealthy(database: androidx.sqlite.db.SupportSQLiteDatabase) {
+        database.query("PRAGMA integrity_check").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals("ok", cursor.getString(0))
+        }
+        database.query("PRAGMA foreign_key_check").use { cursor -> assertFalse(cursor.moveToFirst()) }
+    }
+
+    private fun assertForeignKey(
+        database: androidx.sqlite.db.SupportSQLiteDatabase,
+        childTable: String,
+        parentTable: String,
+        expectedDeleteAction: String,
+    ) {
+        database.query("PRAGMA foreign_key_list(`$childTable`)").use { cursor ->
+            val tableColumn = cursor.getColumnIndexOrThrow("table")
+            val deleteColumn = cursor.getColumnIndexOrThrow("on_delete")
+            var found = false
+            while (cursor.moveToNext()) {
+                if (cursor.getString(tableColumn) == parentTable) {
+                    assertEquals(expectedDeleteAction, cursor.getString(deleteColumn))
+                    found = true
+                }
+            }
+            assertTrue("Falta la FK $childTable → $parentTable", found)
+        }
+    }
+
     private fun androidx.sqlite.db.SupportSQLiteDatabase.scalar(sql: String): Int = query(sql).use { cursor ->
         check(cursor.moveToFirst())
         cursor.getInt(0)
@@ -126,6 +248,8 @@ class V2DatabaseMigrationInstrumentedTest {
 
     private companion object {
         const val DB = "v2-migration-1-2-test.db"
+        const val DB_TWO_TO_THREE = "v2-migration-2-3-test.db"
+        const val DB_CHAIN = "v2-migration-1-3-test.db"
         val VERSION_ONE_TABLES = listOf(
             "objectives",
             "shifts",
@@ -151,6 +275,12 @@ class V2DatabaseMigrationInstrumentedTest {
             "recurring_plans",
             "recurring_plan_revisions",
             "recurring_occurrences",
+        )
+        val VERSION_TWO_TABLES = VERSION_ONE_TABLES + NEW_TABLES
+        val VERSION_THREE_TABLES = listOf(
+            "extra_work_classes",
+            "shift_actual_records",
+            "shift_extra_intervals",
         )
     }
 }

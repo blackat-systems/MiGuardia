@@ -1000,7 +1000,10 @@ private class FakeV2Shifts : V2ShiftRepository {
     override suspend fun getWorkSnapshot(shiftId: UUID): ShiftWorkSnapshot? = null
     override suspend fun getShift(shiftId: UUID): V2ShiftLookup = V2ShiftLookup.Missing
     override suspend fun insert(write: V2ShiftWrite) = error("No se usa")
-    override suspend fun deleteShift(expected: V2ShiftWrite) = error("No se usa")
+    override suspend fun deleteShift(
+        expected: V2ShiftWrite,
+        expectedActual: com.blackatsystems.miguardia.core.domain.model.ShiftActualExpectation?,
+    ) = error("No se usa")
     override suspend fun applyV2Batch(
         mutation: V2ShiftBatchMutation,
         expectedOccupancy: ShiftOccupancyExpectation,

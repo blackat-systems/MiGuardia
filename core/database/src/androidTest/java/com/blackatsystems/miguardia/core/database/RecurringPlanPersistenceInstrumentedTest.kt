@@ -15,6 +15,9 @@ import com.blackatsystems.miguardia.core.domain.model.RecurringPlanRevisionKind
 import com.blackatsystems.miguardia.core.domain.model.RecurringOccurrenceState
 import com.blackatsystems.miguardia.core.domain.model.ShiftNote
 import com.blackatsystems.miguardia.core.domain.model.ShiftNotificationConfig
+import com.blackatsystems.miguardia.core.domain.model.ShiftActualDifferenceChoice
+import com.blackatsystems.miguardia.core.domain.model.ShiftActualDraft
+import com.blackatsystems.miguardia.core.domain.model.ShiftActualWriteResult
 import com.blackatsystems.miguardia.core.domain.model.ShiftOccupancyExpectation
 import com.blackatsystems.miguardia.core.domain.model.V2ShiftBatchMutation
 import com.blackatsystems.miguardia.core.domain.model.V2ShiftLookup
@@ -27,9 +30,12 @@ import com.blackatsystems.miguardia.core.domain.shift.editV2ShiftPositionOnly
 import com.blackatsystems.miguardia.core.domain.shift.planNewRecurringPlan
 import com.blackatsystems.miguardia.core.domain.shift.planRecurringFinalization
 import com.blackatsystems.miguardia.core.domain.shift.planRecurringRevision
+import com.blackatsystems.miguardia.core.domain.model.buildShiftActualSaveMutation
 import com.blackatsystems.miguardia.core.database.mapping.toEntity
 import java.time.Clock
+import java.time.Duration
 import java.time.LocalDate
+import java.time.ZoneOffset
 import java.util.UUID
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -86,6 +92,47 @@ class RecurringPlanPersistenceInstrumentedTest {
             store.recurringPlans.getOccurrenceForShift(writes.first().shift.id)?.planId,
         )
         assertDatabaseIntegrity()
+    }
+
+    @Test
+    fun savingActualHoursKeepsTheRecurringOccurrenceAutomatic() = runBlocking {
+        val write = store.buildTestV2Write(fixture, V2TestIds.uuid(209), DATE)
+        createPlan(listOf(DATE), listOf(write))
+        val planBefore = requireNotNull(store.recurringPlans.getPlan(PLAN_ID))
+        val expectation = requireNotNull(store.shiftActuals.getExpectation(write.shift.id))
+        assertEquals(
+            RecurringOccurrenceState.AUTOMATIC,
+            requireNotNull(expectation.recurringOccurrence).state,
+        )
+        val mutation = requireNotNull(
+            buildShiftActualSaveMutation(
+                expectation = expectation,
+                draft = ShiftActualDraft(
+                    actualStart = write.shift.startAt,
+                    actualEnd = write.shift.endAt.plus(Duration.ofMinutes(30)),
+                    differenceReason = "Salida posterior ficticia",
+                    explanation = null,
+                    differenceChoice = ShiftActualDifferenceChoice.ALL_REGULAR,
+                    classSelection = null,
+                    fragments = emptyList(),
+                ),
+                clock = Clock.fixed(write.shift.endAt.plus(Duration.ofHours(4)), ZoneOffset.UTC),
+                timestamp = write.shift.endAt.plusSeconds(60),
+            ),
+        )
+
+        assertTrue(store.shiftActuals.save(mutation) is ShiftActualWriteResult.Saved)
+
+        assertEquals(planBefore, store.recurringPlans.getPlan(PLAN_ID))
+        assertEquals(
+            RecurringOccurrenceState.AUTOMATIC,
+            store.recurringPlans.getOccurrenceForShift(write.shift.id)?.state,
+        )
+        assertEquals(
+            RecurringOccurrenceState.AUTOMATIC,
+            store.shiftActuals.getExpectation(write.shift.id)?.recurringOccurrence?.state,
+        )
+        assertEquals(V2ShiftLookup.V2(write), store.v2Shifts.getShift(write.shift.id))
     }
 
     @Test

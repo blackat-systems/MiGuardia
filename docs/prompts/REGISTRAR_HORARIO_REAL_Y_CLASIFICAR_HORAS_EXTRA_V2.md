@@ -1,6 +1,6 @@
 # Registrar horario real y clasificar horas extra V2
 
-- Estado: **HABILITADO — NO IMPLEMENTADO**
+- Estado: **CERRADO — INTEGRADO POR MAIN**
 - Fecha: 2026-08-25
 - Proyecto obligatorio:
   `C:\Users\Joaquin\Desktop\chatgptprojects\MiGuardia-2.0`
@@ -813,3 +813,21 @@ La dependencia se considera candidata sólo cuando:
 - no se implementó avance, extras independientes ni otro bloque futuro;
 - el diff está limpio de whitespace, sin staged y sin cambios fuera de alcance;
 - el handoff vuelve a MAIN sin commit ni push.
+
+## CIERRE MAIN — 2026-08-25
+
+MAIN auditó el candidato, corrigió defectos de dominio, persistencia, interfaz
+y pruebas, y verificó el bloque en JVM, lint, compilación, Samsung API 36 y
+emulador API 26. Room V2 quedó en versión 3 con migración explícita `2→3` y
+tres tablas para clases, registros reales y fragmentos extra.
+
+La validación final obtuvo 364/364 pruebas JVM, 82/82 pruebas de aplicación y
+84/84 pruebas Room en cada entorno Android. La revisión visual directa detectó
+y corrigió el margen seguro de la pantalla de horario real frente a la barra
+del sistema.
+
+Evidencia durable:
+`docs/audits/2026-08-25-horario-real-y-horas-extra-v2.md`.
+
+Este prompt no debe volver a ejecutarse salvo que MAIN documente una regresión
+y Joaquin autorice reabrirlo.

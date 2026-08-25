@@ -2,6 +2,7 @@ package com.blackatsystems.miguardia.core.domain.repository
 
 import com.blackatsystems.miguardia.core.domain.model.ShiftWorkSnapshot
 import com.blackatsystems.miguardia.core.domain.model.ShiftOccupancyExpectation
+import com.blackatsystems.miguardia.core.domain.model.ShiftActualExpectation
 import com.blackatsystems.miguardia.core.domain.model.V2ShiftBatchMutation
 import com.blackatsystems.miguardia.core.domain.model.V2ShiftLookup
 import com.blackatsystems.miguardia.core.domain.model.V2ShiftWrite
@@ -18,7 +19,10 @@ interface V2ShiftRepository {
 
     suspend fun insert(write: V2ShiftWrite)
 
-    suspend fun deleteShift(expected: V2ShiftWrite)
+    suspend fun deleteShift(
+        expected: V2ShiftWrite,
+        expectedActual: ShiftActualExpectation? = null,
+    )
 
     suspend fun applyV2Batch(
         mutation: V2ShiftBatchMutation,

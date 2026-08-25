@@ -127,6 +127,7 @@ data class V2ShiftBatchMutation(
     val shiftsToInsert: List<V2ShiftWrite> = emptyList(),
     val shiftsToUpdate: List<V2ShiftWrite> = emptyList(),
     val explicitDayStatusDatesToClear: Set<LocalDate> = emptySet(),
+    val actualExpectations: Map<UUID, ShiftActualExpectation> = emptyMap(),
 ) {
     init {
         val insertedIds = shiftsToInsert.map { it.shift.id }
@@ -142,6 +143,9 @@ data class V2ShiftBatchMutation(
         }
         require(shiftIdsToDelete.none(insertedIds::contains) && shiftIdsToDelete.none(updatedIds::contains)) {
             "Una jornada no puede borrarse y escribirse en el mismo lote"
+        }
+        require(actualExpectations.keys.all { it in shiftIdsToDelete || it in updatedIds }) {
+            "Una expectativa de horario real sólo puede acompañar una jornada afectada"
         }
         val writes = shiftsToInsert + shiftsToUpdate
         val timelines = writes.map { it.snapshot.timelineId }.distinct()

@@ -6,13 +6,18 @@ import com.blackatsystems.miguardia.core.database.mapping.decodeRecurringPlanAgg
 import com.blackatsystems.miguardia.core.database.mapping.encodeSector
 import com.blackatsystems.miguardia.core.database.mapping.toDomain
 import com.blackatsystems.miguardia.core.database.mapping.toDomainOrNull
+import com.blackatsystems.miguardia.core.database.mapping.toDomainActualRecord
+import com.blackatsystems.miguardia.core.database.mapping.toDomainExtraInterval
+import com.blackatsystems.miguardia.core.database.mapping.toDomainExtraWorkClass
 import com.blackatsystems.miguardia.core.database.mapping.toDomainWorkPlace
 import com.blackatsystems.miguardia.core.database.mapping.toDomainWorkSnapshot
 import com.blackatsystems.miguardia.core.database.mapping.toDomainWorkTemplate
 import com.blackatsystems.miguardia.core.database.mapping.toDomainWorkType
 import com.blackatsystems.miguardia.core.database.mapping.toDomainRuleRevision
 import com.blackatsystems.miguardia.core.domain.model.RecurringPlanRevisionKind
+import com.blackatsystems.miguardia.core.domain.model.ShiftActualAggregate
 import com.blackatsystems.miguardia.core.domain.model.V2ShiftWrite
+import com.blackatsystems.miguardia.core.domain.model.requireValidStoredShiftActual
 import com.blackatsystems.miguardia.core.domain.repository.InvalidLocalDataException
 import com.blackatsystems.miguardia.core.domain.work.WorkCatalog
 import com.blackatsystems.miguardia.core.domain.work.WorkConfigurationHistory
@@ -124,7 +129,56 @@ private suspend fun MiGuardiaV2Database.auditValidV2LocalData(): WorkConfigurati
         catalogs = catalogs,
         writes = writes,
     )
+    validateShiftActuals(history = history, writes = writes)
     return history
+}
+
+private suspend fun MiGuardiaV2Database.validateShiftActuals(
+    history: WorkConfigurationHistory?,
+    writes: List<V2ShiftWrite>,
+) {
+    val actualDao = shiftActualDao()
+    if (actualDao.getInvalidReferenceOrBooleanCount() != 0) {
+        invalidV2Data("La base contiene horarios reales o clases extra huérfanos o incoherentes.")
+    }
+    val classes = actualDao.getAllClasses().map { it.toDomainExtraWorkClass() }
+    val storedHistory = history
+    if (classes.isNotEmpty() && storedHistory == null) {
+        invalidV2Data("Hay clases extra sin una configuración laboral.")
+    }
+    classes.forEach { extraClass ->
+        if (
+            storedHistory?.timeline?.id != extraClass.timelineId ||
+            storedHistory.timeline.revisions.none { it.value.sector == extraClass.sector }
+        ) {
+            invalidV2Data("La clase extra ${extraClass.id} pertenece a otra forma de trabajar.")
+        }
+    }
+    val classesById = classes.associateBy { it.id }
+    val records = actualDao.getAllRecords().associateBy { it.shiftId }
+    val intervals = actualDao.getAllIntervals().groupBy { it.shiftId }
+    if (intervals.keys.any { it !in records.keys }) {
+        invalidV2Data("Hay fragmentos extra sin su horario real.")
+    }
+    val writesById = writes.associateBy { it.shift.id.toString() }
+    records.forEach { (shiftId, recordEntity) ->
+        val planned = writesById[shiftId]
+            ?: invalidV2Data("El horario real $shiftId no conserva su jornada planificada.")
+        val aggregate = ShiftActualAggregate(
+            record = recordEntity.toDomainActualRecord(),
+            extraIntervals = intervals[shiftId].orEmpty().map { it.toDomainExtraInterval() },
+        )
+        val classIds = aggregate.extraIntervals.map { it.extraWorkClassId }.distinct()
+        if (classIds.size > 1) invalidV2Data("El horario real $shiftId mezcla clases extra.")
+        val selectedClass = classIds.singleOrNull()?.let { classId ->
+            classesById[classId] ?: invalidV2Data("El horario real $shiftId referencia una clase inexistente.")
+        }
+        try {
+            requireValidStoredShiftActual(planned, aggregate, selectedClass)
+        } catch (error: IllegalArgumentException) {
+            throw InvalidLocalDataException("El horario real $shiftId contiene datos inválidos.", error)
+        }
+    }
 }
 
 private suspend fun MiGuardiaV2Database.validateRecurringPlans(

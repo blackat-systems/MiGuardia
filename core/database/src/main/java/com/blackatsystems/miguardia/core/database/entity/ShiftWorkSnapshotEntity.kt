@@ -52,6 +52,7 @@ import androidx.room.PrimaryKey
         ),
     ],
     indices = [
+        Index(value = ["shiftId", "timelineId", "sector"], unique = true),
         Index(value = ["timelineId"]),
         Index(value = ["configurationRevisionId"]),
         Index(value = ["workPlaceId", "timelineId", "sector", "objectiveId"]),

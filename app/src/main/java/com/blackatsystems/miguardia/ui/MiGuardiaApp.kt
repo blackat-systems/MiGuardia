@@ -52,6 +52,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -123,6 +124,11 @@ import com.blackatsystems.miguardia.ui.management.V2ShiftEditActions
 import com.blackatsystems.miguardia.ui.management.V2ShiftEditSurfaceHost
 import com.blackatsystems.miguardia.ui.management.V2ShiftEditUiState
 import com.blackatsystems.miguardia.ui.management.V2ShiftEditViewModel
+import com.blackatsystems.miguardia.ui.management.V2ShiftActualActions
+import com.blackatsystems.miguardia.ui.management.V2ShiftActualDetailCard
+import com.blackatsystems.miguardia.ui.management.V2ShiftActualSurfaceHost
+import com.blackatsystems.miguardia.ui.management.V2ShiftActualUiState
+import com.blackatsystems.miguardia.ui.management.V2ShiftActualViewModel
 import com.blackatsystems.miguardia.ui.nextevent.NextEventCard
 import com.blackatsystems.miguardia.ui.nextevent.NextEventUiState
 import com.blackatsystems.miguardia.ui.nextevent.NextEventViewModel
@@ -358,6 +364,7 @@ fun MiGuardiaApp(
     nextEventViewModel: NextEventViewModel,
     v2ManualShiftLoadViewModel: V2ManualShiftLoadViewModel,
     v2ShiftEditViewModel: V2ShiftEditViewModel,
+    v2ShiftActualViewModel: V2ShiftActualViewModel,
     v2RecurringPlanViewModel: V2RecurringPlanViewModel,
     exceptionsViewModel: ExceptionsViewModel,
     vacationViewModel: VacationViewModel,
@@ -376,6 +383,7 @@ fun MiGuardiaApp(
     val nextEventState by nextEventViewModel.uiState.collectAsStateWithLifecycle()
     val v2ManualShiftLoadState by v2ManualShiftLoadViewModel.uiState.collectAsStateWithLifecycle()
     val v2ShiftEditState by v2ShiftEditViewModel.uiState.collectAsStateWithLifecycle()
+    val v2ShiftActualState by v2ShiftActualViewModel.uiState.collectAsStateWithLifecycle()
     val v2RecurringState by v2RecurringPlanViewModel.uiState.collectAsStateWithLifecycle()
     val exceptionsState by exceptionsViewModel.uiState.collectAsStateWithLifecycle()
     val vacationState by vacationViewModel.uiState.collectAsStateWithLifecycle()
@@ -402,6 +410,8 @@ fun MiGuardiaApp(
         v2ManualShiftLoadActions = V2ManualShiftLoadActions.from(v2ManualShiftLoadViewModel),
         v2ShiftEditState = v2ShiftEditState,
         v2ShiftEditActions = V2ShiftEditActions.from(v2ShiftEditViewModel),
+        v2ShiftActualState = v2ShiftActualState,
+        v2ShiftActualActions = V2ShiftActualActions.from(v2ShiftActualViewModel),
         v2RecurringState = v2RecurringState,
         v2RecurringActions = V2RecurringActions.from(v2RecurringPlanViewModel),
         exceptionsState = exceptionsState,
@@ -448,6 +458,8 @@ fun MiGuardiaApp(
     v2ManualShiftLoadActions: V2ManualShiftLoadActions = V2ManualShiftLoadActions(),
     v2ShiftEditState: V2ShiftEditUiState = V2ShiftEditUiState(),
     v2ShiftEditActions: V2ShiftEditActions = V2ShiftEditActions(),
+    v2ShiftActualState: V2ShiftActualUiState = V2ShiftActualUiState(),
+    v2ShiftActualActions: V2ShiftActualActions = V2ShiftActualActions(),
     v2RecurringState: V2RecurringUiState = V2RecurringUiState(),
     v2RecurringActions: V2RecurringActions = V2RecurringActions(),
     exceptionsState: ExceptionsUiState = ExceptionsUiState(holidayMonth = calendarState.visibleMonth),
@@ -471,7 +483,8 @@ fun MiGuardiaApp(
 ) {
     val preserveV2WriteSurface =
         (v2ShiftEditState.isBlocking && v2ShiftEditState.isSaving) ||
-            (v2RecurringState.isBlocking && v2RecurringState.isSaving)
+            (v2RecurringState.isBlocking && v2RecurringState.isSaving) ||
+            (v2ShiftActualState.isBlocking && v2ShiftActualState.isSaving)
     if (
         !preserveV2WriteSurface &&
         (
@@ -498,6 +511,7 @@ fun MiGuardiaApp(
             v2RecurringState.isBlocking &&
             v2ReadyState.timelineId == v2RecurringState.timelineId
         )
+    val v2ShiftActualActive = v2ShiftActualState.isBlocking
     var destination by rememberSaveable { androidx.compose.runtime.mutableStateOf(MainDestination.CALENDAR) }
     val displayedCalendarState = if (
         !v2ManualLoadActive && calendarState.interactionMode == CalendarInteractionMode.EDIT
@@ -527,7 +541,8 @@ fun MiGuardiaApp(
         workSetupState.surface != WorkSetupSurface.NONE ||
         v2ManualLoadActive ||
         v2ShiftEditActive ||
-        v2RecurringActive
+        v2RecurringActive ||
+        v2ShiftActualActive
     val canOpenDrawer = !hasBlockingSurface && selectedDay == null
     LaunchedEffect(calendarNavigationRequest) {
         if (calendarNavigationRequest > 0) {
@@ -538,6 +553,7 @@ fun MiGuardiaApp(
     LaunchedEffect(workSetupState.rootState) {
         v2ShiftEditActions.resume(workSetupState.rootState)
         v2RecurringActions.resume(workSetupState.rootState)
+        v2ShiftActualActions.resume(workSetupState.rootState)
     }
     LaunchedEffect(
         v2ManualShiftLoadState.isActive,
@@ -588,6 +604,13 @@ fun MiGuardiaApp(
             destination = MainDestination.CALENDAR
         }
     }
+    LaunchedEffect(v2ShiftActualState.successSequence) {
+        val successSequence = v2ShiftActualState.successSequence
+        if (successSequence > 0) {
+            v2ShiftActualActions.consumeSuccess(successSequence)
+            destination = MainDestination.CALENDAR
+        }
+    }
     LaunchedEffect(v2ReadyState?.timelineId, selectedDay?.date, v2ShiftEditActive) {
         val ready = v2ReadyState
         val date = selectedDay?.date
@@ -595,6 +618,25 @@ fun MiGuardiaApp(
             v2ShiftEditActions.inspectDay(ready, date)
         } else if (!v2ShiftEditActive) {
             v2ShiftEditActions.clearInspection()
+        }
+    }
+    LaunchedEffect(
+        workSetupState.rootState,
+        selectedDay?.date,
+        selectedDay?.shifts?.map { it.shift.id },
+        calendarState.referenceInstant,
+        v2ShiftActualActive,
+    ) {
+        val date = selectedDay?.date
+        if (date != null && !v2ShiftActualActive) {
+            v2ShiftActualActions.inspectDay(
+                workSetupState.rootState,
+                date,
+                selectedDay.shifts.map { it.shift },
+                calendarState.referenceInstant,
+            )
+        } else if (!v2ShiftActualActive) {
+            v2ShiftActualActions.clearInspection()
         }
     }
     LaunchedEffect(hasBlockingSurface) {
@@ -716,6 +758,8 @@ fun MiGuardiaApp(
                     v2ManualShiftLoadActions = v2ManualShiftLoadActions,
                     v2ShiftEditState = v2ShiftEditState,
                     v2ShiftEditActions = v2ShiftEditActions,
+                    v2ShiftActualState = v2ShiftActualState,
+                    v2ShiftActualActions = v2ShiftActualActions,
                     v2RecurringState = v2RecurringState,
                     v2RecurringActions = v2RecurringActions,
                     onOpenPhotos = { photosActions.open(calendarState.visibleMonth) },
@@ -798,13 +842,16 @@ fun MiGuardiaApp(
     val navigationBarBottomPadding = WindowInsets.navigationBars
         .asPaddingValues()
         .calculateBottomPadding()
+    val dayDetailSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     if (
         selectedDay != null &&
         !v2ShiftEditActive &&
-        !v2RecurringActive
+        !v2RecurringActive &&
+        !v2ShiftActualActive
     ) {
         ModalBottomSheet(
             onDismissRequest = onDismissDate,
+            sheetState = dayDetailSheetState,
             modifier = Modifier.padding(bottom = navigationBarBottomPadding + 16.dp),
         ) {
             DayDetailSheet(
@@ -822,6 +869,8 @@ fun MiGuardiaApp(
                 weatherState = weatherState,
                 v2ShiftEditState = v2ShiftEditState.takeIf { v2ReadyState != null },
                 onRetryV2Inspection = v2ShiftEditActions.retryInspection,
+                v2ShiftActualState = v2ShiftActualState,
+                v2ShiftActualActions = v2ShiftActualActions,
             )
         }
     }
@@ -849,6 +898,10 @@ fun MiGuardiaApp(
                     workSetupActions.requestBack()
                     v2RecurringActions.openPlans(workSetupState.rootState)
                 },
+                openExtraClasses = {
+                    workSetupActions.requestBack()
+                    v2ShiftActualActions.openCatalog(workSetupState.rootState)
+                },
             ),
         )
     }
@@ -864,11 +917,35 @@ fun MiGuardiaApp(
                     onDismissDate()
                     v2RecurringActions.finalizeFrom(planId, date)
                 },
+                correctActual = { shiftId ->
+                    val row = v2ShiftEditState.dayRows.firstOrNull { it.shift.id == shiftId }
+                    val opened = row != null && v2ShiftActualActions.begin(
+                        shiftId,
+                        row.ordinal,
+                        row.total,
+                        row.shift.localStartDate,
+                    )
+                    if (opened) {
+                        v2ShiftEditActions.handoffToActual()
+                    } else {
+                        v2ShiftEditActions.reportActualHandoffUnavailable()
+                    }
+                },
+                returnActualToPlanned = { shiftId ->
+                    if (v2ShiftActualActions.requestReturnToPlanned(shiftId)) {
+                        v2ShiftEditActions.handoffToActual()
+                    } else {
+                        v2ShiftEditActions.reportActualHandoffUnavailable()
+                    }
+                },
             ),
         )
     }
     if (v2RecurringActive) {
         V2RecurringPlanSurfaceHost(v2RecurringState, v2RecurringActions)
+    }
+    if (v2ShiftActualActive) {
+        V2ShiftActualSurfaceHost(v2ShiftActualState, v2ShiftActualActions)
     }
 }
 
@@ -994,6 +1071,8 @@ private fun CalendarScreen(
     v2ManualShiftLoadActions: V2ManualShiftLoadActions,
     v2ShiftEditState: V2ShiftEditUiState,
     v2ShiftEditActions: V2ShiftEditActions,
+    v2ShiftActualState: V2ShiftActualUiState,
+    v2ShiftActualActions: V2ShiftActualActions,
     v2RecurringState: V2RecurringUiState,
     v2RecurringActions: V2RecurringActions,
     appZoom: AppZoom,
@@ -1030,10 +1109,13 @@ private fun CalendarScreen(
     }
     TransientConfirmation(
         message = v2ShiftEditState.infoMessage
+            ?: v2ShiftActualState.infoMessage
             ?: v2ManualShiftLoadState.infoMessage
             ?: v2RecurringState.infoMessage,
         onDismiss = if (v2ShiftEditState.infoMessage != null) {
             v2ShiftEditActions.clearMessage
+        } else if (v2ShiftActualState.infoMessage != null) {
+            v2ShiftActualActions.clearMessage
         } else if (v2ManualShiftLoadState.infoMessage != null) {
             v2ManualShiftLoadActions.clearMessage
         } else if (v2RecurringState.infoMessage != null) {
@@ -1686,6 +1768,8 @@ private fun DayDetailSheet(
     weatherState: WeatherUiState,
     v2ShiftEditState: V2ShiftEditUiState? = null,
     onRetryV2Inspection: () -> Unit = {},
+    v2ShiftActualState: V2ShiftActualUiState = V2ShiftActualUiState(),
+    v2ShiftActualActions: V2ShiftActualActions = V2ShiftActualActions(),
 ) {
     Column(
         modifier = Modifier
@@ -1721,6 +1805,14 @@ private fun DayDetailSheet(
                 weatherUnit = weatherState.preferences.unitSystem,
                 weatherBrief = weatherState.shiftBriefs[calendarShift.shift.id],
                 weatherLoading = calendarShift.shift.id in weatherState.loadingBriefIds,
+            )
+            V2ShiftActualDetailCard(
+                shift = calendarShift.shift,
+                ordinal = index + 1,
+                count = day.shifts.size,
+                ownerDate = day.date,
+                rowState = v2ShiftActualState.rows[calendarShift.shift.id],
+                actions = v2ShiftActualActions,
             )
         }
         when (day.explicitStatus) {

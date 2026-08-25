@@ -455,6 +455,54 @@ class V2ShiftEditCoordinatorTest {
     }
 
     @Test
+    fun recreationRehydratesActualExpectationBeforeConfirmingExactDeletion() {
+        val fixture = fixture()
+        val actualExpectation = expectationWithActual(fixture)
+        var persisted = V2ShiftEditPersistedState()
+        val first = harness(
+            fixture,
+            actualExpectation = actualExpectation,
+            persist = { persisted = it },
+        )
+        first.inspectAndOpenActions()
+        first.coordinator.requestDelete(fixture.original.shift.id)
+
+        val restored = harness(
+            fixture,
+            actualExpectation = actualExpectation,
+            initial = persisted,
+        )
+        assertEquals(V2ShiftEditStage.CONFIRM_DELETE, restored.coordinator.uiState.value.stage)
+        assertEquals(actualExpectation, restored.coordinator.uiState.value.actualExpectation)
+
+        restored.coordinator.confirmDelete()
+
+        assertEquals(actualExpectation, restored.v2.lastExpectedActual)
+        assertEquals(1, restored.v2.successfulDeletes)
+    }
+
+    @Test
+    fun explicitHandoffToActualClosesStructuralDraftWithoutWritingIt() {
+        val fixture = fixture()
+        val actualExpectation = expectationWithActual(fixture)
+        var persisted = V2ShiftEditPersistedState()
+        val harness = harness(
+            fixture,
+            actualExpectation = actualExpectation,
+            persist = { persisted = it },
+        )
+        harness.openEditor(fixture.original.shift.id)
+        harness.coordinator.updatePosition("Borrador que no debe guardarse")
+
+        harness.coordinator.handoffToActual()
+
+        assertEquals(V2ShiftEditStage.IDLE, harness.coordinator.uiState.value.stage)
+        assertEquals(V2ShiftEditPersistedState(), persisted)
+        assertEquals(fixture.original, harness.v2.writes.getValue(fixture.original.shift.id))
+        assertEquals(0, harness.v2.successfulUpdates)
+    }
+
+    @Test
     fun incompatibleRootCancelsPendingReadsWithoutReopeningTheEditor() {
         val fixture = fixture()
         val harness = harness(fixture)
@@ -707,6 +755,7 @@ class V2ShiftEditCoordinatorTest {
         autoResume: Boolean = true,
         recurringOccurrence: RecurringOccurrence? = null,
         recurringPlanKind: RecurringPlanRevisionKind = RecurringPlanRevisionKind.ACTIVE,
+        actualExpectation: com.blackatsystems.miguardia.core.domain.model.ShiftActualExpectation? = null,
     ): Harness {
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined).also(scopes::add)
         val configurations = EditFakeConfigurations(fixture.history)
@@ -720,6 +769,7 @@ class V2ShiftEditCoordinatorTest {
             shiftRepository = shifts,
             medicalLeaveRepository = EditFakeMedicalLeaves(medicalLeaves),
             v2ShiftRepository = v2,
+            shiftActualRepository = actualExpectation?.let(::EditFakeShiftActualRepository),
             recurringPlanRepository = EditFakeRecurringPlans(
                 recurringOccurrence,
                 recurringOccurrence?.let { fixture.recurringPlan(it, recurringPlanKind) },
@@ -860,6 +910,32 @@ class V2ShiftEditCoordinatorTest {
         return Fixture(timelineId, revision, history, objective, place, type, template, alternative, catalog, original)
     }
 
+    private fun expectationWithActual(fixture: Fixture):
+        com.blackatsystems.miguardia.core.domain.model.ShiftActualExpectation {
+        val shift = fixture.original.shift
+        val record = com.blackatsystems.miguardia.core.domain.model.ShiftActualRecord(
+            shiftId = shift.id,
+            timelineId = fixture.timelineId,
+            sector = WorkSector.NURSING,
+            actualStart = shift.startAt,
+            actualEnd = shift.endAt.plusSeconds(60 * 60),
+            differenceReason = "Extensión real",
+            explanation = null,
+            createdAt = OLD,
+            updatedAt = OLD,
+        )
+        return com.blackatsystems.miguardia.core.domain.model.ShiftActualExpectation(
+            planned = fixture.original,
+            previousActual = com.blackatsystems.miguardia.core.domain.model.ShiftActualAggregate(
+                record,
+                emptyList(),
+            ),
+            observedClass = null,
+            recurringOccurrence = null,
+            protectionFingerprint = "actual-protection",
+        )
+    }
+
     private companion object {
         val DATE: LocalDate = LocalDate.of(2026, 12, 31)
         val OLD: Instant = Instant.parse("2026-08-20T12:00:00Z")
@@ -988,6 +1064,38 @@ private class EditFakeShifts(initial: List<Shift>) : ShiftRepository {
     }
 }
 
+private class EditFakeShiftActualRepository(
+    private val expectation: com.blackatsystems.miguardia.core.domain.model.ShiftActualExpectation,
+) : com.blackatsystems.miguardia.core.domain.repository.ShiftActualRepository {
+    override fun observeExpectation(
+        shiftId: UUID,
+    ): Flow<com.blackatsystems.miguardia.core.domain.model.ShiftActualExpectation?> =
+        MutableStateFlow(expectation.takeIf { it.planned.shift.id == shiftId })
+
+    override suspend fun getExpectation(
+        shiftId: UUID,
+    ): com.blackatsystems.miguardia.core.domain.model.ShiftActualExpectation? =
+        expectation.takeIf { it.planned.shift.id == shiftId }
+
+    override fun observeExtraWorkClasses(
+        timelineId: UUID,
+        sector: WorkSector,
+    ): Flow<List<com.blackatsystems.miguardia.core.domain.work.ExtraWorkClass>> = MutableStateFlow(emptyList())
+
+    override suspend fun save(
+        mutation: com.blackatsystems.miguardia.core.domain.model.ShiftActualSaveMutation,
+    ): com.blackatsystems.miguardia.core.domain.model.ShiftActualWriteResult = error("No se usa")
+
+    override suspend fun returnToPlanned(
+        expectation: com.blackatsystems.miguardia.core.domain.model.ShiftActualExpectation,
+    ): com.blackatsystems.miguardia.core.domain.model.ShiftActualWriteResult = error("No se usa")
+
+    override suspend fun saveExtraWorkClass(
+        expected: com.blackatsystems.miguardia.core.domain.work.ExtraWorkClass?,
+        replacement: com.blackatsystems.miguardia.core.domain.work.ExtraWorkClass,
+    ): com.blackatsystems.miguardia.core.domain.model.ExtraWorkClassWriteResult = error("No se usa")
+}
+
 private class EditFakeV2Shifts(
     private val shifts: EditFakeShifts,
     initial: List<V2ShiftWrite>,
@@ -1002,6 +1110,7 @@ private class EditFakeV2Shifts(
     var writeGate: CompletableDeferred<Unit>? = null
     var lookupGate: CompletableDeferred<Unit>? = null
     var lastOccupancyPreview: ShiftOccupancyExpectation? = null
+    var lastExpectedActual: com.blackatsystems.miguardia.core.domain.model.ShiftActualExpectation? = null
 
     override fun observeWorkSnapshot(shiftId: UUID): Flow<ShiftWorkSnapshot?> =
         MutableStateFlow(writes[shiftId]?.snapshot)
@@ -1014,8 +1123,12 @@ private class EditFakeV2Shifts(
     }
     override suspend fun insert(write: V2ShiftWrite) = error("No se usa")
 
-    override suspend fun deleteShift(expected: V2ShiftWrite) {
+    override suspend fun deleteShift(
+        expected: V2ShiftWrite,
+        expectedActual: com.blackatsystems.miguardia.core.domain.model.ShiftActualExpectation?,
+    ) {
         deleteCalls++
+        lastExpectedActual = expectedActual
         writeGate?.await()
         failure?.let { throw it }
         if (writes[expected.shift.id] != expected) {

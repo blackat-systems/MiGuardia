@@ -21,6 +21,9 @@ import com.blackatsystems.miguardia.core.domain.model.Objective
 import com.blackatsystems.miguardia.core.domain.model.RecurringOccurrence
 import com.blackatsystems.miguardia.core.domain.model.RecurringOccurrenceState
 import com.blackatsystems.miguardia.core.domain.model.Shift
+import com.blackatsystems.miguardia.core.domain.model.ShiftActualAggregate
+import com.blackatsystems.miguardia.core.domain.model.ShiftActualExpectation
+import com.blackatsystems.miguardia.core.domain.model.ShiftActualRecord
 import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
 import com.blackatsystems.miguardia.core.domain.model.ShiftWorkSnapshot
 import com.blackatsystems.miguardia.core.domain.model.V2ShiftWrite
@@ -39,6 +42,7 @@ import com.blackatsystems.miguardia.ui.calendar.CalendarLoadState
 import com.blackatsystems.miguardia.ui.calendar.CalendarUiState
 import com.blackatsystems.miguardia.ui.management.V2DayEditEntry
 import com.blackatsystems.miguardia.ui.management.V2ShiftDayInspectionState
+import com.blackatsystems.miguardia.ui.management.V2ShiftActualActions
 import com.blackatsystems.miguardia.ui.management.V2ShiftEditActions
 import com.blackatsystems.miguardia.ui.management.V2ShiftEditDayRow
 import com.blackatsystems.miguardia.ui.management.V2ShiftEditStage
@@ -131,7 +135,7 @@ class V2ShiftEditComposeTest {
             }
         }
 
-        compose.onNodeWithText("Editar este día").assertIsDisplayed().performClick()
+        compose.onNodeWithText("Editar este día").performScrollTo().assertIsDisplayed().performClick()
         compose.runOnIdle { assertEquals(1, starts) }
         compose.onNodeWithText("Editando calendario").assertDoesNotExist()
     }
@@ -209,6 +213,142 @@ class V2ShiftEditComposeTest {
         compose.onNodeWithTag("v2-shift-edit-position").performTextReplacement("Puesto B")
         compose.onNodeWithTag("v2-shift-request-review").performScrollTo().assertIsEnabled()
         compose.onNodeWithTag("v2-shift-original-summary").assertIsDisplayed()
+    }
+
+    @Test
+    fun structuralEditorOffersConsciousDirectActionsWhenActualTimeExists() {
+        val original = write(uuid(31), position = "Puesto A")
+        val expectation = actualExpectation(original)
+        var correctCalls = 0
+        var returnCalls = 0
+        compose.setContent {
+            MiGuardiaTheme {
+                V2ShiftEditSurfaceHost(
+                    state = editorState(original).copy(actualExpectation = expectation),
+                    actions = V2ShiftEditActions(
+                        correctActual = { correctCalls++ },
+                        returnActualToPlanned = { returnCalls++ },
+                    ),
+                )
+            }
+        }
+
+        compose.onNodeWithTag("v2-shift-edit-correct-actual").performScrollTo().assertIsDisplayed().performClick()
+        compose.onNodeWithTag("v2-shift-edit-return-actual").performScrollTo().assertIsDisplayed().performClick()
+
+        compose.runOnIdle {
+            assertEquals(1, correctCalls)
+            assertEquals(1, returnCalls)
+        }
+    }
+
+    @Test
+    fun appOpensActualFlowBeforeDiscardingStructuralEditor() {
+        val original = write(uuid(32), position = "Puesto A")
+        val state = editorState(original).copy(
+            actualExpectation = actualExpectation(original),
+            dayRows = listOf(row(original, 1, 1)),
+        )
+        var actualOpenings = 0
+        var handoffs = 0
+        var unavailable = 0
+        compose.setContent {
+            MiGuardiaTheme {
+                MiGuardiaApp(
+                    calendarState = calendarState(original.shift),
+                    onPreviousMonth = {},
+                    onNextMonth = {},
+                    onToday = {},
+                    onSelectDate = {},
+                    onDismissDate = {},
+                    onRetry = {},
+                    v2ShiftEditState = state,
+                    v2ShiftEditActions = V2ShiftEditActions(
+                        handoffToActual = { handoffs++ },
+                        reportActualHandoffUnavailable = { unavailable++ },
+                    ),
+                    v2ShiftActualActions = V2ShiftActualActions(
+                        begin = { shiftId, ordinal, count, ownerDate ->
+                            assertEquals(original.shift.id, shiftId)
+                            assertEquals(1, ordinal)
+                            assertEquals(1, count)
+                            assertEquals(DATE, ownerDate)
+                            actualOpenings++
+                            true
+                        },
+                        requestReturnToPlanned = { shiftId ->
+                            assertEquals(original.shift.id, shiftId)
+                            actualOpenings++
+                            true
+                        },
+                    ),
+                    workSetupState = readyWorkSetupState(),
+                )
+            }
+        }
+
+        compose.onNodeWithTag("v2-shift-edit-correct-actual")
+            .performScrollTo()
+            .performClick()
+        compose.onNodeWithTag("v2-shift-edit-return-actual")
+            .performScrollTo()
+            .performClick()
+
+        compose.runOnIdle {
+            assertEquals(2, actualOpenings)
+            assertEquals(2, handoffs)
+            assertEquals(0, unavailable)
+        }
+    }
+
+    @Test
+    fun appKeepsStructuralEditorWhenActualFlowCannotOpen() {
+        val original = write(uuid(33), position = "Borrador que debe sobrevivir")
+        val state = editorState(original).copy(
+            actualExpectation = actualExpectation(original),
+            dayRows = listOf(row(original, 1, 1)),
+        )
+        var handoffs = 0
+        var unavailable = 0
+        compose.setContent {
+            MiGuardiaTheme {
+                MiGuardiaApp(
+                    calendarState = calendarState(original.shift),
+                    onPreviousMonth = {},
+                    onNextMonth = {},
+                    onToday = {},
+                    onSelectDate = {},
+                    onDismissDate = {},
+                    onRetry = {},
+                    v2ShiftEditState = state,
+                    v2ShiftEditActions = V2ShiftEditActions(
+                        handoffToActual = { handoffs++ },
+                        reportActualHandoffUnavailable = { unavailable++ },
+                    ),
+                    v2ShiftActualActions = V2ShiftActualActions(
+                        begin = { _, _, _, _ -> false },
+                        requestReturnToPlanned = { false },
+                    ),
+                    workSetupState = readyWorkSetupState(),
+                )
+            }
+        }
+
+        compose.onNodeWithTag("v2-shift-edit-correct-actual")
+            .performScrollTo()
+            .performClick()
+        compose.onNodeWithTag("v2-shift-edit-return-actual")
+            .performScrollTo()
+            .performClick()
+
+        compose.runOnIdle {
+            assertEquals(0, handoffs)
+            assertEquals(2, unavailable)
+        }
+        compose.onNodeWithTag("v2-shift-edit-surface").assertIsDisplayed()
+        compose.onNodeWithText("Borrador que debe sobrevivir")
+            .performScrollTo()
+            .assertIsDisplayed()
     }
 
     @Test
@@ -291,10 +431,12 @@ class V2ShiftEditComposeTest {
         compose.runOnIdle {
             state = state.copy(
                 stage = V2ShiftEditStage.CONFIRM_DELETE,
+                actualExpectation = actualExpectation(original),
                 confirmedPairFingerprint = "par-ficticio",
             )
         }
         compose.onNodeWithTag("v2-shift-delete-dialog").assertIsDisplayed()
+        compose.onNodeWithText("También se quitarán el horario real", substring = true).assertIsDisplayed()
         compose.onNodeWithText("Hospital ficticio", substring = true).assertIsDisplayed()
         compose.onNodeWithText("08:00–16:00", substring = true).performScrollTo().assertIsDisplayed()
         compose.onNodeWithTag("v2-shift-confirm-delete").performClick()
@@ -401,6 +543,27 @@ class V2ShiftEditComposeTest {
         templateOptions = listOf(option()),
         selectedTemplateId = original.snapshot.templateId,
         position = original.shift.position.orEmpty(),
+    )
+
+    private fun actualExpectation(original: V2ShiftWrite): ShiftActualExpectation = ShiftActualExpectation(
+        planned = original,
+        previousActual = ShiftActualAggregate(
+            ShiftActualRecord(
+                shiftId = original.shift.id,
+                timelineId = TIMELINE_ID,
+                sector = WorkSector.NURSING,
+                actualStart = original.shift.startAt,
+                actualEnd = original.shift.endAt.plusSeconds(60 * 60),
+                differenceReason = "Extensión real",
+                explanation = null,
+                createdAt = NOW,
+                updatedAt = NOW,
+            ),
+            emptyList(),
+        ),
+        observedClass = null,
+        recurringOccurrence = null,
+        protectionFingerprint = "actual-protection",
     )
 
     private fun row(write: V2ShiftWrite, ordinal: Int, total: Int) =

@@ -15,6 +15,7 @@ import com.blackatsystems.miguardia.core.domain.repository.ConflictingLocalWrite
 import com.blackatsystems.miguardia.core.domain.repository.MedicalLeaveRepository
 import com.blackatsystems.miguardia.core.domain.repository.ObjectiveRepository
 import com.blackatsystems.miguardia.core.domain.repository.ShiftRepository
+import com.blackatsystems.miguardia.core.domain.repository.ShiftActualRepository
 import com.blackatsystems.miguardia.core.domain.repository.V2ShiftRepository
 import com.blackatsystems.miguardia.core.domain.repository.WorkCatalogRepository
 import com.blackatsystems.miguardia.core.domain.repository.WorkConfigurationRepository
@@ -123,6 +124,7 @@ class V2ManualShiftLoadViewModel(
     shiftRepository: ShiftRepository,
     medicalLeaveRepository: MedicalLeaveRepository,
     v2ShiftRepository: V2ShiftRepository,
+    shiftActualRepository: ShiftActualRepository,
     clock: Clock,
     zoneId: ZoneId,
     uuidProvider: UuidProvider,
@@ -135,6 +137,7 @@ class V2ManualShiftLoadViewModel(
         shiftRepository = shiftRepository,
         medicalLeaveRepository = medicalLeaveRepository,
         v2ShiftRepository = v2ShiftRepository,
+        shiftActualRepository = shiftActualRepository,
         clock = clock,
         zoneId = zoneId,
         uuidProvider = uuidProvider,
@@ -170,6 +173,7 @@ class V2ManualShiftLoadViewModel(
         private val shiftRepository: ShiftRepository,
         private val medicalLeaveRepository: MedicalLeaveRepository,
         private val v2ShiftRepository: V2ShiftRepository,
+        private val shiftActualRepository: ShiftActualRepository,
         private val clock: Clock = Clock.system(AppDefaults.zoneId()),
         private val zoneId: ZoneId = AppDefaults.zoneId(),
         private val uuidProvider: UuidProvider = UuidProvider(UUID::randomUUID),
@@ -184,6 +188,7 @@ class V2ManualShiftLoadViewModel(
                 shiftRepository = shiftRepository,
                 medicalLeaveRepository = medicalLeaveRepository,
                 v2ShiftRepository = v2ShiftRepository,
+                shiftActualRepository = shiftActualRepository,
                 clock = clock,
                 zoneId = zoneId,
                 uuidProvider = uuidProvider,
@@ -200,6 +205,7 @@ internal class V2ManualShiftLoadCoordinator(
     private val shiftRepository: ShiftRepository,
     private val medicalLeaveRepository: MedicalLeaveRepository,
     private val v2ShiftRepository: V2ShiftRepository,
+    private val shiftActualRepository: ShiftActualRepository? = null,
     private val clock: Clock,
     private val zoneId: ZoneId,
     private val uuidProvider: UuidProvider,
@@ -923,8 +929,14 @@ internal class V2ManualShiftLoadCoordinator(
         )
         val savedDates = plan.mutation.shiftsToInsert
             .mapTo(linkedSetOf()) { it.shift.localStartDate }
+        val actualExpectations = plan.mutation.shiftIdsToDelete
+            .mapNotNull { shiftId ->
+                shiftActualRepository?.getExpectation(shiftId)?.let { shiftId to it }
+            }
+            .toMap(linkedMapOf())
         val mutation = plan.mutation.copy(
             explicitDayStatusDatesToClear = savedDates,
+            actualExpectations = actualExpectations,
         )
         val coexistenceWarnings = medicalLeaves
             .filter { leave -> savedDates.any { it in leave.startDate..leave.endDateInclusive } }
@@ -932,7 +944,12 @@ internal class V2ManualShiftLoadCoordinator(
                 "Existe una carpeta médica entre ${leave.startDate.format(DATE_FORMATTER)} y " +
                     "${leave.endDateInclusive.format(DATE_FORMATTER)}. No se modificará."
             }
-        val warningTexts = plan.warnings.map(::warningText) + coexistenceWarnings
+        val actualWarnings = actualExpectations.values
+            .filter { it.previousActual != null }
+            .map { expectation ->
+                "Reemplazar la jornada ${expectation.planned.shift.id} también eliminará su horario real y extras."
+            }
+        val warningTexts = plan.warnings.map(::warningText) + coexistenceWarnings + actualWarnings
         return PreparedV2Mutation(
             mutation = mutation,
             expectedOccupancy = ShiftOccupancyExpectation.capture(
@@ -1019,6 +1036,12 @@ internal class V2ManualShiftLoadCoordinator(
             append(omittedDates.sorted().joinToString(","))
             append(";warnings=")
             append(warnings.joinToString("|"))
+            append(";actualExpectations=")
+            append(
+                mutation.actualExpectations.entries
+                    .sortedBy { it.key }
+                    .joinToString("|") { (id, expectation) -> "$id=$expectation" },
+            )
         }
         return MessageDigest.getInstance("SHA-256")
             .digest(raw.toByteArray(Charsets.UTF_8))

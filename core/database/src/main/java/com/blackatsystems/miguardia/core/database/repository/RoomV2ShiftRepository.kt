@@ -29,6 +29,7 @@ import com.blackatsystems.miguardia.core.domain.model.RecurringPlanMutation
 import com.blackatsystems.miguardia.core.domain.model.RecurringPlanRevisionKind
 import com.blackatsystems.miguardia.core.domain.model.RecurringProtectionExpectation
 import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
+import com.blackatsystems.miguardia.core.domain.model.ShiftActualExpectation
 import com.blackatsystems.miguardia.core.domain.model.RecurringShiftProtectionVersion
 import com.blackatsystems.miguardia.core.domain.model.ShiftOccupancyExpectation
 import com.blackatsystems.miguardia.core.domain.model.V2ShiftBatchMutation
@@ -50,6 +51,8 @@ import com.blackatsystems.miguardia.core.domain.work.resolveWorkplaceRuleSegment
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
+import java.nio.charset.StandardCharsets
+import java.security.MessageDigest
 import java.util.UUID
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -61,6 +64,8 @@ internal class RoomV2ShiftRepository(
 ) : V2RecurringShiftRepository, RecurringPlanRepository {
     private val dao = database.v2ShiftDao()
     private val recurringDao = database.recurringPlanDao()
+    private val actualReader = RoomShiftActualRepository(database)
+    private val actualDao = database.shiftActualDao()
 
     override fun observePlans(
         timelineId: UUID,
@@ -134,7 +139,10 @@ internal class RoomV2ShiftRepository(
         database.requireValidV2LocalData()
     }
 
-    override suspend fun deleteShift(expected: V2ShiftWrite): Unit = writeShiftData(
+    override suspend fun deleteShift(
+        expected: V2ShiftWrite,
+        expectedActual: com.blackatsystems.miguardia.core.domain.model.ShiftActualExpectation?,
+    ): Unit = writeShiftData(
         "No se pudo eliminar la jornada 2.0.",
     ) {
         database.requireValidV2LocalData()
@@ -147,6 +155,17 @@ internal class RoomV2ShiftRepository(
                 "La jornada cambió mientras confirmabas la eliminación. Revisala nuevamente.",
             )
         }
+        val currentActual = actualReader.readExpectationInside(expected.shift.id.toString())
+        if (currentActual?.previousActual != null && currentActual != expectedActual) {
+            throw ConflictingLocalWriteException(
+                "La jornada tiene horario real y extras. Revisá la eliminación y confirmá que también se quitarán.",
+            )
+        }
+        if (expectedActual != null && currentActual != expectedActual) {
+            throw ConflictingLocalWriteException(
+                "El horario real cambió mientras confirmabas la eliminación. Revisalo nuevamente.",
+            )
+        }
         recurringDao.getOccurrenceForShift(expected.shift.id.toString())?.let { entity ->
             val occurrence = entity.toDomainOccurrence()
             val excluded = occurrence.copy(
@@ -156,6 +175,12 @@ internal class RoomV2ShiftRepository(
             )
             if (recurringDao.updateOccurrence(excluded.toEntity()) != 1) {
                 invalid("La ocurrencia cambió mientras se eliminaba la jornada.")
+            }
+        }
+        if (currentActual?.previousActual != null) {
+            actualDao.deleteIntervals(expected.shift.id.toString())
+            if (actualDao.deleteRecord(expected.shift.id.toString()) != 1) {
+                invalid("El horario real cambió mientras se eliminaba la jornada.")
             }
         }
         if (dao.deleteShiftAndOwnedSnapshot(expected.shift.id.toString()) != 1) {
@@ -226,6 +251,27 @@ internal class RoomV2ShiftRepository(
                 )
             }
             validateUpdateIdentity(existing, write)
+            val currentActual = actualReader.readExpectationInside(write.shift.id.toString())
+            val expectedActual = mutation.actualExpectations[write.shift.id]
+            if (currentActual?.previousActual != null) {
+                if (expectedActual == null || currentActual != expectedActual) {
+                    throw ConflictingLocalWriteException(
+                        "La jornada tiene horario real. Revisalo antes de modificar su planificación.",
+                    )
+                }
+                if (
+                    existing.shift.startAt != write.shift.startAt ||
+                    existing.shift.endAt != write.shift.endAt
+                ) {
+                    invalid(
+                        "Volvé al horario planificado antes de cambiar el inicio o final de esta jornada.",
+                    )
+                }
+            } else if (expectedActual != null && currentActual != expectedActual) {
+                throw ConflictingLocalWriteException(
+                    "El horario real cambió mientras revisabas la edición.",
+                )
+            }
             if (isExactV2PositionOnlyEdit(existing, write)) {
                 write.shift.validated()
                 requireExactShiftSnapshotInstants(write.shift)
@@ -238,6 +284,18 @@ internal class RoomV2ShiftRepository(
             .groupBy { it.shift.localStartDate }
             .mapValues { (_, writes) -> writes.maxOf { it.shift.updatedAt } }
         mutation.shiftIdsToDelete.forEach { shiftId ->
+            val currentActual = actualReader.readExpectationInside(shiftId.toString())
+            val expectedActual = mutation.actualExpectations[shiftId]
+            if (currentActual?.previousActual != null && currentActual != expectedActual) {
+                throw ConflictingLocalWriteException(
+                    "La jornada tiene horario real y extras. Confirmá específicamente su reemplazo.",
+                )
+            }
+            if (expectedActual != null && currentActual != expectedActual) {
+                throw ConflictingLocalWriteException(
+                    "El horario real cambió mientras confirmabas el reemplazo.",
+                )
+            }
             recurringDao.getOccurrenceForShift(shiftId.toString())?.let { entity ->
                 val occurrence = entity.toDomainOccurrence()
                 val replacementTimestamp = writeTimestampsByDate[occurrence.localDate]
@@ -266,6 +324,15 @@ internal class RoomV2ShiftRepository(
         }
 
         if (mutation.shiftIdsToDelete.isNotEmpty()) {
+            mutation.shiftIdsToDelete.forEach { shiftId ->
+                val currentActual = actualReader.readExpectationInside(shiftId.toString())
+                if (currentActual?.previousActual != null) {
+                    actualDao.deleteIntervals(shiftId.toString())
+                    if (actualDao.deleteRecord(shiftId.toString()) != 1) {
+                        invalid("El horario real cambió mientras se reemplazaba la jornada.")
+                    }
+                }
+            }
             val deletedRows = deleteShiftsInSafeBatches(mutation.shiftIdsToDelete)
             if (deletedRows != mutation.shiftIdsToDelete.size) {
                 invalid("Una jornada cambió mientras se confirmaba el reemplazo.")
@@ -358,6 +425,11 @@ internal class RoomV2ShiftRepository(
             if (requireExistingV2Write(shiftId) != expectedPairs.writesById[shiftId]) {
                 throw ConflictingLocalWriteException(
                     "Una jornada cambió mientras confirmabas el plan. Revisá nuevamente.",
+                )
+            }
+            if (actualReader.readExpectationInside(shiftId.toString())?.previousActual != null) {
+                invalid(
+                    "Una revisión recurrente no puede retirar ni reemplazar una jornada con horario real.",
                 )
             }
         }
@@ -482,6 +554,15 @@ internal class RoomV2ShiftRepository(
             .mapTo(hashSetOf()) { it.shiftId }
         val remindersByShift = queryShiftIdBatches(encodedIds, recurringDao::getNotificationReminders)
             .groupBy { it.shiftId }
+        val actualRecordIds = queryShiftIdBatches(encodedIds, database.shiftActualDao()::getRecords)
+            .mapTo(hashSetOf()) { it.shiftId }
+        val actualFingerprintsByShift = actualRecordIds.associateWith { shiftId ->
+            actualFingerprint(
+                requireNotNull(actualReader.readExpectationInside(shiftId)) {
+                    "El horario real protegido dejó de conservar su jornada."
+                },
+            )
+        }
         val medicalLeaves = if (startDateInclusive == null) {
             emptyList()
         } else {
@@ -513,12 +594,23 @@ internal class RoomV2ShiftRepository(
                     notificationLeadMinutes = remindersByShift[encodedShiftId]
                         .orEmpty()
                         .map { it.leadMinutes },
+                    actualFingerprint = actualFingerprintsByShift[encodedShiftId],
                 )
             },
             startDateInclusive = startDateInclusive,
             endDateInclusive = endDateInclusive,
             medicalLeaves = medicalLeaves,
         )
+    }
+
+    private fun actualFingerprint(expectation: ShiftActualExpectation): String {
+        val canonical = buildString {
+            append("aggregate|").append(requireNotNull(expectation.previousActual)).append('\n')
+            append("class|").append(expectation.observedClass).append('\n')
+        }
+        return MessageDigest.getInstance("SHA-256")
+            .digest(canonical.toByteArray(StandardCharsets.UTF_8))
+            .joinToString("") { byte -> "%02x".format(byte) }
     }
 
     private suspend fun validateRecurringRevision(

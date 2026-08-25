@@ -69,7 +69,7 @@ prevalecen para el estado operativo.
 | `EDICION_Y_ELIMINACION_DE_JORNADAS_V2.md` | **CERRADO** | La edición y eliminación exacta de una jornada V2 fue auditada, probada e integrada por MAIN |
 | `RETIRAR_MODO_V1_Y_FIJAR_BASE_EXCLUSIVA_V2.md` | **CERRADO** | MiGuardia ya ejecuta una sola experiencia V2 sobre `MiGuardiaV2Database` versión 1; Samsung API 36 y emulador API 26 quedaron verificados |
 | `REPETIR_JORNADAS_Y_CAMBIAR_DESDE_UNA_FECHA_V2.md` | **CERRADO** | Planes finitos, excepciones durables y cambios de una jornada o de todo lo futuro integrados sobre Room V2 versión 2 |
-| `REGISTRAR_HORARIO_REAL_Y_CLASIFICAR_HORAS_EXTRA_V2.md` | **HABILITADO** | Registrar lo realmente trabajado en una jornada existente y clasificar conscientemente su diferencia extra, sin calcular todavía avance |
+| `REGISTRAR_HORARIO_REAL_Y_CLASIFICAR_HORAS_EXTRA_V2.md` | **CERRADO** | Horario real y extras exactas por jornada integrados sobre Room V2 versión 3, sin calcular todavía avance |
 
 ## Contratos históricos de MiGuardia 1.0
 
@@ -118,11 +118,12 @@ Joaquin indicó que quiere preparar o abrir la siguiente:
 6. **Cerrado:** repetir jornadas y decidir si un cambio afecta sólo una fecha o
    todo lo futuro, mediante
    `REPETIR_JORNADAS_Y_CAMBIAR_DESDE_UNA_FECHA_V2.md`;
-7. **Habilitado:** horario real y clasificación exacta de la diferencia
+7. **Cerrado:** horario real y clasificación exacta de la diferencia
    adicional en jornadas existentes, mediante
    `REGISTRAR_HORARIO_REAL_Y_CLASIFICAR_HORAS_EXTRA_V2.md`;
-8. trabajo extra independiente y avance contra la referencia, después de
-   resolver los cambios de referencia dentro de una semana o ciclo;
+8. **Siguiente recomendado, no habilitado:** trabajo extra independiente y
+   avance contra la referencia, después de resolver los cambios de referencia
+   dentro de una semana o ciclo;
 9. disponibilidad, situaciones especiales y consolidación final del motor de
    horas y cumplimiento;
 10. Calendario final y tarjeta superior;
@@ -134,8 +135,8 @@ Joaquin indicó que quiere preparar o abrir la siguiente:
 
 Cuando Joaquin pide un prompt, MAIN lo habilita en este índice después de cerrar
 su contrato y dependencias, y crea automáticamente el checkpoint documental
-local verificado. Pedir el prompt no abre por sí solo la tarea. La autorización
-adicional indicada arriba sólo cubre el push de este cierre; cualquier
+local verificado. Pedir el prompt no abre por sí solo la tarea. Las
+autorizaciones de push indicadas arriba ya fueron consumidas; cualquier
 publicación posterior requiere una autorización nueva.
 
 El coordinador secuencial no habilita paralelismo entre implementadores. Si ya

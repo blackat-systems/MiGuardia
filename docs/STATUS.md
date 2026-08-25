@@ -118,7 +118,8 @@ y auditada en
 
 - `main`, `origin/main` y `v1.0.0^{}` permanecen en MiGuardia 1.0.0, commit
   `82db6fd8eb2c511205968894dc9857a96b16ed20`.
-- `codex/miguardia-2.0` conserva estos checkpoints de desarrollo:
+- `codex/miguardia-2.0` conserva estos checkpoints de desarrollo previos al
+  cierre documentado en este mismo cambio:
   - `a3e89fdb56aedeed77c89824cec137f37f4c9619`: Calendario adaptable;
   - `6dab82b8f239f8009cfcb32d400b50fcc4080836`: planificación y traspaso a MAIN.
   - `3519606aeda3a26bed7ec8fc0feb8b7f3f788d35`: retiro de las funciones
@@ -141,15 +142,24 @@ y auditada en
   - `59e3181`: contrato de edición y eliminación individual de jornadas V2.
   - `4646f665eec84052a544a5179c72b93971df2700`: edición y eliminación
     individual auditada, probada e integrada por MAIN.
+  - `a306221efa850e026a4009d3c8a8640c0ed263ea`: contrato de runtime
+    exclusivamente V2.
+  - `b04dd59cbb1da656a46f88710c2a846002a143b0`: retiro del modo V1 y base Room
+    exclusiva V2 integrados.
+  - `0364b835d07883708e137a7057f235fad9113b38`: registro de la recomendación
+    futura de Agenda profesional y último push autorizado.
+  - `12fa7f64eef7493f8324467c876b55c9883d8625`: contrato de planes recurrentes.
+  - `2d41f60840be9e12abde97182d79757ddbb0a992`: planes recurrentes auditados,
+    probados e integrados.
+  - `d1f3e68c1ee5debdc34ef7e30f7376980175ee04`: contrato de horario real y
+    clasificación exacta de extras.
 - Al iniciar la preparación documental, la rama todavía no poseía upstream. El
   push puntual posterior fue ejecutado y verificado: rama local y remoto privado
   coincidían en `836d908`; esa autorización no puede reutilizarse.
 - El dominio nuevo vive en `core/domain/.../work/`; no se recuperó el candidato
-  mensual descartado. Room v7 ya persiste su Corte A, la primera configuración,
-  la carga manual y la edición o eliminación individual de jornadas V2. El
-  retiro de la bifurcación V1 es el bloque habilitado antes de ampliar
-  nuevamente la persistencia o cerrar el candidato final. ADR 0026 fija para
-  ese corte una nueva base `MiGuardiaV2Database`, versión 1.
+  mensual descartado. El runtime V1 ya fue retirado. `MiGuardiaV2Database`
+  conserva su cadena explícita `1→2→3` y ya persiste configuración, carga,
+  edición/eliminación, recurrencias, horario real y clases extra.
 
 ## Antecedente histórico descartado: candidato mensual
 
@@ -562,33 +572,61 @@ El contrato quedó `CERRADO` en
 completa está en
 `docs/audits/2026-08-25-planes-recurrentes-y-cambios-futuros-v2.md`.
 
-## Horario real y clasificación exacta de extras — contrato preparado
+## Horario real y clasificación exacta de extras — cerrado
 
-Joaquin pidió preparar la próxima dependencia después del cierre de planes
-recurrentes. MAIN auditó el dominio, Room y la interfaz vigentes y habilitó
-`docs/prompts/REGISTRAR_HORARIO_REAL_Y_CLASIFICAR_HORAS_EXTRA_V2.md`.
+MAIN auditó, corrigió e integró localmente el candidato recibido sobre
+`d1f3e68c1ee5debdc34ef7e30f7376980175ee04`.
 
-El bloque parte de la base funcional cerrada
-`2d41f60840be9e12abde97182d79757ddbb0a992` y establece:
+Quedó funcionando:
 
-- horario planificado y horario real como datos separados;
-- motivo obligatorio cuando difieren;
+- horario planificado separado, que no se sobrescribe al registrar el horario
+  real opcional;
+- alta, corrección y regreso consciente al planificado desde una jornada
+  exacta;
+- fecha, hora y offset explícitos, incluidos cruces de día, mes y año;
 - clasificación consciente de una duración real mayor como habitual o extra;
-- uno o más fragmentos extra exactos, sin doble conteo;
-- clases reutilizables con fotografía histórica;
+- uno o más fragmentos extra exactos, sin solapamiento ni doble conteo;
+- clases reutilizables por sector, con alta, renombrado, archivo, reactivación
+  y fotografía histórica;
+- borradores recuperables, doble toque bloqueado, errores reintentables y CAS
+  completo frente a cambios concurrentes;
 - protección transaccional de edición, eliminación, carga manual y
-  recurrencias;
-- migración Room V2 explícita `2→3`, con `1.json` y `2.json` intactos.
+  recurrencias cuando una jornada ya posee horario real.
 
-El contrato se dividió deliberadamente antes de implementar. No calcula avance
-contra la referencia porque sigue pendiente decidir qué meta usar si una
-referencia cambia dentro de una semana o ciclo. Tampoco crea todavía trabajo
-extra independiente sin jornada dueña: esa capacidad necesita una fotografía
-laboral e identidad de Calendario propias.
+Room V2 pasó de la versión 2 a la 3 mediante migración explícita. Conserva las
+22 tablas anteriores y agrega `extra_work_classes`, `shift_actual_records` y
+`shift_extra_intervals`. Los esquemas `1.json` y `2.json` permanecen intactos;
+`3.json` queda fijado con SHA-256
+`39B7C4AEB0C2098ACBE9FE9FFC7FB308C4AA30AA04F30A3A69B770A5CDDA9428`.
 
-ADR 0028 fija el modelo de horario real y extras exactas. El prompt está
-**HABILITADO — NO IMPLEMENTADO**. No existe candidato, diff de código ni tarea
-especializada abierta todavía.
+La auditoría de MAIN y tres revisiones independientes corrigieron validaciones
+de transiciones y fotografías, evidencia CAS inmutable, clases archivadas,
+rollback, protección de recurrencias, restauración del borrador, conflictos de
+integración y orden estable del Calendario. La QA física detectó además una
+aserción sensible al alto de API 26 y una superposición real con la barra del
+sistema; ambas quedaron corregidas y revalidadas.
+
+Validación de cierre:
+
+- JVM: 364/364 —215 de dominio, 5 de base y 144 de aplicación—;
+- lint: 0 errores y 4 avisos de versiones disponibles;
+- APK Debug, QA y ambos APK AndroidTest: compilados desde cero;
+- Samsung `SM-S938B`, API 36: aplicación afectada 82/82 y Room 84/84;
+- emulador Android 8.0, API 26: aplicación afectada 82/82 y Room 84/84;
+- recorrido físico registrar → recrear → persistir → reabrir → volver al
+  planificado, más claro/oscuro, retrato/paisaje y zoom interno 100/150/200;
+- revisión visual directa en Samsung del Calendario, detalle y editor de
+  horario real, con barra del sistema respetada;
+- paquetes QA retirados, emulador apagado y producción intacta y no abierta.
+
+El contrato quedó `CERRADO` en
+`docs/prompts/REGISTRAR_HORARIO_REAL_Y_CLASIFICAR_HORAS_EXTRA_V2.md`. La
+evidencia completa está en
+`docs/audits/2026-08-25-horario-real-y-horas-extra-v2.md`.
+
+Este bloque no calcula todavía avance contra la referencia ni crea trabajo
+extra independiente sin jornada dueña. Esas decisiones siguen separadas tal
+como fija ADR 0028.
 
 ## Flujo vigente de MAIN
 
@@ -632,9 +670,8 @@ cierre documentado arriba y no habilita acciones posteriores.
 
 ## Todavía no implementado
 
-- horario real y clasificación exacta de extras ligadas a una jornada
-  existente; su prompt está habilitado, pero todavía no fue ejecutado;
-- trabajo extra independiente y avance contra la referencia;
+- trabajo extra independiente y avance contra la referencia; antes debe
+  resolverse qué meta corresponde cuando cambia dentro de una semana o ciclo;
 - persistencia de guardias pasivas y disponibilidad;
 - situaciones especiales y consolidación final del motor de horas y
   cumplimiento, con su presentación en Resumen y Calendario;
@@ -643,15 +680,14 @@ cierre documentado arriba y no habilita acciones posteriores.
 
 ## Próximo paso
 
-Los planes recurrentes y los cambios desde una fecha quedaron cerrados. El
-siguiente bloque habilitado se llama **Registrar horario real y clasificar
-horas extra V2**. Joaquin puede entregar íntegramente
-`docs/prompts/REGISTRAR_HORARIO_REAL_Y_CLASIFICAR_HORAS_EXTRA_V2.md` a una
-única dependencia desde el checkpoint documental que informe MAIN.
+Horario real y clasificación exacta de extras quedaron cerrados. El siguiente
+bloque recomendado es definir **trabajo extra independiente y avance contra la
+referencia**, empezando por la regla de qué meta usar cuando una referencia
+cambia dentro de una semana o ciclo.
 
-Pedir y preparar el prompt no abrió por sí solo otra tarea. El avance contra la
-referencia queda para el bloque siguiente, después de resolver la regla de
-cambio de meta dentro de una semana o ciclo.
+Ese bloque todavía no tiene prompt habilitado ni tarea abierta. MAIN debe
+preparar su contrato sólo cuando Joaquin lo pida; hasta entonces no corresponde
+adelantar persistencia, pantallas ni cálculos.
 
 Quedan como verificaciones separadas el recorrido físico de alarma exacta
 —sólo con permiso explícito— y API 37 antes del candidato final. API 26 ya fue

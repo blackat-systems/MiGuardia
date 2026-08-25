@@ -51,6 +51,7 @@ import com.blackatsystems.miguardia.core.domain.model.V2ShiftWrite
 import com.blackatsystems.miguardia.core.domain.work.WorkSetupState
 import com.blackatsystems.miguardia.core.domain.work.normalizeOptionalWorkText
 import com.blackatsystems.miguardia.ui.components.PersistentMessage
+import com.blackatsystems.miguardia.ui.components.SectionCard
 import com.blackatsystems.miguardia.ui.theme.vigiliaColors
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -71,6 +72,10 @@ data class V2ShiftEditActions(
     val changeSeriesFrom: (UUID, LocalDate) -> Unit = { _, _ -> },
     val finalizeSeriesFrom: (UUID, LocalDate) -> Unit = { _, _ -> },
     val handoffToRecurring: () -> Unit = {},
+    val correctActual: (UUID) -> Unit = {},
+    val returnActualToPlanned: (UUID) -> Unit = {},
+    val handoffToActual: () -> Unit = {},
+    val reportActualHandoffUnavailable: () -> Unit = {},
     val chooseHistoricalTemplate: () -> Unit = {},
     val chooseTemplate: (UUID) -> Unit = {},
     val updatePosition: (String) -> Unit = {},
@@ -102,6 +107,8 @@ data class V2ShiftEditActions(
             deleteOnlyThisOccurrence = viewModel::deleteOnlyThisOccurrence,
             cancelScopeChoice = viewModel::cancelScopeChoice,
             handoffToRecurring = viewModel::handoffToRecurring,
+            handoffToActual = viewModel::handoffToActual,
+            reportActualHandoffUnavailable = viewModel::reportActualHandoffUnavailable,
             chooseHistoricalTemplate = viewModel::chooseHistoricalTemplate,
             chooseTemplate = viewModel::chooseTemplate,
             updatePosition = viewModel::updatePosition,
@@ -399,6 +406,31 @@ private fun EditorStep(state: V2ShiftEditUiState, actions: V2ShiftEditActions) {
         modifier = Modifier.testTag("v2-shift-original-summary"),
     ) {
         HistoricalSummary(original)
+    }
+    if (state.actualExpectation?.previousActual != null) {
+        SectionCard(
+            title = "Esta jornada tiene horario real",
+            supportingText = "Para cambiar el inicio o el final planificado, primero resolvé su horario real.",
+        ) {
+            OutlinedButton(
+                onClick = { actions.correctActual(original.shift.id) },
+                enabled = editable,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("v2-shift-edit-correct-actual"),
+            ) {
+                Text("Descartar esta edición y corregir horario real")
+            }
+            OutlinedButton(
+                onClick = { actions.returnActualToPlanned(original.shift.id) },
+                enabled = editable,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("v2-shift-edit-return-actual"),
+            ) {
+                Text("Descartar esta edición y volver al planificado")
+            }
+        }
     }
     Text("Plantilla", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
     Text(
@@ -790,6 +822,13 @@ private fun DeleteDialog(state: V2ShiftEditUiState, actions: V2ShiftEditActions)
                     Text("Releyendo la jornada exacta…")
                 }
                 Text("Se eliminará solamente esta jornada. Las demás se conservarán.")
+                if (state.actualExpectation?.previousActual != null) {
+                    Text(
+                        "También se quitarán el horario real y todos sus fragmentos extra.",
+                        color = MaterialTheme.colorScheme.error,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
                 if (state.recurringOccurrence != null) {
                     Text("La fecha quedará excluida del plan y no reaparecerá en una revisión futura.")
                 }

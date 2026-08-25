@@ -12,6 +12,7 @@ import com.blackatsystems.miguardia.core.domain.model.RecurringOccurrence
 import com.blackatsystems.miguardia.core.domain.model.RecurringPlanRevisionKind
 import com.blackatsystems.miguardia.core.domain.model.Shift
 import com.blackatsystems.miguardia.core.domain.model.ShiftOccupancyExpectation
+import com.blackatsystems.miguardia.core.domain.model.ShiftActualExpectation
 import com.blackatsystems.miguardia.core.domain.model.ShiftWorkSnapshot
 import com.blackatsystems.miguardia.core.domain.model.V2ShiftLookup
 import com.blackatsystems.miguardia.core.domain.model.V2ShiftWrite
@@ -21,6 +22,7 @@ import com.blackatsystems.miguardia.core.domain.repository.MedicalLeaveRepositor
 import com.blackatsystems.miguardia.core.domain.repository.ObjectiveRepository
 import com.blackatsystems.miguardia.core.domain.repository.RecurringPlanRepository
 import com.blackatsystems.miguardia.core.domain.repository.ShiftRepository
+import com.blackatsystems.miguardia.core.domain.repository.ShiftActualRepository
 import com.blackatsystems.miguardia.core.domain.repository.V2ShiftRepository
 import com.blackatsystems.miguardia.core.domain.repository.WorkCatalogRepository
 import com.blackatsystems.miguardia.core.domain.repository.WorkConfigurationRepository
@@ -99,6 +101,7 @@ data class V2ShiftEditUiState(
     val targetShiftId: UUID? = null,
     val originalWrite: V2ShiftWrite? = null,
     val recurringOccurrence: RecurringOccurrence? = null,
+    val actualExpectation: ShiftActualExpectation? = null,
     val templateOptions: List<V2ShiftEditTemplateOption> = emptyList(),
     val selectedTemplateId: UUID? = null,
     val usesHistoricalTemplate: Boolean = true,
@@ -153,6 +156,7 @@ class V2ShiftEditViewModel(
     shiftRepository: ShiftRepository,
     medicalLeaveRepository: MedicalLeaveRepository,
     v2ShiftRepository: V2ShiftRepository,
+    shiftActualRepository: ShiftActualRepository,
     recurringPlanRepository: RecurringPlanRepository,
     clock: Clock,
     private val savedStateHandle: SavedStateHandle,
@@ -164,6 +168,7 @@ class V2ShiftEditViewModel(
         shiftRepository = shiftRepository,
         medicalLeaveRepository = medicalLeaveRepository,
         v2ShiftRepository = v2ShiftRepository,
+        shiftActualRepository = shiftActualRepository,
         recurringPlanRepository = recurringPlanRepository,
         clock = clock,
         scope = viewModelScope,
@@ -184,6 +189,8 @@ class V2ShiftEditViewModel(
     fun deleteOnlyThisOccurrence() = coordinator.deleteOnlyThisOccurrence()
     fun cancelScopeChoice() = coordinator.cancelScopeChoice()
     fun handoffToRecurring() = coordinator.handoffToRecurring()
+    fun handoffToActual() = coordinator.handoffToActual()
+    fun reportActualHandoffUnavailable() = coordinator.reportActualHandoffUnavailable()
     fun chooseHistoricalTemplate() = coordinator.chooseHistoricalTemplate()
     fun chooseTemplate(id: UUID) = coordinator.chooseTemplate(id)
     fun updatePosition(value: String) = coordinator.updatePosition(value)
@@ -209,6 +216,7 @@ class V2ShiftEditViewModel(
         private val shiftRepository: ShiftRepository,
         private val medicalLeaveRepository: MedicalLeaveRepository,
         private val v2ShiftRepository: V2ShiftRepository,
+        private val shiftActualRepository: ShiftActualRepository,
         private val recurringPlanRepository: RecurringPlanRepository,
         private val clock: Clock = Clock.system(AppDefaults.zoneId()),
     ) : ViewModelProvider.Factory {
@@ -222,6 +230,7 @@ class V2ShiftEditViewModel(
                 shiftRepository = shiftRepository,
                 medicalLeaveRepository = medicalLeaveRepository,
                 v2ShiftRepository = v2ShiftRepository,
+                shiftActualRepository = shiftActualRepository,
                 recurringPlanRepository = recurringPlanRepository,
                 clock = clock,
                 savedStateHandle = extras.createSavedStateHandle(),
@@ -237,6 +246,7 @@ internal class V2ShiftEditCoordinator(
     private val shiftRepository: ShiftRepository,
     private val medicalLeaveRepository: MedicalLeaveRepository,
     private val v2ShiftRepository: V2ShiftRepository,
+    private val shiftActualRepository: ShiftActualRepository? = null,
     private val recurringPlanRepository: RecurringPlanRepository? = null,
     private val clock: Clock,
     private val scope: CoroutineScope,
@@ -344,6 +354,7 @@ internal class V2ShiftEditCoordinator(
             ensureCurrent(epoch)
             requireCompatibleTarget(write)
             val occurrence = recurringPlanRepository?.getOccurrenceForShift(id)
+            val actualExpectation = shiftActualRepository?.getExpectation(id)
             ensureCurrent(epoch)
             if (occurrence != null &&
                 !write.shift.localStartDate.isBefore(today()) &&
@@ -355,6 +366,7 @@ internal class V2ShiftEditCoordinator(
                         targetShiftId = id,
                         originalWrite = write,
                         recurringOccurrence = occurrence,
+                        actualExpectation = actualExpectation,
                         isLoading = false,
                         errorMessage = null,
                     )
@@ -381,6 +393,7 @@ internal class V2ShiftEditCoordinator(
             ensureCurrent(epoch)
             requireCompatibleTarget(write)
             val occurrence = recurringPlanRepository?.getOccurrenceForShift(id)
+            val actualExpectation = shiftActualRepository?.getExpectation(id)
             ensureCurrent(epoch)
             if (occurrence != null &&
                 !write.shift.localStartDate.isBefore(today()) &&
@@ -392,6 +405,7 @@ internal class V2ShiftEditCoordinator(
                         targetShiftId = id,
                         originalWrite = write,
                         recurringOccurrence = occurrence,
+                        actualExpectation = actualExpectation,
                         confirmedPairFingerprint = pairFingerprint(write),
                         isLoading = false,
                         errorMessage = null,
@@ -450,6 +464,49 @@ internal class V2ShiftEditCoordinator(
         persistCurrentState()
     }
 
+    fun handoffToActual() {
+        val state = _uiState.value
+        if (
+            state.stage !in setOf(
+                V2ShiftEditStage.EDIT_FORM,
+                V2ShiftEditStage.CONFIRM_WARNINGS,
+                V2ShiftEditStage.REVIEW,
+            ) ||
+            state.isLoading ||
+            state.isSaving ||
+            state.actualExpectation?.previousActual == null
+        ) {
+            return
+        }
+        stateEpoch++
+        readJob?.cancel()
+        readJob = null
+        preparedReview = null
+        _uiState.value = V2ShiftEditUiState(
+            infoMessage = state.infoMessage,
+            successSequence = state.successSequence,
+        )
+        persistCurrentState()
+    }
+
+    fun reportActualHandoffUnavailable() {
+        val state = _uiState.value
+        if (
+            state.stage !in setOf(
+                V2ShiftEditStage.EDIT_FORM,
+                V2ShiftEditStage.CONFIRM_WARNINGS,
+                V2ShiftEditStage.REVIEW,
+            ) ||
+            state.isLoading ||
+            state.isSaving
+        ) {
+            return
+        }
+        showError(
+            "Todavía estamos leyendo el horario real. El borrador de esta edición se conserva; reintentá en un momento.",
+        )
+    }
+
     private fun today(): LocalDate = LocalDate.now(clock)
 
     private suspend fun hasActiveRecurringPlan(occurrence: RecurringOccurrence): Boolean =
@@ -465,11 +522,14 @@ internal class V2ShiftEditCoordinator(
             val write = requireTargetWrite(id)
             ensureCurrent(epoch)
             requireCompatibleTarget(write)
+            val actualExpectation = shiftActualRepository?.getExpectation(id)
+            ensureCurrent(epoch)
             updateAndPersist {
                 it.copy(
                     stage = V2ShiftEditStage.CONFIRM_DELETE,
                     targetShiftId = id,
                     originalWrite = write,
+                    actualExpectation = actualExpectation,
                     selectedTemplateId = null,
                     usesHistoricalTemplate = true,
                     position = "",
@@ -659,7 +719,7 @@ internal class V2ShiftEditCoordinator(
                 return@launch
             }
             try {
-                v2ShiftRepository.deleteShift(expected)
+                v2ShiftRepository.deleteShift(expected, state.actualExpectation)
                 finishSuccess("Jornada eliminada.")
             } catch (error: CancellationException) {
                 throw error
@@ -690,6 +750,7 @@ internal class V2ShiftEditCoordinator(
                 targetShiftId = null,
                 originalWrite = null,
                 recurringOccurrence = null,
+                actualExpectation = null,
                 confirmedPairFingerprint = null,
                 errorMessage = null,
             )
@@ -752,6 +813,7 @@ internal class V2ShiftEditCoordinator(
             targetShiftId = null,
             originalWrite = null,
             recurringOccurrence = null,
+            actualExpectation = null,
             templateOptions = emptyList(),
             selectedTemplateId = null,
             usesHistoricalTemplate = true,
@@ -942,6 +1004,8 @@ internal class V2ShiftEditCoordinator(
             val write = requireTargetWrite(id)
             ensureCurrent(epoch)
             requireCompatibleTarget(write)
+            val actualExpectation = shiftActualRepository?.getExpectation(id)
+            ensureCurrent(epoch)
             val context = loadEditorContext(write)
             ensureCurrent(epoch)
             val selectedTemplateId = if (preserveDraft) {
@@ -963,6 +1027,7 @@ internal class V2ShiftEditCoordinator(
                     date = write.shift.localStartDate,
                     targetShiftId = write.shift.id,
                     originalWrite = write,
+                    actualExpectation = actualExpectation,
                     templateOptions = context.options,
                     selectedTemplateId = selectedTemplateId,
                     usesHistoricalTemplate = usesHistoricalTemplate,
@@ -1042,6 +1107,16 @@ internal class V2ShiftEditCoordinator(
                     updatedAt = clock.instant(),
                 )
             }
+            val actualExpectation = shiftActualRepository?.getExpectation(targetId)
+            ensureCurrent(epoch)
+            if (actualExpectation?.previousActual != null && (
+                candidate.shift.startAt != current.shift.startAt ||
+                    candidate.shift.endAt != current.shift.endAt
+                )) {
+                throw IllegalStateException(
+                    "Esta jornada tiene horario real. Volvé al horario planificado antes de cambiar su inicio o final.",
+                )
+            }
             val date = current.shift.localStartDate
             val startDate = date.minusDays(2)
             val endDate = date.plusDays(2)
@@ -1065,11 +1140,19 @@ internal class V2ShiftEditCoordinator(
                     "${leave.endDateInclusive.format(DATE_FORMATTER)}. No se modificará."
             }
             ensureCurrent(epoch)
-            val warnings = plan.warnings.map(::warningText) + medicalWarnings
+            val actualWarnings = if (actualExpectation?.previousActual != null) {
+                listOf("Se conservarán el horario real y sus extras porque la planificación mantiene los mismos instantes.")
+            } else emptyList()
+            val warnings = plan.warnings.map(::warningText) + medicalWarnings + actualWarnings
             val expectation = ShiftOccupancyExpectation.capture(startDate, endDate, existing)
+            val mutation = if (actualExpectation != null) {
+                plan.mutation.copy(actualExpectations = mapOf(targetId to actualExpectation))
+            } else {
+                plan.mutation
+            }
             val prepared = PreparedEdit(
                 original = current,
-                mutation = plan.mutation,
+                mutation = mutation,
                 expectedOccupancy = expectation,
                 warnings = warnings,
                 fingerprint = reviewFingerprint(current, candidate, expectation, warnings),
@@ -1110,6 +1193,7 @@ internal class V2ShiftEditCoordinator(
                 it.copy(
                     stage = V2ShiftEditStage.REVIEW,
                     originalWrite = current,
+                    actualExpectation = actualExpectation,
                     templateOptions = context.options,
                     warnings = warnings,
                     reviewFingerprint = prepared.fingerprint,
@@ -1283,6 +1367,8 @@ internal class V2ShiftEditCoordinator(
                     val current = requireTargetWrite(target)
                     ensureCurrent(epoch)
                     requireCompatibleTarget(current)
+                    val actualExpectation = shiftActualRepository?.getExpectation(target)
+                    ensureCurrent(epoch)
                     if (pairFingerprint(current) != restored.confirmedPairFingerprint) {
                         reloadDayActions(
                             "La jornada cambió durante la pausa. Revisala nuevamente antes de eliminar.",
@@ -1292,6 +1378,7 @@ internal class V2ShiftEditCoordinator(
                         updateAndPersist {
                             it.copy(
                                 originalWrite = current,
+                                actualExpectation = actualExpectation,
                                 inspectionState = V2ShiftDayInspectionState.CONTENT,
                                 isLoading = false,
                                 errorMessage = null,
@@ -1340,6 +1427,7 @@ internal class V2ShiftEditCoordinator(
                     targetShiftId = null,
                     originalWrite = null,
                     recurringOccurrence = null,
+                    actualExpectation = null,
                     templateOptions = emptyList(),
                     selectedTemplateId = null,
                     usesHistoricalTemplate = true,
@@ -1367,6 +1455,7 @@ internal class V2ShiftEditCoordinator(
                 targetShiftId = null,
                 originalWrite = null,
                 recurringOccurrence = null,
+                actualExpectation = null,
                 templateOptions = emptyList(),
                 selectedTemplateId = null,
                 usesHistoricalTemplate = true,
@@ -1426,6 +1515,7 @@ internal class V2ShiftEditCoordinator(
                 targetShiftId = null,
                 originalWrite = null,
                 recurringOccurrence = null,
+                actualExpectation = null,
                 templateOptions = emptyList(),
                 selectedTemplateId = null,
                 usesHistoricalTemplate = true,

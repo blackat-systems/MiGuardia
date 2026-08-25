@@ -10,6 +10,7 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performScrollTo
 import com.blackatsystems.miguardia.core.domain.AppDefaults
 import com.blackatsystems.miguardia.core.domain.calendar.projectCalendarMonth
 import com.blackatsystems.miguardia.core.domain.model.ExplicitDayStatus
@@ -71,7 +72,7 @@ class CalendarCommonV2ComposeTest {
 
         compose.runOnIdle { state = state.copy(detailDate = TWO_SHIFTS_DATE) }
         compose.onNodeWithText("Hospital Norte (HNO)").assertIsDisplayed()
-        compose.onNodeWithText("Hospital Sur (HSU)").assertIsDisplayed()
+        compose.onNodeWithText("Hospital Sur (HSU)").performScrollTo().assertIsDisplayed()
         compose.onAllNodesWithText("Notas").fetchSemanticsNodes().also { nodes ->
             check(nodes.size == 2) { "Cada jornada V2 debe conservar su acceso a Notas." }
         }

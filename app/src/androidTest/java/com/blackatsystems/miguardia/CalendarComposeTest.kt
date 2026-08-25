@@ -223,8 +223,8 @@ class CalendarComposeTest {
             }
         }
 
-        compose.onNodeWithTag("v2-edit-day-action").assertIsDisplayed()
-        compose.onNodeWithText("Notas").performClick()
+        compose.onNodeWithTag("v2-edit-day-action").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Notas").performScrollTo().performClick()
 
         compose.onNodeWithText("Notas privadas").assertIsDisplayed()
         compose.onNodeWithTag("v2-edit-day-action").assertDoesNotExist()

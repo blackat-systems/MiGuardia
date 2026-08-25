@@ -60,7 +60,7 @@ fun projectCalendarMonth(
     val shiftsByDate = shifts
         .asSequence()
         .filter { it.localStartDate in startDate..endDate }
-        .sortedWith(compareBy<Shift>({ it.startAt }, { it.id }))
+        .sortedWith(compareBy<Shift>({ it.startAt }, { it.endAt }, { it.id }))
         .groupBy { it.localStartDate }
     val explicitByDate = explicitDayStatuses
         .asSequence()

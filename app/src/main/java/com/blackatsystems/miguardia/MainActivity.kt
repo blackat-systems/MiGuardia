@@ -27,6 +27,7 @@ import com.blackatsystems.miguardia.ui.exceptions.ExceptionsViewModel
 import com.blackatsystems.miguardia.ui.management.V2ManualShiftLoadViewModel
 import com.blackatsystems.miguardia.ui.management.V2RecurringPlanViewModel
 import com.blackatsystems.miguardia.ui.management.V2ShiftEditViewModel
+import com.blackatsystems.miguardia.ui.management.V2ShiftActualViewModel
 import com.blackatsystems.miguardia.ui.nextevent.NextEventViewModel
 import com.blackatsystems.miguardia.ui.notifications.NotificationViewModel
 import com.blackatsystems.miguardia.ui.photos.PhotosViewModel
@@ -99,6 +100,7 @@ class MainActivity : ComponentActivity() {
             shiftRepository = dataStore.shifts,
             medicalLeaveRepository = dataStore.medicalLeaves,
             v2ShiftRepository = dataStore.v2Shifts,
+            shiftActualRepository = dataStore.shiftActuals,
         )
     }
 
@@ -111,7 +113,16 @@ class MainActivity : ComponentActivity() {
             shiftRepository = dataStore.shifts,
             medicalLeaveRepository = dataStore.medicalLeaves,
             v2ShiftRepository = dataStore.v2Shifts,
+            shiftActualRepository = dataStore.shiftActuals,
             recurringPlanRepository = dataStore.recurringPlans,
+        )
+    }
+
+    private val v2ShiftActualViewModel: V2ShiftActualViewModel by viewModels {
+        val dataStore = (application as MiGuardiaApplication).localDataStore
+        V2ShiftActualViewModel.Factory(
+            repository = dataStore.shiftActuals,
+            clock = Clock.systemUTC(),
         )
     }
 
@@ -185,6 +196,7 @@ class MainActivity : ComponentActivity() {
                     nextEventViewModel = nextEventViewModel,
                     v2ManualShiftLoadViewModel = v2ManualShiftLoadViewModel,
                     v2ShiftEditViewModel = v2ShiftEditViewModel,
+                    v2ShiftActualViewModel = v2ShiftActualViewModel,
                     v2RecurringPlanViewModel = v2RecurringPlanViewModel,
                     exceptionsViewModel = exceptionsViewModel,
                     vacationViewModel = vacationViewModel,

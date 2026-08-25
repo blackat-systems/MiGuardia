@@ -654,7 +654,7 @@ private fun RecurringOccupantKind.visibleName(): String = when (this) {
     RecurringOccupantKind.MANUAL -> "jornada manual protegida"
     RecurringOccupantKind.AUTOMATIC_INTACT -> "automática intacta"
     RecurringOccupantKind.CUSTOMIZED -> "personalizada protegida"
-    RecurringOccupantKind.PROTECTED -> "protegida por estado, nota o aviso"
+    RecurringOccupantKind.PROTECTED -> "protegida por estado, nota, aviso u horario real"
 }
 
 private fun ShiftPlanningWarning.visibleName(): String = when (this) {

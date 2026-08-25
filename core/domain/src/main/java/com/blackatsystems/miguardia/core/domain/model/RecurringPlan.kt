@@ -238,9 +238,10 @@ data class RecurringShiftProtectionVersion(
     val notes: Set<RecurringNoteVersion>,
     val hasNotificationConfig: Boolean,
     val notificationLeadMinutes: List<Long>,
+    val actualFingerprint: String? = null,
 ) {
     val isProtected: Boolean
-        get() = status != ShiftStatus.PLANNED || notes.isNotEmpty() || hasNotificationConfig
+        get() = status != ShiftStatus.PLANNED || notes.isNotEmpty() || hasNotificationConfig || actualFingerprint != null
 }
 
 @ConsistentCopyVisibility

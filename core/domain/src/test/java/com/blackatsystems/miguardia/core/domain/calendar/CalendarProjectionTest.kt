@@ -131,6 +131,35 @@ class CalendarProjectionTest {
     }
 
     @Test
+    fun monthProjectionUsesEndThenUuidWhenShiftsStartTogether() {
+        val longerWithLowerUuid = shift(
+            id = UUID.fromString("00000000-0000-0000-0000-000000000001"),
+            localDate = LocalDate.of(2026, 8, 31),
+            startTime = LocalTime.of(8, 0),
+            endTime = LocalTime.of(16, 0),
+        )
+        val shorterWithHigherUuid = shift(
+            id = UUID.fromString("00000000-0000-0000-0000-000000000009"),
+            localDate = LocalDate.of(2026, 8, 31),
+            startTime = LocalTime.of(8, 0),
+            endTime = LocalTime.of(12, 0),
+        )
+
+        val august = projectCalendarMonth(
+            month = YearMonth.of(2026, 8),
+            shifts = listOf(longerWithLowerUuid, shorterWithHigherUuid),
+            explicitDayStatuses = emptyList(),
+            medicalLeaves = emptyList(),
+            now = Instant.parse("2026-08-01T00:00:00Z"),
+        )
+
+        assertEquals(
+            listOf(shorterWithHigherUuid.id, longerWithLowerUuid.id),
+            august.last().shifts.map { it.shift.id },
+        )
+    }
+
+    @Test
     fun implicitUndefinedDiffersFromExplicitUndefinedAndDayOff() {
         val month = YearMonth.of(2026, 8)
         val days = projectCalendarMonth(

@@ -7,6 +7,7 @@ import com.blackatsystems.miguardia.core.database.repository.RoomMedicalLeaveRep
 import com.blackatsystems.miguardia.core.database.repository.RoomObjectiveRepository
 import com.blackatsystems.miguardia.core.database.repository.RoomSchedulePhotoRepository
 import com.blackatsystems.miguardia.core.database.repository.RoomShiftRepository
+import com.blackatsystems.miguardia.core.database.repository.RoomShiftActualRepository
 import com.blackatsystems.miguardia.core.database.repository.RoomShiftNoteRepository
 import com.blackatsystems.miguardia.core.database.repository.RoomShiftNotificationConfigRepository
 import com.blackatsystems.miguardia.core.database.repository.RoomVacationRepository
@@ -20,6 +21,7 @@ import com.blackatsystems.miguardia.core.domain.repository.ObjectiveRepository
 import com.blackatsystems.miguardia.core.domain.repository.RecurringPlanRepository
 import com.blackatsystems.miguardia.core.domain.repository.SchedulePhotoRepository
 import com.blackatsystems.miguardia.core.domain.repository.ShiftRepository
+import com.blackatsystems.miguardia.core.domain.repository.ShiftActualRepository
 import com.blackatsystems.miguardia.core.domain.repository.ShiftNoteRepository
 import com.blackatsystems.miguardia.core.domain.repository.ShiftNotificationConfigRepository
 import com.blackatsystems.miguardia.core.domain.repository.VacationRepository
@@ -36,6 +38,7 @@ class LocalDataStore internal constructor(
     recurringClock: Clock = Clock.systemUTC(),
 ) : Closeable {
     private val roomV2Shifts = RoomV2ShiftRepository(database, recurringClock)
+    private val roomShiftActual = RoomShiftActualRepository(database)
     val objectives: ObjectiveRepository = RoomObjectiveRepository(database)
     val shifts: ShiftRepository = RoomShiftRepository(database)
     val explicitDayStatuses: ExplicitDayStatusRepository =
@@ -52,6 +55,7 @@ class LocalDataStore internal constructor(
         RoomWorkConfigurationRepository(database)
     val workCatalog: WorkCatalogRepository = RoomWorkCatalogRepository(database)
     val v2Shifts: V2ShiftRepository = roomV2Shifts
+    val shiftActuals: ShiftActualRepository = roomShiftActual
     val recurringShiftWriter: V2RecurringShiftRepository = roomV2Shifts
     val recurringPlans: RecurringPlanRepository = roomV2Shifts
 

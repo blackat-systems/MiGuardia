@@ -209,7 +209,7 @@ class V2ShiftEditActivityTest {
     private fun openDayActions() {
         compose.onNodeWithTag(waitForCalendarDay()).performScrollTo().performClick()
         waitForTag("v2-edit-day-action")
-        compose.onNodeWithTag("v2-edit-day-action").performClick()
+        compose.onNodeWithTag("v2-edit-day-action").performScrollTo().assertIsDisplayed().performClick()
         waitForTag("v2-shift-edit-surface")
     }
 

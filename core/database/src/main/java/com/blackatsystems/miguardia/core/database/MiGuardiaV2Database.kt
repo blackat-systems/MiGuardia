@@ -12,6 +12,7 @@ import com.blackatsystems.miguardia.core.database.dao.MedicalLeaveDao
 import com.blackatsystems.miguardia.core.database.dao.ObjectiveDao
 import com.blackatsystems.miguardia.core.database.dao.RecurringPlanDao
 import com.blackatsystems.miguardia.core.database.dao.SchedulePhotoDao
+import com.blackatsystems.miguardia.core.database.dao.ShiftActualDao
 import com.blackatsystems.miguardia.core.database.dao.ShiftDao
 import com.blackatsystems.miguardia.core.database.dao.ShiftNoteDao
 import com.blackatsystems.miguardia.core.database.dao.ShiftNotificationConfigDao
@@ -20,6 +21,7 @@ import com.blackatsystems.miguardia.core.database.dao.VacationDao
 import com.blackatsystems.miguardia.core.database.dao.WorkCatalogDao
 import com.blackatsystems.miguardia.core.database.dao.WorkConfigurationDao
 import com.blackatsystems.miguardia.core.database.entity.ExplicitDayStatusEntity
+import com.blackatsystems.miguardia.core.database.entity.ExtraWorkClassEntity
 import com.blackatsystems.miguardia.core.database.entity.HolidayEntity
 import com.blackatsystems.miguardia.core.database.entity.MedicalLeaveEntity
 import com.blackatsystems.miguardia.core.database.entity.ObjectiveEntity
@@ -30,6 +32,8 @@ import com.blackatsystems.miguardia.core.database.entity.RecurringPlanEntity
 import com.blackatsystems.miguardia.core.database.entity.RecurringPlanRevisionEntity
 import com.blackatsystems.miguardia.core.database.entity.SchedulePhotoEntity
 import com.blackatsystems.miguardia.core.database.entity.ShiftEntity
+import com.blackatsystems.miguardia.core.database.entity.ShiftActualRecordEntity
+import com.blackatsystems.miguardia.core.database.entity.ShiftExtraIntervalEntity
 import com.blackatsystems.miguardia.core.database.entity.ShiftNoteEntity
 import com.blackatsystems.miguardia.core.database.entity.ShiftNotificationConfigEntity
 import com.blackatsystems.miguardia.core.database.entity.ShiftNotificationReminderEntity
@@ -66,8 +70,11 @@ import com.blackatsystems.miguardia.core.database.entity.WorkplaceRuleRevisionEn
         RecurringPlanEntity::class,
         RecurringPlanRevisionEntity::class,
         RecurringOccurrenceEntity::class,
+        ExtraWorkClassEntity::class,
+        ShiftActualRecordEntity::class,
+        ShiftExtraIntervalEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 internal abstract class MiGuardiaV2Database : RoomDatabase() {
@@ -84,6 +91,7 @@ internal abstract class MiGuardiaV2Database : RoomDatabase() {
     internal abstract fun workCatalogDao(): WorkCatalogDao
     internal abstract fun v2ShiftDao(): V2ShiftDao
     internal abstract fun recurringPlanDao(): RecurringPlanDao
+    internal abstract fun shiftActualDao(): ShiftActualDao
 
     companion object {
         const val DATABASE_NAME: String = "miguardia-v2.db"
@@ -95,7 +103,7 @@ internal abstract class MiGuardiaV2Database : RoomDatabase() {
             context.applicationContext,
             MiGuardiaV2Database::class.java,
             databaseName,
-        ).addMigrations(MIGRATION_1_2).build()
+        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3).build()
 
         internal val MIGRATION_1_2: Migration = object : Migration(1, 2) {
             override fun migrate(db: SupportSQLiteDatabase) {
@@ -191,6 +199,105 @@ internal abstract class MiGuardiaV2Database : RoomDatabase() {
                 db.execSQL(
                     "CREATE UNIQUE INDEX IF NOT EXISTS `index_recurring_occurrences_shiftId` " +
                         "ON `recurring_occurrences` (`shiftId`)",
+                )
+            }
+        }
+
+        internal val MIGRATION_2_3: Migration = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS " +
+                        "`index_shift_work_snapshots_shiftId_timelineId_sector` " +
+                        "ON `shift_work_snapshots` (`shiftId`, `timelineId`, `sector`)",
+                )
+                db.execSQL(
+                    """CREATE TABLE IF NOT EXISTS `extra_work_classes` (
+                        `id` TEXT NOT NULL,
+                        `timelineId` TEXT NOT NULL,
+                        `sector` TEXT NOT NULL,
+                        `name` TEXT NOT NULL,
+                        `normalizedNameKey` TEXT NOT NULL,
+                        `helpsMeetHoursReference` INTEGER NOT NULL,
+                        `showDedicatedSummary` INTEGER NOT NULL,
+                        `isActive` INTEGER NOT NULL,
+                        `createdAtEpochMillis` INTEGER NOT NULL,
+                        `updatedAtEpochMillis` INTEGER NOT NULL,
+                        PRIMARY KEY(`id`),
+                        FOREIGN KEY(`timelineId`) REFERENCES `work_configuration_roots`(`timelineId`)
+                            ON UPDATE NO ACTION ON DELETE RESTRICT
+                    )""".trimIndent(),
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_extra_work_classes_timelineId` " +
+                        "ON `extra_work_classes` (`timelineId`)",
+                )
+                db.execSQL(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS " +
+                        "`index_extra_work_classes_timelineId_sector_normalizedNameKey` " +
+                        "ON `extra_work_classes` (`timelineId`, `sector`, `normalizedNameKey`)",
+                )
+                db.execSQL(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS `index_extra_work_classes_id_timelineId_sector` " +
+                        "ON `extra_work_classes` (`id`, `timelineId`, `sector`)",
+                )
+                db.execSQL(
+                    """CREATE TABLE IF NOT EXISTS `shift_actual_records` (
+                        `shiftId` TEXT NOT NULL,
+                        `timelineId` TEXT NOT NULL,
+                        `sector` TEXT NOT NULL,
+                        `actualStartEpochMillis` INTEGER NOT NULL,
+                        `actualEndEpochMillis` INTEGER NOT NULL,
+                        `differenceReason` TEXT NOT NULL,
+                        `explanation` TEXT,
+                        `createdAtEpochMillis` INTEGER NOT NULL,
+                        `updatedAtEpochMillis` INTEGER NOT NULL,
+                        PRIMARY KEY(`shiftId`),
+                        FOREIGN KEY(`shiftId`, `timelineId`, `sector`)
+                            REFERENCES `shift_work_snapshots`(`shiftId`, `timelineId`, `sector`)
+                            ON UPDATE NO ACTION ON DELETE RESTRICT
+                    )""".trimIndent(),
+                )
+                db.execSQL(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS " +
+                        "`index_shift_actual_records_shiftId_timelineId_sector` " +
+                        "ON `shift_actual_records` (`shiftId`, `timelineId`, `sector`)",
+                )
+                db.execSQL(
+                    """CREATE TABLE IF NOT EXISTS `shift_extra_intervals` (
+                        `id` TEXT NOT NULL,
+                        `shiftId` TEXT NOT NULL,
+                        `timelineId` TEXT NOT NULL,
+                        `sector` TEXT NOT NULL,
+                        `extraWorkClassId` TEXT NOT NULL,
+                        `startEpochMillis` INTEGER NOT NULL,
+                        `endEpochMillis` INTEGER NOT NULL,
+                        `classNameSnapshot` TEXT NOT NULL,
+                        `helpsMeetHoursReferenceSnapshot` INTEGER NOT NULL,
+                        `showDedicatedSummarySnapshot` INTEGER NOT NULL,
+                        `createdAtEpochMillis` INTEGER NOT NULL,
+                        `updatedAtEpochMillis` INTEGER NOT NULL,
+                        PRIMARY KEY(`id`),
+                        FOREIGN KEY(`shiftId`, `timelineId`, `sector`)
+                            REFERENCES `shift_actual_records`(`shiftId`, `timelineId`, `sector`)
+                            ON UPDATE NO ACTION ON DELETE CASCADE,
+                        FOREIGN KEY(`extraWorkClassId`, `timelineId`, `sector`)
+                            REFERENCES `extra_work_classes`(`id`, `timelineId`, `sector`)
+                            ON UPDATE NO ACTION ON DELETE RESTRICT
+                    )""".trimIndent(),
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_shift_extra_intervals_shiftId_timelineId_sector` " +
+                        "ON `shift_extra_intervals` (`shiftId`, `timelineId`, `sector`)",
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS " +
+                        "`index_shift_extra_intervals_extraWorkClassId_timelineId_sector` " +
+                        "ON `shift_extra_intervals` (`extraWorkClassId`, `timelineId`, `sector`)",
+                )
+                db.execSQL(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS " +
+                        "`index_shift_extra_intervals_shiftId_startEpochMillis_endEpochMillis` " +
+                        "ON `shift_extra_intervals` (`shiftId`, `startEpochMillis`, `endEpochMillis`)",
                 )
             }
         }
