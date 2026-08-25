@@ -69,6 +69,7 @@ prevalecen para el estado operativo.
 | `EDICION_Y_ELIMINACION_DE_JORNADAS_V2.md` | **CERRADO** | La edición y eliminación exacta de una jornada V2 fue auditada, probada e integrada por MAIN |
 | `RETIRAR_MODO_V1_Y_FIJAR_BASE_EXCLUSIVA_V2.md` | **CERRADO** | MiGuardia ya ejecuta una sola experiencia V2 sobre `MiGuardiaV2Database` versión 1; Samsung API 36 y emulador API 26 quedaron verificados |
 | `REPETIR_JORNADAS_Y_CAMBIAR_DESDE_UNA_FECHA_V2.md` | **CERRADO** | Planes finitos, excepciones durables y cambios de una jornada o de todo lo futuro integrados sobre Room V2 versión 2 |
+| `REGISTRAR_HORARIO_REAL_Y_CLASIFICAR_HORAS_EXTRA_V2.md` | **HABILITADO** | Registrar lo realmente trabajado en una jornada existente y clasificar conscientemente su diferencia extra, sin calcular todavía avance |
 
 ## Contratos históricos de MiGuardia 1.0
 
@@ -117,15 +118,19 @@ Joaquin indicó que quiere preparar o abrir la siguiente:
 6. **Cerrado:** repetir jornadas y decidir si un cambio afecta sólo una fecha o
    todo lo futuro, mediante
    `REPETIR_JORNADAS_Y_CAMBIAR_DESDE_UNA_FECHA_V2.md`;
-7. horario real, extras y avance contra la referencia;
-8. disponibilidad, situaciones especiales y consolidación final del motor de
+7. **Habilitado:** horario real y clasificación exacta de la diferencia
+   adicional en jornadas existentes, mediante
+   `REGISTRAR_HORARIO_REAL_Y_CLASIFICAR_HORAS_EXTRA_V2.md`;
+8. trabajo extra independiente y avance contra la referencia, después de
+   resolver los cambios de referencia dentro de una semana o ciclo;
+9. disponibilidad, situaciones especiales y consolidación final del motor de
    horas y cumplimiento;
-9. Calendario final y tarjeta superior;
-10. Resumen personalizable;
-11. adaptación de próximo evento y notificaciones;
-12. auditoría integral del núcleo;
-13. segunda capa: widget, informes, copias, bloqueo y Ayuda/recorrido inicial;
-14. auditoría de la aplicación completa y candidato local.
+10. Calendario final y tarjeta superior;
+11. Resumen personalizable;
+12. adaptación de próximo evento y notificaciones;
+13. auditoría integral del núcleo;
+14. segunda capa: widget, informes, copias, bloqueo y Ayuda/recorrido inicial;
+15. auditoría de la aplicación completa y candidato local.
 
 Cuando Joaquin pide un prompt, MAIN lo habilita en este índice después de cerrar
 su contrato y dependencias, y crea automáticamente el checkpoint documental

@@ -562,6 +562,34 @@ El contrato quedó `CERRADO` en
 completa está en
 `docs/audits/2026-08-25-planes-recurrentes-y-cambios-futuros-v2.md`.
 
+## Horario real y clasificación exacta de extras — contrato preparado
+
+Joaquin pidió preparar la próxima dependencia después del cierre de planes
+recurrentes. MAIN auditó el dominio, Room y la interfaz vigentes y habilitó
+`docs/prompts/REGISTRAR_HORARIO_REAL_Y_CLASIFICAR_HORAS_EXTRA_V2.md`.
+
+El bloque parte de la base funcional cerrada
+`2d41f60840be9e12abde97182d79757ddbb0a992` y establece:
+
+- horario planificado y horario real como datos separados;
+- motivo obligatorio cuando difieren;
+- clasificación consciente de una duración real mayor como habitual o extra;
+- uno o más fragmentos extra exactos, sin doble conteo;
+- clases reutilizables con fotografía histórica;
+- protección transaccional de edición, eliminación, carga manual y
+  recurrencias;
+- migración Room V2 explícita `2→3`, con `1.json` y `2.json` intactos.
+
+El contrato se dividió deliberadamente antes de implementar. No calcula avance
+contra la referencia porque sigue pendiente decidir qué meta usar si una
+referencia cambia dentro de una semana o ciclo. Tampoco crea todavía trabajo
+extra independiente sin jornada dueña: esa capacidad necesita una fotografía
+laboral e identidad de Calendario propias.
+
+ADR 0028 fija el modelo de horario real y extras exactas. El prompt está
+**HABILITADO — NO IMPLEMENTADO**. No existe candidato, diff de código ni tarea
+especializada abierta todavía.
+
 ## Flujo vigente de MAIN
 
 - Joaquin entrega un handoff o pide preparar el prompt de una nueva tarea;
@@ -604,7 +632,9 @@ cierre documentado arriba y no habilita acciones posteriores.
 
 ## Todavía no implementado
 
-- horario real, clasificación de extras y avance contra la referencia;
+- horario real y clasificación exacta de extras ligadas a una jornada
+  existente; su prompt está habilitado, pero todavía no fue ejecutado;
+- trabajo extra independiente y avance contra la referencia;
 - persistencia de guardias pasivas y disponibilidad;
 - situaciones especiales y consolidación final del motor de horas y
   cumplimiento, con su presentación en Resumen y Calendario;
@@ -614,9 +644,14 @@ cierre documentado arriba y no habilita acciones posteriores.
 ## Próximo paso
 
 Los planes recurrentes y los cambios desde una fecha quedaron cerrados. El
-siguiente bloque recomendado es **horario real, extras y avance contra la
-referencia**. MAIN preparará su contrato durable únicamente cuando Joaquin lo
-pida; todavía no existe otra dependencia abierta ni habilitada.
+siguiente bloque habilitado se llama **Registrar horario real y clasificar
+horas extra V2**. Joaquin puede entregar íntegramente
+`docs/prompts/REGISTRAR_HORARIO_REAL_Y_CLASIFICAR_HORAS_EXTRA_V2.md` a una
+única dependencia desde el checkpoint documental que informe MAIN.
+
+Pedir y preparar el prompt no abrió por sí solo otra tarea. El avance contra la
+referencia queda para el bloque siguiente, después de resolver la regla de
+cambio de meta dentro de una semana o ciclo.
 
 Quedan como verificaciones separadas el recorrido físico de alarma exacta
 —sólo con permiso explícito— y API 37 antes del candidato final. API 26 ya fue

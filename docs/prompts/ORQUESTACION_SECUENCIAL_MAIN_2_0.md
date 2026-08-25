@@ -220,11 +220,14 @@ La secuencia conocida al redactar este prompt es:
 7. Corregir o eliminar una jornada V2 individual —cerrado en `4646f66`.
 8. Retirar el modo V1 antes de ampliar nuevamente la persistencia, conservando
    el código útil —cerrado en `b04dd59`.
-9. Repetir jornadas y editar una fecha o todo lo futuro —prompt habilitado;
-   implementación todavía no abierta.
-10. Registrar el horario realmente trabajado y las horas adicionales.
-11. Calcular trabajo activo, extras y avance contra la referencia por mes,
-    semana o ciclo.
+9. Repetir jornadas y editar una fecha o todo lo futuro —cerrado en
+   `2d41f60`.
+10. Registrar el horario realmente trabajado y clasificar la diferencia
+    adicional de una jornada existente —prompt habilitado; implementación
+    todavía no abierta.
+11. Registrar trabajo extra independiente y calcular trabajo activo, extras y
+    avance contra la referencia por mes, semana o ciclo, después de resolver
+    los cambios de referencia dentro de un período.
 12. Registrar guardias pasivas y descontar sólo el trabajo coincidente.
 13. Registrar situaciones especiales sin convertirlas automáticamente en
     horas.
@@ -527,12 +530,13 @@ acción sobre producción.
 
 ## 17. Estado inmediato
 
-El bloque **Dejar MiGuardia únicamente en modo 2.0** quedó auditado, corregido,
-verificado y cerrado por MAIN. `MiGuardiaV2Database`, `miguardia-v2.db` y Room
-V2 versión 1 son ahora la única base activa; Samsung API 36 y emulador API 26
-quedaron verdes.
+El bloque **Repetir jornadas y cambiar una fecha o todo lo futuro** quedó
+auditado, corregido, verificado y cerrado por MAIN en `2d41f60`.
+`MiGuardiaV2Database`, `miguardia-v2.db` y Room V2 versión 2 son la base activa;
+Samsung API 36 y emulador API 26 quedaron verdes.
 
-El prompt `REPETIR_JORNADAS_Y_CAMBIAR_DESDE_UNA_FECHA_V2.md` quedó habilitado
-por pedido expreso de Joaquin. La implementación todavía no está abierta. MAIN
-espera que Joaquin entregue el contrato a una única dependencia o pida abrir
-esa tarea desde el checkpoint documental correspondiente.
+Por pedido expreso de Joaquin, el prompt
+`REGISTRAR_HORARIO_REAL_Y_CLASIFICAR_HORAS_EXTRA_V2.md` quedó habilitado. Su
+implementación todavía no está abierta. MAIN espera que Joaquin entregue el
+contrato a una única dependencia desde el checkpoint documental
+correspondiente.
