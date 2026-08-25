@@ -3,6 +3,7 @@
 - Estado: **ACTIVO**
 - Activación: 2026-08-21 por autorización expresa de Joaquin
 - Flujo de handoffs vigente: 2026-08-23
+- Contrato humano de dependencias vigente: 2026-08-25
 - Rama integradora: `codex/miguardia-2.0`
 - Base protegida: `v1.0.0^{}` / `82db6fd8eb2c511205968894dc9857a96b16ed20`
 - Aplicación: `com.blackatsystems.miguardia`
@@ -58,8 +59,8 @@ de convertirla en una implementación amplia.
 - Kotlin y Compose continúan como base.
 - El código parte de MiGuardia 1.0 y puede reutilizar sus componentes probados.
 - El runtime actual abre únicamente `MiGuardiaV2Database`, archivo
-  `miguardia-v2.db`, Room versión 1; la cadena Room histórica y las rutas V1 ya
-  no forman parte de la ejecución.
+  `miguardia-v2.db`, Room versión 3 y cadena explícita `1→2→3`; la cadena Room
+  histórica y las rutas V1 ya no forman parte de la ejecución.
 - Se conservan inicialmente `minSdk 26`, `targetSdk 37`, `compileSdk 37` y Java
   17.
 - `Objective`, `Shift`, la configuración laboral, el catálogo y las
@@ -173,6 +174,8 @@ implementadoras en paralelo.
 Cuando Joaquin pida preparar una nueva tarea, crear o actualizar un prompt en
 `docs/prompts/` que incluya:
 
+- QUÉ HACE;
+- POR QUÉ EXISTE;
 - TASK;
 - CONTEXT;
 - INPUTS;
@@ -182,6 +185,13 @@ Cuando Joaquin pida preparar una nueva tarea, crear o actualizar un prompt en
 - DO NOT;
 - VALIDATION;
 - DONE WHEN.
+
+`QUÉ HACE` explica en lenguaje común la capacidad o el resultado concreto que
+entrega la dependencia. `POR QUÉ EXISTE` explica el problema que resuelve, de
+qué contrato previo depende y qué paso posterior desbloquea. Ambas secciones
+deben poder ser comprendidas por Joaquin sin leer clases, tablas ni comandos, y
+deben repetirse en el handoff para comprobar que la entrega sigue respondiendo
+al motivo por el cual fue creada.
 
 El especialista, si existe, no redefine producto, esquema compartido ni
 contratos públicos. MAIN audita el diff y repite las pruebas relevantes.
@@ -295,6 +305,7 @@ mayor al planificado.
 
 Cada cierre informa:
 
+- qué hacía la dependencia y por qué existía;
 - resultado práctico;
 - archivos cambiados;
 - pruebas y conteos reales;

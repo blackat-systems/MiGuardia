@@ -13,6 +13,8 @@
 - **Orquestación secuencial:** MAIN recibe, audita, integra y cierra un handoff
   por vez mediante `ORQUESTACION_SECUENCIAL_MAIN_2_0.md`; no crea el prompt ni
   la tarea siguiente por su cuenta.
+- **Contrato humano:** toda dependencia nueva explica primero `QUÉ HACE` y
+  `POR QUÉ EXISTE`, tanto en su prompt como en su handoff.
 - **Commits locales:** MAIN los crea automáticamente como checkpoints de
   bloques comprobados.
 - **Push puntual anterior de la rama 2.0:** ejecutado y verificado hasta
@@ -70,6 +72,7 @@ prevalecen para el estado operativo.
 | `RETIRAR_MODO_V1_Y_FIJAR_BASE_EXCLUSIVA_V2.md` | **CERRADO** | MiGuardia ya ejecuta una sola experiencia V2 sobre `MiGuardiaV2Database` versión 1; Samsung API 36 y emulador API 26 quedaron verificados |
 | `REPETIR_JORNADAS_Y_CAMBIAR_DESDE_UNA_FECHA_V2.md` | **CERRADO** | Planes finitos, excepciones durables y cambios de una jornada o de todo lo futuro integrados sobre Room V2 versión 2 |
 | `REGISTRAR_HORARIO_REAL_Y_CLASIFICAR_HORAS_EXTRA_V2.md` | **CERRADO** | Horario real y extras exactas por jornada integrados sobre Room V2 versión 3, sin calcular todavía avance |
+| `EXTRAS_INDEPENDIENTES_Y_AVANCE_DE_HORAS_V2.md` | **HABILITADO** | Permite registrar extras sin jornada dueña, elegir cuándo reiniciar la referencia y mostrar cuánto se trabajó y cuánto falta |
 
 ## Contratos históricos de MiGuardia 1.0
 
@@ -121,9 +124,10 @@ Joaquin indicó que quiere preparar o abrir la siguiente:
 7. **Cerrado:** horario real y clasificación exacta de la diferencia
    adicional en jornadas existentes, mediante
    `REGISTRAR_HORARIO_REAL_Y_CLASIFICAR_HORAS_EXTRA_V2.md`;
-8. **Siguiente recomendado, no habilitado:** trabajo extra independiente y
-   avance contra la referencia, después de resolver los cambios de referencia
-   dentro de una semana o ciclo;
+8. **Habilitado, sin implementación abierta:** extras independientes y avance
+   contra la referencia mediante
+   `EXTRAS_INDEPENDIENTES_Y_AVANCE_DE_HORAS_V2.md`; la persona elige la fecha
+   de reinicio y no existe prorrateo automático;
 9. disponibilidad, situaciones especiales y consolidación final del motor de
    horas y cumplimiento;
 10. Calendario final y tarjeta superior;
@@ -138,6 +142,11 @@ su contrato y dependencias, y crea automáticamente el checkpoint documental
 local verificado. Pedir el prompt no abre por sí solo la tarea. Las
 autorizaciones de push indicadas arriba ya fueron consumidas; cualquier
 publicación posterior requiere una autorización nueva.
+
+Antes de los detalles técnicos, cada contrato debe explicar en lenguaje común
+qué resultado aporta y qué problema del proyecto justifica que esa dependencia
+exista. El handoff repite ambas explicaciones para que MAIN pueda comprobar que
+lo entregado coincide con la razón original de la tarea.
 
 El coordinador secuencial no habilita paralelismo entre implementadores. Si ya
 existe un resultado candidato o una tarea abierta, MAIN debe cerrarlo antes de
@@ -156,3 +165,8 @@ real, por ejemplo:
 
 Las siglas técnicas pueden quedar dentro de especificaciones internas, siempre
 acompañadas por su traducción.
+
+Un nombre entendible no reemplaza la explicación. Cada dependencia conserva
+además dos campos separados: `QUÉ HACE` describe su resultado concreto y
+`POR QUÉ EXISTE` describe el problema, la dependencia previa y el paso que
+desbloquea.

@@ -81,8 +81,9 @@ MAIN debe informar siempre:
 ## 5. Cómo se ejecuta un bloque
 
 1. Joaquin pide preparar un prompt nuevo o entrega un handoff ya producido.
-2. Si pidió el prompt, MAIN lo escribe, lo verifica y crea su checkpoint
-   documental; no abre la tarea salvo que Joaquin también lo pida.
+2. Si pidió el prompt, MAIN lo escribe empezando por explicar qué hace la
+   dependencia y por qué existe, lo verifica y crea su checkpoint documental;
+   no abre la tarea salvo que Joaquin también lo pida.
 3. Al recibir un handoff, MAIN verifica rama, HEAD, base y cambios previos.
 4. MAIN revisa cada cambio y confirma que pertenezca al alcance prometido.
 5. MAIN agrega o repite pruebas de la conducta nueva.
@@ -108,6 +109,10 @@ recomendarla cuando:
 
 Cada tarea recibe ruta, rama o base, alcance permitido, prohibiciones, pruebas y
 condición de terminado. MAIN revisa su entrega antes de incorporarla.
+
+Además, el prompt y el handoff empiezan con dos explicaciones separadas y sin
+jerga: `QUÉ HACE`, para entender el resultado concreto, y `POR QUÉ EXISTE`,
+para entender qué problema resuelve y qué parte posterior habilita.
 
 El contrato completo para crear, recibir e integrar esas tareas está en
 `docs/prompts/ORQUESTACION_SECUENCIAL_MAIN_2_0.md`.

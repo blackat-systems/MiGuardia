@@ -107,6 +107,9 @@ plan o regla desde una fecha no reescribe el pasado.
   muestran separadas sin dejar de integrar el total.
 - Superar una referencia nunca crea horas extras automáticamente.
 - Cada clase extra decide si ayuda a completar las horas requeridas.
+- Al crear o cambiar una referencia, la persona elige desde qué fecha reinicia
+  el conteo —por ejemplo hoy o el próximo lunes—. MiGuardia no prorratea la
+  meta ni la aplica hacia atrás.
 - Dos trabajos activos superpuestos se advierten y, si el usuario los conserva,
   ambos suman completos.
 - La disponibilidad se informa aparte. El trabajo activo reemplaza sólo el

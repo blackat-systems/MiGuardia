@@ -193,6 +193,17 @@ Períodos admitidos:
 La cantidad puede permanecer fija hasta que se cambie o informarse período por
 período. Un período sin valor queda `Falta informar`, no cero.
 
+Al crear o cambiar la referencia, MiGuardia pregunta desde qué fecha local se
+reinicia el conteo. Ofrece como mínimo empezar hoy, empezar en el próximo límite
+normal —por ejemplo el próximo lunes o el primer día del mes siguiente— o
+elegir otra fecha. La referencia anterior continúa hasta el día previo.
+
+Si la persona elige reiniciar dentro de un mes, semana o ciclo ya iniciado, el
+nuevo tramo comienza en cero y usa la meta completa. MiGuardia explica que ese
+primer tramo será más corto, pero no prorratea, no combina metas y no aplica la
+referencia nueva hacia atrás. Una revisión que cambia otro dato sin cambiar ni
+reiniciar conscientemente la referencia no reinicia las horas.
+
 El Resumen mensual muestra el total del mes y, dentro de `Cumplimiento de
 horas`, las semanas o ciclos completos que tocan ese mes. Un ciclo no se corta
 artificialmente en la medianoche del último día mensual.

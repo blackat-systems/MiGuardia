@@ -6,6 +6,11 @@ PLANIFICACIÓN quedó cerrada por autorización expresa de Joaquin. Las decision
 funcionales reunidas constituyen la base vigente para avanzar; cerrar esta etapa
 no significa que exista ya una implementación nueva.
 
+El contrato **Extras independientes y avance de horas** está habilitado sobre
+la base funcional `2e6138509e4ef6c5faf09657cb6bf094cb7ae610`. Joaquin todavía
+no pidió abrir la tarea implementadora: existe el prompt reproducible, no un
+candidato de código.
+
 MAIN 2.0 está reactivada para recibir los handoffs que Joaquin entregue,
 auditarlos, integrarlos, probarlos y cerrarlos. Joaquin decide cuándo pedir el
 prompt de una nueva tarea y cuándo abrirla; MAIN no encadena dependencias por su
@@ -153,6 +158,8 @@ y auditada en
     probados e integrados.
   - `d1f3e68c1ee5debdc34ef7e30f7376980175ee04`: contrato de horario real y
     clasificación exacta de extras.
+  - `2e6138509e4ef6c5faf09657cb6bf094cb7ae610`: horario real y clasificación
+    exacta de extras auditados, probados e integrados por MAIN.
 - Al iniciar la preparación documental, la rama todavía no poseía upstream. El
   push puntual posterior fue ejecutado y verificado: rama local y remoto privado
   coincidían en `836d908`; esa autorización no puede reutilizarse.
@@ -628,6 +635,33 @@ Este bloque no calcula todavía avance contra la referencia ni crea trabajo
 extra independiente sin jornada dueña. Esas decisiones siguen separadas tal
 como fija ADR 0028.
 
+## Extras independientes y avance de horas — contrato habilitado
+
+Joaquin decidió el 2026-08-25 que MiGuardia debe preguntarle a la persona desde
+cuándo quiere reiniciar el conteo de horas. Puede elegir, por ejemplo, empezar
+hoy o desde el próximo lunes. La referencia anterior continúa hasta el día
+previo; la nueva comienza en cero en la fecha elegida.
+
+No existe prorrateo automático. Si se elige una fecha dentro de un mes, semana
+o ciclo ya comenzado, MiGuardia explica que el primer tramo será más corto y
+usa la meta completa. También permite elegir el próximo límite normal para
+evitar ese tramo corto. La meta nueva nunca se aplica hacia atrás.
+
+El prompt
+`docs/prompts/EXTRAS_INDEPENDIENTES_Y_AVANCE_DE_HORAS_V2.md` quedó
+`HABILITADO`. Define:
+
+- configuración visible de referencia y fecha de reinicio;
+- extras independientes con horario exacto, lugar, tipo, clase y fotografía
+  histórica;
+- motor puro de habitual, extras, total, cumplimiento, faltante y superación;
+- vista funcional de avance sin construir todavía el Resumen final;
+- migración prevista de Room V2 `3→4`, preservando los tres esquemas actuales.
+
+La decisión queda registrada en ADR 0029. No hay tarea implementadora abierta,
+diff de aplicación ni autorización de Samsung/API 26 para este bloque. Pedir el
+prompt no autorizó push ni otra acción externa.
+
 ## Flujo vigente de MAIN
 
 - Joaquin entrega un handoff o pide preparar el prompt de una nueva tarea;
@@ -639,7 +673,10 @@ como fija ADR 0028.
   informa su commit;
 - MAIN recomienda el siguiente bloque y espera la indicación de Joaquin;
 - MAIN escribe un prompt nuevo o abre una tarea sólo por pedido expreso de
-  Joaquin.
+  Joaquin;
+- toda dependencia nueva explica primero, en lenguaje común, `QUÉ HACE` y
+  `POR QUÉ EXISTE`; el handoff repite ambos campos para que MAIN compruebe que
+  la entrega responde a su propósito original.
 
 El coordinador `docs/prompts/ORQUESTACION_SECUENCIAL_MAIN_2_0.md` conserva un
 solo handoff o una sola tarea implementadora por vez. La decisión del 2026-08-23
@@ -670,8 +707,8 @@ cierre documentado arriba y no habilita acciones posteriores.
 
 ## Todavía no implementado
 
-- trabajo extra independiente y avance contra la referencia; antes debe
-  resolverse qué meta corresponde cuando cambia dentro de una semana o ciclo;
+- el bloque habilitado de extras independientes y avance contra la referencia;
+  su contrato está listo, pero no existe todavía código candidato;
 - persistencia de guardias pasivas y disponibilidad;
 - situaciones especiales y consolidación final del motor de horas y
   cumplimiento, con su presentación en Resumen y Calendario;
@@ -680,14 +717,14 @@ cierre documentado arriba y no habilita acciones posteriores.
 
 ## Próximo paso
 
-Horario real y clasificación exacta de extras quedaron cerrados. El siguiente
-bloque recomendado es definir **trabajo extra independiente y avance contra la
-referencia**, empezando por la regla de qué meta usar cuando una referencia
-cambia dentro de una semana o ciclo.
+Horario real y clasificación exacta de extras quedaron cerrados. La regla de
+reinicio ya fue decidida y el siguiente contrato, **Extras independientes y
+avance de horas**, está habilitado.
 
-Ese bloque todavía no tiene prompt habilitado ni tarea abierta. MAIN debe
-preparar su contrato sólo cuando Joaquin lo pida; hasta entonces no corresponde
-adelantar persistencia, pantallas ni cálculos.
+El próximo paso es abrir exactamente una tarea implementadora usando
+`docs/prompts/EXTRAS_INDEPENDIENTES_Y_AVANCE_DE_HORAS_V2.md`, únicamente cuando
+Joaquin lo indique. Hasta entonces no corresponde adelantar persistencia,
+pantallas ni cálculos.
 
 Quedan como verificaciones separadas el recorrido físico de alarma exacta
 —sólo con permiso explícito— y API 37 antes del candidato final. API 26 ya fue

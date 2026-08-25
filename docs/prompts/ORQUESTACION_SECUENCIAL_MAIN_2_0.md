@@ -3,6 +3,7 @@
 - Estado: **ACTIVO / COORDINADOR**
 - Fecha de autorización original: 2026-08-22
 - Flujo actualizado por Joaquin: 2026-08-23
+- Contrato humano de dependencias actualizado: 2026-08-25
 - Proyecto obligatorio:
   `C:\Users\Joaquin\Desktop\chatgptprojects\MiGuardia-2.0`
 - Rama integradora obligatoria: `codex/miguardia-2.0`
@@ -14,6 +15,10 @@
 En este documento, `dependencia` significa una tarea especializada de Codex que
 produce una parte necesaria para MAIN. No significa agregar una biblioteca de
 Gradle ni una dependencia de producción.
+
+Toda dependencia debe poder entenderse antes de leer sus detalles técnicos.
+Por eso su prompt y su handoff deben decir expresamente, en lenguaje común,
+**qué hace** y **por qué existe**.
 
 ## 1. Orden para MAIN
 
@@ -223,11 +228,11 @@ La secuencia conocida al redactar este prompt es:
 9. Repetir jornadas y editar una fecha o todo lo futuro —cerrado en
    `2d41f60`.
 10. Registrar el horario realmente trabajado y clasificar la diferencia
-    adicional de una jornada existente —prompt habilitado; implementación
-    todavía no abierta.
-11. Registrar trabajo extra independiente y calcular trabajo activo, extras y
-    avance contra la referencia por mes, semana o ciclo, después de resolver
-    los cambios de referencia dentro de un período.
+    adicional de una jornada existente —cerrado en `2e61385`.
+11. Extras independientes y avance de horas: registrar trabajo extra sin
+    jornada dueña y calcular trabajo activo, extras y avance por mes, semana o
+    ciclo. La persona elige la fecha de reinicio y no existe prorrateo
+    automático —prompt habilitado, implementación todavía no abierta—.
 12. Registrar guardias pasivas y descontar sólo el trabajo coincidente.
 13. Registrar situaciones especiales sin convertirlas automáticamente en
     horas.
@@ -272,6 +277,8 @@ Cuando Joaquin pida preparar una nueva tarea, MAIN debe crear o actualizar un
 archivo en `docs/prompts/` con estas secciones explícitas:
 
 ```text
+QUÉ HACE
+POR QUÉ EXISTE
 ROLE
 TASK
 CONTEXT
@@ -284,6 +291,18 @@ VALIDATION
 HANDOFF A MAIN
 DONE WHEN
 ```
+
+Las dos primeras secciones son obligatorias y se escriben para Joaquin, no
+para otro programador:
+
+- `QUÉ HACE`: explica en uno o dos párrafos breves qué capacidad concreta
+  incorpora o qué resultado deja disponible, sin apoyarse en nombres de
+  clases, tablas o archivos;
+- `POR QUÉ EXISTE`: explica qué problema o hueco del producto resuelve, de qué
+  bloque anterior depende y qué trabajo posterior permite desbloquear.
+
+No alcanza con repetir el título ni con usar frases vagas como «avanzar la
+aplicación». `TASK`, `SCOPE` y `OUTPUT` conservan después la precisión técnica.
 
 El prompt debe incluir además:
 
@@ -357,6 +376,9 @@ reanudar, recuperá ese estado antes de crear nada nuevo.
 
 La dependencia devuelve:
 
+- `QUÉ HACE`: explicación humana del resultado que debía entregar;
+- `POR QUÉ EXISTE`: problema que resolvía y siguiente parte del proyecto que
+  deja habilitada;
 - `OBJECTIVE`: resultado concreto;
 - `CHANGES`: qué cambió realmente;
 - `FILES`: modificados y no rastreados;
@@ -458,6 +480,7 @@ Un bloque queda cerrado sólo cuando:
 Después del checkpoint, MAIN informa a Joaquin en lenguaje común:
 
 - qué puede hacer ahora la aplicación;
+- por qué existía esa dependencia y qué problema dejó resuelto;
 - qué archivos o capas cambiaron;
 - qué se probó realmente;
 - cuál es el commit local;
@@ -530,13 +553,17 @@ acción sobre producción.
 
 ## 17. Estado inmediato
 
-El bloque **Repetir jornadas y cambiar una fecha o todo lo futuro** quedó
-auditado, corregido, verificado y cerrado por MAIN en `2d41f60`.
-`MiGuardiaV2Database`, `miguardia-v2.db` y Room V2 versión 2 son la base activa;
-Samsung API 36 y emulador API 26 quedaron verdes.
+El bloque **Registrar el horario realmente trabajado y clasificar la diferencia
+adicional de una jornada existente** quedó auditado, corregido, verificado y
+cerrado por MAIN en `2e61385`. `MiGuardiaV2Database`, `miguardia-v2.db` y Room
+V2 versión 3 son la base activa; Samsung API 36 y emulador API 26 quedaron
+verdes.
 
-Por pedido expreso de Joaquin, el prompt
-`REGISTRAR_HORARIO_REAL_Y_CLASIFICAR_HORAS_EXTRA_V2.md` quedó habilitado. Su
-implementación todavía no está abierta. MAIN espera que Joaquin entregue el
-contrato a una única dependencia desde el checkpoint documental
-correspondiente.
+El prompt `EXTRAS_INDEPENDIENTES_Y_AVANCE_DE_HORAS_V2.md` está habilitado sobre
+esa base funcional. Joaquin decidió que la persona elige desde qué fecha
+reinicia el conteo —por ejemplo hoy o el próximo lunes— y que MiGuardia no
+prorratea ni aplica la meta nueva hacia atrás.
+
+No hay una tarea especializada abierta ni código candidato. MAIN espera la
+indicación de Joaquin antes de crear exactamente una implementadora desde el
+checkpoint documental de este contrato.
