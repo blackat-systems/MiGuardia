@@ -6,10 +6,10 @@ PLANIFICACIÓN quedó cerrada por autorización expresa de Joaquin. Las decision
 funcionales reunidas constituyen la base vigente para avanzar; cerrar esta etapa
 no significa que exista ya una implementación nueva.
 
-El contrato **Extras independientes y avance de horas** está habilitado sobre
-la base funcional `2e6138509e4ef6c5faf09657cb6bf094cb7ae610`. Joaquin todavía
-no pidió abrir la tarea implementadora: existe el prompt reproducible, no un
-candidato de código.
+El bloque **Extras independientes y avance de horas** quedó auditado, corregido,
+probado e integrado localmente por MAIN sobre Room V2 versión 4. El siguiente
+bloque previsto es disponibilidad, situaciones especiales y consolidación del
+motor de horas; todavía no tiene un prompt habilitado ni una tarea abierta.
 
 MAIN 2.0 está reactivada para recibir los handoffs que Joaquin entregue,
 auditarlos, integrarlos, probarlos y cerrarlos. Joaquin decide cuándo pedir el
@@ -160,13 +160,16 @@ y auditada en
     clasificación exacta de extras.
   - `2e6138509e4ef6c5faf09657cb6bf094cb7ae610`: horario real y clasificación
     exacta de extras auditados, probados e integrados por MAIN.
+  - `6fb04c8ff34eec2c454277dfb086664349a9051b`: contrato de extras
+    independientes, reinicio consciente y avance de horas.
 - Al iniciar la preparación documental, la rama todavía no poseía upstream. El
   push puntual posterior fue ejecutado y verificado: rama local y remoto privado
   coincidían en `836d908`; esa autorización no puede reutilizarse.
 - El dominio nuevo vive en `core/domain/.../work/`; no se recuperó el candidato
   mensual descartado. El runtime V1 ya fue retirado. `MiGuardiaV2Database`
-  conserva su cadena explícita `1→2→3` y ya persiste configuración, carga,
-  edición/eliminación, recurrencias, horario real y clases extra.
+  conserva su cadena explícita `1→2→3→4` y ya persiste configuración, carga,
+  edición/eliminación, recurrencias, horario real, clases extra, extras
+  independientes y el inicio consciente de la referencia de horas.
 
 ## Antecedente histórico descartado: candidato mensual
 
@@ -635,7 +638,7 @@ Este bloque no calcula todavía avance contra la referencia ni crea trabajo
 extra independiente sin jornada dueña. Esas decisiones siguen separadas tal
 como fija ADR 0028.
 
-## Extras independientes y avance de horas — contrato habilitado
+## Extras independientes y avance de horas — cerrado
 
 Joaquin decidió el 2026-08-25 que MiGuardia debe preguntarle a la persona desde
 cuándo quiere reiniciar el conteo de horas. Puede elegir, por ejemplo, empezar
@@ -649,18 +652,40 @@ evitar ese tramo corto. La meta nueva nunca se aplica hacia atrás.
 
 El prompt
 `docs/prompts/EXTRAS_INDEPENDIENTES_Y_AVANCE_DE_HORAS_V2.md` quedó
-`HABILITADO`. Define:
+`CERRADO`. El bloque integra:
 
 - configuración visible de referencia y fecha de reinicio;
 - extras independientes con horario exacto, lugar, tipo, clase y fotografía
   histórica;
 - motor puro de habitual, extras, total, cumplimiento, faltante y superación;
 - vista funcional de avance sin construir todavía el Resumen final;
-- migración prevista de Room V2 `3→4`, preservando los tres esquemas actuales.
+- migración explícita de Room V2 `3→4`, preservando los tres esquemas previos.
 
-La decisión queda registrada en ADR 0029. No hay tarea implementadora abierta,
-diff de aplicación ni autorización de Samsung/API 26 para este bloque. Pedir el
-prompt no autorizó push ni otra acción externa.
+MAIN auditó el dominio, Room, CAS e interfaz con tres revisiones independientes.
+Corrigió la vigencia exacta de la configuración, la conservación automática de
+fotografías históricas, la atomicidad de metas por período, el control de
+concurrencia desde que se abre un borrador, los límites civiles de intervalos y
+las advertencias de solapamiento o protección para que sólo aparezcan cuando
+corresponden.
+
+Evidencia final:
+
+- JVM: 409/409 — dominio 247, base 10 y aplicación 152;
+- lint: 0 errores y 4 avisos de versiones disponibles fuera del alcance;
+- APK Debug, QA y ambos APK AndroidTest: compilados desde cero;
+- Samsung `SM-S938B`, API 36: Room y migraciones 57/57;
+- Samsung `SM-S938B`, API 36: aplicación afectada 89/89;
+- claro/oscuro, retrato/paisaje, zoom interno 100/150/200, recreación,
+  error/reintento y regresiones de carga, recurrencia, horario real y edición
+  cubiertos por instrumentación física;
+- paquetes QA retirados al finalizar; producción no fue abierta ni
+  modificada;
+- API 26 no fue autorizada para este bloque y queda como evidencia separada.
+
+La decisión funcional continúa registrada en ADR 0029. La auditoría completa
+está en
+`docs/audits/2026-08-25-extras-independientes-y-avance-de-horas-v2.md`.
+Este cierre no autorizó push ni otra acción externa.
 
 ## Flujo vigente de MAIN
 
@@ -707,8 +732,6 @@ cierre documentado arriba y no habilita acciones posteriores.
 
 ## Todavía no implementado
 
-- el bloque habilitado de extras independientes y avance contra la referencia;
-  su contrato está listo, pero no existe todavía código candidato;
 - persistencia de guardias pasivas y disponibilidad;
 - situaciones especiales y consolidación final del motor de horas y
   cumplimiento, con su presentación en Resumen y Calendario;
@@ -717,14 +740,13 @@ cierre documentado arriba y no habilita acciones posteriores.
 
 ## Próximo paso
 
-Horario real y clasificación exacta de extras quedaron cerrados. La regla de
-reinicio ya fue decidida y el siguiente contrato, **Extras independientes y
-avance de horas**, está habilitado.
+Extras independientes y avance de horas quedaron cerrados sobre Room V2 versión
+4. El próximo bloque previsto reúne disponibilidad pasiva, situaciones
+especiales y la consolidación final del motor de horas y cumplimiento.
 
-El próximo paso es abrir exactamente una tarea implementadora usando
-`docs/prompts/EXTRAS_INDEPENDIENTES_Y_AVANCE_DE_HORAS_V2.md`, únicamente cuando
-Joaquin lo indique. Hasta entonces no corresponde adelantar persistencia,
-pantallas ni cálculos.
+El próximo paso es estabilizar y escribir un prompt autosuficiente para ese
+bloque únicamente cuando Joaquin lo pida. Hasta entonces no corresponde abrir
+otra tarea ni adelantar su persistencia, pantallas o reglas.
 
 Quedan como verificaciones separadas el recorrido físico de alarma exacta
 —sólo con permiso explícito— y API 37 antes del candidato final. API 26 ya fue

@@ -8,6 +8,7 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.blackatsystems.miguardia.core.database.dao.ExplicitDayStatusDao
 import com.blackatsystems.miguardia.core.database.dao.HolidayDao
+import com.blackatsystems.miguardia.core.database.dao.IndependentExtraWorkDao
 import com.blackatsystems.miguardia.core.database.dao.MedicalLeaveDao
 import com.blackatsystems.miguardia.core.database.dao.ObjectiveDao
 import com.blackatsystems.miguardia.core.database.dao.RecurringPlanDao
@@ -23,6 +24,7 @@ import com.blackatsystems.miguardia.core.database.dao.WorkConfigurationDao
 import com.blackatsystems.miguardia.core.database.entity.ExplicitDayStatusEntity
 import com.blackatsystems.miguardia.core.database.entity.ExtraWorkClassEntity
 import com.blackatsystems.miguardia.core.database.entity.HolidayEntity
+import com.blackatsystems.miguardia.core.database.entity.IndependentExtraWorkRecordEntity
 import com.blackatsystems.miguardia.core.database.entity.MedicalLeaveEntity
 import com.blackatsystems.miguardia.core.database.entity.ObjectiveEntity
 import com.blackatsystems.miguardia.core.database.entity.PerPeriodHoursDefinitionEntity
@@ -73,8 +75,9 @@ import com.blackatsystems.miguardia.core.database.entity.WorkplaceRuleRevisionEn
         ExtraWorkClassEntity::class,
         ShiftActualRecordEntity::class,
         ShiftExtraIntervalEntity::class,
+        IndependentExtraWorkRecordEntity::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = true,
 )
 internal abstract class MiGuardiaV2Database : RoomDatabase() {
@@ -92,6 +95,7 @@ internal abstract class MiGuardiaV2Database : RoomDatabase() {
     internal abstract fun v2ShiftDao(): V2ShiftDao
     internal abstract fun recurringPlanDao(): RecurringPlanDao
     internal abstract fun shiftActualDao(): ShiftActualDao
+    internal abstract fun independentExtraWorkDao(): IndependentExtraWorkDao
 
     companion object {
         const val DATABASE_NAME: String = "miguardia-v2.db"
@@ -103,7 +107,7 @@ internal abstract class MiGuardiaV2Database : RoomDatabase() {
             context.applicationContext,
             MiGuardiaV2Database::class.java,
             databaseName,
-        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3).build()
+        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4).build()
 
         internal val MIGRATION_1_2: Migration = object : Migration(1, 2) {
             override fun migrate(db: SupportSQLiteDatabase) {
@@ -301,5 +305,173 @@ internal abstract class MiGuardiaV2Database : RoomDatabase() {
                 )
             }
         }
+
+        internal val MIGRATION_3_4: Migration = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "ALTER TABLE `work_configuration_revisions` " +
+                        "ADD COLUMN `hoursReferenceStartedOn` TEXT",
+                )
+                db.execSQL(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS " +
+                        "`index_work_configuration_revisions_id_timelineId_sector` " +
+                        "ON `work_configuration_revisions` (`id`, `timelineId`, `sector`)",
+                )
+                backfillHoursReferenceStartedOn(db)
+                db.execSQL(
+                    """CREATE TABLE IF NOT EXISTS `independent_extra_work_records` (
+                        `id` TEXT NOT NULL,
+                        `timelineId` TEXT NOT NULL,
+                        `sector` TEXT NOT NULL,
+                        `configurationRevisionId` TEXT NOT NULL,
+                        `workPlaceId` TEXT NOT NULL,
+                        `objectiveId` TEXT NOT NULL,
+                        `workTypeId` TEXT NOT NULL,
+                        `templateId` TEXT,
+                        `extraWorkClassId` TEXT NOT NULL,
+                        `ownerLocalDate` TEXT NOT NULL,
+                        `zoneId` TEXT NOT NULL,
+                        `startEpochMillis` INTEGER NOT NULL,
+                        `endEpochMillis` INTEGER NOT NULL,
+                        `workPlaceNameSnapshot` TEXT NOT NULL,
+                        `workPlaceAbbreviationSnapshot` TEXT NOT NULL,
+                        `workPlaceAddressSnapshot` TEXT,
+                        `workTypeNameSnapshot` TEXT NOT NULL,
+                        `workTypeBehaviorSnapshot` TEXT NOT NULL,
+                        `colorArgbSnapshot` INTEGER NOT NULL,
+                        `positionSnapshot` TEXT,
+                        `classNameSnapshot` TEXT NOT NULL,
+                        `helpsMeetHoursReferenceSnapshot` INTEGER NOT NULL,
+                        `showDedicatedSummarySnapshot` INTEGER NOT NULL,
+                        `createdAtEpochMillis` INTEGER NOT NULL,
+                        `updatedAtEpochMillis` INTEGER NOT NULL,
+                        PRIMARY KEY(`id`),
+                        FOREIGN KEY(`timelineId`) REFERENCES `work_configuration_roots`(`timelineId`)
+                            ON UPDATE NO ACTION ON DELETE RESTRICT,
+                        FOREIGN KEY(`configurationRevisionId`, `timelineId`, `sector`)
+                            REFERENCES `work_configuration_revisions`(`id`, `timelineId`, `sector`)
+                            ON UPDATE NO ACTION ON DELETE RESTRICT,
+                        FOREIGN KEY(`workPlaceId`, `timelineId`, `sector`, `objectiveId`)
+                            REFERENCES `work_places`(`id`, `timelineId`, `sector`, `objectiveId`)
+                            ON UPDATE NO ACTION ON DELETE RESTRICT,
+                        FOREIGN KEY(`objectiveId`) REFERENCES `objectives`(`id`)
+                            ON UPDATE NO ACTION ON DELETE RESTRICT,
+                        FOREIGN KEY(`workTypeId`, `timelineId`, `sector`)
+                            REFERENCES `work_types`(`id`, `timelineId`, `sector`)
+                            ON UPDATE NO ACTION ON DELETE RESTRICT,
+                        FOREIGN KEY(`templateId`, `timelineId`, `sector`, `workPlaceId`, `objectiveId`, `workTypeId`)
+                            REFERENCES `work_templates`(`id`, `timelineId`, `sector`, `workPlaceId`, `objectiveId`, `workTypeId`)
+                            ON UPDATE NO ACTION ON DELETE RESTRICT,
+                        FOREIGN KEY(`extraWorkClassId`, `timelineId`, `sector`)
+                            REFERENCES `extra_work_classes`(`id`, `timelineId`, `sector`)
+                            ON UPDATE NO ACTION ON DELETE RESTRICT
+                    )""".trimIndent(),
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS " +
+                        "`index_independent_extra_work_records_timelineId_sector_ownerLocalDate` " +
+                        "ON `independent_extra_work_records` (`timelineId`, `sector`, `ownerLocalDate`)",
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS " +
+                        "`index_independent_extra_work_records_timelineId_sector_startEpochMillis_endEpochMillis` " +
+                        "ON `independent_extra_work_records` " +
+                        "(`timelineId`, `sector`, `startEpochMillis`, `endEpochMillis`)",
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS " +
+                        "`index_independent_extra_work_records_configurationRevisionId_timelineId_sector` " +
+                        "ON `independent_extra_work_records` (`configurationRevisionId`, `timelineId`, `sector`)",
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS " +
+                        "`index_independent_extra_work_records_workPlaceId_timelineId_sector_objectiveId` " +
+                        "ON `independent_extra_work_records` (`workPlaceId`, `timelineId`, `sector`, `objectiveId`)",
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_independent_extra_work_records_objectiveId` " +
+                        "ON `independent_extra_work_records` (`objectiveId`)",
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS " +
+                        "`index_independent_extra_work_records_workTypeId_timelineId_sector` " +
+                        "ON `independent_extra_work_records` (`workTypeId`, `timelineId`, `sector`)",
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS " +
+                        "`index_independent_extra_work_records_templateId_timelineId_sector_workPlaceId_objectiveId_workTypeId` " +
+                        "ON `independent_extra_work_records` " +
+                        "(`templateId`, `timelineId`, `sector`, `workPlaceId`, `objectiveId`, `workTypeId`)",
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS " +
+                        "`index_independent_extra_work_records_extraWorkClassId_timelineId_sector` " +
+                        "ON `independent_extra_work_records` (`extraWorkClassId`, `timelineId`, `sector`)",
+                )
+            }
+        }
+
+        private fun backfillHoursReferenceStartedOn(db: SupportSQLiteDatabase) {
+            val previousByTimeline = mutableMapOf<String, Pair<String, String?>>()
+            db.query(
+                """SELECT id, timelineId, effectiveFrom, hoursReferenceKind,
+                          periodKind, weeklyFirstDayIso, cycleAnchorDate,
+                          cycleLengthDays, requiredMinutes, perPeriodDefinitionId
+                   FROM work_configuration_revisions
+                   ORDER BY timelineId, effectiveFrom, id""".trimIndent(),
+            ).use { cursor ->
+                val idIndex = cursor.getColumnIndexOrThrow("id")
+                val timelineIndex = cursor.getColumnIndexOrThrow("timelineId")
+                val effectiveIndex = cursor.getColumnIndexOrThrow("effectiveFrom")
+                val kindIndex = cursor.getColumnIndexOrThrow("hoursReferenceKind")
+                val periodIndex = cursor.getColumnIndexOrThrow("periodKind")
+                val weeklyIndex = cursor.getColumnIndexOrThrow("weeklyFirstDayIso")
+                val anchorIndex = cursor.getColumnIndexOrThrow("cycleAnchorDate")
+                val lengthIndex = cursor.getColumnIndexOrThrow("cycleLengthDays")
+                val requiredIndex = cursor.getColumnIndexOrThrow("requiredMinutes")
+                val definitionIndex = cursor.getColumnIndexOrThrow("perPeriodDefinitionId")
+                while (cursor.moveToNext()) {
+                    val id = cursor.getString(idIndex)
+                    val timeline = cursor.getString(timelineIndex)
+                    val effectiveFrom = cursor.getString(effectiveIndex)
+                    val kind = cursor.getString(kindIndex)
+                    val signature = listOf(
+                        kind,
+                        cursor.nullableString(periodIndex),
+                        cursor.nullableInt(weeklyIndex)?.toString(),
+                        cursor.nullableString(anchorIndex),
+                        cursor.nullableInt(lengthIndex)?.toString(),
+                        cursor.nullableLong(requiredIndex)?.toString(),
+                        cursor.nullableString(definitionIndex),
+                    ).joinToString("|") { it ?: "∅" }
+                    val hasPeriod = kind == "FIXED" ||
+                        kind == "PER_PERIOD" ||
+                        (kind == "UNKNOWN" && !cursor.isNull(periodIndex))
+                    val previous = previousByTimeline[timeline]
+                    val marker = when {
+                        !hasPeriod -> null
+                        previous != null && previous.first == signature -> previous.second
+                        else -> effectiveFrom
+                    }
+                    if (marker != null) {
+                        db.execSQL(
+                            "UPDATE work_configuration_revisions " +
+                                "SET hoursReferenceStartedOn = ? WHERE id = ?",
+                            arrayOf(marker, id),
+                        )
+                    }
+                    previousByTimeline[timeline] = signature to marker
+                }
+            }
+        }
+
+        private fun android.database.Cursor.nullableString(index: Int): String? =
+            if (isNull(index)) null else getString(index)
+
+        private fun android.database.Cursor.nullableInt(index: Int): Int? =
+            if (isNull(index)) null else getInt(index)
+
+        private fun android.database.Cursor.nullableLong(index: Int): Long? =
+            if (isNull(index)) null else getLong(index)
     }
 }

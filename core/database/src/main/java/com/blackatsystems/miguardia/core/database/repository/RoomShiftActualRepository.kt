@@ -63,6 +63,30 @@ internal class RoomShiftActualRepository(
         }
     }
 
+    override fun observeAllActuals(
+        timelineId: UUID,
+        sector: WorkSector,
+    ): Flow<Map<UUID, ShiftActualAggregate>> = dao.observeContextToken(
+        timelineId.toString(),
+        sector.encodeSector(),
+    ).map {
+        database.withTransaction {
+            database.requireValidV2LocalData()
+            val records = dao.getAllRecords()
+                .filter { row -> row.timelineId == timelineId.toString() && row.sector == sector.encodeSector() }
+            val intervals = dao.getAllIntervals()
+                .filter { row -> row.timelineId == timelineId.toString() && row.sector == sector.encodeSector() }
+                .groupBy { row -> row.shiftId }
+            records.associate { row ->
+                val record = row.toDomainActualRecord()
+                record.shiftId to ShiftActualAggregate(
+                    record,
+                    intervals[row.shiftId].orEmpty().map { it.toDomainExtraInterval() },
+                )
+            }
+        }
+    }
+
     override suspend fun save(mutation: ShiftActualSaveMutation): ShiftActualWriteResult =
         try {
             database.withTransaction {

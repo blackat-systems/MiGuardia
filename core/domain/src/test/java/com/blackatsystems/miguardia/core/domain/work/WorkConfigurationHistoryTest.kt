@@ -89,7 +89,12 @@ class WorkConfigurationHistoryTest {
     private fun revision(id: UUID, date: LocalDate, hours: HoursReference) = EffectiveRevision(
         id = id,
         effectiveFrom = date,
-        value = WorkConfiguration(WorkSector.PRIVATE_SECURITY, hours, availabilityLabel = null),
+        value = WorkConfiguration(
+            WorkSector.PRIVATE_SECURITY,
+            hours,
+            availabilityLabel = null,
+            hoursReferenceStartedOn = date.takeIf { hours.requiresStartedOnMarker },
+        ),
     )
 
     private fun entry(id: UUID, reference: HoursReference.PerPeriod, date: LocalDate) = PerPeriodHoursEntry(

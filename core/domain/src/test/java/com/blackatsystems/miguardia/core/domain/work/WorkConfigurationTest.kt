@@ -9,6 +9,111 @@ import org.junit.Test
 
 class WorkConfigurationTest {
     @Test
+    fun changingOnlyTheHoursReferenceCannotAlterSectorOrAvailability() {
+        val initial = EffectiveRevision(
+            REVISION_1_ID,
+            DATE,
+            WorkConfiguration(
+                WorkSector.NURSING,
+                HoursReference.PendingSetup,
+                AvailabilityLabel.PASSIVE_GUARD,
+            ),
+        )
+        val history = WorkConfigurationHistory(
+            EffectiveDateTimeline(TIMELINE_ID, listOf(initial)),
+            PerPeriodHoursValues(emptyList()),
+        )
+        val reference = HoursReference.Fixed(HoursPeriod.Monthly, PositiveMinutes(9_000))
+
+        assertThrows(IllegalArgumentException::class.java) {
+            WorkConfigurationReferenceMutation(
+                history,
+                EffectiveRevision(
+                    REVISION_2_ID,
+                    DATE,
+                    WorkConfiguration(
+                        WorkSector.MEDICINE,
+                        reference,
+                        AvailabilityLabel.PASSIVE_GUARD,
+                        DATE,
+                    ),
+                ),
+            )
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            WorkConfigurationReferenceMutation(
+                history,
+                EffectiveRevision(
+                    REVISION_2_ID,
+                    DATE,
+                    WorkConfiguration(
+                        WorkSector.NURSING,
+                        reference,
+                        null,
+                        DATE,
+                    ),
+                ),
+            )
+        }
+    }
+
+    @Test
+    fun perPeriodValueMutationAcceptsDefinitionRepeatedByUnrelatedRevisions() {
+        val definitionId = UUID.fromString("71000000-0000-0000-0000-000000000004")
+        val entryId = UUID.fromString("71000000-0000-0000-0000-000000000005")
+        val reference = HoursReference.PerPeriod(definitionId, HoursPeriod.Monthly)
+        val first = EffectiveRevision(
+            REVISION_1_ID,
+            DATE,
+            WorkConfiguration(WorkSector.NURSING, reference, null, DATE),
+        )
+        val unrelated = EffectiveRevision(
+            REVISION_2_ID,
+            DATE.plusDays(1),
+            first.value.copy(availabilityLabel = AvailabilityLabel.PASSIVE_GUARD),
+        )
+        val history = WorkConfigurationHistory(
+            EffectiveDateTimeline(TIMELINE_ID, listOf(first, unrelated)),
+            PerPeriodHoursValues(emptyList()),
+        )
+        val replacement = PerPeriodHoursEntry(
+            entryId,
+            reference.keyContaining(DATE),
+            PositiveMinutes(8_400),
+        )
+
+        assertEquals(
+            replacement,
+            PerPeriodHoursValueMutation(history, replacement).replacement,
+        )
+    }
+
+    @Test
+    fun referenceStartMarkerMatchesExactlyTheReferencesThatCountAPeriod() {
+        val fixed = HoursReference.Fixed(HoursPeriod.Monthly, PositiveMinutes(1))
+        assertThrows(IllegalArgumentException::class.java) {
+            WorkConfiguration(WorkSector.NURSING, fixed, null)
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            WorkConfiguration(
+                WorkSector.NURSING,
+                HoursReference.NotUsed,
+                null,
+                hoursReferenceStartedOn = DATE,
+            )
+        }
+        assertEquals(
+            DATE,
+            WorkConfiguration(
+                WorkSector.NURSING,
+                HoursReference.Unknown(HoursPeriod.Monthly),
+                null,
+                hoursReferenceStartedOn = DATE,
+            ).hoursReferenceStartedOn,
+        )
+    }
+
+    @Test
     fun sectorCatalogAndSuggestedVocabularyAreExact() {
         assertEquals(
             listOf("Vigilancia privada", "Policía", "Enfermería", "Medicina"),

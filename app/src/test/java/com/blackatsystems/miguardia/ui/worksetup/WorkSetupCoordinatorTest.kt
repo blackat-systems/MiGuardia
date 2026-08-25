@@ -12,7 +12,6 @@ import com.blackatsystems.miguardia.core.domain.work.HoursReference
 import com.blackatsystems.miguardia.core.domain.work.NightHoursRule
 import com.blackatsystems.miguardia.core.domain.work.NewV2Backfill
 import com.blackatsystems.miguardia.core.domain.work.NewWorkPlace
-import com.blackatsystems.miguardia.core.domain.work.PerPeriodHoursEntry
 import com.blackatsystems.miguardia.core.domain.work.PerPeriodHoursValues
 import com.blackatsystems.miguardia.core.domain.work.RecentWorkTemplate
 import com.blackatsystems.miguardia.core.domain.work.WorkCatalog
@@ -829,11 +828,6 @@ private class FakeWorkConfigurationRepository(
         revision: EffectiveRevision<WorkConfiguration>,
     ) = error("No se usa en estas pruebas")
 
-    override suspend fun createPerPeriodValue(timelineId: UUID, entry: PerPeriodHoursEntry) =
-        error("No se usa en estas pruebas")
-
-    override suspend fun updatePerPeriodValue(timelineId: UUID, entry: PerPeriodHoursEntry) =
-        error("No se usa en estas pruebas")
 }
 
 private class FakeWorkCatalogRepository : WorkCatalogRepository {

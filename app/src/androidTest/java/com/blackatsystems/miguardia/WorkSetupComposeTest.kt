@@ -38,6 +38,7 @@ import com.blackatsystems.miguardia.ui.worksetup.WorkPlaceDraft
 import com.blackatsystems.miguardia.ui.worksetup.WorkSetupActions
 import com.blackatsystems.miguardia.ui.worksetup.WorkSetupStep
 import com.blackatsystems.miguardia.ui.worksetup.WorkSetupSurface
+import com.blackatsystems.miguardia.ui.worksetup.WorkSetupSurfaceHost
 import com.blackatsystems.miguardia.ui.worksetup.WorkSetupUiState
 import com.blackatsystems.miguardia.ui.worksetup.WorkTemplateDraft
 import java.time.Instant
@@ -51,6 +52,25 @@ import org.junit.Test
 class WorkSetupComposeTest {
     @get:Rule
     val compose = createComposeRule()
+
+    @Test
+    fun overviewOffersTheSingleReferenceAndHoursProgressEntry() {
+        var opened = 0
+        compose.setContent {
+            MiGuardiaTheme {
+                WorkSetupSurfaceHost(
+                    state = readyState(WorkSector.NURSING).copy(surface = WorkSetupSurface.OVERVIEW),
+                    actions = WorkSetupActions(openHoursProgress = { opened++ }),
+                )
+            }
+        }
+
+        compose.onNodeWithTag("work-setup-hours-progress")
+            .performScrollTo()
+            .assertIsDisplayed()
+            .performClick()
+        compose.runOnIdle { assertEquals(1, opened) }
+    }
 
     @Test
     fun loadingAndErrorNeverExposeCalendarOrFreshSelector() {

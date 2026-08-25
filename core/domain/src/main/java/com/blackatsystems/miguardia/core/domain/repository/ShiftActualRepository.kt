@@ -2,6 +2,7 @@ package com.blackatsystems.miguardia.core.domain.repository
 
 import com.blackatsystems.miguardia.core.domain.model.ExtraWorkClassWriteResult
 import com.blackatsystems.miguardia.core.domain.model.ShiftActualExpectation
+import com.blackatsystems.miguardia.core.domain.model.ShiftActualAggregate
 import com.blackatsystems.miguardia.core.domain.model.ShiftActualSaveMutation
 import com.blackatsystems.miguardia.core.domain.model.ShiftActualWriteResult
 import com.blackatsystems.miguardia.core.domain.work.ExtraWorkClass
@@ -18,6 +19,11 @@ interface ShiftActualRepository {
         timelineId: UUID,
         sector: WorkSector,
     ): Flow<List<ExtraWorkClass>>
+
+    fun observeAllActuals(
+        timelineId: UUID,
+        sector: WorkSector,
+    ): Flow<Map<UUID, ShiftActualAggregate>>
 
     suspend fun save(mutation: ShiftActualSaveMutation): ShiftActualWriteResult
 

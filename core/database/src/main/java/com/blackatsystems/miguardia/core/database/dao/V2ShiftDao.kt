@@ -18,6 +18,20 @@ internal data class ShiftWithWorkSnapshotRow(
 
 @Dao
 internal interface V2ShiftDao {
+    @Transaction
+    @Query(
+        """SELECT shifts.*, shift_work_snapshots.*
+            FROM shift_work_snapshots
+            JOIN shifts ON shifts.id = shift_work_snapshots.shiftId
+            WHERE shift_work_snapshots.timelineId = :timelineId
+              AND shift_work_snapshots.sector = :sector
+            ORDER BY shifts.startEpochMillis, shifts.id""",
+    )
+    fun observeAll(
+        timelineId: String,
+        sector: String,
+    ): Flow<List<ShiftWithWorkSnapshotRow>>
+
     @Query("SELECT * FROM shift_work_snapshots WHERE shiftId = :shiftId")
     fun observeSnapshot(shiftId: String): Flow<ShiftWorkSnapshotEntity?>
 

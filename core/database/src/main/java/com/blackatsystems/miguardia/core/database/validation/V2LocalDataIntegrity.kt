@@ -9,6 +9,7 @@ import com.blackatsystems.miguardia.core.database.mapping.toDomainOrNull
 import com.blackatsystems.miguardia.core.database.mapping.toDomainActualRecord
 import com.blackatsystems.miguardia.core.database.mapping.toDomainExtraInterval
 import com.blackatsystems.miguardia.core.database.mapping.toDomainExtraWorkClass
+import com.blackatsystems.miguardia.core.database.mapping.toDomainIndependentExtra
 import com.blackatsystems.miguardia.core.database.mapping.toDomainWorkPlace
 import com.blackatsystems.miguardia.core.database.mapping.toDomainWorkSnapshot
 import com.blackatsystems.miguardia.core.database.mapping.toDomainWorkTemplate
@@ -130,7 +131,62 @@ private suspend fun MiGuardiaV2Database.auditValidV2LocalData(): WorkConfigurati
         writes = writes,
     )
     validateShiftActuals(history = history, writes = writes)
+    validateIndependentExtras(history = history, catalogs = catalogs)
     return history
+}
+
+private suspend fun MiGuardiaV2Database.validateIndependentExtras(
+    history: WorkConfigurationHistory?,
+    catalogs: Map<Pair<UUID, WorkSector>, WorkCatalog>,
+) {
+    val dao = independentExtraWorkDao()
+    if (dao.getInvalidRowCount() != 0) {
+        invalidV2Data("La base contiene extras independientes huérfanos o incoherentes.")
+    }
+    val records = dao.getAll().map { it.toDomainIndependentExtra() }
+    if (records.isNotEmpty() && history == null) {
+        invalidV2Data("Hay extras independientes sin una configuración laboral.")
+    }
+    val classes = shiftActualDao().getAllClasses().map { it.toDomainExtraWorkClass() }.associateBy { it.id }
+    records.forEach { record ->
+        val storedHistory = requireNotNull(history)
+        if (storedHistory.timeline.id != record.timelineId) {
+            invalidV2Data("El extra independiente ${record.id} pertenece a otra línea temporal.")
+        }
+        val preservedRevision = storedHistory.timeline.revisions.singleOrNull { revision ->
+            revision.id == record.configurationRevisionId
+        } ?: invalidV2Data(
+            "El extra independiente ${record.id} no conserva una revisión de configuración existente.",
+        )
+        if (
+            preservedRevision.effectiveFrom.isAfter(record.ownerLocalDate) ||
+            preservedRevision.value.sector != record.sector
+        ) {
+            invalidV2Data("La revisión histórica del extra ${record.id} no corresponde a su fecha y sector.")
+        }
+        val catalog = catalogs[record.timelineId to record.sector]
+            ?: invalidV2Data("El extra independiente ${record.id} no conserva su catálogo laboral.")
+        val place = catalog.workPlaces.singleOrNull { it.id == record.workPlaceId }
+            ?: invalidV2Data("El extra independiente ${record.id} referencia un lugar inexistente.")
+        val type = catalog.workTypes.singleOrNull { it.id == record.workTypeId }
+            ?: invalidV2Data("El extra independiente ${record.id} referencia un tipo inexistente.")
+        val template = record.templateId?.let { templateId ->
+            catalog.workTemplates.singleOrNull { it.id == templateId }
+                ?: invalidV2Data("El extra independiente ${record.id} referencia una plantilla inexistente.")
+        }
+        val extraClass = classes[record.extraWorkClassId]
+            ?: invalidV2Data("El extra independiente ${record.id} referencia una clase inexistente.")
+        if (
+            place.objectiveId != record.objectiveId ||
+            template?.workPlaceId?.let { it != place.id } == true ||
+            template?.objectiveId?.let { it != record.objectiveId } == true ||
+            template?.workTypeId?.let { it != type.id } == true ||
+            extraClass.timelineId != record.timelineId ||
+            extraClass.sector != record.sector
+        ) {
+            invalidV2Data("El extra independiente ${record.id} mezcla fuentes laborales incompatibles.")
+        }
+    }
 }
 
 private suspend fun MiGuardiaV2Database.validateShiftActuals(

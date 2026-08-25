@@ -710,6 +710,12 @@ private class FakeActualRepository(
         }
     }
 
+    override fun observeAllActuals(
+        timelineId: UUID,
+        sector: WorkSector,
+    ): Flow<Map<UUID, com.blackatsystems.miguardia.core.domain.model.ShiftActualAggregate>> =
+        MutableStateFlow(emptyMap())
+
     override suspend fun save(mutation: ShiftActualSaveMutation): ShiftActualWriteResult {
         saveCalls++
         lastMutation = mutation

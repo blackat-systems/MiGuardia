@@ -97,7 +97,75 @@ class V2DatabaseMigrationInstrumentedTest {
     }
 
     @Test
-    fun migrationChainOneToTwoToThreePreservesVersionOneData() {
+    fun migrationThreeToFourPreservesTwentyFiveTablesBackfillsReferenceStartsAndCreatesEmptyExtras() {
+        helper.createDatabase(DB_THREE_TO_FOUR, 1).apply {
+            seedEveryVersionOneTable()
+            close()
+        }
+        helper.runMigrationsAndValidate(
+            DB_THREE_TO_FOUR,
+            3,
+            true,
+            MiGuardiaV2Database.MIGRATION_1_2,
+            MiGuardiaV2Database.MIGRATION_2_3,
+        ).apply {
+            seedEveryVersionTwoRecurringTable()
+            seedEveryVersionThreeTable()
+            seedReferenceBackfillCases()
+            close()
+        }
+
+        val migrated = helper.runMigrationsAndValidate(
+            DB_THREE_TO_FOUR,
+            4,
+            true,
+            MiGuardiaV2Database.MIGRATION_3_4,
+        )
+
+        (VERSION_TWO_TABLES + VERSION_THREE_TABLES).forEach { table ->
+            assertTrue("La migración debe preservar $table", migrated.scalar("SELECT COUNT(*) FROM `$table`") > 0)
+        }
+        assertEquals(0, migrated.scalar("SELECT COUNT(*) FROM independent_extra_work_records"))
+        assertEquals(
+            26,
+            migrated.scalar(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' " +
+                    "AND name NOT LIKE 'sqlite_%' AND name NOT LIKE 'android_%' " +
+                    "AND name != 'room_master_table'",
+            ),
+        )
+        assertEquals("2026-01-01", migrated.referenceStartedOn("configuration-1"))
+        assertEquals("2026-01-01", migrated.referenceStartedOn("configuration-same-1"))
+        assertEquals("2026-03-01", migrated.referenceStartedOn("configuration-fixed-1"))
+        assertEquals("2026-03-01", migrated.referenceStartedOn("configuration-fixed-same"))
+        assertEquals(null, migrated.referenceStartedOn("configuration-unknown-no-period"))
+        assertEquals("2026-06-01", migrated.referenceStartedOn("configuration-unknown-monthly"))
+        assertEquals("2026-07-01", migrated.referenceStartedOn("configuration-weekly-1"))
+        assertEquals("2026-07-01", migrated.referenceStartedOn("configuration-weekly-same"))
+        assertEquals("2026-09-01", migrated.referenceStartedOn("configuration-weekly-changed"))
+        assertEquals("2026-10-01", migrated.referenceStartedOn("configuration-cycle-1"))
+        assertEquals("2026-10-01", migrated.referenceStartedOn("configuration-cycle-same"))
+        assertEquals("2026-12-01", migrated.referenceStartedOn("configuration-cycle-changed"))
+        assertEquals(null, migrated.referenceStartedOn("configuration-not-used"))
+        assertEquals("2027-02-01", migrated.referenceStartedOn("configuration-fixed-after-not-used"))
+        assertEquals(null, migrated.referenceStartedOn("configuration-pending"))
+        assertEquals("2027-04-01", migrated.referenceStartedOn("configuration-unknown-after-pending"))
+        assertForeignKey(migrated, "independent_extra_work_records", "work_configuration_revisions", "RESTRICT")
+        assertForeignKey(migrated, "independent_extra_work_records", "work_places", "RESTRICT")
+        assertForeignKey(migrated, "independent_extra_work_records", "work_templates", "RESTRICT")
+        assertForeignKey(migrated, "independent_extra_work_records", "extra_work_classes", "RESTRICT")
+        assertHealthy(migrated)
+        migrated.close()
+
+        val reopened = helper.runMigrationsAndValidate(DB_THREE_TO_FOUR, 4, true)
+        assertEquals("2026-01-01", reopened.referenceStartedOn("configuration-same-1"))
+        assertEquals("2026-03-01", reopened.referenceStartedOn("configuration-fixed-same"))
+        assertHealthy(reopened)
+        reopened.close()
+    }
+
+    @Test
+    fun migrationChainOneToTwoToThreeToFourPreservesVersionOneData() {
         helper.createDatabase(DB_CHAIN, 1).apply {
             seedEveryVersionOneTable()
             close()
@@ -105,16 +173,17 @@ class V2DatabaseMigrationInstrumentedTest {
 
         val migrated = helper.runMigrationsAndValidate(
             DB_CHAIN,
-            3,
+            4,
             true,
             MiGuardiaV2Database.MIGRATION_1_2,
             MiGuardiaV2Database.MIGRATION_2_3,
+            MiGuardiaV2Database.MIGRATION_3_4,
         )
 
         VERSION_ONE_TABLES.forEach { table ->
             assertEquals("La cadena debe preservar $table", 1, migrated.scalar("SELECT COUNT(*) FROM `$table`"))
         }
-        (NEW_TABLES + VERSION_THREE_TABLES).forEach { table ->
+        (NEW_TABLES + VERSION_THREE_TABLES + VERSION_FOUR_TABLES).forEach { table ->
             assertEquals("La cadena debe iniciar $table vacía", 0, migrated.scalar("SELECT COUNT(*) FROM `$table`"))
         }
         assertHealthy(migrated)
@@ -208,6 +277,116 @@ class V2DatabaseMigrationInstrumentedTest {
         )
     }
 
+    private fun androidx.sqlite.db.SupportSQLiteDatabase.seedEveryVersionThreeTable() {
+        execSQL(
+            "INSERT INTO extra_work_classes VALUES " +
+                "('class-1', 'timeline-1', 'PRIVATE_SECURITY', 'Hora extra', 'HORA EXTRA', 1, 1, 1, 1, 1)",
+        )
+        execSQL(
+            "INSERT INTO shift_actual_records VALUES " +
+                "('shift-1', 'timeline-1', 'PRIVATE_SECURITY', 1787472000000, 1787500800000, " +
+                "'Horario confirmado', NULL, 1, 1)",
+        )
+        execSQL(
+            "INSERT INTO shift_extra_intervals VALUES " +
+                "('interval-1', 'shift-1', 'timeline-1', 'PRIVATE_SECURITY', 'class-1', " +
+                "1787497200000, 1787500800000, 'Hora extra', 1, 1, 1, 1)",
+        )
+    }
+
+    private fun androidx.sqlite.db.SupportSQLiteDatabase.seedReferenceBackfillCases() {
+        execSQL(
+            """INSERT INTO work_configuration_revisions VALUES (
+                'configuration-same-1', 'timeline-1', '2026-02-01', 'PRIVATE_SECURITY', 'PASSIVE_GUARD',
+                'PER_PERIOD', NULL, NULL, NULL, NULL, NULL, 'definition-1'
+            )""",
+        )
+        execSQL(
+            """INSERT INTO work_configuration_revisions VALUES (
+                'configuration-fixed-1', 'timeline-1', '2026-03-01', 'PRIVATE_SECURITY', NULL,
+                'FIXED', 'MONTHLY', NULL, NULL, NULL, 9600, NULL
+            )""",
+        )
+        execSQL(
+            """INSERT INTO work_configuration_revisions VALUES (
+                'configuration-fixed-same', 'timeline-1', '2026-04-01', 'PRIVATE_SECURITY', 'PASSIVE_GUARD',
+                'FIXED', 'MONTHLY', NULL, NULL, NULL, 9600, NULL
+            )""",
+        )
+        execSQL(
+            """INSERT INTO work_configuration_revisions VALUES (
+                'configuration-unknown-no-period', 'timeline-1', '2026-05-01', 'PRIVATE_SECURITY', NULL,
+                'UNKNOWN', NULL, NULL, NULL, NULL, NULL, NULL
+            )""",
+        )
+        execSQL(
+            """INSERT INTO work_configuration_revisions VALUES (
+                'configuration-unknown-monthly', 'timeline-1', '2026-06-01', 'PRIVATE_SECURITY', NULL,
+                'UNKNOWN', 'MONTHLY', NULL, NULL, NULL, NULL, NULL
+            )""",
+        )
+        execSQL(
+            """INSERT INTO work_configuration_revisions VALUES (
+                'configuration-weekly-1', 'timeline-1', '2026-07-01', 'PRIVATE_SECURITY', NULL,
+                'FIXED', 'WEEKLY', 1, NULL, NULL, 2400, NULL
+            )""",
+        )
+        execSQL(
+            """INSERT INTO work_configuration_revisions VALUES (
+                'configuration-weekly-same', 'timeline-1', '2026-08-01', 'PRIVATE_SECURITY', 'PASSIVE_GUARD',
+                'FIXED', 'WEEKLY', 1, NULL, NULL, 2400, NULL
+            )""",
+        )
+        execSQL(
+            """INSERT INTO work_configuration_revisions VALUES (
+                'configuration-weekly-changed', 'timeline-1', '2026-09-01', 'PRIVATE_SECURITY', NULL,
+                'FIXED', 'WEEKLY', 4, NULL, NULL, 2400, NULL
+            )""",
+        )
+        execSQL(
+            """INSERT INTO work_configuration_revisions VALUES (
+                'configuration-cycle-1', 'timeline-1', '2026-10-01', 'PRIVATE_SECURITY', NULL,
+                'UNKNOWN', 'CYCLE', NULL, '2026-09-15', 21, NULL, NULL
+            )""",
+        )
+        execSQL(
+            """INSERT INTO work_configuration_revisions VALUES (
+                'configuration-cycle-same', 'timeline-1', '2026-11-01', 'PRIVATE_SECURITY', 'PASSIVE_GUARD',
+                'UNKNOWN', 'CYCLE', NULL, '2026-09-15', 21, NULL, NULL
+            )""",
+        )
+        execSQL(
+            """INSERT INTO work_configuration_revisions VALUES (
+                'configuration-cycle-changed', 'timeline-1', '2026-12-01', 'PRIVATE_SECURITY', NULL,
+                'UNKNOWN', 'CYCLE', NULL, '2026-09-15', 28, NULL, NULL
+            )""",
+        )
+        execSQL(
+            """INSERT INTO work_configuration_revisions VALUES (
+                'configuration-not-used', 'timeline-1', '2027-01-01', 'PRIVATE_SECURITY', NULL,
+                'NOT_USED', NULL, NULL, NULL, NULL, NULL, NULL
+            )""",
+        )
+        execSQL(
+            """INSERT INTO work_configuration_revisions VALUES (
+                'configuration-fixed-after-not-used', 'timeline-1', '2027-02-01', 'PRIVATE_SECURITY', NULL,
+                'FIXED', 'MONTHLY', NULL, NULL, NULL, 9600, NULL
+            )""",
+        )
+        execSQL(
+            """INSERT INTO work_configuration_revisions VALUES (
+                'configuration-pending', 'timeline-1', '2027-03-01', 'PRIVATE_SECURITY', NULL,
+                'PENDING_SETUP', NULL, NULL, NULL, NULL, NULL, NULL
+            )""",
+        )
+        execSQL(
+            """INSERT INTO work_configuration_revisions VALUES (
+                'configuration-unknown-after-pending', 'timeline-1', '2027-04-01', 'PRIVATE_SECURITY', NULL,
+                'UNKNOWN', 'MONTHLY', NULL, NULL, NULL, NULL, NULL
+            )""",
+        )
+    }
+
     private fun assertHealthy(database: androidx.sqlite.db.SupportSQLiteDatabase) {
         database.query("PRAGMA integrity_check").use { cursor ->
             assertTrue(cursor.moveToFirst())
@@ -246,10 +425,20 @@ class V2DatabaseMigrationInstrumentedTest {
         cursor.getString(0)
     }
 
+    private fun androidx.sqlite.db.SupportSQLiteDatabase.referenceStartedOn(id: String): String? =
+        query(
+            "SELECT hoursReferenceStartedOn FROM work_configuration_revisions WHERE id = ?",
+            arrayOf(id),
+        ).use { cursor ->
+            check(cursor.moveToFirst())
+            if (cursor.isNull(0)) null else cursor.getString(0)
+        }
+
     private companion object {
         const val DB = "v2-migration-1-2-test.db"
         const val DB_TWO_TO_THREE = "v2-migration-2-3-test.db"
         const val DB_CHAIN = "v2-migration-1-3-test.db"
+        const val DB_THREE_TO_FOUR = "v2-migration-3-4-test.db"
         val VERSION_ONE_TABLES = listOf(
             "objectives",
             "shifts",
@@ -282,5 +471,6 @@ class V2DatabaseMigrationInstrumentedTest {
             "shift_actual_records",
             "shift_extra_intervals",
         )
+        val VERSION_FOUR_TABLES = listOf("independent_extra_work_records")
     }
 }

@@ -3,6 +3,7 @@ package com.blackatsystems.miguardia.core.database
 import android.content.Context
 import com.blackatsystems.miguardia.core.database.repository.RoomExplicitDayStatusRepository
 import com.blackatsystems.miguardia.core.database.repository.RoomHolidayRepository
+import com.blackatsystems.miguardia.core.database.repository.RoomIndependentExtraWorkRepository
 import com.blackatsystems.miguardia.core.database.repository.RoomMedicalLeaveRepository
 import com.blackatsystems.miguardia.core.database.repository.RoomObjectiveRepository
 import com.blackatsystems.miguardia.core.database.repository.RoomSchedulePhotoRepository
@@ -16,6 +17,7 @@ import com.blackatsystems.miguardia.core.database.repository.RoomWorkCatalogRepo
 import com.blackatsystems.miguardia.core.database.repository.RoomWorkConfigurationRepository
 import com.blackatsystems.miguardia.core.domain.repository.ExplicitDayStatusRepository
 import com.blackatsystems.miguardia.core.domain.repository.HolidayRepository
+import com.blackatsystems.miguardia.core.domain.repository.IndependentExtraWorkRepository
 import com.blackatsystems.miguardia.core.domain.repository.MedicalLeaveRepository
 import com.blackatsystems.miguardia.core.domain.repository.ObjectiveRepository
 import com.blackatsystems.miguardia.core.domain.repository.RecurringPlanRepository
@@ -39,6 +41,7 @@ class LocalDataStore internal constructor(
 ) : Closeable {
     private val roomV2Shifts = RoomV2ShiftRepository(database, recurringClock)
     private val roomShiftActual = RoomShiftActualRepository(database)
+    private val roomIndependentExtras = RoomIndependentExtraWorkRepository(database, recurringClock)
     val objectives: ObjectiveRepository = RoomObjectiveRepository(database)
     val shifts: ShiftRepository = RoomShiftRepository(database)
     val explicitDayStatuses: ExplicitDayStatusRepository =
@@ -56,6 +59,7 @@ class LocalDataStore internal constructor(
     val workCatalog: WorkCatalogRepository = RoomWorkCatalogRepository(database)
     val v2Shifts: V2ShiftRepository = roomV2Shifts
     val shiftActuals: ShiftActualRepository = roomShiftActual
+    val independentExtraWork: IndependentExtraWorkRepository = roomIndependentExtras
     val recurringShiftWriter: V2RecurringShiftRepository = roomV2Shifts
     val recurringPlans: RecurringPlanRepository = roomV2Shifts
 

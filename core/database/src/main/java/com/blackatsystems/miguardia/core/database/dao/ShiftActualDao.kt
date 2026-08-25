@@ -22,6 +22,14 @@ import kotlinx.coroutines.flow.Flow
 internal interface ShiftActualDao {
     @Query(
         """SELECT
+            (SELECT COUNT(*) FROM shift_actual_records WHERE timelineId = :timelineId AND sector = :sector) +
+            (SELECT COUNT(*) FROM shift_extra_intervals WHERE timelineId = :timelineId AND sector = :sector) +
+            (SELECT COUNT(*) FROM extra_work_classes WHERE timelineId = :timelineId AND sector = :sector)""",
+    )
+    fun observeContextToken(timelineId: String, sector: String): Flow<Long>
+
+    @Query(
+        """SELECT
             (SELECT COUNT(*) FROM extra_work_classes c
                 LEFT JOIN work_configuration_roots r ON r.timelineId = c.timelineId
                 WHERE r.timelineId IS NULL OR c.helpsMeetHoursReference NOT IN (0, 1)

@@ -7,10 +7,13 @@ import com.blackatsystems.miguardia.core.domain.model.V2ShiftBatchMutation
 import com.blackatsystems.miguardia.core.domain.model.V2ShiftLookup
 import com.blackatsystems.miguardia.core.domain.model.V2ShiftWrite
 import com.blackatsystems.miguardia.core.domain.model.V2ShiftWriteExpectation
+import com.blackatsystems.miguardia.core.domain.work.WorkSector
 import java.util.UUID
 import kotlinx.coroutines.flow.Flow
 
 interface V2ShiftRepository {
+    fun observeAll(timelineId: UUID, sector: WorkSector): Flow<List<V2ShiftWrite>>
+
     fun observeWorkSnapshot(shiftId: UUID): Flow<ShiftWorkSnapshot?>
 
     suspend fun getWorkSnapshot(shiftId: UUID): ShiftWorkSnapshot?

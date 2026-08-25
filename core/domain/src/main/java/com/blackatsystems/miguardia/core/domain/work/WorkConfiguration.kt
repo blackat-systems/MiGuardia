@@ -53,13 +53,97 @@ data class WorkConfiguration(
     val sector: WorkSector,
     val hoursReference: HoursReference,
     val availabilityLabel: AvailabilityLabel?,
-)
+    val hoursReferenceStartedOn: LocalDate? = null,
+) {
+    init {
+        require(hoursReferenceStartedOn != null == hoursReference.requiresStartedOnMarker) {
+            "El inicio de la referencia debe existir exactamente cuando hay un período que contar"
+        }
+    }
+}
+
+val HoursReference.requiresStartedOnMarker: Boolean
+    get() = when (this) {
+        HoursReference.PendingSetup,
+        HoursReference.NotUsed,
+        -> false
+
+        is HoursReference.Unknown -> period != null
+        is HoursReference.Fixed,
+        is HoursReference.PerPeriod,
+        -> true
+    }
 
 data class EffectiveRevision<T>(
     val id: UUID,
     val effectiveFrom: LocalDate,
     val value: T,
 )
+
+data class WorkConfigurationReferenceMutation(
+    val expectedHistory: WorkConfigurationHistory,
+    val revision: EffectiveRevision<WorkConfiguration>,
+    val initialPerPeriodValue: PerPeriodHoursEntry? = null,
+) {
+    init {
+        val previousAtStart = requireNotNull(
+            expectedHistory.timeline.revisionAt(revision.effectiveFrom),
+        ) { "La referencia no puede comenzar antes de la configuración laboral" }
+        require(
+            revision.value.sector == previousAtStart.value.sector &&
+                revision.value.availabilityLabel == previousAtStart.value.availabilityLabel,
+        ) {
+            "Cambiar la referencia no puede modificar el rubro ni la disponibilidad"
+        }
+        require(
+            !revision.value.hoursReference.requiresStartedOnMarker ||
+                revision.effectiveFrom == revision.value.hoursReferenceStartedOn,
+        ) {
+            "Una nueva referencia debe comenzar en la fecha elegida para el reinicio"
+        }
+        val perPeriod = revision.value.hoursReference as? HoursReference.PerPeriod
+        initialPerPeriodValue?.let { entry ->
+            requireNotNull(perPeriod) {
+                "Sólo una referencia por período admite un valor inicial"
+            }
+            require(entry.key.definitionId == perPeriod.definitionId && entry.key.period == perPeriod.period) {
+                "El valor inicial no pertenece a la nueva referencia"
+            }
+            require(revision.effectiveFrom in entry.key.window) {
+                "El valor inicial debe corresponder al primer período de la referencia"
+            }
+        }
+    }
+}
+
+data class PerPeriodHoursValueMutation(
+    val expectedHistory: WorkConfigurationHistory,
+    val replacement: PerPeriodHoursEntry,
+) {
+    init {
+        val matchingReferences = expectedHistory.timeline.revisions
+            .asSequence()
+            .mapNotNull { it.value.hoursReference as? HoursReference.PerPeriod }
+            .filter { it.definitionId == replacement.key.definitionId }
+            .toList()
+        require(matchingReferences.isNotEmpty()) {
+            "El valor debe pertenecer a una definición vigente del historial"
+        }
+        require(matchingReferences.all { it.period == replacement.key.period }) {
+            "El valor debe conservar el período de su definición"
+        }
+    }
+}
+
+sealed interface PerPeriodHoursValueWriteResult {
+    data class Saved(val history: WorkConfigurationHistory) : PerPeriodHoursValueWriteResult
+    data object Conflict : PerPeriodHoursValueWriteResult
+}
+
+sealed interface WorkConfigurationReferenceWriteResult {
+    data class Saved(val history: WorkConfigurationHistory) : WorkConfigurationReferenceWriteResult
+    data object Conflict : WorkConfigurationReferenceWriteResult
+}
 
 class EffectiveDateTimeline<T>(
     val id: UUID,

@@ -25,6 +25,7 @@ import androidx.room.PrimaryKey
     ],
     indices = [
         Index(value = ["timelineId", "effectiveFrom"], unique = true),
+        Index(value = ["id", "timelineId", "sector"], unique = true),
         Index(value = ["perPeriodDefinitionId"]),
     ],
 )
@@ -41,4 +42,5 @@ internal data class WorkConfigurationRevisionEntity(
     val cycleLengthDays: Int?,
     val requiredMinutes: Long?,
     val perPeriodDefinitionId: String?,
+    val hoursReferenceStartedOn: String? = null,
 )

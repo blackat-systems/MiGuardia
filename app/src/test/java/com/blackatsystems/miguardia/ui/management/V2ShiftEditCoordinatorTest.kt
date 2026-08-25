@@ -36,7 +36,6 @@ import com.blackatsystems.miguardia.core.domain.work.HoursReference
 import com.blackatsystems.miguardia.core.domain.work.NewV2Backfill
 import com.blackatsystems.miguardia.core.domain.work.NewWorkPlace
 import com.blackatsystems.miguardia.core.domain.work.NightHoursRule
-import com.blackatsystems.miguardia.core.domain.work.PerPeriodHoursEntry
 import com.blackatsystems.miguardia.core.domain.work.PerPeriodHoursValues
 import com.blackatsystems.miguardia.core.domain.work.RecentWorkTemplate
 import com.blackatsystems.miguardia.core.domain.work.ResolvedWorkConfigurationRevision
@@ -976,8 +975,6 @@ private class EditFakeConfigurations(
     override suspend fun get(): WorkConfigurationHistory = history
     override suspend fun createInitial(timelineId: UUID, firstRevision: EffectiveRevision<WorkConfiguration>) = error("No se usa")
     override suspend fun addRevision(timelineId: UUID, revision: EffectiveRevision<WorkConfiguration>) = error("No se usa")
-    override suspend fun createPerPeriodValue(timelineId: UUID, entry: PerPeriodHoursEntry) = error("No se usa")
-    override suspend fun updatePerPeriodValue(timelineId: UUID, entry: PerPeriodHoursEntry) = error("No se usa")
 }
 
 private class EditFakeCatalog(
@@ -1067,6 +1064,12 @@ private class EditFakeShifts(initial: List<Shift>) : ShiftRepository {
 private class EditFakeShiftActualRepository(
     private val expectation: com.blackatsystems.miguardia.core.domain.model.ShiftActualExpectation,
 ) : com.blackatsystems.miguardia.core.domain.repository.ShiftActualRepository {
+    override fun observeAllActuals(
+        timelineId: UUID,
+        sector: WorkSector,
+    ): Flow<Map<UUID, com.blackatsystems.miguardia.core.domain.model.ShiftActualAggregate>> =
+        MutableStateFlow(emptyMap())
+
     override fun observeExpectation(
         shiftId: UUID,
     ): Flow<com.blackatsystems.miguardia.core.domain.model.ShiftActualExpectation?> =
@@ -1112,6 +1115,12 @@ private class EditFakeV2Shifts(
     var lastOccupancyPreview: ShiftOccupancyExpectation? = null
     var lastExpectedActual: com.blackatsystems.miguardia.core.domain.model.ShiftActualExpectation? = null
 
+    override fun observeAll(timelineId: UUID, sector: WorkSector): Flow<List<V2ShiftWrite>> =
+        MutableStateFlow(
+            writes.values.filter { write ->
+                write.snapshot.timelineId == timelineId && write.snapshot.sector == sector
+            },
+        )
     override fun observeWorkSnapshot(shiftId: UUID): Flow<ShiftWorkSnapshot?> =
         MutableStateFlow(writes[shiftId]?.snapshot)
     override suspend fun getWorkSnapshot(shiftId: UUID): ShiftWorkSnapshot? = writes[shiftId]?.snapshot

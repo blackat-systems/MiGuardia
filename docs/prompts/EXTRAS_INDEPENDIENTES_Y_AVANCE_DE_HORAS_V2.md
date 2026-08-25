@@ -1,6 +1,6 @@
 # Extras independientes y avance de horas V2
 
-- Estado: **HABILITADO — SIN IMPLEMENTACIÓN ABIERTA**
+- Estado: **CERRADO — INTEGRADO POR MAIN**
 - Fecha: 2026-08-25
 - Proyecto obligatorio:
   `C:\Users\Joaquin\Desktop\chatgptprojects\MiGuardia-2.0`

@@ -7,6 +7,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Relation
 import androidx.room.Transaction
+import androidx.room.Update
 import com.blackatsystems.miguardia.core.database.entity.PerPeriodHoursDefinitionEntity
 import com.blackatsystems.miguardia.core.database.entity.PerPeriodHoursValueEntity
 import com.blackatsystems.miguardia.core.database.entity.WorkConfigurationRevisionEntity
@@ -134,8 +135,24 @@ internal interface WorkConfigurationDao {
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertRevision(entity: WorkConfigurationRevisionEntity)
 
+    @Update(onConflict = OnConflictStrategy.ABORT)
+    suspend fun updateRevision(entity: WorkConfigurationRevisionEntity): Int
+
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertValue(entity: PerPeriodHoursValueEntity)
+
+    @Query("DELETE FROM per_period_hours_values WHERE definitionId = :definitionId")
+    suspend fun deleteValuesForDefinition(definitionId: String): Int
+
+    @Query(
+        """DELETE FROM per_period_hours_definitions
+            WHERE id = :definitionId
+              AND NOT EXISTS (
+                  SELECT 1 FROM work_configuration_revisions
+                  WHERE perPeriodDefinitionId = :definitionId
+              )""",
+    )
+    suspend fun deleteDefinitionIfUnused(definitionId: String): Int
 
     @Query(
         """UPDATE per_period_hours_values

@@ -33,7 +33,6 @@ import com.blackatsystems.miguardia.core.domain.work.HoursReference
 import com.blackatsystems.miguardia.core.domain.work.NewV2Backfill
 import com.blackatsystems.miguardia.core.domain.work.NewWorkPlace
 import com.blackatsystems.miguardia.core.domain.work.NightHoursRule
-import com.blackatsystems.miguardia.core.domain.work.PerPeriodHoursEntry
 import com.blackatsystems.miguardia.core.domain.work.PerPeriodHoursValues
 import com.blackatsystems.miguardia.core.domain.work.RecentWorkTemplate
 import com.blackatsystems.miguardia.core.domain.work.WeekendRule
@@ -542,8 +541,6 @@ private class FakeRecurringConfigurations(
     override suspend fun get(): WorkConfigurationHistory = history
     override suspend fun createInitial(timelineId: UUID, firstRevision: EffectiveRevision<WorkConfiguration>) = error("No se usa")
     override suspend fun addRevision(timelineId: UUID, revision: EffectiveRevision<WorkConfiguration>) = error("No se usa")
-    override suspend fun createPerPeriodValue(timelineId: UUID, entry: PerPeriodHoursEntry) = error("No se usa")
-    override suspend fun updatePerPeriodValue(timelineId: UUID, entry: PerPeriodHoursEntry) = error("No se usa")
 }
 
 private class FakeRecurringCatalog(
@@ -623,6 +620,13 @@ private class FakeRecurringStore(
     var failure: Throwable? = null
     var observePlansFailure: Throwable? = null
     var getPlanFailure: Throwable? = null
+
+    override fun observeAll(timelineId: UUID, sector: WorkSector): Flow<List<V2ShiftWrite>> =
+        MutableStateFlow(
+            writes.values.filter { write ->
+                write.snapshot.timelineId == timelineId && write.snapshot.sector == sector
+            },
+        )
 
     fun requireWrite(shiftId: UUID): V2ShiftWrite = requireNotNull(writes[shiftId])
 

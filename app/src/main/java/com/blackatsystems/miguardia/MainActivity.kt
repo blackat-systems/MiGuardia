@@ -24,6 +24,7 @@ import com.blackatsystems.miguardia.notifications.NotificationSystemAccess
 import com.blackatsystems.miguardia.ui.MiGuardiaApp
 import com.blackatsystems.miguardia.ui.calendar.CalendarViewModel
 import com.blackatsystems.miguardia.ui.exceptions.ExceptionsViewModel
+import com.blackatsystems.miguardia.ui.hours.HoursAndExtrasViewModel
 import com.blackatsystems.miguardia.ui.management.V2ManualShiftLoadViewModel
 import com.blackatsystems.miguardia.ui.management.V2RecurringPlanViewModel
 import com.blackatsystems.miguardia.ui.management.V2ShiftEditViewModel
@@ -149,6 +150,22 @@ class MainActivity : ComponentActivity() {
         )
     }
 
+    private val hoursAndExtrasViewModel: HoursAndExtrasViewModel by viewModels {
+        val dataStore = (application as MiGuardiaApplication).localDataStore
+        HoursAndExtrasViewModel.Factory(
+            configurationRepository = dataStore.workConfiguration,
+            catalogRepository = dataStore.workCatalog,
+            objectiveRepository = dataStore.objectives,
+            shiftRepository = dataStore.v2Shifts,
+            shiftActualRepository = dataStore.shiftActuals,
+            independentExtraRepository = dataStore.independentExtraWork,
+            medicalLeaveRepository = dataStore.medicalLeaves,
+            vacationRepository = dataStore.vacations,
+            clock = Clock.systemUTC(),
+            zoneId = AppDefaults.zoneId(),
+        )
+    }
+
     private val exceptionsViewModel: ExceptionsViewModel by viewModels {
         val dataStore = (application as MiGuardiaApplication).localDataStore
         ExceptionsViewModel.Factory(
@@ -204,6 +221,7 @@ class MainActivity : ComponentActivity() {
                     notificationViewModel = notificationViewModel,
                     weatherViewModel = weatherViewModel,
                     workSetupViewModel = workSetupViewModel,
+                    hoursAndExtrasViewModel = hoursAndExtrasViewModel,
                     calendarNavigationRequest = calendarNavigationRequest,
                     appZoom = appZoom,
                     onAppZoomChange = { selected ->
@@ -230,6 +248,7 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         workSetupViewModel.refreshReferenceDate()
+        hoursAndExtrasViewModel.refresh()
         notificationViewModel.refreshSystemAccess()
         weatherViewModel.onResume()
         (application as MiGuardiaApplication).notificationRuntime.reconcile()

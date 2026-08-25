@@ -72,7 +72,7 @@ prevalecen para el estado operativo.
 | `RETIRAR_MODO_V1_Y_FIJAR_BASE_EXCLUSIVA_V2.md` | **CERRADO** | MiGuardia ya ejecuta una sola experiencia V2 sobre `MiGuardiaV2Database` versión 1; Samsung API 36 y emulador API 26 quedaron verificados |
 | `REPETIR_JORNADAS_Y_CAMBIAR_DESDE_UNA_FECHA_V2.md` | **CERRADO** | Planes finitos, excepciones durables y cambios de una jornada o de todo lo futuro integrados sobre Room V2 versión 2 |
 | `REGISTRAR_HORARIO_REAL_Y_CLASIFICAR_HORAS_EXTRA_V2.md` | **CERRADO** | Horario real y extras exactas por jornada integrados sobre Room V2 versión 3, sin calcular todavía avance |
-| `EXTRAS_INDEPENDIENTES_Y_AVANCE_DE_HORAS_V2.md` | **HABILITADO** | Permite registrar extras sin jornada dueña, elegir cuándo reiniciar la referencia y mostrar cuánto se trabajó y cuánto falta |
+| `EXTRAS_INDEPENDIENTES_Y_AVANCE_DE_HORAS_V2.md` | **CERRADO** | Extras sin jornada dueña, reinicio consciente de la referencia y avance de horas integrados sobre Room V2 versión 4 |
 
 ## Contratos históricos de MiGuardia 1.0
 
@@ -124,12 +124,11 @@ Joaquin indicó que quiere preparar o abrir la siguiente:
 7. **Cerrado:** horario real y clasificación exacta de la diferencia
    adicional en jornadas existentes, mediante
    `REGISTRAR_HORARIO_REAL_Y_CLASIFICAR_HORAS_EXTRA_V2.md`;
-8. **Habilitado, sin implementación abierta:** extras independientes y avance
-   contra la referencia mediante
+8. **Cerrado:** extras independientes y avance contra la referencia mediante
    `EXTRAS_INDEPENDIENTES_Y_AVANCE_DE_HORAS_V2.md`; la persona elige la fecha
    de reinicio y no existe prorrateo automático;
-9. disponibilidad, situaciones especiales y consolidación final del motor de
-   horas y cumplimiento;
+9. **Siguiente, todavía no habilitado:** disponibilidad, situaciones especiales
+   y consolidación final del motor de horas y cumplimiento;
 10. Calendario final y tarjeta superior;
 11. Resumen personalizable;
 12. adaptación de próximo evento y notificaciones;

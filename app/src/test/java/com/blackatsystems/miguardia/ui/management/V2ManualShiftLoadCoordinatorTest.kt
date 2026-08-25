@@ -27,7 +27,6 @@ import com.blackatsystems.miguardia.core.domain.work.HoursReference
 import com.blackatsystems.miguardia.core.domain.work.NewV2Backfill
 import com.blackatsystems.miguardia.core.domain.work.NewWorkPlace
 import com.blackatsystems.miguardia.core.domain.work.NightHoursRule
-import com.blackatsystems.miguardia.core.domain.work.PerPeriodHoursEntry
 import com.blackatsystems.miguardia.core.domain.work.PerPeriodHoursValues
 import com.blackatsystems.miguardia.core.domain.work.RecentWorkTemplate
 import com.blackatsystems.miguardia.core.domain.work.WorkCatalog
@@ -912,8 +911,6 @@ private class FakeConfigurations(
     }
     override suspend fun createInitial(timelineId: UUID, firstRevision: EffectiveRevision<WorkConfiguration>) = error("No se usa")
     override suspend fun addRevision(timelineId: UUID, revision: EffectiveRevision<WorkConfiguration>) = error("No se usa")
-    override suspend fun createPerPeriodValue(timelineId: UUID, entry: PerPeriodHoursEntry) = error("No se usa")
-    override suspend fun updatePerPeriodValue(timelineId: UUID, entry: PerPeriodHoursEntry) = error("No se usa")
 }
 
 private class FakeCatalog(
@@ -996,6 +993,8 @@ private class FakeV2Shifts : V2ShiftRepository {
     var gate: CompletableDeferred<Unit>? = null
     var failure: Throwable? = null
     var calls: Int = 0
+    override fun observeAll(timelineId: UUID, sector: WorkSector): Flow<List<V2ShiftWrite>> =
+        MutableStateFlow(emptyList())
     override fun observeWorkSnapshot(shiftId: UUID): Flow<ShiftWorkSnapshot?> = MutableStateFlow(null)
     override suspend fun getWorkSnapshot(shiftId: UUID): ShiftWorkSnapshot? = null
     override suspend fun getShift(shiftId: UUID): V2ShiftLookup = V2ShiftLookup.Missing

@@ -51,6 +51,7 @@ internal fun EffectiveRevision<WorkConfiguration>.toEntity(
             cycleLengthDays = encodedReference.inlinePeriod?.cycleLengthDays,
             requiredMinutes = encodedReference.requiredMinutes,
             perPeriodDefinitionId = encodedReference.perPeriodDefinition?.id,
+            hoursReferenceStartedOn = value.hoursReferenceStartedOn?.toString(),
         ),
         perPeriodDefinition = encodedReference.perPeriodDefinition,
     )
@@ -188,6 +189,7 @@ private fun WorkConfigurationRevisionEntity.toDomain(
         sector = sector.decodeSector(),
         hoursReference = decodeHoursReference(definitions),
         availabilityLabel = availabilityLabel?.decodeAvailabilityLabel(),
+        hoursReferenceStartedOn = hoursReferenceStartedOn?.let(LocalDate::parse),
     ),
 )
 

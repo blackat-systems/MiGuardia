@@ -70,6 +70,7 @@ data class WorkSetupActions(
     val openFirstWorkSet: () -> Unit = {},
     val openRecurringPlans: () -> Unit = {},
     val openExtraClasses: () -> Unit = {},
+    val openHoursProgress: () -> Unit = {},
     val updatePlaceDraft: ((WorkPlaceDraft) -> WorkPlaceDraft) -> Unit = {},
     val updateTemplateDraft: ((WorkTemplateDraft) -> WorkTemplateDraft) -> Unit = {},
     val continueToTemplate: () -> Unit = {},
@@ -360,6 +361,12 @@ private fun WorkSetupOverview(state: WorkSetupUiState, actions: WorkSetupActions
                             .fillMaxWidth()
                             .testTag("work-setup-extra-classes"),
                     ) { Text("Clases de horas extra") }
+                    OutlinedButton(
+                        onClick = actions.openHoursProgress,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("work-setup-hours-progress"),
+                    ) { Text("Referencia y avance de horas") }
                 }
             }
         }

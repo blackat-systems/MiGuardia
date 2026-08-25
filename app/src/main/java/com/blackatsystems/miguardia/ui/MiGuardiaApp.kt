@@ -95,6 +95,7 @@ import com.blackatsystems.miguardia.core.domain.calendar.CalendarDay
 import com.blackatsystems.miguardia.core.domain.calendar.CalendarShift
 import com.blackatsystems.miguardia.core.domain.calendar.ShiftTemporalStatus
 import com.blackatsystems.miguardia.core.domain.model.ExplicitDayStatusType
+import com.blackatsystems.miguardia.core.domain.model.IndependentExtraWorkRecord
 import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
 import com.blackatsystems.miguardia.core.domain.nextevent.isEligibleUpcomingWork
 import com.blackatsystems.miguardia.core.domain.weather.WeatherCoverage
@@ -110,6 +111,11 @@ import com.blackatsystems.miguardia.ui.components.PersistentMessage
 import com.blackatsystems.miguardia.ui.components.ScreenHeading
 import com.blackatsystems.miguardia.ui.components.SectionCard
 import com.blackatsystems.miguardia.ui.components.TransientConfirmation
+import com.blackatsystems.miguardia.ui.hours.HoursAndExtrasActions
+import com.blackatsystems.miguardia.ui.hours.HoursAndExtrasSurfaceHost
+import com.blackatsystems.miguardia.ui.hours.HoursAndExtrasUiState
+import com.blackatsystems.miguardia.ui.hours.HoursAndExtrasViewModel
+import com.blackatsystems.miguardia.ui.hours.IndependentExtraDetailCard
 import com.blackatsystems.miguardia.ui.management.V2ManualShiftLoadActions
 import com.blackatsystems.miguardia.ui.management.V2ManualShiftLoadContent
 import com.blackatsystems.miguardia.ui.management.V2ManualShiftLoadStage
@@ -372,6 +378,7 @@ fun MiGuardiaApp(
     notificationViewModel: NotificationViewModel,
     weatherViewModel: WeatherViewModel,
     workSetupViewModel: WorkSetupViewModel,
+    hoursAndExtrasViewModel: HoursAndExtrasViewModel,
     modifier: Modifier = Modifier,
     calendarNavigationRequest: Int = 0,
     appZoom: AppZoom = AppZoom.STANDARD,
@@ -391,6 +398,7 @@ fun MiGuardiaApp(
     val notificationState by notificationViewModel.uiState.collectAsStateWithLifecycle()
     val weatherState by weatherViewModel.uiState.collectAsStateWithLifecycle()
     val workSetupState by workSetupViewModel.uiState.collectAsStateWithLifecycle()
+    val hoursAndExtrasState by hoursAndExtrasViewModel.uiState.collectAsStateWithLifecycle()
     MiGuardiaApp(
         calendarState = calendarState,
         nextEventState = nextEventState,
@@ -427,6 +435,8 @@ fun MiGuardiaApp(
         weatherActions = WeatherActions.from(weatherViewModel),
         workSetupState = workSetupState,
         workSetupActions = WorkSetupActions.from(workSetupViewModel),
+        hoursAndExtrasState = hoursAndExtrasState,
+        hoursAndExtrasActions = HoursAndExtrasActions.from(hoursAndExtrasViewModel),
         calendarNavigationRequest = calendarNavigationRequest,
         appZoom = appZoom,
         onAppZoomChange = onAppZoomChange,
@@ -475,6 +485,8 @@ fun MiGuardiaApp(
     weatherActions: WeatherActions = WeatherActions(),
     workSetupState: WorkSetupUiState = previewV2WorkSetupUiState(),
     workSetupActions: WorkSetupActions = WorkSetupActions(),
+    hoursAndExtrasState: HoursAndExtrasUiState = HoursAndExtrasUiState(),
+    hoursAndExtrasActions: HoursAndExtrasActions = HoursAndExtrasActions(),
     calendarNavigationRequest: Int = 0,
     appZoom: AppZoom = AppZoom.STANDARD,
     onAppZoomChange: (AppZoom) -> Unit = {},
@@ -484,7 +496,8 @@ fun MiGuardiaApp(
     val preserveV2WriteSurface =
         (v2ShiftEditState.isBlocking && v2ShiftEditState.isSaving) ||
             (v2RecurringState.isBlocking && v2RecurringState.isSaving) ||
-            (v2ShiftActualState.isBlocking && v2ShiftActualState.isSaving)
+            (v2ShiftActualState.isBlocking && v2ShiftActualState.isSaving) ||
+            (hoursAndExtrasState.isBlocking && hoursAndExtrasState.isSaving)
     if (
         !preserveV2WriteSurface &&
         (
@@ -512,6 +525,7 @@ fun MiGuardiaApp(
             v2ReadyState.timelineId == v2RecurringState.timelineId
         )
     val v2ShiftActualActive = v2ShiftActualState.isBlocking
+    val hoursAndExtrasActive = hoursAndExtrasState.isBlocking
     var destination by rememberSaveable { androidx.compose.runtime.mutableStateOf(MainDestination.CALENDAR) }
     val displayedCalendarState = if (
         !v2ManualLoadActive && calendarState.interactionMode == CalendarInteractionMode.EDIT
@@ -542,7 +556,8 @@ fun MiGuardiaApp(
         v2ManualLoadActive ||
         v2ShiftEditActive ||
         v2RecurringActive ||
-        v2ShiftActualActive
+        v2ShiftActualActive ||
+        hoursAndExtrasActive
     val canOpenDrawer = !hasBlockingSurface && selectedDay == null
     LaunchedEffect(calendarNavigationRequest) {
         if (calendarNavigationRequest > 0) {
@@ -608,6 +623,13 @@ fun MiGuardiaApp(
         val successSequence = v2ShiftActualState.successSequence
         if (successSequence > 0) {
             v2ShiftActualActions.consumeSuccess(successSequence)
+            destination = MainDestination.CALENDAR
+        }
+    }
+    LaunchedEffect(hoursAndExtrasState.successSequence) {
+        val successSequence = hoursAndExtrasState.successSequence
+        if (successSequence > 0) {
+            hoursAndExtrasActions.consumeSuccess(successSequence)
             destination = MainDestination.CALENDAR
         }
     }
@@ -762,6 +784,8 @@ fun MiGuardiaApp(
                     v2ShiftActualActions = v2ShiftActualActions,
                     v2RecurringState = v2RecurringState,
                     v2RecurringActions = v2RecurringActions,
+                    hoursAndExtrasState = hoursAndExtrasState,
+                    hoursAndExtrasActions = hoursAndExtrasActions,
                     onOpenPhotos = { photosActions.open(calendarState.visibleMonth) },
                     appZoom = appZoom,
                     needsFirstWorkSet = needsFirstWorkSet,
@@ -847,7 +871,8 @@ fun MiGuardiaApp(
         selectedDay != null &&
         !v2ShiftEditActive &&
         !v2RecurringActive &&
-        !v2ShiftActualActive
+        !v2ShiftActualActive &&
+        !hoursAndExtrasActive
     ) {
         ModalBottomSheet(
             onDismissRequest = onDismissDate,
@@ -871,6 +896,14 @@ fun MiGuardiaApp(
                 onRetryV2Inspection = v2ShiftEditActions.retryInspection,
                 v2ShiftActualState = v2ShiftActualState,
                 v2ShiftActualActions = v2ShiftActualActions,
+                independentExtras = hoursAndExtrasState.extrasOn(selectedDay.date),
+                canRegisterIndependentExtra = v2ReadyState != null &&
+                    hoursAndExtrasState.canRegisterIndependentExtraOn(selectedDay.date),
+                onRegisterIndependentExtra = {
+                    hoursAndExtrasActions.openCreateExtra(selectedDay.date)
+                },
+                onCorrectIndependentExtra = hoursAndExtrasActions.openCorrectExtra,
+                onDeleteIndependentExtra = hoursAndExtrasActions.requestDelete,
             )
         }
     }
@@ -902,7 +935,20 @@ fun MiGuardiaApp(
                     workSetupActions.requestBack()
                     v2ShiftActualActions.openCatalog(workSetupState.rootState)
                 },
+                openHoursProgress = {
+                    workSetupActions.requestBack()
+                    hoursAndExtrasActions.openProgress()
+                },
             ),
+        )
+    }
+    if (hoursAndExtrasActive) {
+        HoursAndExtrasSurfaceHost(
+            state = hoursAndExtrasState,
+            actions = hoursAndExtrasActions,
+            onOpenExtraClassCatalog = {
+                v2ShiftActualActions.openCatalog(workSetupState.rootState)
+            },
         )
     }
     if (v2ShiftEditActive) {
@@ -1075,6 +1121,8 @@ private fun CalendarScreen(
     v2ShiftActualActions: V2ShiftActualActions,
     v2RecurringState: V2RecurringUiState,
     v2RecurringActions: V2RecurringActions,
+    hoursAndExtrasState: HoursAndExtrasUiState,
+    hoursAndExtrasActions: HoursAndExtrasActions,
     appZoom: AppZoom,
     needsFirstWorkSet: Boolean,
     onOpenWorkSetup: () -> Unit,
@@ -1111,7 +1159,8 @@ private fun CalendarScreen(
         message = v2ShiftEditState.infoMessage
             ?: v2ShiftActualState.infoMessage
             ?: v2ManualShiftLoadState.infoMessage
-            ?: v2RecurringState.infoMessage,
+            ?: v2RecurringState.infoMessage
+            ?: hoursAndExtrasState.message,
         onDismiss = if (v2ShiftEditState.infoMessage != null) {
             v2ShiftEditActions.clearMessage
         } else if (v2ShiftActualState.infoMessage != null) {
@@ -1120,6 +1169,8 @@ private fun CalendarScreen(
             v2ManualShiftLoadActions.clearMessage
         } else if (v2RecurringState.infoMessage != null) {
             v2RecurringActions.clearMessage
+        } else if (hoursAndExtrasState.message != null) {
+            hoursAndExtrasActions.clearMessage
         } else v2ManualShiftLoadActions.clearMessage,
     ) {
         BoxWithConstraints(
@@ -1170,9 +1221,15 @@ private fun CalendarScreen(
                 }
 
                 if (state.days.isNotEmpty()) {
+                    val independentExtraCounts = hoursAndExtrasState.source
+                        ?.independentExtras
+                        .orEmpty()
+                        .groupingBy(IndependentExtraWorkRecord::ownerLocalDate)
+                        .eachCount()
                     CalendarGridViewport(
                         month = state.visibleMonth,
                         days = state.days,
+                        independentExtraCounts = independentExtraCounts,
                         today = today,
                         onPreviousMonth = previousMonth,
                         onNextMonth = nextMonth,
@@ -1295,6 +1352,7 @@ private fun CalendarScreen(
 private fun CalendarGridViewport(
     month: YearMonth,
     days: List<CalendarDay>,
+    independentExtraCounts: Map<LocalDate, Int>,
     today: LocalDate,
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit,
@@ -1330,6 +1388,7 @@ private fun CalendarGridViewport(
                 MonthGrid(
                     month = month,
                     days = days,
+                    independentExtraCounts = independentExtraCounts,
                     today = today,
                     onPreviousMonth = onPreviousMonth,
                     onNextMonth = onNextMonth,
@@ -1510,6 +1569,7 @@ private fun WeekdayHeader() {
 private fun MonthGrid(
     month: YearMonth,
     days: List<CalendarDay>,
+    independentExtraCounts: Map<LocalDate, Int>,
     today: LocalDate,
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit,
@@ -1574,6 +1634,7 @@ private fun MonthGrid(
                     } else {
                         DayCell(
                             day = day,
+                            independentExtraCount = independentExtraCounts[day.date] ?: 0,
                             isToday = day.date == today,
                             isSelected = day.date in selectedDates,
                             enabled = interactionMode == CalendarInteractionMode.VIEW ||
@@ -1601,6 +1662,7 @@ private fun MonthGrid(
 @Composable
 private fun DayCell(
     day: CalendarDay,
+    independentExtraCount: Int,
     isToday: Boolean,
     isSelected: Boolean,
     enabled: Boolean,
@@ -1609,7 +1671,11 @@ private fun DayCell(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val description = day.accessibilityDescription(isToday, shiftDescription)
+    val description = day.accessibilityDescription(
+        isToday,
+        shiftDescription,
+        independentExtraCount,
+    )
     val isCompletedDay = day.vacation == null &&
         day.shifts.isNotEmpty() &&
         day.shifts.all { it.temporalStatus == ShiftTemporalStatus.COMPLETED }
@@ -1706,6 +1772,14 @@ private fun DayCell(
                 )
             }
         }
+        if (independentExtraCount > 0) {
+            AutoSizeSingleLineText(
+                text = if (independentExtraCount == 1) "Extra" else "$independentExtraCount extras",
+                maximum = 10.sp,
+                minimum = 6.sp,
+                fontWeight = FontWeight.Bold,
+            )
+        }
         val markers = buildList {
             when (day.explicitStatus) {
                 ExplicitDayStatusType.DAY_OFF -> add("F")
@@ -1770,6 +1844,11 @@ private fun DayDetailSheet(
     onRetryV2Inspection: () -> Unit = {},
     v2ShiftActualState: V2ShiftActualUiState = V2ShiftActualUiState(),
     v2ShiftActualActions: V2ShiftActualActions = V2ShiftActualActions(),
+    independentExtras: List<IndependentExtraWorkRecord> = emptyList(),
+    canRegisterIndependentExtra: Boolean = false,
+    onRegisterIndependentExtra: () -> Unit = {},
+    onCorrectIndependentExtra: (IndependentExtraWorkRecord) -> Unit = {},
+    onDeleteIndependentExtra: (IndependentExtraWorkRecord) -> Unit = {},
 ) {
     Column(
         modifier = Modifier
@@ -1785,7 +1864,12 @@ private fun DayDetailSheet(
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
         )
-        if (day.shifts.isEmpty() && day.explicitStatus == null && !day.hasMedicalLeave) {
+        if (
+            day.shifts.isEmpty() &&
+            independentExtras.isEmpty() &&
+            day.explicitStatus == null &&
+            !day.hasMedicalLeave
+        ) {
             Text(stringResource(R.string.undefined_implicit_detail))
         }
         day.shifts.forEachIndexed { index, calendarShift ->
@@ -1815,6 +1899,14 @@ private fun DayDetailSheet(
                 actions = v2ShiftActualActions,
             )
         }
+        independentExtras.forEach { record ->
+            HorizontalDivider()
+            IndependentExtraDetailCard(
+                record = record,
+                onCorrect = { onCorrectIndependentExtra(record) },
+                onDelete = { onDeleteIndependentExtra(record) },
+            )
+        }
         when (day.explicitStatus) {
             ExplicitDayStatusType.DAY_OFF -> Text(stringResource(R.string.day_off_explicit_detail))
             ExplicitDayStatusType.UNDEFINED -> Text(stringResource(R.string.undefined_explicit_detail))
@@ -1839,6 +1931,16 @@ private fun DayDetailSheet(
                 onBegin = onEditDay,
                 onRetry = onRetryV2Inspection,
             )
+        }
+        if (canRegisterIndependentExtra) {
+            OutlinedButton(
+                onClick = onRegisterIndependentExtra,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("register-independent-extra-${day.date}"),
+            ) {
+                Text("Registrar trabajo extra")
+            }
         }
     }
 }
@@ -2073,6 +2175,7 @@ private fun ShiftTemporalStatus.shortLabel(): String = when (this) {
 private fun CalendarDay.accessibilityDescription(
     isToday: Boolean,
     shiftDescription: String,
+    independentExtraCount: Int,
 ): String {
     val parts = mutableListOf(date.fullDisplayName())
     if (isToday) parts += "hoy"
@@ -2087,6 +2190,13 @@ private fun CalendarDay.accessibilityDescription(
             append(calendarShift.shift.endTimeSnapshot.format(ShiftTimeFormatter))
             append(", ")
             append(calendarShift.temporalStatus.accessibilityLabel())
+        }
+    }
+    if (independentExtraCount > 0) {
+        parts += if (independentExtraCount == 1) {
+            "un trabajo extra independiente"
+        } else {
+            "$independentExtraCount trabajos extra independientes"
         }
     }
     when (explicitStatus) {

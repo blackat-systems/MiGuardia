@@ -44,6 +44,7 @@ import com.blackatsystems.miguardia.core.domain.shift.expandRecurringDates
 import com.blackatsystems.miguardia.core.domain.shift.isExactV2PositionOnlyEdit
 import com.blackatsystems.miguardia.core.domain.work.WorkConfigurationHistory
 import com.blackatsystems.miguardia.core.domain.work.WorkPlace
+import com.blackatsystems.miguardia.core.domain.work.WorkSector
 import com.blackatsystems.miguardia.core.domain.work.WorkTemplate
 import com.blackatsystems.miguardia.core.domain.work.WorkType
 import com.blackatsystems.miguardia.core.domain.work.WorkplaceRuleRevision
@@ -66,6 +67,21 @@ internal class RoomV2ShiftRepository(
     private val recurringDao = database.recurringPlanDao()
     private val actualReader = RoomShiftActualRepository(database)
     private val actualDao = database.shiftActualDao()
+
+    override fun observeAll(
+        timelineId: UUID,
+        sector: WorkSector,
+    ): Flow<List<V2ShiftWrite>> = combine(
+        dao.observeAll(timelineId.toString(), sector.encodeSector()),
+        database.workCatalogDao().observeInvalidV2RowCount(),
+        database.workConfigurationDao().observeRoots(),
+    ) { rows, _, _ -> rows }
+        .map { rows ->
+            database.withTransaction {
+                database.requireValidV2LocalData()
+                rows.map { row -> row.toDomainWrite() }
+            }
+        }
 
     override fun observePlans(
         timelineId: UUID,

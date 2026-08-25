@@ -10,8 +10,13 @@ import com.blackatsystems.miguardia.core.domain.work.HoursPeriod
 import com.blackatsystems.miguardia.core.domain.work.HoursReference
 import com.blackatsystems.miguardia.core.domain.work.PerPeriodHoursEntry
 import com.blackatsystems.miguardia.core.domain.work.PerPeriodHoursLookup
+import com.blackatsystems.miguardia.core.domain.work.PerPeriodHoursValueMutation
+import com.blackatsystems.miguardia.core.domain.work.PerPeriodHoursValueWriteResult
 import com.blackatsystems.miguardia.core.domain.work.PositiveMinutes
 import com.blackatsystems.miguardia.core.domain.work.WorkConfiguration
+import com.blackatsystems.miguardia.core.domain.work.WorkConfigurationReferenceMutation
+import com.blackatsystems.miguardia.core.domain.work.WorkConfigurationReferenceWriteResult
+import com.blackatsystems.miguardia.core.domain.work.requiresStartedOnMarker
 import com.blackatsystems.miguardia.core.domain.work.WorkSector
 import java.time.LocalDate
 import kotlinx.coroutines.flow.first
@@ -19,6 +24,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -162,18 +168,46 @@ class WorkConfigurationPersistenceInstrumentedTest {
     @Test
     fun perPeriodValueCreatesUpdatesAndReopensAtomically() = runBlocking {
         val definition = HoursReference.PerPeriod(DEFINITION_ID, HoursPeriod.Monthly)
-        store.workConfiguration.createInitial(
+        val first = revision(20, DATE, WorkSector.PRIVATE_SECURITY, definition)
+        store.workConfiguration.createInitial(TIMELINE_ID, first)
+        store.workConfiguration.addRevision(
             TIMELINE_ID,
-            revision(20, DATE, WorkSector.PRIVATE_SECURITY, definition),
+            EffectiveRevision(
+                V2TestIds.uuid(221),
+                DATE.plusDays(1),
+                first.value.copy(
+                    availabilityLabel = com.blackatsystems.miguardia.core.domain.work
+                        .AvailabilityLabel.PASSIVE_GUARD,
+                ),
+            ),
         )
         val original = PerPeriodHoursEntry(
             id = ENTRY_ID,
             key = definition.keyContaining(DATE),
             requiredMinutes = PositiveMinutes(9_600),
         )
-        store.workConfiguration.createPerPeriodValue(TIMELINE_ID, original)
+        val emptyExpected = requireNotNull(store.workConfiguration.get())
+        assertTrue(
+            store.workConfiguration.applyPerPeriodHoursValueMutation(
+                PerPeriodHoursValueMutation(emptyExpected, original),
+            ) is PerPeriodHoursValueWriteResult.Saved,
+        )
         val corrected = original.copy(requiredMinutes = PositiveMinutes(9_000))
-        store.workConfiguration.updatePerPeriodValue(TIMELINE_ID, corrected)
+        val correctionExpected = requireNotNull(store.workConfiguration.get())
+        assertTrue(
+            store.workConfiguration.applyPerPeriodHoursValueMutation(
+                PerPeriodHoursValueMutation(correctionExpected, corrected),
+            ) is PerPeriodHoursValueWriteResult.Saved,
+        )
+        assertEquals(
+            PerPeriodHoursValueWriteResult.Conflict,
+            store.workConfiguration.applyPerPeriodHoursValueMutation(
+                PerPeriodHoursValueMutation(
+                    correctionExpected,
+                    corrected.copy(requiredMinutes = PositiveMinutes(8_400)),
+                ),
+            ),
+        )
 
         assertEquals(
             PerPeriodHoursLookup.Defined(corrected),
@@ -202,6 +236,212 @@ class WorkConfigurationPersistenceInstrumentedTest {
         assertNull(store.workConfiguration.get()?.timeline?.valueAt(DATE.minusDays(1)))
     }
 
+    @Test
+    fun atomicReferenceMutationPersistsResetMarkerAndDetectsStaleHistory() = runBlocking {
+        val first = revision(40, DATE, WorkSector.PRIVATE_SECURITY, HoursReference.PendingSetup)
+        store.workConfiguration.createInitial(TIMELINE_ID, first)
+        val expected = requireNotNull(store.workConfiguration.get())
+        val reference = HoursReference.Fixed(HoursPeriod.Monthly, PositiveMinutes(9_600))
+        val start = DATE.plusDays(1)
+        val fixedRevision = EffectiveRevision(
+            V2TestIds.uuid(241),
+            start,
+            WorkConfiguration(
+                WorkSector.PRIVATE_SECURITY,
+                reference,
+                null,
+                hoursReferenceStartedOn = start,
+            ),
+        )
+        val saved = store.workConfiguration.applyReferenceMutation(
+            WorkConfigurationReferenceMutation(expected, fixedRevision),
+        )
+        assertTrue(saved is WorkConfigurationReferenceWriteResult.Saved)
+        assertEquals(start, requireNotNull(store.workConfiguration.get()).timeline.valueAt(start)?.hoursReferenceStartedOn)
+
+        val staleRetry = store.workConfiguration.applyReferenceMutation(
+            WorkConfigurationReferenceMutation(expected, fixedRevision.copy(id = V2TestIds.uuid(242))),
+        )
+        assertEquals(WorkConfigurationReferenceWriteResult.Conflict, staleRetry)
+
+        store.close()
+        openStore()
+        assertEquals(start, requireNotNull(store.workConfiguration.get()).timeline.valueAt(start)?.hoursReferenceStartedOn)
+    }
+
+    @Test
+    fun referenceMutationRollsBackCompletelyWhenTheRevisionInsertFails() = runBlocking {
+        val first = revision(45, DATE, WorkSector.PRIVATE_SECURITY, HoursReference.PendingSetup)
+        store.workConfiguration.createInitial(TIMELINE_ID, first)
+        val expected = requireNotNull(store.workConfiguration.get())
+        val start = DATE.plusDays(1)
+        val failedRevisionId = V2TestIds.uuid(246)
+        val replacement = EffectiveRevision(
+            failedRevisionId,
+            start,
+            first.value.copy(
+                hoursReference = HoursReference.Fixed(HoursPeriod.Monthly, PositiveMinutes(9_000)),
+                hoursReferenceStartedOn = start,
+            ),
+        )
+        database.openHelper.writableDatabase.execSQL(
+            """CREATE TRIGGER force_reference_mutation_rollback
+                BEFORE INSERT ON work_configuration_revisions
+                WHEN NEW.id = '$failedRevisionId'
+                BEGIN
+                    SELECT RAISE(ABORT, 'forced reference failure');
+                END""",
+        )
+
+        assertEquals(
+            WorkConfigurationReferenceWriteResult.Conflict,
+            store.workConfiguration.applyReferenceMutation(
+                WorkConfigurationReferenceMutation(expected, replacement),
+            ),
+        )
+        val actual = requireNotNull(store.workConfiguration.get())
+        assertEquals(expected.timeline.id, actual.timeline.id)
+        assertEquals(expected.timeline.revisions, actual.timeline.revisions)
+        assertEquals(expected.perPeriodHoursValues.entries, actual.perPeriodHoursValues.entries)
+        assertEquals(1, rowCount("work_configuration_revisions"))
+        assertEquals(0, rowCount("per_period_hours_definitions"))
+        assertEquals(0, rowCount("per_period_hours_values"))
+    }
+
+    @Test
+    fun atomicPerPeriodReferenceCreatesDefinitionRevisionAndFirstValueTogether() = runBlocking {
+        val first = revision(50, DATE, WorkSector.PRIVATE_SECURITY, HoursReference.PendingSetup)
+        store.workConfiguration.createInitial(TIMELINE_ID, first)
+        val expected = requireNotNull(store.workConfiguration.get())
+        val start = DATE.plusDays(1)
+        val definition = HoursReference.PerPeriod(DEFINITION_ID, HoursPeriod.Monthly)
+        val newRevision = EffectiveRevision(
+            V2TestIds.uuid(251),
+            start,
+            WorkConfiguration(
+                WorkSector.PRIVATE_SECURITY,
+                definition,
+                null,
+                hoursReferenceStartedOn = start,
+            ),
+        )
+        val value = PerPeriodHoursEntry(
+            ENTRY_ID,
+            definition.keyContaining(start),
+            PositiveMinutes(8_400),
+        )
+
+        val result = store.workConfiguration.applyReferenceMutation(
+            WorkConfigurationReferenceMutation(expected, newRevision, value),
+        )
+
+        assertTrue(result is WorkConfigurationReferenceWriteResult.Saved)
+        assertEquals(
+            PerPeriodHoursLookup.Defined(value),
+            requireNotNull(store.workConfiguration.get()).perPeriodHoursValues.valueFor(value.key),
+        )
+        assertEquals(1, rowCount("per_period_hours_definitions"))
+        assertEquals(1, rowCount("per_period_hours_values"))
+    }
+
+    @Test
+    fun sameDateReferenceReplacementIsAtomicAndRemovesObsoletePerPeriodValues() = runBlocking {
+        val oldDefinition = HoursReference.PerPeriod(DEFINITION_ID, HoursPeriod.Monthly)
+        val first = revision(60, DATE, WorkSector.PRIVATE_SECURITY, oldDefinition)
+        store.workConfiguration.createInitial(TIMELINE_ID, first)
+        val oldValue = PerPeriodHoursEntry(
+            ENTRY_ID,
+            oldDefinition.keyContaining(DATE),
+            PositiveMinutes(8_100),
+        )
+        assertTrue(
+            store.workConfiguration.applyPerPeriodHoursValueMutation(
+                PerPeriodHoursValueMutation(
+                    requireNotNull(store.workConfiguration.get()),
+                    oldValue,
+                ),
+            ) is PerPeriodHoursValueWriteResult.Saved,
+        )
+        val expected = requireNotNull(store.workConfiguration.get())
+        val fixed = HoursReference.Fixed(HoursPeriod.Monthly, PositiveMinutes(9_000))
+
+        val result = store.workConfiguration.applyReferenceMutation(
+            WorkConfigurationReferenceMutation(
+                expectedHistory = expected,
+                revision = EffectiveRevision(
+                    id = first.id,
+                    effectiveFrom = DATE,
+                    value = first.value.copy(
+                        hoursReference = fixed,
+                        hoursReferenceStartedOn = DATE,
+                    ),
+                ),
+            ),
+        )
+
+        assertTrue(result is WorkConfigurationReferenceWriteResult.Saved)
+        assertEquals(fixed, requireNotNull(store.workConfiguration.get()).timeline.valueAt(DATE)?.hoursReference)
+        assertEquals(0, rowCount("per_period_hours_values"))
+        assertEquals(0, rowCount("per_period_hours_definitions"))
+        assertEquals(1, rowCount("work_configuration_revisions"))
+    }
+
+    @Test
+    fun retroactiveRestartPropagatesThroughUnrelatedRevisionsButStopsAtALaterRestart() = runBlocking {
+        val originalReference = HoursReference.Fixed(HoursPeriod.Monthly, PositiveMinutes(8_400))
+        val first = revision(70, DATE, WorkSector.PRIVATE_SECURITY, originalReference)
+        store.workConfiguration.createInitial(TIMELINE_ID, first)
+        val unrelatedDate = DATE.plusDays(10)
+        val laterRestartDate = DATE.plusDays(20)
+        val unrelated = EffectiveRevision(
+            V2TestIds.uuid(271),
+            unrelatedDate,
+            first.value.copy(
+                availabilityLabel = com.blackatsystems.miguardia.core.domain.work.AvailabilityLabel.PASSIVE_GUARD,
+            ),
+        )
+        val laterRestart = EffectiveRevision(
+            V2TestIds.uuid(272),
+            laterRestartDate,
+            first.value.copy(hoursReferenceStartedOn = laterRestartDate),
+        )
+        store.workConfiguration.addRevision(TIMELINE_ID, unrelated)
+        store.workConfiguration.addRevision(TIMELINE_ID, laterRestart)
+        val expected = requireNotNull(store.workConfiguration.get())
+        val retroactiveDate = DATE.plusDays(5)
+        val replacementReference = HoursReference.Fixed(HoursPeriod.Monthly, PositiveMinutes(9_000))
+        val replacement = EffectiveRevision(
+            V2TestIds.uuid(273),
+            retroactiveDate,
+            first.value.copy(
+                hoursReference = replacementReference,
+                hoursReferenceStartedOn = retroactiveDate,
+            ),
+        )
+
+        assertTrue(
+            store.workConfiguration.applyReferenceMutation(
+                WorkConfigurationReferenceMutation(expected, replacement),
+            ) is WorkConfigurationReferenceWriteResult.Saved,
+        )
+
+        val saved = requireNotNull(store.workConfiguration.get())
+        assertEquals(originalReference, saved.timeline.valueAt(retroactiveDate.minusDays(1))?.hoursReference)
+        assertEquals(replacementReference, saved.timeline.valueAt(retroactiveDate)?.hoursReference)
+        assertEquals(retroactiveDate, saved.timeline.valueAt(unrelatedDate)?.hoursReferenceStartedOn)
+        assertEquals(replacementReference, saved.timeline.valueAt(unrelatedDate)?.hoursReference)
+        assertEquals(originalReference, saved.timeline.valueAt(laterRestartDate)?.hoursReference)
+        assertEquals(laterRestartDate, saved.timeline.valueAt(laterRestartDate)?.hoursReferenceStartedOn)
+
+        store.close()
+        openStore()
+        assertEquals(
+            retroactiveDate,
+            requireNotNull(store.workConfiguration.get())
+                .timeline.valueAt(unrelatedDate)?.hoursReferenceStartedOn,
+        )
+    }
+
     private fun openStore() {
         database = MiGuardiaV2Database.build(context, DB)
         store = LocalDataStore(database)
@@ -222,7 +462,12 @@ class WorkConfigurationPersistenceInstrumentedTest {
     ) = EffectiveRevision(
         id = V2TestIds.uuid(200 + number),
         effectiveFrom = date,
-        value = WorkConfiguration(sector, hours, availabilityLabel = null),
+        value = WorkConfiguration(
+            sector,
+            hours,
+            availabilityLabel = null,
+            hoursReferenceStartedOn = date.takeIf { hours.requiresStartedOnMarker },
+        ),
     )
 
     private suspend inline fun <reified T : Throwable> assertSuspendThrows(
