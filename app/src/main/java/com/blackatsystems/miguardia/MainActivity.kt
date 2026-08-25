@@ -25,6 +25,7 @@ import com.blackatsystems.miguardia.ui.MiGuardiaApp
 import com.blackatsystems.miguardia.ui.calendar.CalendarViewModel
 import com.blackatsystems.miguardia.ui.exceptions.ExceptionsViewModel
 import com.blackatsystems.miguardia.ui.management.V2ManualShiftLoadViewModel
+import com.blackatsystems.miguardia.ui.management.V2RecurringPlanViewModel
 import com.blackatsystems.miguardia.ui.management.V2ShiftEditViewModel
 import com.blackatsystems.miguardia.ui.nextevent.NextEventViewModel
 import com.blackatsystems.miguardia.ui.notifications.NotificationViewModel
@@ -110,6 +111,20 @@ class MainActivity : ComponentActivity() {
             shiftRepository = dataStore.shifts,
             medicalLeaveRepository = dataStore.medicalLeaves,
             v2ShiftRepository = dataStore.v2Shifts,
+            recurringPlanRepository = dataStore.recurringPlans,
+        )
+    }
+
+    private val v2RecurringPlanViewModel: V2RecurringPlanViewModel by viewModels {
+        val dataStore = (application as MiGuardiaApplication).localDataStore
+        V2RecurringPlanViewModel.Factory(
+            configurationRepository = dataStore.workConfiguration,
+            catalogRepository = dataStore.workCatalog,
+            objectiveRepository = dataStore.objectives,
+            shiftRepository = dataStore.shifts,
+            medicalLeaveRepository = dataStore.medicalLeaves,
+            recurringPlanRepository = dataStore.recurringPlans,
+            recurringShiftRepository = dataStore.recurringShiftWriter,
         )
     }
 
@@ -170,6 +185,7 @@ class MainActivity : ComponentActivity() {
                     nextEventViewModel = nextEventViewModel,
                     v2ManualShiftLoadViewModel = v2ManualShiftLoadViewModel,
                     v2ShiftEditViewModel = v2ShiftEditViewModel,
+                    v2RecurringPlanViewModel = v2RecurringPlanViewModel,
                     exceptionsViewModel = exceptionsViewModel,
                     vacationViewModel = vacationViewModel,
                     photosViewModel = photosViewModel,

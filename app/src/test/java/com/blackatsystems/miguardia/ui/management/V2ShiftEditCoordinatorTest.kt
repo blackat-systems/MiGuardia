@@ -3,6 +3,14 @@ package com.blackatsystems.miguardia.ui.management
 import androidx.lifecycle.SavedStateHandle
 import com.blackatsystems.miguardia.core.domain.model.MedicalLeave
 import com.blackatsystems.miguardia.core.domain.model.Objective
+import com.blackatsystems.miguardia.core.domain.model.RecurringOccurrence
+import com.blackatsystems.miguardia.core.domain.model.RecurringOccurrenceState
+import com.blackatsystems.miguardia.core.domain.model.RecurringPattern
+import com.blackatsystems.miguardia.core.domain.model.RecurringPlan
+import com.blackatsystems.miguardia.core.domain.model.RecurringPlanAggregate
+import com.blackatsystems.miguardia.core.domain.model.RecurringPlanRevision
+import com.blackatsystems.miguardia.core.domain.model.RecurringPlanRevisionKind
+import com.blackatsystems.miguardia.core.domain.model.RecurringProtectionExpectation
 import com.blackatsystems.miguardia.core.domain.model.Shift
 import com.blackatsystems.miguardia.core.domain.model.ShiftOccupancyExpectation
 import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
@@ -14,6 +22,7 @@ import com.blackatsystems.miguardia.core.domain.model.V2ShiftWriteExpectation
 import com.blackatsystems.miguardia.core.domain.repository.ConflictingLocalWriteException
 import com.blackatsystems.miguardia.core.domain.repository.MedicalLeaveRepository
 import com.blackatsystems.miguardia.core.domain.repository.ObjectiveRepository
+import com.blackatsystems.miguardia.core.domain.repository.RecurringPlanRepository
 import com.blackatsystems.miguardia.core.domain.repository.ShiftRepository
 import com.blackatsystems.miguardia.core.domain.repository.V2ShiftRepository
 import com.blackatsystems.miguardia.core.domain.repository.WorkCatalogRepository
@@ -569,9 +578,99 @@ class V2ShiftEditCoordinatorTest {
     }
 
     @Test
+    fun futureLinkedShiftRequiresExplicitEditScopeAndCanContinueOnlyThisOccurrence() {
+        val fixture = fixture()
+        val occurrence = fixture.occurrence()
+        val harness = harness(fixture, recurringOccurrence = occurrence)
+
+        harness.inspectAndOpenActions()
+        harness.coordinator.editShift(fixture.original.shift.id)
+
+        assertEquals(V2ShiftEditStage.CHOOSE_EDIT_SCOPE, harness.coordinator.uiState.value.stage)
+        assertEquals(occurrence, harness.coordinator.uiState.value.recurringOccurrence)
+        assertEquals(0, harness.v2.updateCalls)
+
+        harness.coordinator.editOnlyThisOccurrence()
+        assertEquals(V2ShiftEditStage.EDIT_FORM, harness.coordinator.uiState.value.stage)
+        assertEquals(fixture.original.shift.localStartDate, harness.coordinator.uiState.value.date)
+    }
+
+    @Test
+    fun futureLinkedShiftRequiresExplicitDeleteScopeAndCanContinueOnlyThisOccurrence() {
+        val fixture = fixture()
+        val occurrence = fixture.occurrence()
+        val harness = harness(fixture, recurringOccurrence = occurrence)
+
+        harness.inspectAndOpenActions()
+        harness.coordinator.requestDelete(fixture.original.shift.id)
+
+        assertEquals(V2ShiftEditStage.CHOOSE_DELETE_SCOPE, harness.coordinator.uiState.value.stage)
+        assertEquals(occurrence, harness.coordinator.uiState.value.recurringOccurrence)
+        assertEquals(0, harness.v2.deleteCalls)
+
+        harness.coordinator.deleteOnlyThisOccurrence()
+        assertEquals(V2ShiftEditStage.CONFIRM_DELETE, harness.coordinator.uiState.value.stage)
+        assertEquals(0, harness.v2.deleteCalls)
+    }
+
+    @Test
+    fun pastLinkedShiftAndManualFutureShiftKeepTheIndividualFlow() {
+        val past = fixture(LocalDate.of(2026, 8, 22))
+        val pastHarness = harness(past, recurringOccurrence = past.occurrence())
+        pastHarness.inspectAndOpenActions()
+        pastHarness.coordinator.editShift(past.original.shift.id)
+        assertEquals(V2ShiftEditStage.EDIT_FORM, pastHarness.coordinator.uiState.value.stage)
+
+        val manual = fixture()
+        val manualHarness = harness(manual)
+        manualHarness.inspectAndOpenActions()
+        manualHarness.coordinator.requestDelete(manual.original.shift.id)
+        assertEquals(V2ShiftEditStage.CONFIRM_DELETE, manualHarness.coordinator.uiState.value.stage)
+    }
+
+    @Test
+    fun futureOccurrenceFromFinalizedPlanKeepsOnlyTheExactIndividualActions() {
+        val editFixture = fixture()
+        val editHarness = harness(
+            editFixture,
+            recurringOccurrence = editFixture.occurrence(),
+            recurringPlanKind = RecurringPlanRevisionKind.FINALIZED,
+        )
+        editHarness.inspectAndOpenActions()
+        editHarness.coordinator.editShift(editFixture.original.shift.id)
+        assertEquals(V2ShiftEditStage.EDIT_FORM, editHarness.coordinator.uiState.value.stage)
+
+        val deleteFixture = fixture()
+        val deleteHarness = harness(
+            deleteFixture,
+            recurringOccurrence = deleteFixture.occurrence(),
+            recurringPlanKind = RecurringPlanRevisionKind.FINALIZED,
+        )
+        deleteHarness.inspectAndOpenActions()
+        deleteHarness.coordinator.requestDelete(deleteFixture.original.shift.id)
+        assertEquals(V2ShiftEditStage.CONFIRM_DELETE, deleteHarness.coordinator.uiState.value.stage)
+    }
+
+    @Test
+    fun futureScopeHandoffClosesIndividualEditorWithoutWriting() {
+        val fixture = fixture()
+        val harness = harness(fixture, recurringOccurrence = fixture.occurrence())
+        harness.inspectAndOpenActions()
+        harness.coordinator.editShift(fixture.original.shift.id)
+
+        harness.coordinator.handoffToRecurring()
+
+        assertEquals(V2ShiftEditStage.IDLE, harness.coordinator.uiState.value.stage)
+        assertEquals(0, harness.v2.updateCalls)
+        assertEquals(fixture.original, harness.v2.writes.getValue(fixture.original.shift.id))
+    }
+
+    @Test
     fun savedStateRoundTripsDraftAndEveryUnconfirmedBlockingStage() {
         listOf(
             V2ShiftEditStage.DAY_ACTIONS,
+            V2ShiftEditStage.CHOOSE_EDIT_SCOPE,
+            V2ShiftEditStage.CHOOSE_DELETE_SCOPE,
             V2ShiftEditStage.EDIT_FORM,
             V2ShiftEditStage.CONFIRM_WARNINGS,
             V2ShiftEditStage.REVIEW,
@@ -606,6 +705,8 @@ class V2ShiftEditCoordinatorTest {
         initial: V2ShiftEditPersistedState = V2ShiftEditPersistedState(),
         persist: (V2ShiftEditPersistedState) -> Unit = {},
         autoResume: Boolean = true,
+        recurringOccurrence: RecurringOccurrence? = null,
+        recurringPlanKind: RecurringPlanRevisionKind = RecurringPlanRevisionKind.ACTIVE,
     ): Harness {
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined).also(scopes::add)
         val configurations = EditFakeConfigurations(fixture.history)
@@ -619,6 +720,10 @@ class V2ShiftEditCoordinatorTest {
             shiftRepository = shifts,
             medicalLeaveRepository = EditFakeMedicalLeaves(medicalLeaves),
             v2ShiftRepository = v2,
+            recurringPlanRepository = EditFakeRecurringPlans(
+                recurringOccurrence,
+                recurringOccurrence?.let { fixture.recurringPlan(it, recurringPlanKind) },
+            ),
             clock = CLOCK,
             scope = scope,
             initialPersistedState = initial,
@@ -629,7 +734,7 @@ class V2ShiftEditCoordinatorTest {
     }
 
     private fun Harness.inspectAndOpenActions() {
-        coordinator.inspectDay(fixture.ready, DATE)
+        coordinator.inspectDay(fixture.ready, fixture.original.shift.localStartDate)
         assertEquals(V2ShiftDayInspectionState.CONTENT, coordinator.uiState.value.inspectionState)
         coordinator.beginDayEditing()
         assertEquals(V2ShiftEditStage.DAY_ACTIONS, coordinator.uiState.value.stage)
@@ -675,13 +780,57 @@ class V2ShiftEditCoordinatorTest {
             timestamp = OLD,
             zoneId = ZONE,
         )
+
+        fun occurrence(): RecurringOccurrence = RecurringOccurrence(
+            planId = uuid(100),
+            localDate = original.shift.localStartDate,
+            revisionId = uuid(101),
+            shiftId = original.shift.id,
+            state = RecurringOccurrenceState.AUTOMATIC,
+            createdAt = OLD,
+            updatedAt = OLD,
+        )
+
+        fun recurringPlan(
+            occurrence: RecurringOccurrence,
+            kind: RecurringPlanRevisionKind,
+        ): RecurringPlanAggregate = RecurringPlanAggregate(
+            plan = RecurringPlan(occurrence.planId, timelineId, WorkSector.NURSING, OLD),
+            revisions = listOf(
+                RecurringPlanRevision(
+                    id = occurrence.revisionId,
+                    planId = occurrence.planId,
+                    revisionNumber = 1,
+                    effectiveFrom = occurrence.localDate,
+                    kind = kind,
+                    endDateInclusive = occurrence.localDate.plusMonths(1),
+                    pattern = RecurringPattern.Weekdays.of(setOf(occurrence.localDate.dayOfWeek)),
+                    templateId = template.id,
+                    workPlaceId = place.id,
+                    objectiveId = objective.id,
+                    workTypeId = type.id,
+                    objectiveNameSnapshot = objective.fullName,
+                    objectiveAbbreviationSnapshot = objective.abbreviation,
+                    objectiveAddressSnapshot = objective.address,
+                    workTypeNameSnapshot = type.name,
+                    workTypeBehaviorSnapshot = type.behavior,
+                    startTimeSnapshot = template.startTime,
+                    endTimeSnapshot = template.endTime,
+                    colorArgbSnapshot = template.colorArgb,
+                    positionSnapshot = original.shift.position,
+                    zoneId = ZONE,
+                    createdAt = OLD,
+                ),
+            ),
+            occurrences = listOf(occurrence),
+        )
     }
 
-    private fun fixture(): Fixture {
+    private fun fixture(date: LocalDate = DATE): Fixture {
         val timelineId = uuid(1)
         val revision = EffectiveRevision(
             id = uuid(2),
-            effectiveFrom = DATE.minusMonths(2),
+            effectiveFrom = date.minusMonths(2),
             value = WorkConfiguration(WorkSector.NURSING, HoursReference.PendingSetup, null),
         )
         val history = WorkConfigurationHistory(
@@ -701,12 +850,12 @@ class V2ShiftEditCoordinatorTest {
         )
         val rule = WorkplaceRuleRevision(
             uuid(8), timelineId, WorkSector.NURSING, place.id, objective.id,
-            DATE.minusMonths(2), WorkplaceRules(NightHoursRule.Disabled, WeekendRule.None, HolidayRule(false, false)), OLD,
+            date.minusMonths(2), WorkplaceRules(NightHoursRule.Disabled, WeekendRule.None, HolidayRule(false, false)), OLD,
         )
         val catalog = WorkCatalog(timelineId, WorkSector.NURSING, listOf(place), listOf(type), listOf(template, alternative), listOf(rule))
         val original = buildV2ShiftWrite(
-            uuid(10), DATE, objective, place, type, template,
-            ResolvedWorkConfigurationRevision.resolve(history, DATE), "Puesto A", OLD, ZONE,
+            uuid(10), date, objective, place, type, template,
+            ResolvedWorkConfigurationRevision.resolve(history, date), "Puesto A", OLD, ZONE,
         )
         return Fixture(timelineId, revision, history, objective, place, type, template, alternative, catalog, original)
     }
@@ -787,6 +936,25 @@ private class EditFakeObjectives(initial: List<Objective>) : ObjectiveRepository
     override fun observeActive(): Flow<List<Objective>> = MutableStateFlow(values.filter(Objective::isActive))
     override fun observeAll(): Flow<List<Objective>> = MutableStateFlow(values.toList())
     override suspend fun getById(id: UUID): Objective? = values.firstOrNull { it.id == id }
+}
+
+private class EditFakeRecurringPlans(
+    private val occurrence: RecurringOccurrence?,
+    private val plan: RecurringPlanAggregate?,
+) : RecurringPlanRepository {
+    override fun observePlans(timelineId: UUID, sector: WorkSector): Flow<List<RecurringPlanAggregate>> =
+        MutableStateFlow(emptyList())
+
+    override suspend fun getPlan(planId: UUID): RecurringPlanAggregate? = plan?.takeIf { it.plan.id == planId }
+
+    override suspend fun getOccurrenceForShift(shiftId: UUID): RecurringOccurrence? =
+        occurrence?.takeIf { it.shiftId == shiftId }
+
+    override suspend fun captureProtection(
+        shiftIds: Set<UUID>,
+        startDateInclusive: LocalDate?,
+        endDateInclusive: LocalDate?,
+    ): RecurringProtectionExpectation = RecurringProtectionExpectation.capture(emptyList())
 }
 
 private class EditFakeMedicalLeaves(

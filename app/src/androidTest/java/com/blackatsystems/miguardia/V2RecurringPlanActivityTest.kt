@@ -1,7 +1,5 @@
 package com.blackatsystems.miguardia
 
-import android.content.pm.ActivityInfo
-import android.content.res.Configuration
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
@@ -15,9 +13,9 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ActivityScenario
 import androidx.test.platform.app.InstrumentationRegistry
-import androidx.test.uiautomator.UiDevice
 import com.blackatsystems.miguardia.core.domain.AppDefaults
 import com.blackatsystems.miguardia.core.domain.model.Objective
+import com.blackatsystems.miguardia.core.domain.model.RecurringOccurrenceState
 import com.blackatsystems.miguardia.core.domain.work.EffectiveRevision
 import com.blackatsystems.miguardia.core.domain.work.FirstWorkSet
 import com.blackatsystems.miguardia.core.domain.work.HolidayRule
@@ -41,40 +39,34 @@ import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 
-/** Recorrido integral de carga V2 sobre un fixture que limpia únicamente la base QA. */
-class V2ManualShiftLoadActivityTest {
+/** Recorrido Activity del plan recurrente; sólo limpia y abre el paquete QA. */
+class V2RecurringPlanActivityTest {
     @get:Rule
     val compose = createEmptyComposeRule()
 
     private var scenario: ActivityScenario<MainActivity>? = null
-    private lateinit var selectedDate: LocalDate
-    private var originalRequestedOrientation: Int = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+    private lateinit var startDate: LocalDate
 
     @Before
-    fun prepareFreshV2Fixture() {
-        val instrumentation = InstrumentationRegistry.getInstrumentation()
-        val context = instrumentation.targetContext
+    fun prepareFreshQaFixture() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
         check(context.packageName == QA_APPLICATION_ID) {
-            "La prueba integral V2 sólo puede ejecutarse contra el paquete QA."
+            "La prueba recurrente sólo puede ejecutarse contra el paquete QA."
         }
-        UiDevice.getInstance(instrumentation).wakeUp()
-        instrumentation.uiAutomation.executeShellCommand("wm dismiss-keyguard").close()
 
-        selectedDate = LocalDate.now(AppDefaults.zoneId())
+        startDate = LocalDate.now(AppDefaults.zoneId())
         val timestamp = Instant.now()
         val store = (context.applicationContext as MiGuardiaApplication).localDataStore
         store.clearAllDataForInstrumentation()
         runBlocking {
-            check(store.workConfiguration.get() == null) {
-                "La preparación QA debe dejar una base sin configuración."
-            }
             val revision = EffectiveRevision(
                 id = REVISION_ID,
-                effectiveFrom = selectedDate,
+                effectiveFrom = startDate,
                 value = WorkConfiguration(
                     sector = WorkSector.NURSING,
                     hoursReference = HoursReference.PendingSetup,
@@ -84,80 +76,65 @@ class V2ManualShiftLoadActivityTest {
             store.workConfiguration.createInitial(TIMELINE_ID, revision)
             val configuration = ResolvedWorkConfigurationRevision.resolve(
                 history = requireNotNull(store.workConfiguration.get()),
-                date = selectedDate,
+                date = startDate,
             )
             store.workCatalog.createFirstWorkSet(firstWorkSet(configuration, timestamp))
         }
 
         scenario = ActivityScenario.launch(MainActivity::class.java)
-        requireNotNull(scenario).onActivity { activity ->
-            originalRequestedOrientation = activity.requestedOrientation
-        }
         compose.waitUntil(WAIT_MILLIS) {
-            compose.onAllNodesWithTag("calendar-v2-load-shifts").fetchSemanticsNodes().isNotEmpty()
+            compose.onAllNodesWithTag("calendar-v2-repeat-shifts").fetchSemanticsNodes().isNotEmpty()
         }
     }
 
     @After
     fun closeActivity() {
-        scenario?.onActivity { activity ->
-            activity.requestedOrientation = originalRequestedOrientation
-        }
         scenario?.close()
         scenario = null
     }
 
     @Test
-    fun draftSurvivesRecreationAndShiftSnapshotSurviveReopen() {
-        compose.onNodeWithTag("calendar-v2-load-shifts").performScrollTo().performClick()
-        compose.onNodeWithTag("day-$selectedDate").performScrollTo().performClick()
-        compose.onNodeWithTag("v2-manual-confirm-dates").performScrollTo().performClick()
+    fun draftSurvivesRecreationAndMultiMonthPlanReturnsReactivelyToCalendar() {
+        compose.onNodeWithTag("calendar-v2-repeat-shifts").performScrollTo().performClick()
         compose.waitUntil(WAIT_MILLIS) {
-            compose.onAllNodesWithTag("v2-template-$TEMPLATE_ID").fetchSemanticsNodes().isNotEmpty()
+            compose.onAllNodesWithTag("v2-recurring-template-$TEMPLATE_ID").fetchSemanticsNodes().isNotEmpty()
         }
-        compose.onNodeWithTag("v2-template-$TEMPLATE_ID").performScrollTo().performClick()
-        compose.onNodeWithTag("v2-manual-position").performScrollTo().performTextInput(POSITION)
+        compose.onNodeWithTag("v2-recurring-template-$TEMPLATE_ID").performScrollTo().performClick()
+        compose.onNodeWithTag("v2-recurring-position").performScrollTo().performTextInput(POSITION)
 
         requireNotNull(scenario).recreate()
 
         compose.waitUntil(WAIT_MILLIS) {
-            compose.onAllNodesWithTag("v2-template-$TEMPLATE_ID").fetchSemanticsNodes().isNotEmpty()
+            compose.onAllNodesWithTag("v2-recurring-template-$TEMPLATE_ID").fetchSemanticsNodes().isNotEmpty()
         }
-        compose.onNodeWithTag("v2-template-$TEMPLATE_ID").assertIsSelected()
+        compose.onNodeWithTag("v2-recurring-template-$TEMPLATE_ID").assertIsSelected()
         compose.onNodeWithText(POSITION).assertIsDisplayed()
-
-        rotateAndVerifyDraft(
-            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE,
-            expectedConfigurationOrientation = Configuration.ORIENTATION_LANDSCAPE,
-        )
-        rotateAndVerifyDraft(
-            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT,
-            expectedConfigurationOrientation = Configuration.ORIENTATION_PORTRAIT,
-        )
-        compose.onNodeWithTag("v2-manual-review").performScrollTo().performClick()
+        compose.onNodeWithTag("v2-recurring-review").performScrollTo().performClick()
         compose.waitUntil(WAIT_MILLIS) {
-            compose.onAllNodesWithTag("v2-manual-save", useUnmergedTree = true)
+            compose.onAllNodesWithTag("v2-recurring-save", useUnmergedTree = true)
                 .fetchSemanticsNodes().isNotEmpty()
         }
-        compose.onNodeWithTag("v2-manual-save", useUnmergedTree = true).performClick()
+        compose.onNodeWithTag("v2-recurring-exact-dates").assertIsDisplayed()
+        compose.onNodeWithTag("v2-recurring-save", useUnmergedTree = true).performScrollTo().performClick()
 
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val store = (context.applicationContext as MiGuardiaApplication).localDataStore
         compose.waitUntil(WAIT_MILLIS) {
             runBlocking {
-                store.shifts.observeStartingBetween(selectedDate, selectedDate).first().size == 1
+                store.recurringPlans.observePlans(TIMELINE_ID, WorkSector.NURSING).first().size == 1
             }
         }
-        val saved = runBlocking {
-            store.shifts.observeStartingBetween(selectedDate, selectedDate).first().single()
+        val aggregate = runBlocking {
+            store.recurringPlans.observePlans(TIMELINE_ID, WorkSector.NURSING).first().single()
         }
-        val snapshot = runBlocking { store.v2Shifts.getWorkSnapshot(saved.id) }
-        assertEquals(POSITION, saved.position)
-        assertEquals(OBJECTIVE_ID, saved.sourceObjectiveId)
-        assertNotNull(snapshot)
-        assertEquals(saved.id, snapshot?.shiftId)
-        assertEquals(TEMPLATE_ID, snapshot?.templateId)
-        assertEquals(WorkSector.NURSING, snapshot?.sector)
+        val occurrenceDates = aggregate.occurrences.map { it.localDate }
+        assertTrue(occurrenceDates.any { it.month != startDate.month })
+        assertTrue(aggregate.occurrences.all { it.state == RecurringOccurrenceState.AUTOMATIC })
+        aggregate.occurrences.forEach { occurrence ->
+            val shiftId = requireNotNull(occurrence.shiftId)
+            assertNotNull(runBlocking { store.v2Shifts.getWorkSnapshot(shiftId) })
+        }
+        assertEquals(startDate.plusMonths(1), aggregate.latestRevision.endDateInclusive)
 
         compose.waitUntil(WAIT_MILLIS) {
             compose.onAllNodesWithText(ABBREVIATION, useUnmergedTree = true)
@@ -171,31 +148,6 @@ class V2ManualShiftLoadActivityTest {
         }
         compose.onNodeWithContentDescription("jornada $ABBREVIATION", substring = true)
             .assertExists()
-        compose.onNodeWithText("¿En qué rubro trabajás?").assertDoesNotExist()
-    }
-
-    private fun rotateAndVerifyDraft(
-        requestedOrientation: Int,
-        expectedConfigurationOrientation: Int,
-    ) {
-        requireNotNull(scenario).onActivity { activity ->
-            activity.requestedOrientation = requestedOrientation
-        }
-        compose.waitUntil(WAIT_MILLIS) {
-            var currentOrientation = Configuration.ORIENTATION_UNDEFINED
-            runCatching {
-                requireNotNull(scenario).onActivity { activity ->
-                    currentOrientation = activity.resources.configuration.orientation
-                }
-            }
-            currentOrientation == expectedConfigurationOrientation
-        }
-        compose.waitUntil(WAIT_MILLIS) {
-            compose.onAllNodesWithTag("v2-template-$TEMPLATE_ID").fetchSemanticsNodes().isNotEmpty()
-        }
-        compose.onNodeWithTag("v2-template-$TEMPLATE_ID").assertIsSelected()
-        compose.onNodeWithTag("v2-manual-position").performScrollTo()
-        compose.onNodeWithText(POSITION).assertIsDisplayed()
     }
 
     private fun firstWorkSet(
@@ -204,7 +156,7 @@ class V2ManualShiftLoadActivityTest {
     ): FirstWorkSet {
         val objective = Objective(
             id = OBJECTIVE_ID,
-            fullName = "Centro ficticio integral",
+            fullName = "Centro ficticio recurrente",
             abbreviation = ABBREVIATION,
             address = null,
             note = null,
@@ -225,7 +177,7 @@ class V2ManualShiftLoadActivityTest {
             id = TYPE_ID,
             timelineId = TIMELINE_ID,
             sector = WorkSector.NURSING,
-            rawName = "Turno habitual",
+            rawName = "Turno recurrente",
             timestamp = timestamp,
         )
         val template = WorkTemplate(
@@ -251,7 +203,7 @@ class V2ManualShiftLoadActivityTest {
                 sector = WorkSector.NURSING,
                 workPlaceId = PLACE_ID,
                 objectiveId = OBJECTIVE_ID,
-                effectiveFrom = selectedDate,
+                effectiveFrom = startDate,
                 rules = WorkplaceRules(
                     nightHours = NightHoursRule.Disabled,
                     weekend = WeekendRule.None,
@@ -266,16 +218,16 @@ class V2ManualShiftLoadActivityTest {
     }
 
     private companion object {
-        const val QA_APPLICATION_ID: String = "com.blackatsystems.miguardia.qa"
-        const val WAIT_MILLIS: Long = 10_000L
-        const val ABBREVIATION: String = "INT"
-        const val POSITION: String = "Puesto ficticio integral"
-        val TIMELINE_ID: UUID = UUID.fromString("93000000-0000-0000-0000-000000000001")
-        val REVISION_ID: UUID = UUID.fromString("93000000-0000-0000-0000-000000000002")
-        val OBJECTIVE_ID: UUID = UUID.fromString("93000000-0000-0000-0000-000000000003")
-        val PLACE_ID: UUID = UUID.fromString("93000000-0000-0000-0000-000000000004")
-        val TYPE_ID: UUID = UUID.fromString("93000000-0000-0000-0000-000000000005")
-        val TEMPLATE_ID: UUID = UUID.fromString("93000000-0000-0000-0000-000000000006")
-        val RULE_ID: UUID = UUID.fromString("93000000-0000-0000-0000-000000000007")
+        const val QA_APPLICATION_ID = "com.blackatsystems.miguardia.qa"
+        const val WAIT_MILLIS = 10_000L
+        const val ABBREVIATION = "REC"
+        const val POSITION = "Puesto ficticio recurrente"
+        val TIMELINE_ID: UUID = UUID.fromString("96000000-0000-0000-0000-000000000001")
+        val REVISION_ID: UUID = UUID.fromString("96000000-0000-0000-0000-000000000002")
+        val OBJECTIVE_ID: UUID = UUID.fromString("96000000-0000-0000-0000-000000000003")
+        val PLACE_ID: UUID = UUID.fromString("96000000-0000-0000-0000-000000000004")
+        val TYPE_ID: UUID = UUID.fromString("96000000-0000-0000-0000-000000000005")
+        val TEMPLATE_ID: UUID = UUID.fromString("96000000-0000-0000-0000-000000000006")
+        val RULE_ID: UUID = UUID.fromString("96000000-0000-0000-0000-000000000007")
     }
 }

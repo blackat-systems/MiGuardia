@@ -120,6 +120,9 @@ Es una regla que crea jornadas futuras concretas y enlazadas. Se admiten:
 - patrón mensual, como primer lunes o último viernes.
 
 Todo plan requiere inicio, finalización y vista previa de fechas.
+Cada creación o cambio de plan puede abarcar como máximo 2.000 jornadas
+concretas futuras. Si el patrón supera ese límite, se rechaza completo con una
+explicación; nunca se recorta silenciosamente.
 
 ## 5. Primera apertura
 
@@ -486,7 +489,7 @@ Validación por impacto:
 - OCR o importación automática de cronogramas;
 - feriados automáticos;
 - fórmulas legales o salariales;
-- patrones de recurrencia arbitrarios fuera de los tres modelos aprobados;
+- patrones de recurrencia arbitrarios fuera de los cuatro patrones aprobados;
 - cuentas, nube o sincronización;
 - widgets, informes, copias y bloqueo antes de cerrar el núcleo laboral.
 

@@ -12,6 +12,7 @@ import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
@@ -30,6 +31,7 @@ import com.blackatsystems.miguardia.core.domain.work.WorkSetupState
 import com.blackatsystems.miguardia.ui.MiGuardiaApp
 import com.blackatsystems.miguardia.ui.calendar.CalendarLoadState
 import com.blackatsystems.miguardia.ui.calendar.CalendarUiState
+import com.blackatsystems.miguardia.ui.management.V2RecurringActions
 import com.blackatsystems.miguardia.ui.theme.AppZoom
 import com.blackatsystems.miguardia.ui.theme.MiGuardiaTheme
 import com.blackatsystems.miguardia.ui.worksetup.WorkPlaceDraft
@@ -115,6 +117,7 @@ class WorkSetupComposeTest {
         compose.onNodeWithText("Cargar datos").assertDoesNotExist()
         compose.onNodeWithText("Editar calendario").assertDoesNotExist()
         compose.onNodeWithText("Cargar jornadas").assertDoesNotExist()
+        compose.onNodeWithText("Repetir jornadas").assertDoesNotExist()
         compose.onNodeWithText("Crear primer lugar").performClick()
         compose.runOnIdle { assertEquals(true, opened) }
     }
@@ -150,6 +153,27 @@ class WorkSetupComposeTest {
         compose.onNodeWithText("Resumen").assertDoesNotExist()
         compose.onNodeWithText("Perfil laboral").assertDoesNotExist()
         compose.onNodeWithText("Objetivos y horarios").assertDoesNotExist()
+    }
+
+    @Test
+    fun workSetupOffersRecurringPlansOnlyAfterTheFirstWorkSetIsReady() {
+        var opened = 0
+        var state by mutableStateOf(
+            readyState(WorkSector.MEDICINE).copy(surface = WorkSetupSurface.OVERVIEW),
+        )
+        setApp(
+            stateProvider = { state },
+            recurringActions = V2RecurringActions(openPlans = { opened++ }),
+        )
+
+        compose.onNodeWithTag("work-setup-recurring-plans").assertIsDisplayed().performClick()
+        compose.runOnIdle { assertEquals(1, opened) }
+
+        compose.runOnIdle {
+            state = needsFirstSetState(WorkSector.MEDICINE).copy(surface = WorkSetupSurface.OVERVIEW)
+        }
+        compose.onNodeWithTag("work-setup-recurring-plans").assertDoesNotExist()
+        compose.onAllNodesWithTag("work-setup-calendar-guide")[0].assertIsDisplayed()
     }
 
     @Test
@@ -309,6 +333,7 @@ class WorkSetupComposeTest {
     private fun setApp(
         stateProvider: () -> WorkSetupUiState,
         actions: WorkSetupActions = WorkSetupActions(),
+        recurringActions: V2RecurringActions = V2RecurringActions(),
         calendar: CalendarUiState = calendarState(),
     ) {
         compose.setContent {
@@ -323,6 +348,7 @@ class WorkSetupComposeTest {
                     onRetry = {},
                     workSetupState = stateProvider(),
                     workSetupActions = actions,
+                    v2RecurringActions = recurringActions,
                 )
             }
         }

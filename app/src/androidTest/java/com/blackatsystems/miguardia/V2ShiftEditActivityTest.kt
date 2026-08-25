@@ -177,10 +177,11 @@ class V2ShiftEditActivityTest {
 
         openDayActions()
         compose.onNodeWithTag("v2-delete-shift-$SECOND_SHIFT_ID").performScrollTo().performClick()
-        compose.onNodeWithTag("v2-shift-delete-dialog").assertIsDisplayed()
+        waitForTag("v2-shift-delete-dialog")
         compose.onNodeWithText("Conservar jornada").performClick()
         assertNotNull(runBlocking { store.shifts.getById(SECOND_SHIFT_ID) })
         compose.onNodeWithTag("v2-delete-shift-$SECOND_SHIFT_ID").performScrollTo().performClick()
+        waitForTag("v2-shift-delete-dialog")
         compose.onNodeWithTag("v2-shift-confirm-delete").performClick()
         compose.waitUntil(WAIT_MILLIS) {
             runBlocking { store.shifts.getById(SECOND_SHIFT_ID) == null }

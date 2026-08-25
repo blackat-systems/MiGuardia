@@ -68,6 +68,7 @@ data class WorkSetupActions(
     val saveInitialSector: () -> Unit = {},
     val openOverview: () -> Unit = {},
     val openFirstWorkSet: () -> Unit = {},
+    val openRecurringPlans: () -> Unit = {},
     val updatePlaceDraft: ((WorkPlaceDraft) -> WorkPlaceDraft) -> Unit = {},
     val updateTemplateDraft: ((WorkTemplateDraft) -> WorkTemplateDraft) -> Unit = {},
     val continueToTemplate: () -> Unit = {},
@@ -346,6 +347,12 @@ private fun WorkSetupOverview(state: WorkSetupUiState, actions: WorkSetupActions
                         onClick = actions.startAnotherPlace,
                         modifier = Modifier.fillMaxWidth(),
                     ) { Text("Agregar otro lugar") }
+                    OutlinedButton(
+                        onClick = actions.openRecurringPlans,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("work-setup-recurring-plans"),
+                    ) { Text("Planes recurrentes") }
                 }
             }
         }

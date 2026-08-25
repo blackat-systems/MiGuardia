@@ -17,20 +17,25 @@ import com.blackatsystems.miguardia.core.domain.repository.ExplicitDayStatusRepo
 import com.blackatsystems.miguardia.core.domain.repository.HolidayRepository
 import com.blackatsystems.miguardia.core.domain.repository.MedicalLeaveRepository
 import com.blackatsystems.miguardia.core.domain.repository.ObjectiveRepository
+import com.blackatsystems.miguardia.core.domain.repository.RecurringPlanRepository
 import com.blackatsystems.miguardia.core.domain.repository.SchedulePhotoRepository
 import com.blackatsystems.miguardia.core.domain.repository.ShiftRepository
 import com.blackatsystems.miguardia.core.domain.repository.ShiftNoteRepository
 import com.blackatsystems.miguardia.core.domain.repository.ShiftNotificationConfigRepository
 import com.blackatsystems.miguardia.core.domain.repository.VacationRepository
 import com.blackatsystems.miguardia.core.domain.repository.V2ShiftRepository
+import com.blackatsystems.miguardia.core.domain.repository.V2RecurringShiftRepository
 import com.blackatsystems.miguardia.core.domain.repository.WorkCatalogRepository
 import com.blackatsystems.miguardia.core.domain.repository.WorkConfigurationRepository
 import java.io.Closeable
+import java.time.Clock
 
 class LocalDataStore internal constructor(
     private val database: MiGuardiaV2Database,
     private val instrumentationResetAllowed: Boolean = false,
+    recurringClock: Clock = Clock.systemUTC(),
 ) : Closeable {
+    private val roomV2Shifts = RoomV2ShiftRepository(database, recurringClock)
     val objectives: ObjectiveRepository = RoomObjectiveRepository(database)
     val shifts: ShiftRepository = RoomShiftRepository(database)
     val explicitDayStatuses: ExplicitDayStatusRepository =
@@ -46,7 +51,9 @@ class LocalDataStore internal constructor(
     val workConfiguration: WorkConfigurationRepository =
         RoomWorkConfigurationRepository(database)
     val workCatalog: WorkCatalogRepository = RoomWorkCatalogRepository(database)
-    val v2Shifts: V2ShiftRepository = RoomV2ShiftRepository(database)
+    val v2Shifts: V2ShiftRepository = roomV2Shifts
+    val recurringShiftWriter: V2RecurringShiftRepository = roomV2Shifts
+    val recurringPlans: RecurringPlanRepository = roomV2Shifts
 
     /** Clears the isolated QA database between instrumentation scenarios. */
     fun clearAllDataForInstrumentation() {

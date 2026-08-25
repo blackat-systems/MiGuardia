@@ -8,6 +8,8 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.CreationExtras
 import com.blackatsystems.miguardia.core.domain.AppDefaults
 import com.blackatsystems.miguardia.core.domain.model.Objective
+import com.blackatsystems.miguardia.core.domain.model.RecurringOccurrence
+import com.blackatsystems.miguardia.core.domain.model.RecurringPlanRevisionKind
 import com.blackatsystems.miguardia.core.domain.model.Shift
 import com.blackatsystems.miguardia.core.domain.model.ShiftOccupancyExpectation
 import com.blackatsystems.miguardia.core.domain.model.ShiftWorkSnapshot
@@ -17,6 +19,7 @@ import com.blackatsystems.miguardia.core.domain.model.V2ShiftWriteExpectation
 import com.blackatsystems.miguardia.core.domain.repository.ConflictingLocalWriteException
 import com.blackatsystems.miguardia.core.domain.repository.MedicalLeaveRepository
 import com.blackatsystems.miguardia.core.domain.repository.ObjectiveRepository
+import com.blackatsystems.miguardia.core.domain.repository.RecurringPlanRepository
 import com.blackatsystems.miguardia.core.domain.repository.ShiftRepository
 import com.blackatsystems.miguardia.core.domain.repository.V2ShiftRepository
 import com.blackatsystems.miguardia.core.domain.repository.WorkCatalogRepository
@@ -56,6 +59,8 @@ import kotlinx.coroutines.sync.Mutex
 enum class V2ShiftEditStage {
     IDLE,
     DAY_ACTIONS,
+    CHOOSE_EDIT_SCOPE,
+    CHOOSE_DELETE_SCOPE,
     EDIT_FORM,
     CONFIRM_WARNINGS,
     REVIEW,
@@ -93,6 +98,7 @@ data class V2ShiftEditUiState(
     val dayRows: List<V2ShiftEditDayRow> = emptyList(),
     val targetShiftId: UUID? = null,
     val originalWrite: V2ShiftWrite? = null,
+    val recurringOccurrence: RecurringOccurrence? = null,
     val templateOptions: List<V2ShiftEditTemplateOption> = emptyList(),
     val selectedTemplateId: UUID? = null,
     val usesHistoricalTemplate: Boolean = true,
@@ -147,6 +153,7 @@ class V2ShiftEditViewModel(
     shiftRepository: ShiftRepository,
     medicalLeaveRepository: MedicalLeaveRepository,
     v2ShiftRepository: V2ShiftRepository,
+    recurringPlanRepository: RecurringPlanRepository,
     clock: Clock,
     private val savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
@@ -157,6 +164,7 @@ class V2ShiftEditViewModel(
         shiftRepository = shiftRepository,
         medicalLeaveRepository = medicalLeaveRepository,
         v2ShiftRepository = v2ShiftRepository,
+        recurringPlanRepository = recurringPlanRepository,
         clock = clock,
         scope = viewModelScope,
         initialPersistedState = savedStateHandle.readV2ShiftEditState(),
@@ -172,6 +180,10 @@ class V2ShiftEditViewModel(
     fun beginDayEditing() = coordinator.beginDayEditing()
     fun editShift(id: UUID) = coordinator.editShift(id)
     fun requestDelete(id: UUID) = coordinator.requestDelete(id)
+    fun editOnlyThisOccurrence() = coordinator.editOnlyThisOccurrence()
+    fun deleteOnlyThisOccurrence() = coordinator.deleteOnlyThisOccurrence()
+    fun cancelScopeChoice() = coordinator.cancelScopeChoice()
+    fun handoffToRecurring() = coordinator.handoffToRecurring()
     fun chooseHistoricalTemplate() = coordinator.chooseHistoricalTemplate()
     fun chooseTemplate(id: UUID) = coordinator.chooseTemplate(id)
     fun updatePosition(value: String) = coordinator.updatePosition(value)
@@ -197,6 +209,7 @@ class V2ShiftEditViewModel(
         private val shiftRepository: ShiftRepository,
         private val medicalLeaveRepository: MedicalLeaveRepository,
         private val v2ShiftRepository: V2ShiftRepository,
+        private val recurringPlanRepository: RecurringPlanRepository,
         private val clock: Clock = Clock.system(AppDefaults.zoneId()),
     ) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
@@ -209,6 +222,7 @@ class V2ShiftEditViewModel(
                 shiftRepository = shiftRepository,
                 medicalLeaveRepository = medicalLeaveRepository,
                 v2ShiftRepository = v2ShiftRepository,
+                recurringPlanRepository = recurringPlanRepository,
                 clock = clock,
                 savedStateHandle = extras.createSavedStateHandle(),
             ) as T
@@ -223,6 +237,7 @@ internal class V2ShiftEditCoordinator(
     private val shiftRepository: ShiftRepository,
     private val medicalLeaveRepository: MedicalLeaveRepository,
     private val v2ShiftRepository: V2ShiftRepository,
+    private val recurringPlanRepository: RecurringPlanRepository? = null,
     private val clock: Clock,
     private val scope: CoroutineScope,
     initialPersistedState: V2ShiftEditPersistedState = V2ShiftEditPersistedState(),
@@ -313,15 +328,135 @@ internal class V2ShiftEditCoordinator(
 
     fun editShift(id: UUID) {
         if (_uiState.value.stage != V2ShiftEditStage.DAY_ACTIONS || _uiState.value.isLoading) return
+        launchRead { epoch -> chooseEditScopeOrLoad(id, epoch) }
+    }
+
+    fun requestDelete(id: UUID) {
+        if (_uiState.value.stage != V2ShiftEditStage.DAY_ACTIONS || _uiState.value.isLoading) return
+        launchRead { epoch -> chooseDeleteScopeOrLoad(id, epoch) }
+    }
+
+    private suspend fun chooseEditScopeOrLoad(id: UUID, epoch: Long) {
+        ensureCurrent(epoch)
+        _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+        try {
+            val write = requireTargetWrite(id)
+            ensureCurrent(epoch)
+            requireCompatibleTarget(write)
+            val occurrence = recurringPlanRepository?.getOccurrenceForShift(id)
+            ensureCurrent(epoch)
+            if (occurrence != null &&
+                !write.shift.localStartDate.isBefore(today()) &&
+                hasActiveRecurringPlan(occurrence)
+            ) {
+                updateAndPersist {
+                    it.copy(
+                        stage = V2ShiftEditStage.CHOOSE_EDIT_SCOPE,
+                        targetShiftId = id,
+                        originalWrite = write,
+                        recurringOccurrence = occurrence,
+                        isLoading = false,
+                        errorMessage = null,
+                    )
+                }
+            } else {
+                loadEditor(id, preserveDraft = false, finalStage = V2ShiftEditStage.EDIT_FORM, epoch = epoch)
+            }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            if (isCurrent(epoch)) {
+                showDayActionsError(error.message ?: "No pudimos abrir esta jornada. Reintentá.")
+            }
+        } finally {
+            if (isCurrent(epoch)) _uiState.update { it.copy(isLoading = false) }
+        }
+    }
+
+    private suspend fun chooseDeleteScopeOrLoad(id: UUID, epoch: Long) {
+        ensureCurrent(epoch)
+        _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+        try {
+            val write = requireTargetWrite(id)
+            ensureCurrent(epoch)
+            requireCompatibleTarget(write)
+            val occurrence = recurringPlanRepository?.getOccurrenceForShift(id)
+            ensureCurrent(epoch)
+            if (occurrence != null &&
+                !write.shift.localStartDate.isBefore(today()) &&
+                hasActiveRecurringPlan(occurrence)
+            ) {
+                updateAndPersist {
+                    it.copy(
+                        stage = V2ShiftEditStage.CHOOSE_DELETE_SCOPE,
+                        targetShiftId = id,
+                        originalWrite = write,
+                        recurringOccurrence = occurrence,
+                        confirmedPairFingerprint = pairFingerprint(write),
+                        isLoading = false,
+                        errorMessage = null,
+                    )
+                }
+            } else {
+                loadDeleteConfirmation(id, epoch)
+            }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            if (isCurrent(epoch)) {
+                showDayActionsError(error.message ?: "No pudimos preparar la eliminación. Reintentá.")
+            }
+        } finally {
+            if (isCurrent(epoch)) _uiState.update { it.copy(isLoading = false) }
+        }
+    }
+
+    fun editOnlyThisOccurrence() {
+        val state = _uiState.value
+        val id = state.targetShiftId ?: return
+        if (state.stage != V2ShiftEditStage.CHOOSE_EDIT_SCOPE || state.isLoading || state.isSaving) return
         launchRead { epoch ->
             loadEditor(id, preserveDraft = false, finalStage = V2ShiftEditStage.EDIT_FORM, epoch = epoch)
         }
     }
 
-    fun requestDelete(id: UUID) {
-        if (_uiState.value.stage != V2ShiftEditStage.DAY_ACTIONS || _uiState.value.isLoading) return
-        launchRead { epoch -> loadDeleteConfirmation(id, epoch) }
+    fun deleteOnlyThisOccurrence() {
+        val state = _uiState.value
+        if (
+            state.stage != V2ShiftEditStage.CHOOSE_DELETE_SCOPE ||
+            state.originalWrite == null ||
+            state.isLoading ||
+            state.isSaving
+        ) {
+            return
+        }
+        updateAndPersist { it.copy(stage = V2ShiftEditStage.CONFIRM_DELETE) }
     }
+
+    fun cancelScopeChoice() {
+        val state = _uiState.value
+        if (state.stage !in setOf(V2ShiftEditStage.CHOOSE_EDIT_SCOPE, V2ShiftEditStage.CHOOSE_DELETE_SCOPE)) return
+        returnToDayActions()
+    }
+
+    fun handoffToRecurring() {
+        val state = _uiState.value
+        if (state.stage !in setOf(V2ShiftEditStage.CHOOSE_EDIT_SCOPE, V2ShiftEditStage.CHOOSE_DELETE_SCOPE)) return
+        preparedReview = null
+        _uiState.value = V2ShiftEditUiState(
+            infoMessage = state.infoMessage,
+            successSequence = state.successSequence,
+        )
+        persistCurrentState()
+    }
+
+    private fun today(): LocalDate = LocalDate.now(clock)
+
+    private suspend fun hasActiveRecurringPlan(occurrence: RecurringOccurrence): Boolean =
+        recurringPlanRepository
+            ?.getPlan(occurrence.planId)
+            ?.latestRevision
+            ?.kind == RecurringPlanRevisionKind.ACTIVE
 
     private suspend fun loadDeleteConfirmation(id: UUID, epoch: Long) {
         ensureCurrent(epoch)
@@ -554,6 +689,7 @@ internal class V2ShiftEditCoordinator(
                 stage = V2ShiftEditStage.DAY_ACTIONS,
                 targetShiftId = null,
                 originalWrite = null,
+                recurringOccurrence = null,
                 confirmedPairFingerprint = null,
                 errorMessage = null,
             )
@@ -566,6 +702,9 @@ internal class V2ShiftEditCoordinator(
         when (state.stage) {
             V2ShiftEditStage.IDLE -> Unit
             V2ShiftEditStage.DAY_ACTIONS -> cancelToDetail()
+            V2ShiftEditStage.CHOOSE_EDIT_SCOPE,
+            V2ShiftEditStage.CHOOSE_DELETE_SCOPE,
+            -> cancelScopeChoice()
             V2ShiftEditStage.EDIT_FORM -> {
                 if (state.hasUnconfirmedChanges) {
                     updateAndPersist { it.copy(stage = V2ShiftEditStage.CONFIRM_DISCARD) }
@@ -612,6 +751,7 @@ internal class V2ShiftEditCoordinator(
             stage = V2ShiftEditStage.IDLE,
             targetShiftId = null,
             originalWrite = null,
+            recurringOccurrence = null,
             templateOptions = emptyList(),
             selectedTemplateId = null,
             usesHistoricalTemplate = true,
@@ -632,6 +772,12 @@ internal class V2ShiftEditCoordinator(
         when (state.stage) {
             V2ShiftEditStage.IDLE -> retryInspection()
             V2ShiftEditStage.DAY_ACTIONS -> launchRead { epoch -> reloadDayActions(epoch = epoch) }
+            V2ShiftEditStage.CHOOSE_EDIT_SCOPE -> state.targetShiftId?.let { id ->
+                launchRead { epoch -> chooseEditScopeOrLoad(id, epoch) }
+            }
+            V2ShiftEditStage.CHOOSE_DELETE_SCOPE -> state.targetShiftId?.let { id ->
+                launchRead { epoch -> chooseDeleteScopeOrLoad(id, epoch) }
+            }
             V2ShiftEditStage.EDIT_FORM -> state.targetShiftId?.let { id ->
                 launchRead { epoch ->
                     loadEditor(id, preserveDraft = true, finalStage = V2ShiftEditStage.EDIT_FORM, epoch = epoch)
@@ -1102,6 +1248,14 @@ internal class V2ShiftEditCoordinator(
                         )
                     }
                 }
+                V2ShiftEditStage.CHOOSE_EDIT_SCOPE -> {
+                    val target = restored.targetShiftId ?: throw IllegalStateException("No existe la jornada restaurada.")
+                    chooseEditScopeOrLoad(target, epoch)
+                }
+                V2ShiftEditStage.CHOOSE_DELETE_SCOPE -> {
+                    val target = restored.targetShiftId ?: throw IllegalStateException("No existe la jornada restaurada.")
+                    chooseDeleteScopeOrLoad(target, epoch)
+                }
                 V2ShiftEditStage.EDIT_FORM,
                 V2ShiftEditStage.CONFIRM_DISCARD,
                 -> {
@@ -1185,6 +1339,7 @@ internal class V2ShiftEditCoordinator(
                     dayRows = rows,
                     targetShiftId = null,
                     originalWrite = null,
+                    recurringOccurrence = null,
                     templateOptions = emptyList(),
                     selectedTemplateId = null,
                     usesHistoricalTemplate = true,
@@ -1211,6 +1366,7 @@ internal class V2ShiftEditCoordinator(
                 stage = V2ShiftEditStage.DAY_ACTIONS,
                 targetShiftId = null,
                 originalWrite = null,
+                recurringOccurrence = null,
                 templateOptions = emptyList(),
                 selectedTemplateId = null,
                 usesHistoricalTemplate = true,
@@ -1269,6 +1425,7 @@ internal class V2ShiftEditCoordinator(
                 stage = V2ShiftEditStage.DAY_ACTIONS,
                 targetShiftId = null,
                 originalWrite = null,
+                recurringOccurrence = null,
                 templateOptions = emptyList(),
                 selectedTemplateId = null,
                 usesHistoricalTemplate = true,

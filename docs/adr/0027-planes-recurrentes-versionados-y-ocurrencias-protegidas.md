@@ -151,11 +151,11 @@ El inicio y el final son inclusivos. El inicio debe ser hoy o una fecha futura,
 según reloj y zona inyectables. Todo plan necesita al menos una ocurrencia y
 una vista previa exacta antes de confirmar.
 
-No se fija todavía un máximo de fechas como regla de producto. La expansión
-debe terminar por la fecha final explícita, detectar desbordes de fecha o
-cantidad antes de escribir y no truncar silenciosamente. Si la implementación
-necesita un límite visible adicional por rendimiento, vuelve a MAIN para una
-decisión de producto.
+Por decisión expresa de Joaquin del 2026-08-25, cada creación o cambio de plan
+puede abarcar como máximo 2.000 jornadas concretas futuras. La expansión debe
+terminar por la fecha final explícita, detectar desbordes de fecha o cantidad
+antes de escribir y no truncar silenciosamente. Si el patrón produciría 2.001
+o más jornadas, se rechaza completo con una explicación visible.
 
 ### 5. Una sola frontera transaccional
 

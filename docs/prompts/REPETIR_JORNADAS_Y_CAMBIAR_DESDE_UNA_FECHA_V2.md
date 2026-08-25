@@ -1,7 +1,8 @@
 # Repetir jornadas y cambiar una fecha o todo lo futuro
 
-- Estado: **HABILITADO — ESPERA APERTURA EXPRESA DE JOAQUIN**
+- Estado: **CERRADO — IMPLEMENTADO, AUDITADO E INTEGRADO POR MAIN**
 - Fecha: 2026-08-23
+- Cierre MAIN: 2026-08-25
 - Proyecto obligatorio:
   `C:\Users\Joaquin\Desktop\chatgptprojects\MiGuardia-2.0`
 - Rama obligatoria: `codex/miguardia-2.0`
@@ -137,11 +138,12 @@ El inicio y el final son inclusivos. El inicio debe ser hoy o una fecha futura
 según `Clock` y zona inyectables. La retrocarga continúa perteneciendo a
 `Cargar jornadas`.
 
-El patrón debe producir al menos una fecha. No se fija todavía un máximo como
-regla de producto. La expansión termina por la fecha final explícita, detecta
-desbordes antes de escribir y nunca recorta silenciosamente. Si necesitás un
-límite visible adicional por rendimiento, detenete y devolvé esa decisión a
-MAIN.
+El patrón debe producir al menos una fecha. Por decisión expresa de Joaquin
+del 2026-08-25, cada creación o cambio de plan puede abarcar como máximo 2.000
+jornadas concretas futuras. La expansión termina por la fecha final explícita,
+detecta desbordes antes de escribir y nunca recorta silenciosamente. Si el
+patrón produciría 2.001 o más jornadas, rechaza el lote completo con una
+explicación visible.
 
 ### 2. Vista previa obligatoria
 
@@ -696,3 +698,17 @@ La dependencia termina solamente cuando:
 
 Si cualquiera de estas condiciones falla, entregá el estado real como
 `CANDIDATO INCOMPLETO` y no amplíes el alcance para ocultarlo.
+
+## CIERRE MAIN — 2026-08-25
+
+MAIN auditó el candidato, corrigió defectos de dominio, persistencia, interfaz
+y pruebas, y verificó el bloque en JVM, lint, compilación, Samsung API 36 y
+emulador API 26. Room V2 quedó en versión 2 con migración explícita `1→2` y
+tres tablas de recurrencia. El límite de producto aprobado por Joaquin es de
+2.000 jornadas concretas por creación o cambio; 2.001 rechaza el lote completo.
+
+Evidencia durable:
+`docs/audits/2026-08-25-planes-recurrentes-y-cambios-futuros-v2.md`.
+
+Este prompt no debe volver a ejecutarse salvo que MAIN documente una regresión
+y Joaquin autorice reabrirlo.

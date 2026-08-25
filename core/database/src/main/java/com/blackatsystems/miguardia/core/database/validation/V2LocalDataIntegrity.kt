@@ -2,6 +2,7 @@ package com.blackatsystems.miguardia.core.database.validation
 
 import com.blackatsystems.miguardia.core.database.MiGuardiaV2Database
 import com.blackatsystems.miguardia.core.database.mapping.decodeWorkCatalog
+import com.blackatsystems.miguardia.core.database.mapping.decodeRecurringPlanAggregate
 import com.blackatsystems.miguardia.core.database.mapping.encodeSector
 import com.blackatsystems.miguardia.core.database.mapping.toDomain
 import com.blackatsystems.miguardia.core.database.mapping.toDomainOrNull
@@ -10,6 +11,7 @@ import com.blackatsystems.miguardia.core.database.mapping.toDomainWorkSnapshot
 import com.blackatsystems.miguardia.core.database.mapping.toDomainWorkTemplate
 import com.blackatsystems.miguardia.core.database.mapping.toDomainWorkType
 import com.blackatsystems.miguardia.core.database.mapping.toDomainRuleRevision
+import com.blackatsystems.miguardia.core.domain.model.RecurringPlanRevisionKind
 import com.blackatsystems.miguardia.core.domain.model.V2ShiftWrite
 import com.blackatsystems.miguardia.core.domain.repository.InvalidLocalDataException
 import com.blackatsystems.miguardia.core.domain.work.WorkCatalog
@@ -117,7 +119,85 @@ private suspend fun MiGuardiaV2Database.auditValidV2LocalData(): WorkConfigurati
             catalogs = catalogs,
         )
     }
+    validateRecurringPlans(
+        history = history,
+        catalogs = catalogs,
+        writes = writes,
+    )
     return history
+}
+
+private suspend fun MiGuardiaV2Database.validateRecurringPlans(
+    history: WorkConfigurationHistory?,
+    catalogs: Map<Pair<UUID, WorkSector>, WorkCatalog>,
+    writes: List<V2ShiftWrite>,
+) {
+    val planRows = recurringPlanDao().getAllPlans()
+    val revisionRows = recurringPlanDao().getAllRevisions()
+    val occurrenceRows = recurringPlanDao().getAllOccurrences()
+    val planIds = planRows.mapTo(hashSetOf()) { it.id }
+    if (
+        revisionRows.any { it.planId !in planIds } ||
+        occurrenceRows.any { it.planId !in planIds }
+    ) {
+        invalidV2Data("La base contiene revisiones u ocurrencias sin su plan recurrente.")
+    }
+    val writesById = writes.associateBy { it.shift.id }
+    planRows.forEach { planRow ->
+        val aggregate = decodeRecurringPlanAggregate(
+            plan = planRow,
+            revisions = revisionRows.filter { it.planId == planRow.id },
+            occurrences = occurrenceRows.filter { it.planId == planRow.id },
+        )
+        val storedHistory = history
+            ?: invalidV2Data("Hay planes recurrentes sin una configuración laboral.")
+        if (
+            aggregate.plan.timelineId != storedHistory.timeline.id ||
+            storedHistory.timeline.revisions.none { it.value.sector == aggregate.plan.sector }
+        ) {
+            invalidV2Data("El plan ${aggregate.plan.id} pertenece a otra forma de trabajar.")
+        }
+        val catalog = catalogs[aggregate.plan.timelineId to aggregate.plan.sector]
+            ?: invalidV2Data("El plan ${aggregate.plan.id} no conserva su catálogo laboral.")
+        aggregate.revisions.forEach { revision ->
+            val place = catalog.workPlaces.singleOrNull { it.id == revision.workPlaceId }
+                ?: invalidV2Data("Una revisión recurrente referencia un lugar inexistente.")
+            val type = catalog.workTypes.singleOrNull { it.id == revision.workTypeId }
+                ?: invalidV2Data("Una revisión recurrente referencia un tipo inexistente.")
+            val template = catalog.workTemplates.singleOrNull { it.id == revision.templateId }
+                ?: invalidV2Data("Una revisión recurrente referencia una plantilla inexistente.")
+            if (
+                place.objectiveId != revision.objectiveId ||
+                template.workPlaceId != place.id ||
+                template.objectiveId != revision.objectiveId ||
+                template.workTypeId != type.id
+            ) {
+                invalidV2Data("Una revisión recurrente mezcla fuentes laborales incompatibles.")
+            }
+        }
+        val finalizedRevisions = aggregate.revisions.filter { revision ->
+            revision.kind == RecurringPlanRevisionKind.FINALIZED
+        }
+        if (
+            finalizedRevisions.size > 1 ||
+            finalizedRevisions.singleOrNull()?.let { it != aggregate.latestRevision } == true
+        ) {
+            invalidV2Data("Una finalización recurrente debe ser la última revisión del plan.")
+        }
+        aggregate.occurrences.forEach { occurrence ->
+            occurrence.shiftId?.let { shiftId ->
+                val write = writesById[shiftId]
+                    ?: invalidV2Data("Una ocurrencia recurrente no conserva su par de jornada.")
+                if (
+                    write.snapshot.timelineId != aggregate.plan.timelineId ||
+                    write.snapshot.sector != aggregate.plan.sector ||
+                    write.shift.localStartDate != occurrence.localDate
+                ) {
+                    invalidV2Data("Una ocurrencia recurrente no coincide con la fecha o forma de trabajar de su jornada.")
+                }
+            }
+        }
+    }
 }
 
 internal suspend fun MiGuardiaV2Database.readCatalog(

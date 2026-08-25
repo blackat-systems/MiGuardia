@@ -23,6 +23,16 @@ internal interface MedicalLeaveDao {
     @Query(
         """SELECT * FROM medical_leaves
             WHERE startDate <= :endDateInclusive AND endDateInclusive >= :startDateInclusive
+            ORDER BY startDate, endDateInclusive, id""",
+    )
+    suspend fun getIntersecting(
+        startDateInclusive: String,
+        endDateInclusive: String,
+    ): List<MedicalLeaveEntity>
+
+    @Query(
+        """SELECT * FROM medical_leaves
+            WHERE startDate <= :endDateInclusive AND endDateInclusive >= :startDateInclusive
             ORDER BY startDate, endDateInclusive, id
             LIMIT 1""",
     )

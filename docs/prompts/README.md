@@ -1,7 +1,7 @@
 # Índice canónico de prompts — MiGuardia
 
 - Estado: activo
-- Última auditoría completa: 2026-08-23
+- Última auditoría completa: 2026-08-25
 - Regla: un prompt sólo se ejecuta si este índice lo marca `ACTIVO` o
   `HABILITADO` y Joaquin autoriza la tarea
 
@@ -68,7 +68,7 @@ prevalecen para el estado operativo.
 | `CARGA_MANUAL_DE_JORNADAS_V2.md` | **CERRADO** | La carga de jornadas nuevas desde horarios guardados fue auditada, probada e integrada por MAIN |
 | `EDICION_Y_ELIMINACION_DE_JORNADAS_V2.md` | **CERRADO** | La edición y eliminación exacta de una jornada V2 fue auditada, probada e integrada por MAIN |
 | `RETIRAR_MODO_V1_Y_FIJAR_BASE_EXCLUSIVA_V2.md` | **CERRADO** | MiGuardia ya ejecuta una sola experiencia V2 sobre `MiGuardiaV2Database` versión 1; Samsung API 36 y emulador API 26 quedaron verificados |
-| `REPETIR_JORNADAS_Y_CAMBIAR_DESDE_UNA_FECHA_V2.md` | **HABILITADO** | Crear planes finitos y elegir si una corrección afecta sólo una jornada o todo lo futuro; espera que Joaquin abra la tarea |
+| `REPETIR_JORNADAS_Y_CAMBIAR_DESDE_UNA_FECHA_V2.md` | **CERRADO** | Planes finitos, excepciones durables y cambios de una jornada o de todo lo futuro integrados sobre Room V2 versión 2 |
 
 ## Contratos históricos de MiGuardia 1.0
 
@@ -114,8 +114,8 @@ Joaquin indicó que quiere preparar o abrir la siguiente:
    original;
 5. **Cerrado:** modo V1 retirado, código común preservado y Room V2 versión 1
    fijada y verificada;
-6. **Habilitado, todavía no abierto:** repetir jornadas y decidir si un cambio
-   afecta sólo una fecha o todo lo futuro, mediante
+6. **Cerrado:** repetir jornadas y decidir si un cambio afecta sólo una fecha o
+   todo lo futuro, mediante
    `REPETIR_JORNADAS_Y_CAMBIAR_DESDE_UNA_FECHA_V2.md`;
 7. horario real, extras y avance contra la referencia;
 8. disponibilidad, situaciones especiales y consolidación final del motor de

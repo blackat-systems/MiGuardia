@@ -65,6 +65,12 @@ data class V2ShiftEditActions(
     val beginDayEditing: () -> Unit = {},
     val editShift: (UUID) -> Unit = {},
     val requestDelete: (UUID) -> Unit = {},
+    val editOnlyThisOccurrence: () -> Unit = {},
+    val deleteOnlyThisOccurrence: () -> Unit = {},
+    val cancelScopeChoice: () -> Unit = {},
+    val changeSeriesFrom: (UUID, LocalDate) -> Unit = { _, _ -> },
+    val finalizeSeriesFrom: (UUID, LocalDate) -> Unit = { _, _ -> },
+    val handoffToRecurring: () -> Unit = {},
     val chooseHistoricalTemplate: () -> Unit = {},
     val chooseTemplate: (UUID) -> Unit = {},
     val updatePosition: (String) -> Unit = {},
@@ -92,6 +98,10 @@ data class V2ShiftEditActions(
             beginDayEditing = viewModel::beginDayEditing,
             editShift = viewModel::editShift,
             requestDelete = viewModel::requestDelete,
+            editOnlyThisOccurrence = viewModel::editOnlyThisOccurrence,
+            deleteOnlyThisOccurrence = viewModel::deleteOnlyThisOccurrence,
+            cancelScopeChoice = viewModel::cancelScopeChoice,
+            handoffToRecurring = viewModel::handoffToRecurring,
             chooseHistoricalTemplate = viewModel::chooseHistoricalTemplate,
             chooseTemplate = viewModel::chooseTemplate,
             updatePosition = viewModel::updatePosition,
@@ -214,6 +224,8 @@ fun V2ShiftEditSurfaceHost(
                 when (state.stage) {
                     V2ShiftEditStage.IDLE -> Unit
                     V2ShiftEditStage.DAY_ACTIONS,
+                    V2ShiftEditStage.CHOOSE_EDIT_SCOPE,
+                    V2ShiftEditStage.CHOOSE_DELETE_SCOPE,
                     V2ShiftEditStage.CONFIRM_DELETE,
                     -> DayActionsStep(state = state, actions = actions)
 
@@ -237,6 +249,8 @@ fun V2ShiftEditSurfaceHost(
 
     when (state.stage) {
         V2ShiftEditStage.CONFIRM_WARNINGS -> WarningDialog(state, actions)
+        V2ShiftEditStage.CHOOSE_EDIT_SCOPE -> EditScopeDialog(state, actions)
+        V2ShiftEditStage.CHOOSE_DELETE_SCOPE -> DeleteScopeDialog(state, actions)
         V2ShiftEditStage.CONFIRM_DELETE -> DeleteDialog(state, actions)
         V2ShiftEditStage.CONFIRM_DISCARD -> DiscardDialog(state, actions)
         else -> Unit
@@ -261,6 +275,8 @@ private fun EditSurfaceHeader(state: V2ShiftEditUiState, onBack: () -> Unit) {
         Text(
             text = when (state.stage) {
                 V2ShiftEditStage.DAY_ACTIONS,
+                V2ShiftEditStage.CHOOSE_EDIT_SCOPE,
+                V2ShiftEditStage.CHOOSE_DELETE_SCOPE,
                 V2ShiftEditStage.CONFIRM_DELETE,
                 -> "Jornadas del día"
 
@@ -682,6 +698,78 @@ private fun WarningDialog(state: V2ShiftEditUiState, actions: V2ShiftEditActions
 }
 
 @Composable
+private fun EditScopeDialog(state: V2ShiftEditUiState, actions: V2ShiftEditActions) {
+    val occurrence = state.recurringOccurrence ?: return
+    val date = state.originalWrite?.shift?.localStartDate ?: return
+    AlertDialog(
+        onDismissRequest = actions.cancelScopeChoice,
+        modifier = Modifier.testTag("v2-shift-edit-scope-dialog"),
+        title = { Text("¿Qué querés cambiar?") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(date.fullDate(), fontWeight = FontWeight.Bold)
+                Text("Esta jornada pertenece a un plan recurrente.")
+                Text("Cambiar sólo esta jornada la dejará personalizada y no modificará las demás.")
+            }
+        },
+        confirmButton = {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                TextButton(
+                    onClick = actions.editOnlyThisOccurrence,
+                    modifier = Modifier.testTag("v2-shift-edit-only-this"),
+                ) { Text("Cambiar sólo esta jornada") }
+                TextButton(
+                    onClick = {
+                        actions.handoffToRecurring()
+                        actions.changeSeriesFrom(occurrence.planId, date)
+                    },
+                    modifier = Modifier.testTag("v2-shift-edit-from-date"),
+                ) { Text("Cambiar desde esta fecha") }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = actions.cancelScopeChoice) { Text("Cancelar") }
+        },
+    )
+}
+
+@Composable
+private fun DeleteScopeDialog(state: V2ShiftEditUiState, actions: V2ShiftEditActions) {
+    val occurrence = state.recurringOccurrence ?: return
+    val date = state.originalWrite?.shift?.localStartDate ?: return
+    AlertDialog(
+        onDismissRequest = actions.cancelScopeChoice,
+        modifier = Modifier.testTag("v2-shift-delete-scope-dialog"),
+        title = { Text("¿Qué querés eliminar?") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(date.fullDate(), fontWeight = FontWeight.Bold)
+                Text("Eliminar sólo esta jornada conservará una exclusión para que no reaparezca.")
+                Text("Finalizar desde esta fecha conservará pasado, personalizaciones, notas, avisos y estados protegidos.")
+            }
+        },
+        confirmButton = {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                TextButton(
+                    onClick = actions.deleteOnlyThisOccurrence,
+                    modifier = Modifier.testTag("v2-shift-delete-only-this"),
+                ) { Text("Eliminar sólo esta jornada", color = MaterialTheme.colorScheme.error) }
+                TextButton(
+                    onClick = {
+                        actions.handoffToRecurring()
+                        actions.finalizeSeriesFrom(occurrence.planId, date)
+                    },
+                    modifier = Modifier.testTag("v2-shift-finalize-from-date"),
+                ) { Text("Finalizar desde esta fecha", color = MaterialTheme.colorScheme.error) }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = actions.cancelScopeChoice) { Text("Cancelar") }
+        },
+    )
+}
+
+@Composable
 private fun DeleteDialog(state: V2ShiftEditUiState, actions: V2ShiftEditActions) {
     val original = state.originalWrite
     AlertDialog(
@@ -702,6 +790,9 @@ private fun DeleteDialog(state: V2ShiftEditUiState, actions: V2ShiftEditActions)
                     Text("Releyendo la jornada exacta…")
                 }
                 Text("Se eliminará solamente esta jornada. Las demás se conservarán.")
+                if (state.recurringOccurrence != null) {
+                    Text("La fecha quedará excluida del plan y no reaparecerá en una revisión futura.")
+                }
                 Text("Esta acción no se puede deshacer.", color = MaterialTheme.colorScheme.error)
                 state.errorMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                 if (state.isSaving || state.isLoading) {

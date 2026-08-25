@@ -508,32 +508,59 @@ El contrato quedó `CERRADO` en
 `docs/prompts/RETIRAR_MODO_V1_Y_FIJAR_BASE_EXCLUSIVA_V2.md`. Evidencia completa
 en `docs/audits/2026-08-23-retiro-modo-v1-y-base-room-v2.md`.
 
-## Repetir jornadas y cambiar una fecha o todo lo futuro — prompt habilitado
+## Repetir jornadas y cambiar una fecha o todo lo futuro — cerrado
 
-Por pedido expreso de Joaquin del 2026-08-23, MAIN preparó el contrato durable
-`docs/prompts/REPETIR_JORNADAS_Y_CAMBIAR_DESDE_UNA_FECHA_V2.md`. La base
-funcional cerrada es
-`0364b835d07883708e137a7057f235fad9113b38`; el HEAD de entrada será el
-checkpoint documental que contiene ese prompt y MAIN deberá informarlo al
-abrir la tarea.
+MAIN auditó, corrigió e integró localmente el candidato recibido sobre
+`12fa7f64eef7493f8324467c876b55c9883d8625`.
 
-ADR 0027 fija la arquitectura necesaria sin implementar todavía el bloque:
+Quedó funcionando:
 
-- un plan estable, revisiones futuras y ocurrencias protegidas;
-- patrones por días de semana, cada N días o semanas y mensual por ordinal;
-- inicio y final inclusivos, sólo desde hoy y vista previa completa, sin un
-  máximo de producto inventado ni truncamiento silencioso;
-- excepciones durables para que una jornada retocada o eliminada no reaparezca;
-- `Cambiar sólo esta jornada`, `Cambiar desde esta fecha`,
-  `Eliminar sólo esta jornada` y `Finalizar desde esta fecha`;
-- una única transacción consciente para plan, ocurrencias y pares
+- creación de planes finitos por días de semana, cada N días, cada N semanas o
+  patrón mensual por ordinal y día;
+- vista previa exacta y materialización inmediata de cada
   `Shift + ShiftWorkSnapshot`;
-- migración explícita de Room V2 `1→2`, con esquema `2.json` y preservación de
-  todos los datos creados en la versión 1.
+- planes versionados con ocurrencias `AUTOMATIC`, `CUSTOMIZED`, `EXCLUDED` y
+  `RETIRED`;
+- cambio o eliminación de una sola jornada, cambio de todo lo futuro y
+  finalización desde una fecha;
+- preservación del pasado, jornadas manuales, personalizaciones, exclusiones,
+  notas, avisos y carpetas médicas;
+- acceso desde Calendario y `Mi forma de trabajar`, con borrador recuperable,
+  errores reintentables y conflictos concurrentes explícitos.
 
-El prompt está `HABILITADO`, pero no existe todavía tarea implementadora ni
-código candidato. Pedir el prompt no autoriza otro push ni permite tocar
-producción.
+Por decisión expresa de Joaquin del 2026-08-25, una creación o modificación
+admite hasta 2.000 jornadas concretas. Si produciría 2.001 o más, el lote se
+rechaza completo y nunca se recorta silenciosamente.
+
+Room V2 pasó de la versión 1 a la 2 mediante migración explícita. Conserva las
+19 tablas anteriores y agrega `recurring_plans`, `recurring_plan_revisions` y
+`recurring_occurrences`. El esquema `1.json` permanece intacto y `2.json`
+queda fijado con SHA-256
+`E5A79603A6DD79532EF9F4A8F9FF241A6588424513107837AEE707186C046C50`.
+
+La auditoría independiente y MAIN corrigieron validaciones de patrón, rango y
+fotografía histórica; ocupación propia y ajena; protección de jornadas
+manuales; consultas SQLite de más de 999 parámetros; reintentos, estados de
+carga, conflictos CAS y semántica de selección múltiple.
+
+Validación de cierre:
+
+- JVM: 328/328 —195 de dominio, 5 de base y 128 de aplicación—;
+- lint: 0 errores y 4 avisos de versiones disponibles;
+- APK Debug, QA y ambos APK AndroidTest: compilados;
+- Samsung `SM-S938B`, API 36: aplicación 89/89 y Room 74/74; las tres pruebas
+  ajustadas durante QA volvieron a pasar 3/3;
+- emulador Android 8.0, API 26: aplicación 89/89 y Room 74/74;
+- revisión visual directa en Samsung: plan recurrente visible en Calendario y
+  próximo evento, accesos V2 y formulario de cuatro patrones; claro/oscuro,
+  retrato/paisaje y zoom interno 100/150/200 quedaron cubiertos físicamente;
+- paquetes QA retirados, emulador apagado y producción intacta, detenida y no
+  abierta.
+
+El contrato quedó `CERRADO` en
+`docs/prompts/REPETIR_JORNADAS_Y_CAMBIAR_DESDE_UNA_FECHA_V2.md`. La evidencia
+completa está en
+`docs/audits/2026-08-25-planes-recurrentes-y-cambios-futuros-v2.md`.
 
 ## Flujo vigente de MAIN
 
@@ -577,25 +604,23 @@ cierre documentado arriba y no habilita acciones posteriores.
 
 ## Todavía no implementado
 
-- recurrencias y edición de una fecha o de todo lo futuro: contrato habilitado,
-  implementación todavía no abierta;
-- persistencia de guardias pasivas o extras V2;
-- motor completo de trabajo habitual, extras exactas y disponibilidad, con su
-  presentación en Resumen y Calendario;
+- horario real, clasificación de extras y avance contra la referencia;
+- persistencia de guardias pasivas y disponibilidad;
+- situaciones especiales y consolidación final del motor de horas y
+  cumplimiento, con su presentación en Resumen y Calendario;
 - adaptación V2 de la tarjeta de próximo evento y de las notificaciones;
 - cambio de `versionName`/`versionCode` para una futura entrega 2.0.
 
 ## Próximo paso
 
-La base exclusiva V2 quedó cerrada y el prompt de **repetir jornadas y decidir
-si un cambio afecta sólo una fecha o todo lo futuro** quedó habilitado. Joaquin
-puede entregarlo a una única dependencia o pedirle a MAIN que abra esa tarea.
-La implementación debe partir del checkpoint documental informado por MAIN y
-volver sin commit para auditoría e integración.
+Los planes recurrentes y los cambios desde una fecha quedaron cerrados. El
+siguiente bloque recomendado es **horario real, extras y avance contra la
+referencia**. MAIN preparará su contrato durable únicamente cuando Joaquin lo
+pida; todavía no existe otra dependencia abierta ni habilitada.
 
 Quedan como verificaciones separadas el recorrido físico de alarma exacta
 —sólo con permiso explícito— y API 37 antes del candidato final. API 26 ya fue
 verificada; no corresponde una migración V1 real en el Samsung.
-La autorización de push de este cierre ya fue consumida en `0364b83`.
-Cualquier otro push, tag, Release y toda operación sobre `main` o producción
-continúan prohibidos.
+La autorización de push anterior ya fue consumida en `0364b83`. Este cierre
+crea sólo un checkpoint local. Cualquier otro push, tag, Release y toda
+operación sobre `main` o producción continúan prohibidos.

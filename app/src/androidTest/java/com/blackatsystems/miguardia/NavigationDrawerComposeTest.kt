@@ -38,6 +38,8 @@ import com.blackatsystems.miguardia.ui.notifications.NotificationActions
 import com.blackatsystems.miguardia.ui.notifications.NotificationUiState
 import com.blackatsystems.miguardia.ui.photos.PhotosSurface
 import com.blackatsystems.miguardia.ui.photos.PhotosUiState
+import com.blackatsystems.miguardia.ui.management.V2RecurringStage
+import com.blackatsystems.miguardia.ui.management.V2RecurringUiState
 import com.blackatsystems.miguardia.ui.theme.AppThemeMode
 import com.blackatsystems.miguardia.ui.theme.AppZoom
 import com.blackatsystems.miguardia.ui.theme.MiGuardiaTheme
@@ -48,6 +50,7 @@ import com.blackatsystems.miguardia.ui.weather.WeatherSurface
 import com.blackatsystems.miguardia.ui.weather.WeatherActions
 import com.blackatsystems.miguardia.ui.weather.WeatherUiState
 import com.blackatsystems.miguardia.ui.worksetup.WorkSetupActions
+import com.blackatsystems.miguardia.core.domain.work.WorkSetupState
 import com.blackatsystems.miguardia.ui.worksetup.WorkSetupSurface
 import com.blackatsystems.miguardia.ui.worksetup.WorkSetupUiState
 import com.blackatsystems.miguardia.ui.worksetup.previewV2WorkSetupUiState
@@ -214,6 +217,8 @@ class NavigationDrawerComposeTest {
         var notifications by mutableStateOf(NotificationUiState())
         var weather by mutableStateOf(WeatherUiState())
         var workSetup by mutableStateOf(previewV2WorkSetupUiState())
+        val ready = workSetup.rootState as WorkSetupState.V2Ready
+        var recurring by mutableStateOf(V2RecurringUiState())
         compose.setContent {
             MiGuardiaTheme {
                 MiGuardiaApp(
@@ -230,6 +235,7 @@ class NavigationDrawerComposeTest {
                     notificationState = notifications,
                     weatherState = weather,
                     workSetupState = workSetup,
+                    v2RecurringState = recurring,
                 )
             }
         }
@@ -262,7 +268,14 @@ class NavigationDrawerComposeTest {
             weather = weather.copy(surface = WeatherSurface.GLOBAL)
         }
         assertMenuBlocked()
-        compose.runOnIdle { weather = weather.copy(surface = WeatherSurface.NONE) }
+        compose.runOnIdle {
+            weather = weather.copy(surface = WeatherSurface.NONE)
+            recurring = V2RecurringUiState(
+                stage = V2RecurringStage.FORM,
+                timelineId = ready.timelineId,
+            )
+        }
+        assertMenuBlocked()
     }
 
     @Test

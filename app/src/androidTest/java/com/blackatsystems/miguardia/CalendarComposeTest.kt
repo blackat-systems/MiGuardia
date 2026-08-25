@@ -30,6 +30,7 @@ import com.blackatsystems.miguardia.ui.exceptions.ExceptionsActions
 import com.blackatsystems.miguardia.ui.exceptions.ExceptionsSurface
 import com.blackatsystems.miguardia.ui.exceptions.ExceptionsUiState
 import com.blackatsystems.miguardia.ui.management.V2ManualShiftLoadActions
+import com.blackatsystems.miguardia.ui.management.V2RecurringActions
 import com.blackatsystems.miguardia.ui.management.V2ShiftDayInspectionState
 import com.blackatsystems.miguardia.ui.management.V2ShiftEditActions
 import com.blackatsystems.miguardia.ui.management.V2ShiftEditDayRow
@@ -112,21 +113,25 @@ class CalendarComposeTest {
     }
 
     @Test
-    fun v2ReadyOffersOnlyManualLoadAndWorkSetup() {
+    fun v2ReadyOffersManualLoadRecurrenceAndWorkSetup() {
         var starts = 0
+        var repeats = 0
         var entersEdit = 0
         var opensSetup = 0
         setApp(
             state = contentState(),
             manualActions = V2ManualShiftLoadActions(start = { _ -> starts++ }),
+            recurringActions = V2RecurringActions(openCreate = { _ -> repeats++ }),
             workSetupActions = WorkSetupActions(openOverview = { opensSetup++ }),
             onEnterEdit = { entersEdit++ },
         )
 
         compose.onNodeWithTag("calendar-v2-load-shifts").performScrollTo().performClick()
+        compose.onNodeWithTag("calendar-v2-repeat-shifts").performScrollTo().performClick()
         compose.onNodeWithTag("calendar-work-setup-action").performScrollTo().performClick()
         compose.runOnIdle {
             assertEquals(1, starts)
+            assertEquals(1, repeats)
             assertEquals(1, entersEdit)
             assertEquals(1, opensSetup)
         }
@@ -293,6 +298,7 @@ class CalendarComposeTest {
         onDismiss: () -> Unit = {},
         onEnterEdit: (LocalDate?) -> Unit = {},
         manualActions: V2ManualShiftLoadActions = V2ManualShiftLoadActions(),
+        recurringActions: V2RecurringActions = V2RecurringActions(),
         workSetupActions: WorkSetupActions = WorkSetupActions(),
         exceptionsActions: ExceptionsActions = ExceptionsActions(),
         editState: V2ShiftEditUiState = V2ShiftEditUiState(),
@@ -310,6 +316,7 @@ class CalendarComposeTest {
                     onRetry = {},
                     onEnterCalendarEditMode = onEnterEdit,
                     v2ManualShiftLoadActions = manualActions,
+                    v2RecurringActions = recurringActions,
                     workSetupActions = workSetupActions,
                     exceptionsActions = exceptionsActions,
                     v2ShiftEditState = editState,

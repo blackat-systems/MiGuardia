@@ -18,6 +18,8 @@ import com.blackatsystems.miguardia.core.domain.calendar.CalendarDay
 import com.blackatsystems.miguardia.core.domain.calendar.CalendarShift
 import com.blackatsystems.miguardia.core.domain.calendar.ShiftTemporalStatus
 import com.blackatsystems.miguardia.core.domain.model.Objective
+import com.blackatsystems.miguardia.core.domain.model.RecurringOccurrence
+import com.blackatsystems.miguardia.core.domain.model.RecurringOccurrenceState
 import com.blackatsystems.miguardia.core.domain.model.Shift
 import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
 import com.blackatsystems.miguardia.core.domain.model.ShiftWorkSnapshot
@@ -303,6 +305,63 @@ class V2ShiftEditComposeTest {
         compose.onNodeWithTag("v2-shift-discard-dialog").assertIsDisplayed()
         compose.onNodeWithTag("v2-shift-confirm-discard").performClick()
         compose.runOnIdle { assertEquals(3, confirmations) }
+    }
+
+    @Test
+    fun recurrentFutureDialogsExposeOnlyThisDateOrTheWholeFutureWithExactHandoffs() {
+        val original = write(uuid(45), position = "Puesto recurrente")
+        val occurrence = RecurringOccurrence(
+            planId = uuid(46),
+            localDate = DATE,
+            revisionId = uuid(47),
+            shiftId = original.shift.id,
+            state = RecurringOccurrenceState.AUTOMATIC,
+            createdAt = NOW,
+            updatedAt = NOW,
+        )
+        var state by mutableStateOf(
+            editorState(original).copy(
+                stage = V2ShiftEditStage.CHOOSE_EDIT_SCOPE,
+                recurringOccurrence = occurrence,
+            ),
+        )
+        var editOnly = 0
+        var deleteOnly = 0
+        var handoffs = 0
+        var changedFrom: Pair<UUID, LocalDate>? = null
+        var finalizedFrom: Pair<UUID, LocalDate>? = null
+        compose.setContent {
+            MiGuardiaTheme {
+                V2ShiftEditSurfaceHost(
+                    state,
+                    V2ShiftEditActions(
+                        editOnlyThisOccurrence = { editOnly++ },
+                        deleteOnlyThisOccurrence = { deleteOnly++ },
+                        handoffToRecurring = { handoffs++ },
+                        changeSeriesFrom = { planId, date -> changedFrom = planId to date },
+                        finalizeSeriesFrom = { planId, date -> finalizedFrom = planId to date },
+                    ),
+                )
+            }
+        }
+
+        compose.onNodeWithTag("v2-shift-edit-scope-dialog").assertIsDisplayed()
+        compose.onNodeWithTag("v2-shift-edit-only-this").performClick()
+        compose.onNodeWithTag("v2-shift-edit-from-date").performClick()
+        compose.runOnIdle {
+            assertEquals(1, editOnly)
+            assertEquals(occurrence.planId to DATE, changedFrom)
+            state = state.copy(stage = V2ShiftEditStage.CHOOSE_DELETE_SCOPE)
+        }
+
+        compose.onNodeWithTag("v2-shift-delete-scope-dialog").assertIsDisplayed()
+        compose.onNodeWithTag("v2-shift-delete-only-this").performClick()
+        compose.onNodeWithTag("v2-shift-finalize-from-date").performClick()
+        compose.runOnIdle {
+            assertEquals(1, deleteOnly)
+            assertEquals(occurrence.planId to DATE, finalizedFrom)
+            assertEquals(2, handoffs)
+        }
     }
 
     @Test
