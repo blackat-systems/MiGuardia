@@ -232,8 +232,9 @@ La secuencia conocida al redactar este prompt es:
 11. Extras independientes y avance de horas: registrar trabajo extra sin
     jornada dueña y calcular trabajo activo, extras y avance por mes, semana o
     ciclo. La persona elige la fecha de reinicio y no existe prorrateo
-    automático —prompt habilitado, implementación todavía no abierta—.
-12. Registrar guardias pasivas y descontar sólo el trabajo coincidente.
+    automático —cerrado en `964b7cd`—.
+12. Registrar guardias pasivas y descontar sólo el trabajo coincidente
+    —prompt habilitado, tarea todavía no abierta—.
 13. Registrar situaciones especiales sin convertirlas automáticamente en
     horas.
 14. Consolidar el motor final de horas y cumplimiento con trabajo activo,
@@ -553,17 +554,23 @@ acción sobre producción.
 
 ## 17. Estado inmediato
 
-El bloque **Registrar el horario realmente trabajado y clasificar la diferencia
-adicional de una jornada existente** quedó auditado, corregido, verificado y
-cerrado por MAIN en `2e61385`. `MiGuardiaV2Database`, `miguardia-v2.db` y Room
-V2 versión 3 son la base activa; Samsung API 36 y emulador API 26 quedaron
-verdes.
+El bloque **Extras independientes y avance de horas** quedó auditado, corregido,
+verificado y cerrado por MAIN en `964b7cd`. `MiGuardiaV2Database`,
+`miguardia-v2.db` y Room V2 versión 4 son la base activa, con cadena explícita
+`1→2→3→4`.
 
-El prompt `EXTRAS_INDEPENDIENTES_Y_AVANCE_DE_HORAS_V2.md` está habilitado sobre
-esa base funcional. Joaquin decidió que la persona elige desde qué fecha
-reinicia el conteo —por ejemplo hoy o el próximo lunes— y que MiGuardia no
-prorratea ni aplica la meta nueva hacia atrás.
+El stage general siguiente queda dividido, sin cambiar el mapa humano, en tres
+dependencias secuenciales:
 
-No hay una tarea especializada abierta ni código candidato. MAIN espera la
-indicación de Joaquin antes de crear exactamente una implementadora desde el
-checkpoint documental de este contrato.
+1. guardias pasivas y disponibilidad;
+2. ausencias, cancelaciones y otras situaciones especiales;
+3. conteo final de horas y cumplimiento.
+
+El prompt `GUARDIAS_PASIVAS_Y_DISPONIBILIDAD_V2.md` está habilitado sobre esa
+base funcional. Define un único concepto con los nombres Guardia pasiva,
+Disponible para llamado o Retén; impide ventanas superpuestas y descuenta
+solamente la unión del trabajo activo coincidente.
+
+No hay una tarea especializada abierta ni código candidato. MAIN espera que
+Joaquin entregue el prompt al nuevo chat desde el checkpoint documental exacto
+de este contrato.

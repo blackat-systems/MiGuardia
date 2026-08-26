@@ -15,6 +15,8 @@
   la tarea siguiente por su cuenta.
 - **Contrato humano:** toda dependencia nueva explica primero `QUÉ HACE` y
   `POR QUÉ EXISTE`, tanto en su prompt como en su handoff.
+- **Próxima dependencia habilitada:** `Guardias pasivas y disponibilidad`; el
+  prompt está listo, pero la tarea todavía no fue abierta.
 - **Commits locales:** MAIN los crea automáticamente como checkpoints de
   bloques comprobados.
 - **Push puntual anterior de la rama 2.0:** ejecutado y verificado hasta
@@ -73,6 +75,7 @@ prevalecen para el estado operativo.
 | `REPETIR_JORNADAS_Y_CAMBIAR_DESDE_UNA_FECHA_V2.md` | **CERRADO** | Planes finitos, excepciones durables y cambios de una jornada o de todo lo futuro integrados sobre Room V2 versión 2 |
 | `REGISTRAR_HORARIO_REAL_Y_CLASIFICAR_HORAS_EXTRA_V2.md` | **CERRADO** | Horario real y extras exactas por jornada integrados sobre Room V2 versión 3, sin calcular todavía avance |
 | `EXTRAS_INDEPENDIENTES_Y_AVANCE_DE_HORAS_V2.md` | **CERRADO** | Extras sin jornada dueña, reinicio consciente de la referencia y avance de horas integrados sobre Room V2 versión 4 |
+| `GUARDIAS_PASIVAS_Y_DISPONIBILIDAD_V2.md` | **HABILITADO — TAREA NO ABIERTA** | Registra ventanas pasivas exactas y descuenta sólo la unión del trabajo activo coincidente, sin sumarlas como horas trabajadas |
 
 ## Contratos históricos de MiGuardia 1.0
 
@@ -127,8 +130,11 @@ Joaquin indicó que quiere preparar o abrir la siguiente:
 8. **Cerrado:** extras independientes y avance contra la referencia mediante
    `EXTRAS_INDEPENDIENTES_Y_AVANCE_DE_HORAS_V2.md`; la persona elige la fecha
    de reinicio y no existe prorrateo automático;
-9. **Siguiente, todavía no habilitado:** disponibilidad, situaciones especiales
-   y consolidación final del motor de horas y cumplimiento;
+9. **Stage en curso, dividido en tres dependencias secuenciales:**
+   - **Habilitada, tarea todavía no abierta:** guardias pasivas y
+     disponibilidad mediante `GUARDIAS_PASIVAS_Y_DISPONIBILIDAD_V2.md`;
+   - después: ausencias, cancelaciones y otras situaciones especiales;
+   - después: conteo final de horas y cumplimiento;
 10. Calendario final y tarjeta superior;
 11. Resumen personalizable;
 12. adaptación de próximo evento y notificaciones;

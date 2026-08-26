@@ -8,8 +8,10 @@ no significa que exista ya una implementación nueva.
 
 El bloque **Extras independientes y avance de horas** quedó auditado, corregido,
 probado e integrado localmente por MAIN sobre Room V2 versión 4. El siguiente
-bloque previsto es disponibilidad, situaciones especiales y consolidación del
-motor de horas; todavía no tiene un prompt habilitado ni una tarea abierta.
+stage general queda dividido en tres dependencias consecutivas: guardias
+pasivas y disponibilidad; ausencias, cancelaciones y otras situaciones
+especiales; y conteo final de horas y cumplimiento. La primera tiene prompt
+habilitado, pero todavía no existe una tarea abierta ni código candidato.
 
 MAIN 2.0 está reactivada para recibir los handoffs que Joaquin entregue,
 auditarlos, integrarlos, probarlos y cerrarlos. Joaquin decide cuándo pedir el
@@ -162,6 +164,8 @@ y auditada en
     exacta de extras auditados, probados e integrados por MAIN.
   - `6fb04c8ff34eec2c454277dfb086664349a9051b`: contrato de extras
     independientes, reinicio consciente y avance de horas.
+  - `964b7cd0ce399ff20ba371fa6585e6e2850fd9b7`: extras independientes y avance
+    de horas auditados, probados e integrados por MAIN.
 - Al iniciar la preparación documental, la rama todavía no poseía upstream. El
   push puntual posterior fue ejecutado y verificado: rama local y remoto privado
   coincidían en `836d908`; esa autorización no puede reutilizarse.
@@ -741,12 +745,22 @@ cierre documentado arriba y no habilita acciones posteriores.
 ## Próximo paso
 
 Extras independientes y avance de horas quedaron cerrados sobre Room V2 versión
-4. El próximo bloque previsto reúne disponibilidad pasiva, situaciones
-especiales y la consolidación final del motor de horas y cumplimiento.
+4. Para reducir riesgo, el stage siguiente se implementará en tres dependencias
+secuenciales:
 
-El próximo paso es estabilizar y escribir un prompt autosuficiente para ese
-bloque únicamente cuando Joaquin lo pida. Hasta entonces no corresponde abrir
-otra tarea ni adelantar su persistencia, pantallas o reglas.
+1. **Guardias pasivas y disponibilidad**;
+2. **Ausencias, cancelaciones y otras situaciones especiales**;
+3. **Conteo final de horas y cumplimiento**.
+
+La primera dependencia está definida en
+`docs/prompts/GUARDIAS_PASIVAS_Y_DISPONIBILIDAD_V2.md` y habilitada para el
+nuevo chat que Joaquin decida abrir. Registra ventanas exactas, usa Guardia
+pasiva, Disponible para llamado o Retén como nombres de un mismo concepto,
+rechaza disponibilidades superpuestas y descuenta sólo la unión del trabajo
+activo coincidente. No adelanta las otras dos dependencias.
+
+La separación y las reglas de la primera dependencia quedaron registradas en
+`docs/adr/0030-disponibilidad-como-ventana-pasiva.md`.
 
 Quedan como verificaciones separadas el recorrido físico de alarma exacta
 —sólo con permiso explícito— y API 37 antes del candidato final. API 26 ya fue
