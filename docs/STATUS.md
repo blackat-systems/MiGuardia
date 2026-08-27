@@ -7,10 +7,10 @@ funcionales reunidas constituyen la base vigente para avanzar; cerrar esta etapa
 no significa que exista ya una implementación nueva.
 
 El bloque **Guardias pasivas y disponibilidad** quedó auditado, corregido,
-probado e integrado por MAIN sobre Room V2 versión 5. El stage general continúa
-con dos dependencias consecutivas: ausencias, cancelaciones y otras situaciones
-especiales; y conteo final de horas y cumplimiento. La primera es el próximo
-bloque recomendado, pero todavía no tiene prompt creado ni habilitado.
+probado e integrado por MAIN sobre Room V2 versión 5. Por decisión expresa de
+Joaquin del 2026-08-27, el próximo bloque es **Calendario final y tarjeta
+superior**. Su prompt está creado y habilitado; la tarea especializada todavía
+no fue abierta.
 
 MAIN 2.0 está reactivada para recibir los handoffs que Joaquin entregue,
 auditarlos, integrarlos, probarlos y cerrarlos. Joaquin decide cuándo pedir el
@@ -22,9 +22,10 @@ consumido. Joaquin autorizó el 2026-08-23 un único push adicional para publica
 el checkpoint estable V2-only y esta recomendación futura. MAIN lo ejecutó y
 verificó hasta `0364b83`; esa autorización quedó consumida. Joaquin autorizó el
 2026-08-27 un único push adicional para publicar el cierre verde de guardias
-pasivas y disponibilidad. Esa autorización se consume con este checkpoint y no
-se extiende a pushes posteriores, tags, un Release, `main`, la publicación de
-la aplicación ni ninguna acción sobre el paquete o los datos de producción.
+pasivas y disponibilidad. MAIN lo ejecutó y verificó en `80fe8e5`; esa
+autorización quedó consumida y no se extiende a pushes posteriores, tags, un
+Release, `main`, la publicación de la aplicación ni ninguna acción sobre el
+paquete o los datos de producción.
 
 Decisión de producto del 2026-08-23: MiGuardia 1.0 fue una prueba interna sin
 usuarios y continúa únicamente como base de código. MiGuardia 2.0 no migra datos
@@ -787,30 +788,36 @@ acciones posteriores.
 
 ## Todavía no implementado
 
-- situaciones especiales y consolidación final del motor de horas y
-  cumplimiento, con su presentación en Resumen y Calendario;
+- flujo visible V2 para marcar ausencia o cancelación y ampliaciones avanzadas
+  de situaciones especiales; quedan diferidos y no bloquean el Calendario;
+- consolidación adicional del motor de horas dentro de las superficies finales
+  que realmente la necesiten;
 - adaptación V2 de la tarjeta de próximo evento y de las notificaciones;
 - cambio de `versionName`/`versionCode` para una futura entrega 2.0.
 
 ## Próximo paso
 
 Guardias pasivas y disponibilidad quedaron cerradas sobre Room V2 versión 5.
-Para reducir riesgo, el stage continúa con dos dependencias secuenciales:
+La próxima dependencia habilitada es **Calendario final y tarjeta superior**,
+regida por
+`docs/prompts/CALENDARIO_FINAL_Y_TARJETA_SUPERIOR_V2.md`.
 
-1. **Ausencias, cancelaciones y otras situaciones especiales**;
-2. **Conteo final de horas y cumplimiento**.
+Debe terminar la convivencia visual de jornadas, extras, disponibilidad y
+marcadores comunes, y permitir desplegar todas las jornadas de hoy, incluidas
+las completadas. No implementa situaciones especiales nuevas, Resumen,
+notificaciones ni widget.
 
-La próxima dependencia todavía no tiene prompt creado ni habilitado. Debe
-estabilizar Ausencia, cancelación por empleador, suspensión, licencia e
-intercambio consciente sin convertir categorías nuevas automáticamente en
-horas ni adelantar el conteo final.
+La preparación y el contraste de alcance quedaron registrados en
+`docs/audits/2026-08-27-preparacion-calendario-final-y-tarjeta-superior-v2.md`.
 
-La separación y las reglas de la primera dependencia quedaron registradas en
-`docs/adr/0030-disponibilidad-como-ventana-pasiva.md`.
+La corrección de secuencia conserva la arquitectura de disponibilidad de
+`docs/adr/0030-disponibilidad-como-ventana-pasiva.md`. Las ampliaciones de
+situaciones especiales quedan diferidas hasta una decisión posterior de
+Joaquin.
 
 Quedan como verificaciones separadas el recorrido físico de alarma exacta
 —sólo con permiso explícito— y API 37 antes del candidato final. API 26 no se
 repitió con Room V2 versión 5; no corresponde una migración V1 real en el
-Samsung. Joaquin autorizó publicar este cierre una única vez. Cualquier push
-posterior, tag, Release y toda operación sobre `main` o producción continúan
-prohibidos.
+Samsung. El push autorizado para disponibilidad fue ejecutado y consumido en
+`80fe8e5`. Cualquier push posterior, tag, Release y toda operación sobre `main`
+o producción continúan prohibidos.

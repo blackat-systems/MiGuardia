@@ -17,8 +17,8 @@
   `POR QUÉ EXISTE`, tanto en su prompt como en su handoff.
 - **Última dependencia cerrada:** `Guardias pasivas y disponibilidad`, auditada
   e integrada por MAIN sobre Room V2 versión 5.
-- **Próxima dependencia recomendada:** `Ausencias, cancelaciones y otras
-  situaciones especiales`; todavía no tiene prompt creado ni habilitado.
+- **Próxima dependencia habilitada:** `Calendario final y tarjeta superior`,
+  mediante `CALENDARIO_FINAL_Y_TARJETA_SUPERIOR_V2.md`.
 - **Commits locales:** MAIN los crea automáticamente como checkpoints de
   bloques comprobados.
 - **Push puntual anterior de la rama 2.0:** ejecutado y verificado hasta
@@ -28,9 +28,9 @@
   único push adicional para publicar el checkpoint estable V2-only y la
   recomendación futura de Agenda profesional. Esa autorización quedó
   consumida en `0364b83`.
-- **Push de este cierre:** Joaquin autorizó el 2026-08-27 publicar el checkpoint
-  verde de guardias pasivas y disponibilidad. La autorización se consume con
-  ese único push.
+- **Push de disponibilidad:** Joaquin autorizó el 2026-08-27 publicar el
+  checkpoint verde de guardias pasivas y disponibilidad. MAIN lo ejecutó y
+  verificó en `80fe8e5`; la autorización quedó consumida.
 - **Pushes posteriores, tag, Release, `main` y producción:** no autorizados.
 
 El prompt rector activo es `docs/PROMPT_MAESTRO_MAIN_2_0.md`. El mapa del
@@ -81,6 +81,7 @@ prevalecen para el estado operativo.
 | `REGISTRAR_HORARIO_REAL_Y_CLASIFICAR_HORAS_EXTRA_V2.md` | **CERRADO** | Horario real y extras exactas por jornada integrados sobre Room V2 versión 3, sin calcular todavía avance |
 | `EXTRAS_INDEPENDIENTES_Y_AVANCE_DE_HORAS_V2.md` | **CERRADO** | Extras sin jornada dueña, reinicio consciente de la referencia y avance de horas integrados sobre Room V2 versión 4 |
 | `GUARDIAS_PASIVAS_Y_DISPONIBILIDAD_V2.md` | **CERRADO** | Ventanas pasivas exactas integradas sobre Room V2 versión 5; sólo la unión del trabajo activo coincidente las reemplaza y nunca suman como horas trabajadas |
+| `CALENDARIO_FINAL_Y_TARJETA_SUPERIOR_V2.md` | **HABILITADO** | Terminación de la única grilla mensual y tarjeta desplegable con todas las jornadas de hoy |
 
 ## Contratos históricos de MiGuardia 1.0
 
@@ -135,13 +136,10 @@ Joaquin indicó que quiere preparar o abrir la siguiente:
 8. **Cerrado:** extras independientes y avance contra la referencia mediante
    `EXTRAS_INDEPENDIENTES_Y_AVANCE_DE_HORAS_V2.md`; la persona elige la fecha
    de reinicio y no existe prorrateo automático;
-9. **Stage en curso, dividido en tres dependencias secuenciales:**
-   - **Cerrada:** guardias pasivas y disponibilidad mediante
-     `GUARDIAS_PASIVAS_Y_DISPONIBILIDAD_V2.md`;
-   - **Próxima recomendada, sin prompt habilitado:** ausencias, cancelaciones y
-     otras situaciones especiales;
-   - después: conteo final de horas y cumplimiento;
-10. Calendario final y tarjeta superior;
+9. **Cerrado:** guardias pasivas y disponibilidad mediante
+   `GUARDIAS_PASIVAS_Y_DISPONIBILIDAD_V2.md`;
+10. **Habilitado / próximo:** Calendario final y tarjeta superior mediante
+    `CALENDARIO_FINAL_Y_TARJETA_SUPERIOR_V2.md`;
 11. Resumen personalizable;
 12. adaptación de próximo evento y notificaciones;
 13. auditoría integral del núcleo;
@@ -150,10 +148,10 @@ Joaquin indicó que quiere preparar o abrir la siguiente:
 
 Cuando Joaquin pide un prompt, MAIN lo habilita en este índice después de cerrar
 su contrato y dependencias, y crea automáticamente el checkpoint documental
-local verificado. Pedir el prompt no abre por sí solo la tarea. Las
-autorizaciones de push anteriores ya fueron consumidas; la autorización actual
-se consume con el único push de este cierre. Cualquier publicación posterior
-requiere una autorización nueva.
+local verificado. Pedir el prompt no abre por sí solo la tarea. Todas las
+autorizaciones de push anteriores, incluida la que publicó disponibilidad en
+`80fe8e5`, ya fueron consumidas. Cualquier publicación posterior requiere una
+autorización nueva.
 
 Antes de los detalles técnicos, cada contrato debe explicar en lenguaje común
 qué resultado aporta y qué problema del proyecto justifica que esa dependencia

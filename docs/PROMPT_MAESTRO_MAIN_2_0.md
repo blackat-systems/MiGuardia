@@ -30,13 +30,14 @@ Joaquin autorizó:
 - conservar como ejecutado y consumido en `0364b83` el único push adicional
   autorizado por Joaquin el 2026-08-23 para publicar el checkpoint estable
   V2-only y la recomendación futura de Agenda profesional;
-- ejecutar el único push autorizado por Joaquin el 2026-08-27 sólo después del
-  cierre verde de guardias pasivas y disponibilidad.
+- conservar como ejecutado y consumido en `80fe8e5` el único push autorizado
+  por Joaquin el 2026-08-27 para publicar el cierre verde de guardias pasivas y
+  disponibilidad.
 
-Las autorizaciones anteriores ya quedaron consumidas. La autorización actual se
-consume con el único push de este cierre y no habilita pushes posteriores, tag,
-Release, operación sobre `main`, cambio en producción ni otra acción externa
-irreversible. Esas puertas continúan separadas.
+Todas las autorizaciones anteriores ya quedaron consumidas. No están
+habilitados pushes posteriores, tag, Release, operación sobre `main`, cambio en
+producción ni otra acción externa irreversible. Esas puertas continúan
+separadas.
 
 ## 2. Autoridad
 
@@ -150,8 +151,7 @@ una decisión documentada.
    código útil.
 7. Agregar planes recurrentes y edición de una fecha o de todo lo futuro.
 8. Agregar horario real, extras y avance contra la referencia.
-9. Agregar disponibilidad y situaciones especiales, y consolidar después el
-   motor final de horas y cumplimiento.
+9. Agregar guardias pasivas y disponibilidad.
 10. Terminar Calendario y tarjeta superior desplegable.
 11. Construir Resumen personalizable.
 12. Adaptar próximo evento y notificaciones.
@@ -159,6 +159,12 @@ una decisión documentada.
 14. Construir la segunda capa local: widget, informes, copias, bloqueo y
     Ayuda/recorrido inicial.
 15. Auditar la aplicación completa y emitir el candidato local.
+
+Corrección de secuencia del 2026-08-27: Joaquin fijó Calendario final y tarjeta
+superior como próximo bloque después de disponibilidad. Las situaciones comunes
+preservadas conservan su alcance actual; un flujo V2 ampliado de situaciones
+especiales y una consolidación adicional del motor quedan diferidos y no son
+puertas previas al punto 10.
 
 No se abre el siguiente bloque hasta que el anterior tenga pruebas, revisión de
 diff y un checkpoint coherente, y Joaquin indique que quiere preparar o abrir
@@ -302,7 +308,8 @@ mayor al planificado.
 - El único push adicional del 2026-08-23 publicó el cierre estable V2-only en
   `0364b83`; su autorización también quedó consumida.
 - Joaquin autorizó un único push del cierre verde de guardias pasivas y
-  disponibilidad el 2026-08-27; la autorización se consume con esa publicación.
+  disponibilidad el 2026-08-27; MAIN lo ejecutó y verificó en `80fe8e5`, por lo
+  que la autorización quedó consumida.
 - No hacer pushes posteriores a ese cierre, merge a `main`, tag, Release ni
   publicación de la aplicación.
 - No usar `reset --hard`, no limpiar worktrees históricos y no descartar cambios

@@ -161,11 +161,13 @@ Retiro del modo V1 antes de ampliar nuevamente la persistencia
         ↓
 Planes recurrentes y edición del Calendario
         ↓
-Horario real, extras, disponibilidad y situaciones especiales
+Horario real y extras exactas — cerrado
         ↓
-Consolidación final del motor de horas y cumplimiento
+Extras independientes y avance de horas — cerrado
         ↓
-Calendario final y tarjeta superior desplegable
+Guardias pasivas y disponibilidad — cerrado
+        ↓
+Calendario final y tarjeta superior desplegable — siguiente
         ↓
 Resumen, próximo evento y notificaciones
         ↓
@@ -175,6 +177,13 @@ Widget, informes, copias, bloqueo y Ayuda 2.0
         ↓
 Auditoría de la aplicación completa y candidato local
 ```
+
+Corrección de secuencia del 2026-08-27: Joaquin indicó que el bloque siguiente
+es Calendario final y tarjeta superior. Las capacidades comunes preservadas
+—`F/?`, carpeta médica, vacaciones, feriados, notas y los estados internos de
+ausencia/cancelación— continúan disponibles según su alcance actual. Un flujo
+V2 ampliado de situaciones especiales o una consolidación adicional de horas
+queda diferido y no bloquea este recorrido.
 
 MAIN integra un bloque por vez. Cada bloque debe compilar, pasar sus pruebas,
 preservar el alcance ajeno y quedar documentado antes del siguiente. El mapa

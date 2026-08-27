@@ -150,13 +150,17 @@ separado.
    código que sirve;
 7. recurrencias y edición de una fecha o de todo lo futuro;
 8. horario real, extras y avance contra la referencia;
-9. disponibilidad, situaciones especiales y consolidación final del motor;
+9. guardias pasivas y disponibilidad;
 10. Calendario final y tarjeta superior;
 11. Resumen personalizable;
 12. próximo evento y notificaciones;
 13. auditoría integral del núcleo;
 14. widget, informes, copias, bloqueo y Ayuda 2.0;
 15. auditoría de la aplicación completa y candidato local.
+
+Corrección del 2026-08-27: Calendario final y tarjeta superior es el bloque
+siguiente. Las ampliaciones futuras de situaciones especiales o del motor de
+horas no se insertan antes sin una nueva indicación de Joaquin.
 
 ## 9. Qué no tiene que hacer Joaquin
 

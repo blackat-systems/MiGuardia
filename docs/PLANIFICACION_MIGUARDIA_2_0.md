@@ -362,6 +362,13 @@ puede escribir fórmulas arbitrarias.
 
 ## 14. Situaciones especiales
 
+> Estado de secuencia actualizado el 2026-08-27: V2 conserva las capacidades
+> comunes de `F/?`, carpeta médica, vacaciones, feriados, notas y los estados
+> internos `ABSENT`/`CANCELLED`. El antiguo recorrido estructural de Novedades
+> V1 fue retirado. Las ampliaciones descriptas en esta sección permanecen como
+> diseño futuro y no constituyen la próxima dependencia ni bloquean Calendario
+> final y tarjeta superior.
+
 ### Ausencia
 
 - Conserva la jornada planificada.
@@ -457,12 +464,16 @@ No recuerda automáticamente esas respuestas para la próxima ocasión.
 6. Retiro del modo V1 antes de ampliar nuevamente la persistencia.
 7. Planes recurrentes y edición de una fecha o de todo lo futuro.
 8. Horario real, extras y avance contra la referencia.
-9. Disponibilidad, situaciones especiales y consolidación final del motor de
-   horas y cumplimiento.
+9. Guardias pasivas y disponibilidad.
 10. Calendario final y tarjeta superior desplegable.
 11. Resumen personalizable.
 12. Próximo evento y notificaciones.
 13. Auditoría global, actualización QA y compatibilidad Android.
+
+Las ampliaciones futuras de situaciones especiales y cualquier consolidación
+adicional del motor se programan únicamente si Joaquin las vuelve a priorizar o
+si una superficie posterior demuestra una dependencia real. No son puertas
+previas al punto 10.
 
 Cada bloque requiere un prompt acotado, pruebas proporcionales, revisión del
 diff y un checkpoint local antes de avanzar. Joaquin indica cuándo preparar el

@@ -3,6 +3,12 @@
 - Estado: aceptada
 - Fecha: 2026-08-25
 
+> Actualización de secuencia del 2026-08-27: la arquitectura de disponibilidad
+> definida por este ADR continúa aceptada. Joaquin reemplazó únicamente el orden
+> posterior: Calendario final y tarjeta superior es ahora la próxima
+> dependencia. Las situaciones especiales ampliadas y la consolidación
+> adicional de horas quedan diferidas y no bloquean ese avance.
+
 ## Contexto
 
 MiGuardia V2 ya registra jornadas planificadas, horario real, extras de una

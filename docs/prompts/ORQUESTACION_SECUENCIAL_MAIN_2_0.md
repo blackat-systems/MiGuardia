@@ -62,6 +62,8 @@ Joaquin, que autoriza a MAIN a:
 - conservar como ejecutado y consumido en `0364b83` el único push adicional
   autorizado por Joaquin el 2026-08-23 para publicar el checkpoint estable
   V2-only y la recomendación futura de Agenda profesional;
+- conservar como ejecutado y consumido en `80fe8e5` el único push autorizado
+  por Joaquin el 2026-08-27 para publicar guardias pasivas y disponibilidad;
 - preparar el prompt de una nueva tarea únicamente cuando Joaquin lo pida;
 - abrir o crear una tarea especializada únicamente cuando Joaquin lo pida.
 
@@ -235,15 +237,17 @@ La secuencia conocida al redactar este prompt es:
     automático —cerrado en `964b7cd`—.
 12. Registrar guardias pasivas y descontar sólo el trabajo coincidente
     —cerrado por MAIN en el checkpoint de disponibilidad del 2026-08-27—.
-13. Registrar situaciones especiales sin convertirlas automáticamente en
-    horas —próximo bloque recomendado, prompt todavía no creado—.
-14. Consolidar el motor final de horas y cumplimiento con trabajo activo,
-    extras, guardias pasivas y situaciones especiales.
-15. Terminar el Calendario y desplegar todas las jornadas del día.
-16. Mostrar y personalizar el Resumen de horas.
-17. Adaptar el motor de próximo evento a MiGuardia 2.0.
-18. Adaptar las notificaciones a todos los eventos compatibles.
-19. Auditar integralmente el núcleo y su compatibilidad Android.
+13. Terminar el Calendario y desplegar todas las jornadas del día —próximo
+    bloque habilitado—.
+14. Mostrar y personalizar el Resumen de horas.
+15. Adaptar el motor de próximo evento a MiGuardia 2.0.
+16. Adaptar las notificaciones a todos los eventos compatibles.
+17. Auditar integralmente el núcleo y su compatibilidad Android.
+
+Las ampliaciones futuras de situaciones especiales y cualquier consolidación
+adicional del motor de horas quedan fuera de esta cadena inmediata. Sólo se
+reinsertan por una nueva indicación de Joaquin o por una dependencia real
+demostrada durante una auditoría posterior.
 
 El motor de próximo evento debe estabilizarse antes de adaptar notificaciones.
 La edición individual reutiliza Room v7 y no amplía el esquema. El retiro del
@@ -558,18 +562,14 @@ El bloque **Guardias pasivas y disponibilidad** quedó auditado, corregido,
 verificado y cerrado por MAIN. `MiGuardiaV2Database`, `miguardia-v2.db` y Room
 V2 versión 5 son la base activa, con cadena explícita `1→2→3→4→5`.
 
-El stage general continúa dividido, sin cambiar el mapa humano, en tres
-dependencias secuenciales:
-
-1. guardias pasivas y disponibilidad —cerrada—;
-2. ausencias, cancelaciones y otras situaciones especiales —próxima—;
-3. conteo final de horas y cumplimiento.
+Guardias pasivas y disponibilidad está cerrada. Por indicación expresa de
+Joaquin, el siguiente bloque es **Calendario final y tarjeta superior**.
 
 El prompt `GUARDIAS_PASIVAS_Y_DISPONIBILIDAD_V2.md` está `CERRADO`. El bloque
 define un único concepto con los nombres Guardia pasiva, Disponible para
 llamado o Retén; impide ventanas superpuestas y descuenta solamente la unión
 del trabajo activo coincidente.
 
-No hay una tarea especializada abierta ni código candidato para el bloque
-siguiente. MAIN espera que Joaquin pida preparar el prompt de ausencias,
-cancelaciones y otras situaciones especiales.
+El prompt `CALENDARIO_FINAL_Y_TARJETA_SUPERIOR_V2.md` está habilitado. No hay
+una tarea especializada abierta ni código candidato para ese bloque hasta que
+Joaquin entregue el prompt a la nueva tarea o pida abrirla.
