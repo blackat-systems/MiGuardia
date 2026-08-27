@@ -71,6 +71,9 @@ class MainActivity : ComponentActivity() {
             shifts = dataStore.shifts,
             explicitDayStatuses = dataStore.explicitDayStatuses,
             vacations = dataStore.vacations,
+            medicalLeaves = dataStore.medicalLeaves,
+            shiftActuals = dataStore.shiftActuals,
+            workConfiguration = dataStore.workConfiguration,
         )
     }
     private val photosViewModel: PhotosViewModel by viewModels {

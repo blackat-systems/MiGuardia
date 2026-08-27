@@ -1,6 +1,6 @@
 # Prompt maestro de dependencia — CALENDARIO FINAL Y TARJETA SUPERIOR V2
 
-> Estado: **HABILITADO / PRÓXIMA DEPENDENCIA**
+> Estado: **CERRADO / INTEGRADO POR MAIN**
 >
 > Fecha: 2026-08-27
 >

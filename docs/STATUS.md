@@ -6,11 +6,11 @@ PLANIFICACIÓN quedó cerrada por autorización expresa de Joaquin. Las decision
 funcionales reunidas constituyen la base vigente para avanzar; cerrar esta etapa
 no significa que exista ya una implementación nueva.
 
-El bloque **Guardias pasivas y disponibilidad** quedó auditado, corregido,
-probado e integrado por MAIN sobre Room V2 versión 5. Por decisión expresa de
-Joaquin del 2026-08-27, el próximo bloque es **Calendario final y tarjeta
-superior**. Su prompt está creado y habilitado; la tarea especializada todavía
-no fue abierta.
+El bloque **Calendario final y tarjeta superior** quedó auditado, corregido,
+probado físicamente e integrado por MAIN sin modificar Room V2 versión 5. La
+próxima etapa recomendada del orden aprobado es **Resumen personalizable**. Su
+prompt todavía no fue creado ni habilitado; MAIN espera la indicación de Joaquin
+antes de prepararlo.
 
 MAIN 2.0 está reactivada para recibir los handoffs que Joaquin entregue,
 auditarlos, integrarlos, probarlos y cerrarlos. Joaquin decide cuándo pedir el
@@ -170,6 +170,11 @@ y auditada en
     de horas auditados, probados e integrados por MAIN.
   - `11bbdb41f0a948f5c45dce6adb8b5c95a5b3c931`: contrato de guardias pasivas y
     disponibilidad.
+  - `80fe8e5f8fdc47d5236941e91a46ffc3b1faab61`: guardias pasivas y
+    disponibilidad auditadas, probadas, integradas y publicadas con autorización
+    puntual.
+  - `27601ddf50f16f6381eb998f0c01daecc9ced706`: contrato de Calendario final y
+    tarjeta superior desplegable.
 - Al iniciar la preparación documental, la rama todavía no poseía upstream. El
   push puntual posterior fue ejecutado y verificado: rama local y remoto privado
   coincidían en `836d908`; esa autorización no puede reutilizarse.
@@ -743,6 +748,63 @@ La decisión arquitectónica está en ADR 0030 y la auditoría completa en
 repitió para Room V2 versión 5 y queda como evidencia de compatibilidad separada,
 no como bloqueo de este checkpoint.
 
+## Calendario final y tarjeta superior — cerrado
+
+El prompt `docs/prompts/CALENDARIO_FINAL_Y_TARJETA_SUPERIOR_V2.md` quedó
+`CERRADO`. MiGuardia conserva una sola grilla mensual y consolida en ella las
+jornadas, extras, disponibilidad y marcadores existentes. Las jornadas
+completadas mantienen una marca histórica de color, pero su estado también se
+expresa con texto y accesibilidad; varias jornadas o disponibilidades informan
+su cantidad sin ocultar los nombres del detalle.
+
+La tarjeta superior ahora resume el día civil actual. Cerrada prioriza una
+jornada en curso, la próxima de hoy, las completadas o el estado honesto sin
+trabajo. Cuando corresponde adjunta el próximo evento futuro. Al desplegarla
+enumera todas las jornadas de hoy, incluidas completadas, canceladas, ausentes y
+protegidas, además de una nocturna todavía activa iniciada ayer. La expansión se
+asocia a la fecha y no se restaura sobre el día siguiente.
+
+MAIN auditó dominio, observación reactiva, estado, Compose y restauración con
+tres revisiones independientes. Corrigió especialmente:
+
+- copias defensivas para que la proyección y sus listas anidadas sean realmente
+  inmutables;
+- observación de todos los sectores presentes en la historia laboral;
+- carreras entre cambios de fuente y límites temporales;
+- descarte del resultado del día anterior al cruzar medianoche;
+- conservación del último resultado válido ante un error recuperable del mismo
+  día, con reintento;
+- expectativas instrumentadas que todavía buscaban el encabezado histórico
+  `Próximo evento` o una única celda completada;
+- determinismo de la prueba Activity frente a preferencias QA persistidas y
+  desplazamiento explícito hasta el mes siguiente.
+
+Room V2 permanece en versión 5 con 27 tablas. No cambiaron entidades, DAO,
+repositorios de base, migraciones ni esquemas 1 a 5. Tampoco cambiaron Gradle,
+manifiesto, permisos, identificadores, versión ni SDK.
+
+Evidencia final de MAIN:
+
+- JVM: 456/456 — dominio 285, base 12 y aplicación 159—;
+- lint: 0 errores y 6 avisos globales de versiones disponibles;
+- APK Debug, QA y ambos APK AndroidTest: compilados;
+- Samsung `SM-S938B`, API 36: Room y persistencia 107/107;
+- Samsung `SM-S938B`, API 36: aplicación completa 214/214;
+- las cuatro expectativas instrumentadas corregidas pasaron 4/4 de forma
+  aislada y la prueba Activity endurecida pasó 1/1 con el APK final;
+- claro/oscuro, retrato/paisaje, zoom interno 100/150/200, expansión,
+  recreación, medianoche y regresiones quedaron cubiertos por instrumentación;
+- MAIN inspeccionó visualmente la tarjeta cerrada y desplegada, la grilla, el
+  tema oscuro en retrato, el tema claro en 100/200 % y el paisaje;
+- la orientación volvió a modo libre, los tres paquetes QA fueron retirados y
+  producción no fue instalada, abierta, consultada ni modificada.
+
+La auditoría completa está en
+`docs/audits/2026-08-27-calendario-final-y-tarjeta-superior-v2.md`. API 26 no se
+repitió para este bloque sin cambios de Room y queda como evidencia de
+compatibilidad separada antes del candidato final. Este cierre no autoriza push
+ni ninguna acción sobre producción.
+
 ## Flujo vigente de MAIN
 
 - Joaquin entrega un handoff o pide preparar el prompt de una nueva tarea;
@@ -792,23 +854,26 @@ acciones posteriores.
   de situaciones especiales; quedan diferidos y no bloquean el Calendario;
 - consolidación adicional del motor de horas dentro de las superficies finales
   que realmente la necesiten;
-- adaptación V2 de la tarjeta de próximo evento y de las notificaciones;
+- Resumen personalizable;
+- adaptación posterior de notificaciones y de los consumidores restantes del
+  motor de próximo evento;
 - cambio de `versionName`/`versionCode` para una futura entrega 2.0.
 
 ## Próximo paso
 
-Guardias pasivas y disponibilidad quedaron cerradas sobre Room V2 versión 5.
-La próxima dependencia habilitada es **Calendario final y tarjeta superior**,
-regida por
-`docs/prompts/CALENDARIO_FINAL_Y_TARJETA_SUPERIOR_V2.md`.
+Calendario final y tarjeta superior quedaron cerrados sin modificar Room V2
+versión 5. La próxima etapa recomendada es **Resumen personalizable**, punto 11
+del orden aprobado. Todavía no existe un prompt habilitado: MAIN lo prepara sólo
+cuando Joaquin lo pida.
 
-Debe terminar la convivencia visual de jornadas, extras, disponibilidad y
-marcadores comunes, y permitir desplegar todas las jornadas de hoy, incluidas
-las completadas. No implementa situaciones especiales nuevas, Resumen,
-notificaciones ni widget.
+El Resumen debe consumir las fuentes ya consolidadas sin crear un segundo
+calendario, inventar referencias horarias ni reinterpretar fotografías
+históricas. Su contrato funcional, alcance visual y métricas exactas deberán
+quedar fijados en el próximo prompt antes de abrir otra dependencia.
 
-La preparación y el contraste de alcance quedaron registrados en
-`docs/audits/2026-08-27-preparacion-calendario-final-y-tarjeta-superior-v2.md`.
+La preparación original y el cierre están registrados respectivamente en
+`docs/audits/2026-08-27-preparacion-calendario-final-y-tarjeta-superior-v2.md`
+y `docs/audits/2026-08-27-calendario-final-y-tarjeta-superior-v2.md`.
 
 La corrección de secuencia conserva la arquitectura de disponibilidad de
 `docs/adr/0030-disponibilidad-como-ventana-pasiva.md`. Las ampliaciones de
@@ -819,5 +884,6 @@ Quedan como verificaciones separadas el recorrido físico de alarma exacta
 —sólo con permiso explícito— y API 37 antes del candidato final. API 26 no se
 repitió con Room V2 versión 5; no corresponde una migración V1 real en el
 Samsung. El push autorizado para disponibilidad fue ejecutado y consumido en
-`80fe8e5`. Cualquier push posterior, tag, Release y toda operación sobre `main`
-o producción continúan prohibidos.
+`80fe8e5`. Calendario final no recibió una autorización de push. Cualquier push
+posterior, tag, Release y toda operación sobre `main` o producción continúan
+prohibidos.

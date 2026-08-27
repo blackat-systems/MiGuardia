@@ -167,9 +167,11 @@ Extras independientes y avance de horas — cerrado
         ↓
 Guardias pasivas y disponibilidad — cerrado
         ↓
-Calendario final y tarjeta superior desplegable — siguiente
+Calendario final y tarjeta superior desplegable — cerrado
         ↓
-Resumen, próximo evento y notificaciones
+Resumen personalizable — siguiente recomendado
+        ↓
+Próximo evento y notificaciones
         ↓
 Auditoría integral del núcleo y compatibilidad Android
         ↓
@@ -179,7 +181,8 @@ Auditoría de la aplicación completa y candidato local
 ```
 
 Corrección de secuencia del 2026-08-27: Joaquin indicó que el bloque siguiente
-es Calendario final y tarjeta superior. Las capacidades comunes preservadas
+era Calendario final y tarjeta superior; ese bloque ya quedó cerrado por MAIN.
+Las capacidades comunes preservadas
 —`F/?`, carpeta médica, vacaciones, feriados, notas y los estados internos de
 ausencia/cancelación— continúan disponibles según su alcance actual. Un flujo
 V2 ampliado de situaciones especiales o una consolidación adicional de horas

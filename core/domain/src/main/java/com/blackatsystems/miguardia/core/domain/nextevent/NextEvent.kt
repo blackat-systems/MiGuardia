@@ -2,6 +2,7 @@ package com.blackatsystems.miguardia.core.domain.nextevent
 
 import com.blackatsystems.miguardia.core.domain.model.ExplicitDayStatus
 import com.blackatsystems.miguardia.core.domain.model.ExplicitDayStatusType
+import com.blackatsystems.miguardia.core.domain.model.MedicalLeave
 import com.blackatsystems.miguardia.core.domain.model.Shift
 import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
 import com.blackatsystems.miguardia.core.domain.model.Vacation
@@ -9,6 +10,7 @@ import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import java.util.Collections
 
 enum class NextEventPrimary {
     ONGOING_SHIFT,
@@ -35,9 +37,13 @@ val NextEventShiftOrder: Comparator<Shift> = compareBy<Shift>(
 fun Shift.isEligibleUpcomingWork(
     now: Instant,
     vacations: List<Vacation>,
+    medicalLeaves: List<MedicalLeave> = emptyList(),
+    actualShiftIds: Set<java.util.UUID> = emptySet(),
 ): Boolean = status == ShiftStatus.PLANNED &&
     endAt > now &&
-    vacations.none { vacation -> localStartDate in vacation.startDate..vacation.endDateInclusive }
+    id !in actualShiftIds &&
+    vacations.none { vacation -> localStartDate in vacation.startDate..vacation.endDateInclusive } &&
+    medicalLeaves.none { leave -> localStartDate in leave.startDate..leave.endDateInclusive }
 
 /**
  * Builds the reusable next-event projection without reading a clock or mutating persisted data.
@@ -48,11 +54,20 @@ fun projectNextEvent(
     shifts: List<Shift>,
     explicitDayStatuses: List<ExplicitDayStatus>,
     vacations: List<Vacation>,
+    medicalLeaves: List<MedicalLeave> = emptyList(),
+    actualShiftIds: Set<java.util.UUID> = emptySet(),
 ): NextEventResult {
     val today = now.atZone(zoneId).toLocalDate()
     val candidateShifts = shifts
         .asSequence()
-        .filter { shift -> shift.isEligibleUpcomingWork(now, vacations) }
+        .filter { shift ->
+            shift.isEligibleUpcomingWork(
+                now = now,
+                vacations = vacations,
+                medicalLeaves = medicalLeaves,
+                actualShiftIds = actualShiftIds,
+            )
+        }
         .sortedWith(NextEventShiftOrder)
         .toList()
     val ongoing = candidateShifts.filter { shift -> shift.startAt <= now }
@@ -90,8 +105,8 @@ fun projectNextEvent(
 
     return NextEventResult(
         referenceInstant = now,
-        ongoingShifts = ongoing,
-        upcomingShifts = upcoming,
+        ongoingShifts = Collections.unmodifiableList(ongoing.toList()),
+        upcomingShifts = Collections.unmodifiableList(upcoming.toList()),
         nextDayOff = nextDayOff,
         primaryEvent = primary,
         remaining = remaining,

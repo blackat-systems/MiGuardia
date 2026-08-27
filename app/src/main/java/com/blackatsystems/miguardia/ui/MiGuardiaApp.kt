@@ -106,6 +106,7 @@ import com.blackatsystems.miguardia.core.domain.weather.spanishLabel
 import com.blackatsystems.miguardia.ui.calendar.CalendarLoadState
 import com.blackatsystems.miguardia.ui.availability.AvailabilityActions
 import com.blackatsystems.miguardia.ui.availability.AvailabilityDaySection
+import com.blackatsystems.miguardia.ui.availability.AvailabilityLoadState
 import com.blackatsystems.miguardia.ui.availability.AvailabilitySurfaceHost
 import com.blackatsystems.miguardia.ui.availability.AvailabilityUiState
 import com.blackatsystems.miguardia.ui.availability.AvailabilityViewModel
@@ -117,6 +118,7 @@ import com.blackatsystems.miguardia.ui.components.ScreenHeading
 import com.blackatsystems.miguardia.ui.components.SectionCard
 import com.blackatsystems.miguardia.ui.components.TransientConfirmation
 import com.blackatsystems.miguardia.ui.hours.HoursAndExtrasActions
+import com.blackatsystems.miguardia.ui.hours.HoursAndExtrasLoadState
 import com.blackatsystems.miguardia.ui.hours.HoursAndExtrasSurfaceHost
 import com.blackatsystems.miguardia.ui.hours.HoursAndExtrasUiState
 import com.blackatsystems.miguardia.ui.hours.HoursAndExtrasViewModel
@@ -1189,8 +1191,12 @@ private fun CalendarScreen(
             ?: v2ShiftActualState.infoMessage
             ?: v2ManualShiftLoadState.infoMessage
             ?: v2RecurringState.infoMessage
-            ?: hoursAndExtrasState.message
-            ?: availabilityState.message,
+            ?: hoursAndExtrasState.message.takeUnless {
+                hoursAndExtrasState.loadState == HoursAndExtrasLoadState.ERROR
+            }
+            ?: availabilityState.message.takeUnless {
+                availabilityState.loadState == AvailabilityLoadState.ERROR
+            },
         onDismiss = if (v2ShiftEditState.infoMessage != null) {
             v2ShiftEditActions.clearMessage
         } else if (v2ShiftActualState.infoMessage != null) {
@@ -1199,9 +1205,15 @@ private fun CalendarScreen(
             v2ManualShiftLoadActions.clearMessage
         } else if (v2RecurringState.infoMessage != null) {
             v2RecurringActions.clearMessage
-        } else if (hoursAndExtrasState.message != null) {
+        } else if (
+            hoursAndExtrasState.message != null &&
+            hoursAndExtrasState.loadState != HoursAndExtrasLoadState.ERROR
+        ) {
             hoursAndExtrasActions.clearMessage
-        } else if (availabilityState.message != null) {
+        } else if (
+            availabilityState.message != null &&
+            availabilityState.loadState != AvailabilityLoadState.ERROR
+        ) {
             availabilityActions.clearMessage
         } else v2ManualShiftLoadActions.clearMessage,
     ) {
@@ -1250,6 +1262,21 @@ private fun CalendarScreen(
                     )
 
                     CalendarLoadState.CONTENT -> Unit
+                }
+
+                if (hoursAndExtrasState.loadState == HoursAndExtrasLoadState.ERROR) {
+                    PersistentMessage(
+                        message = hoursAndExtrasState.message
+                            ?: "No pudimos actualizar los extras del calendario.",
+                        onRetry = hoursAndExtrasActions.retry,
+                    )
+                }
+                if (availabilityState.loadState == AvailabilityLoadState.ERROR) {
+                    PersistentMessage(
+                        message = availabilityState.message
+                            ?: "No pudimos actualizar la disponibilidad del calendario.",
+                        onRetry = availabilityActions.retry,
+                    )
                 }
 
                 if (state.days.isNotEmpty()) {
@@ -1732,7 +1759,7 @@ private fun DayCell(
     val background = when {
         isSelected -> vigilia.active.copy(alpha = if (vigilia.isDark) 0.30f else 0.18f)
         day.vacation != null -> vigilia.vacation.copy(alpha = if (vigilia.isDark) 0.20f else 0.12f)
-        isCompletedDay -> vigilia.success.copy(alpha = if (vigilia.isDark) 0.22f else 0.13f)
+        isCompletedDay -> MaterialTheme.colorScheme.surfaceVariant
         isToday -> MaterialTheme.colorScheme.primaryContainer
         else -> MaterialTheme.colorScheme.surfaceContainerHigh
     }
@@ -1830,16 +1857,21 @@ private fun DayCell(
             )
         }
         if (availabilityCount > 0) {
-            AutoSizeSingleLineText(
-                text = if (availabilityCount == 1) {
-                    requireNotNull(availabilityLabel)
-                } else {
-                    "$availabilityCount · ${requireNotNull(availabilityLabel)}"
-                },
-                maximum = 10.sp,
-                minimum = 6.sp,
-                fontWeight = FontWeight.Bold,
-            )
+            if (availabilityCount == 1) {
+                AutoSizeWrappedText(
+                    text = requireNotNull(availabilityLabel),
+                    maximum = 10.sp,
+                    minimum = 6.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+            } else {
+                AutoSizeSingleLineText(
+                    text = "$availabilityCount disponibil.",
+                    maximum = 10.sp,
+                    minimum = 6.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
         }
         val markers = buildList {
             when (day.explicitStatus) {
@@ -1886,6 +1918,35 @@ private fun AutoSizeSingleLineText(
             textAlign = TextAlign.Center,
             onTextLayout = { result ->
                 if (result.didOverflowWidth && currentSize.value > minimum.value) {
+                    currentSize = (currentSize.value - 0.5f).coerceAtLeast(minimum.value).sp
+                }
+            },
+        )
+    }
+}
+
+@Composable
+private fun AutoSizeWrappedText(
+    text: String,
+    maximum: TextUnit,
+    minimum: TextUnit,
+    fontWeight: FontWeight? = null,
+) {
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        var currentSize by remember(text, maxWidth, maximum, minimum) {
+            mutableStateOf(maximum)
+        }
+        Text(
+            text = text,
+            modifier = Modifier.fillMaxWidth(),
+            maxLines = 2,
+            softWrap = true,
+            overflow = TextOverflow.Clip,
+            fontSize = currentSize,
+            fontWeight = fontWeight,
+            textAlign = TextAlign.Center,
+            onTextLayout = { result ->
+                if ((result.didOverflowWidth || result.didOverflowHeight) && currentSize.value > minimum.value) {
                     currentSize = (currentSize.value - 0.5f).coerceAtLeast(minimum.value).sp
                 }
             },
@@ -2234,11 +2295,11 @@ private fun ShiftTemporalStatus.displayLabel(): String = stringResource(
 )
 
 private fun ShiftTemporalStatus.shortLabel(): String = when (this) {
-    ShiftTemporalStatus.UPCOMING -> "Próx."
-    ShiftTemporalStatus.IN_PROGRESS -> "Ahora"
-    ShiftTemporalStatus.COMPLETED -> "Hecha"
-    ShiftTemporalStatus.CANCELLED -> "Cancel."
-    ShiftTemporalStatus.ABSENT -> "Aus."
+    ShiftTemporalStatus.UPCOMING -> "Próxima"
+    ShiftTemporalStatus.IN_PROGRESS -> "En curso"
+    ShiftTemporalStatus.COMPLETED -> "Completada"
+    ShiftTemporalStatus.CANCELLED -> "Cancelada"
+    ShiftTemporalStatus.ABSENT -> "Ausente"
 }
 
 private fun CalendarDay.accessibilityDescription(
@@ -2250,6 +2311,7 @@ private fun CalendarDay.accessibilityDescription(
 ): String {
     val parts = mutableListOf(date.fullDisplayName())
     if (isToday) parts += "hoy"
+    if (shifts.size > 1) parts += "${shifts.size} turnos"
     shifts.forEach { calendarShift ->
         parts += buildString {
             append(shiftDescription)

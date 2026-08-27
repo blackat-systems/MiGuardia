@@ -4,6 +4,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
@@ -15,10 +16,16 @@ import androidx.test.uiautomator.UiDevice
 import com.blackatsystems.miguardia.core.domain.AppDefaults
 import com.blackatsystems.miguardia.core.domain.model.ExplicitDayStatus
 import com.blackatsystems.miguardia.core.domain.model.ExplicitDayStatusType
+import com.blackatsystems.miguardia.core.domain.model.MedicalLeave
 import com.blackatsystems.miguardia.core.domain.model.Shift
+import com.blackatsystems.miguardia.core.domain.model.ShiftActualAggregate
+import com.blackatsystems.miguardia.core.domain.model.ShiftActualRecord
 import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
-import com.blackatsystems.miguardia.core.domain.nextevent.NextEventResult
+import com.blackatsystems.miguardia.core.domain.model.Vacation
+import com.blackatsystems.miguardia.core.domain.nextevent.TodayCardProjection
 import com.blackatsystems.miguardia.core.domain.nextevent.projectNextEvent
+import com.blackatsystems.miguardia.core.domain.nextevent.projectTodayCard
+import com.blackatsystems.miguardia.core.domain.work.WorkSector
 import com.blackatsystems.miguardia.ui.MiGuardiaApp
 import com.blackatsystems.miguardia.ui.calendar.CalendarLoadState
 import com.blackatsystems.miguardia.ui.calendar.CalendarUiState
@@ -51,7 +58,7 @@ class NextEventComposeTest {
             }
         }
 
-        compose.onNodeWithText("Buscando guardias y francos…").assertExists()
+        compose.onNodeWithText("Buscando jornadas y francos…").assertExists()
         compose.runOnIdle {
             state = NextEventUiState(
                 loadState = NextEventLoadState.ERROR,
@@ -59,105 +66,378 @@ class NextEventComposeTest {
                 errorMessage = "Error ficticio recuperable",
             )
         }
-        compose.onNodeWithText("Próxima guardia").assertExists()
+        compose.onNodeWithText("Próxima jornada").assertExists()
         compose.onNodeWithText("Error ficticio recuperable").assertExists()
         compose.onNodeWithText("Reintentar").performClick()
         compose.runOnIdle { assertEquals(1, retries) }
     }
 
     @Test
-    fun ongoingShiftShowsHistoricalDetailsRemainingTimeAndMultiplicityWithoutPrivateContent() {
-        val first = shift(
+    fun activeOvernightStartedYesterdayIsTheClosedPrimaryWithoutPrivateContent() {
+        val earlyMorning = instant(2026, 8, 15, 2, 0)
+        val overnight = shift(
             id = "10000000-0000-0000-0000-000000000001",
-            start = NOW.minusSeconds(4 * 60 * 60),
-            end = NOW.plusSeconds(5 * 60 * 60 + 20 * 60),
+            start = instant(2026, 8, 14, 21, 0),
+            end = instant(2026, 8, 15, 6, 0),
             name = "Objetivo ficticio Norte",
             abbreviation = "NRT",
             position = "Acceso uno",
         )
+
+        setCard(projection(now = earlyMorning, shifts = listOf(overnight)))
+
+        compose.onNodeWithText("Jornada en curso").assertExists()
+        compose.onNodeWithText("NRT · Objetivo ficticio Norte").assertExists()
+        compose.onNodeWithText("21:00–06:00", substring = true).assertExists()
+        compose.onNodeWithText("Inició ayer, 14/08/2026").assertExists()
+        compose.onNodeWithText("Puesto: Acceso uno").assertExists()
+        compose.onNodeWithText("Termina en 4 h").assertExists()
+        compose.onNodeWithTag("today-card-list").assertDoesNotExist()
+        compose.onNodeWithText("nota médica privada", substring = true).assertDoesNotExist()
+        compose.onNodeWithContentDescription("Jornada en curso", substring = true).assertExists()
+    }
+
+    @Test
+    fun sameTimeUpcomingShiftsStayDifferentiatedAndExpandInStableOrder() {
+        val start = instant(2026, 8, 15, 13, 0)
+        val end = instant(2026, 8, 15, 17, 0)
+        val first = shift(
+            id = "20000000-0000-0000-0000-000000000001",
+            start = start,
+            end = end,
+            name = "Objetivo ficticio uno",
+            abbreviation = "UNO",
+        )
         val second = shift(
-            id = "10000000-0000-0000-0000-000000000002",
-            start = NOW.minusSeconds(30 * 60),
-            end = NOW.plusSeconds(6 * 60 * 60),
-            name = "Objetivo ficticio Sur",
-            abbreviation = "SUR",
+            id = "20000000-0000-0000-0000-000000000002",
+            start = start,
+            end = end,
+            name = "Objetivo ficticio dos",
+            abbreviation = "DOS",
         )
 
         setCard(projection(shifts = listOf(second, first)))
 
-        compose.onNodeWithText("Guardia en curso").assertExists()
-        compose.onNodeWithText("NRT").assertExists()
-        compose.onNodeWithText("Objetivo ficticio Norte").assertExists()
-        compose.onNodeWithText("15/08/2026").assertExists()
-        compose.onNodeWithText("08:00–17:20").assertExists()
-        compose.onNodeWithText("Puesto: Acceso uno").assertExists()
-        compose.onNodeWithText("Termina en 5 h 20 min").assertExists()
-        compose.onNodeWithText("2 guardias comparten este estado.").assertExists()
-        compose.onNodeWithText("nota médica privada", substring = true).assertDoesNotExist()
-        compose.onNodeWithContentDescription("Guardia en curso, Objetivo ficticio Norte", substring = true).assertExists()
+        compose.onNodeWithText("Próxima jornada").assertExists()
+        compose.onNodeWithText("UNO · Objetivo ficticio uno").assertExists()
+        compose.onNodeWithText("13:00–17:00", substring = true).assertExists()
+        compose.onNodeWithText("Comienza en 1 h").assertExists()
+        compose.onNodeWithText("2 jornadas hoy.").assertExists()
+        compose.onNodeWithTag("today-card-list").assertDoesNotExist()
+
+        compose.onNodeWithText("Ver jornadas de hoy").performClick()
+        compose.onNodeWithTag("today-card-list").assertExists()
+        compose.onNodeWithTag("today-card-shift-${first.id}").assertExists()
+        compose.onNodeWithTag("today-card-shift-${second.id}").assertExists()
+        compose.onNodeWithText("DOS · Objetivo ficticio dos").assertExists()
     }
 
     @Test
-    fun upcomingShiftShowsArgentineDateFullTimeCountAndSecondaryDayOff() {
-        val first = futureShift()
-        val second = first.copy(
-            id = UUID.fromString("20000000-0000-0000-0000-000000000002"),
-            objectiveNameSnapshot = "Objetivo ficticio dos",
+    fun completedOnlySummaryExpandsAndCanCloseWithoutLosingItsData() {
+        val completed = shift(
+            id = "30000000-0000-0000-0000-000000000001",
+            start = instant(2026, 8, 15, 7, 0),
+            end = instant(2026, 8, 15, 11, 0),
+            name = "Objetivo completado ficticio",
+            abbreviation = "CMP",
         )
-        val dayOff = ExplicitDayStatus(LocalDate.of(2026, 8, 17), ExplicitDayStatusType.DAY_OFF)
 
-        setCard(projection(shifts = listOf(second, first), statuses = listOf(dayOff)))
+        setCard(projection(shifts = listOf(completed)))
 
-        compose.onNodeWithText("Próxima guardia").assertExists()
-        compose.onNodeWithText("16/08/2026").assertExists()
-        compose.onNodeWithText("19:00–07:00").assertExists()
-        compose.onNodeWithText("Comienza en 1 d 7 h").assertExists()
-        compose.onNodeWithText("2 guardias comparten este estado.").assertExists()
-        compose.onNodeWithText("Próximo franco: 17/08/2026").assertExists()
+        compose.onNodeWithText("Hoy: 1 jornada completada").assertExists()
+        compose.onNodeWithTag("today-card-list").assertDoesNotExist()
+        compose.onNodeWithText("Ver jornadas de hoy").performClick()
+        compose.onNodeWithTag("today-card-shift-${completed.id}").assertExists()
+        compose.onNodeWithText("Completada").assertExists()
+
+        compose.onNodeWithText("Ocultar jornadas de hoy").performClick()
+        compose.onNodeWithTag("today-card-list").assertDoesNotExist()
+        compose.onNodeWithText("Ver jornadas de hoy").performClick()
+        compose.onNodeWithTag("today-card-shift-${completed.id}").assertExists()
+        compose.onNodeWithText("CMP · Objetivo completado ficticio").assertExists()
+        compose.onNodeWithContentDescription("1 jornada completada", substring = true).assertExists()
     }
 
     @Test
-    fun explicitDayOffAndHonestEmptyStateAreDistinct() {
-        var state by mutableStateOf(
-            contentState(
+    fun oneHistoricalTodayRecordStillOffersItsFullExpandableDetail() {
+        val cancelled = todayShift(
+            id = "30000000-0000-0000-0000-000000000006",
+            hour = 7,
+            name = "Jornada histórica ficticia",
+            abbreviation = "HIS",
+        ).copy(status = ShiftStatus.CANCELLED)
+
+        setCard(projection(shifts = listOf(cancelled)))
+
+        compose.onNodeWithText("Hoy no tenés trabajo").assertExists()
+        compose.onNodeWithText("Próximo evento").assertDoesNotExist()
+        compose.onNodeWithText("Sin próximos eventos").assertDoesNotExist()
+        compose.onNodeWithText("Ver jornadas de hoy").performClick()
+        compose.onNodeWithTag("today-card-shift-${cancelled.id}").assertExists()
+        compose.onNodeWithText("HIS · Jornada histórica ficticia").assertExists()
+        compose.onNodeWithText("Cancelada").assertExists()
+    }
+
+    @Test
+    fun expansionResetsWhenTheCivilDateChanges() {
+        val firstDay = shift(
+            id = "30000000-0000-0000-0000-000000000002",
+            start = instant(2026, 8, 15, 7, 0),
+            end = instant(2026, 8, 15, 11, 0),
+        )
+        val secondDay = shift(
+            id = "30000000-0000-0000-0000-000000000003",
+            start = instant(2026, 8, 16, 7, 0),
+            end = instant(2026, 8, 16, 11, 0),
+        )
+        var state by mutableStateOf(contentState(projection(shifts = listOf(firstDay))))
+        compose.setContent { MiGuardiaTheme { NextEventCard(state, {}) } }
+
+        compose.onNodeWithText("Ver jornadas de hoy").performClick()
+        compose.onNodeWithTag("today-card-list").assertExists()
+        compose.runOnIdle {
+            state = contentState(
+                projection(
+                    now = instant(2026, 8, 16, 12, 0),
+                    shifts = listOf(secondDay),
+                ),
+            )
+        }
+
+        compose.onNodeWithTag("today-card-list").assertDoesNotExist()
+        compose.onNodeWithText("Ver jornadas de hoy").assertExists()
+    }
+
+    @Test
+    fun restoredExpansionStaysBoundToTheCivilDateThatWasSaved() {
+        val firstDay = shift(
+            id = "30000000-0000-0000-0000-000000000004",
+            start = instant(2026, 8, 15, 7, 0),
+            end = instant(2026, 8, 15, 11, 0),
+        )
+        val secondDay = shift(
+            id = "30000000-0000-0000-0000-000000000005",
+            start = instant(2026, 8, 16, 7, 0),
+            end = instant(2026, 8, 16, 11, 0),
+        )
+        var state = contentState(projection(shifts = listOf(firstDay)))
+        val restoration = StateRestorationTester(compose)
+        restoration.setContent { MiGuardiaTheme { NextEventCard(state, {}) } }
+
+        compose.onNodeWithText("Ver jornadas de hoy").performClick()
+        compose.onNodeWithTag("today-card-list").assertExists()
+        compose.runOnIdle {
+            state = contentState(
+                projection(
+                    now = instant(2026, 8, 16, 12, 0),
+                    shifts = listOf(secondDay),
+                ),
+            )
+        }
+        restoration.emulateSavedInstanceStateRestore()
+
+        compose.onNodeWithTag("today-card-list").assertDoesNotExist()
+        compose.onNodeWithText("Ver jornadas de hoy").assertExists()
+    }
+
+    @Test
+    fun expandedListIncludesCancelledAbsentAndProtectedTodayShifts() {
+        val cancelled = todayShift(
+            id = "40000000-0000-0000-0000-000000000001",
+            hour = 7,
+            name = "Jornada cancelada ficticia",
+        ).copy(status = ShiftStatus.CANCELLED)
+        val absent = todayShift(
+            id = "40000000-0000-0000-0000-000000000002",
+            hour = 9,
+            name = "Jornada ausente ficticia",
+        ).copy(status = ShiftStatus.ABSENT)
+        val protected = todayShift(
+            id = "40000000-0000-0000-0000-000000000003",
+            hour = 14,
+            name = "Jornada protegida ficticia",
+        )
+        val medicalLeave = medicalLeave(privateNote = "nota médica privada que nunca debe mostrarse")
+
+        setCard(
+            projection(
+                shifts = listOf(protected, absent, cancelled, futureShift()),
+                medicalLeaves = listOf(medicalLeave),
+            ),
+        )
+
+        compose.onNodeWithText("Hoy no tenés trabajo").assertExists()
+        compose.onNodeWithText("3 jornadas registradas hoy.").assertExists()
+        compose.onNodeWithText("Próxima jornada").assertExists()
+        compose.onNodeWithContentDescription(
+            "Hoy no tenés trabajo. Próxima jornada",
+            substring = true,
+        ).assertExists()
+        compose.onNodeWithText("Ver jornadas de hoy").performClick()
+        compose.onNodeWithTag("today-card-shift-${cancelled.id}").assertExists()
+        compose.onNodeWithTag("today-card-shift-${absent.id}").assertExists()
+        compose.onNodeWithTag("today-card-shift-${protected.id}").assertExists()
+        compose.onNodeWithText("Cancelada · carpeta médica").assertExists()
+        compose.onNodeWithText("Ausente · carpeta médica").assertExists()
+        compose.onNodeWithText("Protegida · carpeta médica").assertExists()
+        compose.onNodeWithText("nota médica privada", substring = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun expandedMixedListPreservesEveryTodayStateAndPlannedSnapshots() {
+        val ongoing = todayShift(
+            id = "50000000-0000-0000-0000-000000000001",
+            hour = 10,
+            durationHours = 5,
+            name = "Jornada en curso ficticia",
+        )
+        val completed = todayShift(
+            id = "50000000-0000-0000-0000-000000000002",
+            hour = 6,
+            durationHours = 4,
+            name = "Jornada completada ficticia",
+        )
+        val cancelled = todayShift(
+            id = "50000000-0000-0000-0000-000000000003",
+            hour = 16,
+            name = "Jornada cancelada ficticia",
+        ).copy(status = ShiftStatus.CANCELLED)
+
+        setCard(projection(shifts = listOf(cancelled, ongoing, completed)))
+
+        compose.onNodeWithText("Jornada en curso").assertExists()
+        compose.onNodeWithText("3 jornadas hoy.").assertExists()
+        compose.onNodeWithText("10:00–15:00", substring = true).assertExists()
+        compose.onNodeWithText("Ver jornadas de hoy").performClick()
+        listOf(completed, ongoing, cancelled).forEach { item ->
+            compose.onNodeWithTag("today-card-shift-${item.id}").assertExists()
+        }
+        compose.onNodeWithText("Completada").assertExists()
+        compose.onNodeWithText("En curso").assertExists()
+        compose.onNodeWithText("Cancelada").assertExists()
+        compose.onNodeWithText("06:00–10:00", substring = true).assertExists()
+        compose.onNodeWithText("16:00–20:00", substring = true).assertExists()
+    }
+
+    @Test
+    fun actualTimeAndProtectionStayVisibleWithoutLeakingReasonsOrMedicalNotes() {
+        val completed = todayShift(
+            id = "60000000-0000-0000-0000-000000000001",
+            hour = 7,
+            durationHours = 4,
+            name = "Jornada con horario real ficticia",
+        )
+        val actual = actualFor(
+            shift = completed,
+            start = instant(2026, 8, 15, 7, 15),
+            end = instant(2026, 8, 15, 10, 45),
+            reason = "motivo real privado",
+            explanation = "explicación real privada",
+        )
+        val leave = medicalLeave(privateNote = "detalle médico privado")
+        val vacation = vacation()
+
+        setCard(
+            projection(
+                shifts = listOf(completed),
+                actuals = mapOf(completed.id to actual),
+                vacations = listOf(vacation),
+                medicalLeaves = listOf(leave),
+            ),
+        )
+
+        compose.onNodeWithText("Hoy: 1 jornada completada").assertExists()
+        compose.onNodeWithText("Ver jornadas de hoy").performClick()
+        compose.onNodeWithText(
+            "Completada · horario real registrado · Vacaciones · carpeta médica",
+        ).assertExists()
+        compose.onNodeWithText("07:00–11:00", substring = true).assertExists()
+        compose.onNodeWithText("motivo real privado", substring = true).assertDoesNotExist()
+        compose.onNodeWithText("explicación real privada", substring = true).assertDoesNotExist()
+        compose.onNodeWithText("detalle médico privado", substring = true).assertDoesNotExist()
+        compose.onNodeWithContentDescription("motivo real privado", substring = true).assertDoesNotExist()
+        compose.onNodeWithContentDescription("detalle médico privado", substring = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun futureShiftExplicitDayOffAndHonestEmptyStateAreDistinct() {
+        var state by mutableStateOf(contentState(projection(shifts = listOf(futureShift()))))
+        compose.setContent { MiGuardiaTheme { NextEventCard(state, {}) } }
+
+        compose.onNodeWithText("Próxima jornada").assertExists()
+        compose.onNodeWithText("16/08/2026", substring = true).assertExists()
+        compose.onNodeWithText("19:00–07:00", substring = true).assertExists()
+        compose.onNodeWithText("Comienza en 1 d 7 h").assertExists()
+
+        compose.runOnIdle {
+            state = contentState(
                 projection(
                     statuses = listOf(
                         ExplicitDayStatus(LocalDate.of(2026, 8, 16), ExplicitDayStatusType.DAY_OFF),
                         ExplicitDayStatus(LocalDate.of(2026, 8, 15), ExplicitDayStatusType.UNDEFINED),
                     ),
                 ),
-            ),
-        )
-        compose.setContent { MiGuardiaTheme { NextEventCard(state, {}) } }
-
+            )
+        }
         compose.onNodeWithText("Próximo franco").assertExists()
         compose.onNodeWithText("16/08/2026").assertExists()
         compose.onNodeWithText("Mañana").assertExists()
 
         compose.runOnIdle { state = contentState(projection()) }
         compose.onNodeWithText("Sin próximos eventos").assertExists()
-        compose.onNodeWithText("No hay guardias planificadas ni francos marcados explícitamente desde hoy.").assertExists()
+        compose.onNodeWithText(
+            "No hay jornadas pendientes ni francos marcados explícitamente desde hoy.",
+        ).assertExists()
     }
 
     @Test
-    fun exactTemporalTransitionsUpdateUpcomingToOngoingAndThenEmpty() {
-        val shift = futureShift()
-        var state by mutableStateOf(contentState(projectNextEvent(NOW, AppDefaults.zoneId(), listOf(shift), emptyList(), emptyList())))
+    fun protectedFutureProducesAnHonestEmptyStateWithoutAnnouncingWork() {
+        val future = futureShift()
+        val protectedDate = future.localStartDate
+
+        setCard(
+            projection(
+                shifts = listOf(future),
+                vacations = listOf(
+                    vacation().copy(
+                        startDate = protectedDate,
+                        endDateInclusive = protectedDate,
+                    ),
+                ),
+            ),
+        )
+
+        compose.onNodeWithText("Sin próximos eventos").assertExists()
+        compose.onNodeWithText(
+            "No hay jornadas pendientes ni francos marcados explícitamente desde hoy.",
+        ).assertExists()
+        compose.onNodeWithText("Próxima jornada").assertDoesNotExist()
+        compose.onNodeWithText("FIC · Objetivo ficticio").assertDoesNotExist()
+    }
+
+    @Test
+    fun exactTemporalTransitionsUpdateUpcomingToOngoingAndThenCompleted() {
+        val shift = todayShift(
+            id = "70000000-0000-0000-0000-000000000001",
+            hour = 13,
+            durationHours = 4,
+        )
+        var state by mutableStateOf(contentState(projection(now = NOW, shifts = listOf(shift))))
         compose.setContent { MiGuardiaTheme { NextEventCard(state, {}) } }
 
-        compose.onNodeWithText("Próxima guardia").assertExists()
+        compose.onNodeWithText("Próxima jornada").assertExists()
         compose.runOnIdle {
-            state = contentState(projectNextEvent(shift.startAt, AppDefaults.zoneId(), listOf(shift), emptyList(), emptyList()))
+            state = contentState(projection(now = shift.startAt, shifts = listOf(shift)))
         }
-        compose.onNodeWithText("Guardia en curso").assertExists()
+        compose.onNodeWithText("Jornada en curso").assertExists()
         compose.runOnIdle {
-            state = contentState(projectNextEvent(shift.endAt, AppDefaults.zoneId(), listOf(shift), emptyList(), emptyList()))
+            state = contentState(projection(now = shift.endAt, shifts = listOf(shift)))
         }
-        compose.onNodeWithText("Sin próximos eventos").assertExists()
+        compose.onNodeWithText("Hoy: 1 jornada completada").assertExists()
     }
 
     @Test
-    fun editingDeletingAndChangingVisibleMonthDoNotCreateASecondSourceOfTruth() {
+    fun changingVisibleMonthDoesNotCreateASecondTopCardSourceOfTruth() {
         var nextState by mutableStateOf(contentState(projection(shifts = listOf(futureShift()))))
         var calendarState by mutableStateOf(calendarState(YearMonth.of(2026, 8)))
         compose.setContent {
@@ -175,17 +455,14 @@ class NextEventComposeTest {
             }
         }
 
-        compose.onNodeWithText("FIC").assertExists()
-        compose.onNodeWithText("Objetivo ficticio").assertExists()
+        compose.onNodeWithText("FIC · Objetivo ficticio").assertExists()
         compose.onNodeWithContentDescription("Mes anterior").performClick()
         compose.onNodeWithText("Julio de 2026").assertExists()
-        compose.onNodeWithText("FIC").assertExists()
-        compose.onNodeWithText("Objetivo ficticio").assertExists()
+        compose.onNodeWithText("FIC · Objetivo ficticio").assertExists()
 
         val edited = futureShift().copy(objectiveNameSnapshot = "Objetivo editado ficticio")
         compose.runOnIdle { nextState = contentState(projection(shifts = listOf(edited))) }
-        compose.onNodeWithText("FIC").assertExists()
-        compose.onNodeWithText("Objetivo editado ficticio").assertExists()
+        compose.onNodeWithText("FIC · Objetivo editado ficticio").assertExists()
         compose.runOnIdle { nextState = contentState(projection()) }
         compose.onNodeWithText("Sin próximos eventos").assertExists()
     }
@@ -215,14 +492,17 @@ class NextEventComposeTest {
 
         compose.onNodeWithText("Motor temporalmente no disponible").assertExists()
         compose.onNodeWithTag("month-grid").assertExists()
-        compose.runOnIdle { dark = true; zoom = AppZoom.LARGE }
+        compose.runOnIdle {
+            dark = true
+            zoom = AppZoom.LARGE
+        }
         compose.onNodeWithTag("next-event-card").performScrollTo().assertIsDisplayed()
         compose.runOnIdle { zoom = AppZoom.EXTRA_LARGE }
         compose.onNodeWithText("Reintentar").performScrollTo().assertIsDisplayed()
     }
 
     @Test
-    fun nextEventCardRemainsReadableInLandscapeAndRestoresOrientation() {
+    fun todayCardRemainsReadableInLandscapeAndRestoresOrientation() {
         val device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
         try {
             device.setOrientationLeft()
@@ -233,8 +513,8 @@ class NextEventComposeTest {
                 }
             }
 
-            compose.onNodeWithText("Próxima guardia").assertIsDisplayed()
-            compose.onNodeWithText("19:00–07:00").assertIsDisplayed()
+            compose.onNodeWithText("Próxima jornada").assertIsDisplayed()
+            compose.onNodeWithText("19:00–07:00", substring = true).assertIsDisplayed()
             compose.onNodeWithText("Comienza en 1 d 7 h").assertIsDisplayed()
         } finally {
             device.setOrientationNatural()
@@ -242,7 +522,7 @@ class NextEventComposeTest {
         }
     }
 
-    private fun setCard(result: NextEventResult) {
+    private fun setCard(result: TodayCardProjection) {
         compose.setContent {
             MiGuardiaTheme {
                 NextEventCard(contentState(result), {})
@@ -250,21 +530,62 @@ class NextEventComposeTest {
         }
     }
 
-    private fun contentState(result: NextEventResult) = NextEventUiState(
+    private fun contentState(result: TodayCardProjection) = NextEventUiState(
         loadState = NextEventLoadState.CONTENT,
         result = result,
     )
 
     private fun projection(
+        now: Instant = NOW,
         shifts: List<Shift> = emptyList(),
         statuses: List<ExplicitDayStatus> = emptyList(),
-    ) = projectNextEvent(NOW, AppDefaults.zoneId(), shifts, statuses, emptyList())
+        actuals: Map<UUID, ShiftActualAggregate> = emptyMap(),
+        vacations: List<Vacation> = emptyList(),
+        medicalLeaves: List<MedicalLeave> = emptyList(),
+    ): TodayCardProjection {
+        val date = now.atZone(AppDefaults.zoneId()).toLocalDate()
+        val futureEvent = projectNextEvent(
+            now = now,
+            zoneId = AppDefaults.zoneId(),
+            shifts = shifts,
+            explicitDayStatuses = statuses,
+            vacations = vacations,
+            medicalLeaves = medicalLeaves,
+            actualShiftIds = actuals.keys,
+        )
+        return projectTodayCard(
+            now = now,
+            zoneId = AppDefaults.zoneId(),
+            todayShifts = shifts.filter { shift -> shift.localStartDate == date },
+            previousDayCandidates = shifts.filter { shift -> shift.localStartDate == date.minusDays(1) },
+            actualsByShiftId = actuals,
+            vacations = vacations,
+            medicalLeaves = medicalLeaves,
+            futureEvent = futureEvent,
+        )
+    }
 
-    private fun futureShift(): Shift {
-        val date = LocalDate.of(2026, 8, 16)
-        val start = ZonedDateTime.of(date, LocalTime.of(19, 0), AppDefaults.zoneId()).toInstant()
-        val end = ZonedDateTime.of(date.plusDays(1), LocalTime.of(7, 0), AppDefaults.zoneId()).toInstant()
-        return shift("20000000-0000-0000-0000-000000000001", start, end)
+    private fun futureShift(): Shift = shift(
+        id = "80000000-0000-0000-0000-000000000001",
+        start = instant(2026, 8, 16, 19, 0),
+        end = instant(2026, 8, 17, 7, 0),
+    )
+
+    private fun todayShift(
+        id: String,
+        hour: Int,
+        durationHours: Long = 4,
+        name: String = "Objetivo ficticio",
+        abbreviation: String = "FIC",
+    ): Shift {
+        val start = instant(2026, 8, 15, hour, 0)
+        return shift(
+            id = id,
+            start = start,
+            end = start.plusSeconds(durationHours * 60 * 60),
+            name = name,
+            abbreviation = abbreviation,
+        )
     }
 
     private fun shift(
@@ -293,6 +614,44 @@ class NextEventComposeTest {
         updatedAt = Instant.EPOCH,
     )
 
+    private fun actualFor(
+        shift: Shift,
+        start: Instant,
+        end: Instant,
+        reason: String,
+        explanation: String,
+    ) = ShiftActualAggregate(
+        record = ShiftActualRecord(
+            shiftId = shift.id,
+            timelineId = UUID(0L, 601L),
+            sector = WorkSector.PRIVATE_SECURITY,
+            actualStart = start,
+            actualEnd = end,
+            differenceReason = reason,
+            explanation = explanation,
+            createdAt = Instant.EPOCH,
+            updatedAt = Instant.EPOCH,
+        ),
+        extraIntervals = emptyList(),
+    )
+
+    private fun vacation() = Vacation(
+        id = UUID(0L, 701L),
+        startDate = TODAY,
+        endDateInclusive = TODAY,
+        createdAt = Instant.EPOCH,
+        updatedAt = Instant.EPOCH,
+    )
+
+    private fun medicalLeave(privateNote: String) = MedicalLeave(
+        id = UUID(0L, 702L),
+        startDate = TODAY,
+        endDateInclusive = TODAY,
+        privateNote = privateNote,
+        createdAt = Instant.EPOCH,
+        updatedAt = Instant.EPOCH,
+    )
+
     private fun calendarState(month: YearMonth) = CalendarUiState(
         visibleMonth = month,
         referenceInstant = NOW,
@@ -307,9 +666,22 @@ class NextEventComposeTest {
         loadState = CalendarLoadState.CONTENT,
     )
 
+    private fun instant(
+        year: Int,
+        month: Int,
+        day: Int,
+        hour: Int,
+        minute: Int,
+    ): Instant = ZonedDateTime.of(
+        LocalDate.of(year, month, day),
+        LocalTime.of(hour, minute),
+        AppDefaults.zoneId(),
+    ).toInstant()
+
     private companion object {
+        val TODAY: LocalDate = LocalDate.of(2026, 8, 15)
         val NOW: Instant = ZonedDateTime.of(
-            LocalDate.of(2026, 8, 15),
+            TODAY,
             LocalTime.NOON,
             AppDefaults.zoneId(),
         ).toInstant()

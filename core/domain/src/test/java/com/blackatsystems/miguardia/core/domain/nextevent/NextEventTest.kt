@@ -3,6 +3,7 @@ package com.blackatsystems.miguardia.core.domain.nextevent
 import com.blackatsystems.miguardia.core.domain.AppDefaults
 import com.blackatsystems.miguardia.core.domain.model.ExplicitDayStatus
 import com.blackatsystems.miguardia.core.domain.model.ExplicitDayStatusType
+import com.blackatsystems.miguardia.core.domain.model.MedicalLeave
 import com.blackatsystems.miguardia.core.domain.model.Shift
 import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
 import com.blackatsystems.miguardia.core.domain.model.Vacation
@@ -88,6 +89,46 @@ class NextEventTest {
         assertEquals(listOf(after), result.upcomingShifts)
         assertEquals(original, inside)
         assertEquals(ShiftStatus.PLANNED, inside.status)
+    }
+
+    @Test
+    fun medicalLeaveAndExistingActualExcludeInvalidFutureCandidates() {
+        val medical = shiftAt(
+            "10000000-0000-0000-0000-000000000009",
+            LocalDate.of(2026, 8, 16),
+            LocalTime.of(8, 0),
+            LocalTime.of(16, 0),
+        )
+        val withActual = shiftAt(
+            "10000000-0000-0000-0000-000000000010",
+            LocalDate.of(2026, 8, 17),
+            LocalTime.of(8, 0),
+            LocalTime.of(16, 0),
+        )
+        val valid = shiftAt(
+            "10000000-0000-0000-0000-000000000011",
+            LocalDate.of(2026, 8, 18),
+            LocalTime.of(8, 0),
+            LocalTime.of(16, 0),
+        )
+
+        val result = projection(
+            instant = now,
+            shifts = listOf(medical, withActual, valid),
+            medicalLeaves = listOf(
+                MedicalLeave(
+                    id = UUID.fromString("80000000-0000-0000-0000-000000000002"),
+                    startDate = medical.localStartDate,
+                    endDateInclusive = medical.localStartDate,
+                    privateNote = "contenido privado que no participa de la proyección",
+                    createdAt = Instant.EPOCH,
+                    updatedAt = Instant.EPOCH,
+                ),
+            ),
+            actualShiftIds = setOf(withActual.id),
+        )
+
+        assertEquals(listOf(valid), result.upcomingShifts)
     }
 
     @Test
@@ -188,7 +229,17 @@ class NextEventTest {
         shifts: List<Shift> = emptyList(),
         statuses: List<ExplicitDayStatus> = emptyList(),
         vacations: List<Vacation> = emptyList(),
-    ) = projectNextEvent(instant, zone, shifts, statuses, vacations)
+        medicalLeaves: List<MedicalLeave> = emptyList(),
+        actualShiftIds: Set<UUID> = emptySet(),
+    ) = projectNextEvent(
+        instant,
+        zone,
+        shifts,
+        statuses,
+        vacations,
+        medicalLeaves,
+        actualShiftIds,
+    )
 
     private fun shiftAt(
         id: String,

@@ -110,8 +110,9 @@ class NavigationDrawerComposeTest {
         ).forEach { compose.onNodeWithText(it).assertExists() }
         compose.onNodeWithTag("main-navigation-drawer").assertIsNotDisplayed()
 
-        openDestination("main-destination-calendar", "Próximo evento")
-        compose.onNodeWithText("Próximo evento").assertExists()
+        compose.onNodeWithContentDescription("Abrir menú").performClick()
+        compose.onNodeWithTag("main-destination-calendar").performScrollTo().performClick()
+        compose.onNodeWithTag("next-event-card").assertIsDisplayed()
         compose.onNodeWithTag("main-navigation-drawer").assertIsNotDisplayed()
     }
 

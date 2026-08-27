@@ -15,10 +15,10 @@
   la tarea siguiente por su cuenta.
 - **Contrato humano:** toda dependencia nueva explica primero `QUÉ HACE` y
   `POR QUÉ EXISTE`, tanto en su prompt como en su handoff.
-- **Última dependencia cerrada:** `Guardias pasivas y disponibilidad`, auditada
-  e integrada por MAIN sobre Room V2 versión 5.
-- **Próxima dependencia habilitada:** `Calendario final y tarjeta superior`,
-  mediante `CALENDARIO_FINAL_Y_TARJETA_SUPERIOR_V2.md`.
+- **Última dependencia cerrada:** `Calendario final y tarjeta superior`,
+  auditada, corregida e integrada por MAIN sin modificar Room V2 versión 5.
+- **Próxima etapa recomendada:** `Resumen personalizable`; todavía no existe un
+  prompt habilitado y MAIN espera la indicación de Joaquin para prepararlo.
 - **Commits locales:** MAIN los crea automáticamente como checkpoints de
   bloques comprobados.
 - **Push puntual anterior de la rama 2.0:** ejecutado y verificado hasta
@@ -81,7 +81,7 @@ prevalecen para el estado operativo.
 | `REGISTRAR_HORARIO_REAL_Y_CLASIFICAR_HORAS_EXTRA_V2.md` | **CERRADO** | Horario real y extras exactas por jornada integrados sobre Room V2 versión 3, sin calcular todavía avance |
 | `EXTRAS_INDEPENDIENTES_Y_AVANCE_DE_HORAS_V2.md` | **CERRADO** | Extras sin jornada dueña, reinicio consciente de la referencia y avance de horas integrados sobre Room V2 versión 4 |
 | `GUARDIAS_PASIVAS_Y_DISPONIBILIDAD_V2.md` | **CERRADO** | Ventanas pasivas exactas integradas sobre Room V2 versión 5; sólo la unión del trabajo activo coincidente las reemplaza y nunca suman como horas trabajadas |
-| `CALENDARIO_FINAL_Y_TARJETA_SUPERIOR_V2.md` | **HABILITADO** | Terminación de la única grilla mensual y tarjeta desplegable con todas las jornadas de hoy |
+| `CALENDARIO_FINAL_Y_TARJETA_SUPERIOR_V2.md` | **CERRADO** | Única grilla mensual consolidada y tarjeta desplegable con todas las jornadas de hoy, auditadas por MAIN |
 
 ## Contratos históricos de MiGuardia 1.0
 
@@ -138,9 +138,9 @@ Joaquin indicó que quiere preparar o abrir la siguiente:
    de reinicio y no existe prorrateo automático;
 9. **Cerrado:** guardias pasivas y disponibilidad mediante
    `GUARDIAS_PASIVAS_Y_DISPONIBILIDAD_V2.md`;
-10. **Habilitado / próximo:** Calendario final y tarjeta superior mediante
+10. **Cerrado:** Calendario final y tarjeta superior mediante
     `CALENDARIO_FINAL_Y_TARJETA_SUPERIOR_V2.md`;
-11. Resumen personalizable;
+11. **Siguiente recomendado, todavía no habilitado:** Resumen personalizable;
 12. adaptación de próximo evento y notificaciones;
 13. auditoría integral del núcleo;
 14. segunda capa: widget, informes, copias, bloqueo y Ayuda/recorrido inicial;

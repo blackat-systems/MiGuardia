@@ -16,6 +16,7 @@ import androidx.test.uiautomator.UiDevice
 import com.blackatsystems.miguardia.core.domain.AppDefaults
 import com.blackatsystems.miguardia.core.domain.model.Shift
 import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
+import com.blackatsystems.miguardia.ui.theme.AppZoom
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
@@ -46,6 +47,16 @@ class V2ReadyCalendarRecreationActivityTest {
         check(context.packageName == QA_APPLICATION_ID) {
             "La recreación V2Ready sólo puede probarse contra el paquete QA."
         }
+        check(
+            context.getSharedPreferences(
+                MainActivity.DISPLAY_PREFERENCES,
+                android.content.Context.MODE_PRIVATE,
+            ).edit()
+                .putInt(MainActivity.APP_ZOOM_PERCENT, AppZoom.STANDARD.percent)
+                .commit(),
+        ) {
+            "La recreación debe comenzar con el zoom interno estándar."
+        }
         val device = UiDevice.getInstance(instrumentation)
         device.wakeUp()
         instrumentation.uiAutomation.executeShellCommand("wm dismiss-keyguard").close()
@@ -58,12 +69,25 @@ class V2ReadyCalendarRecreationActivityTest {
         selectedMonth = YearMonth.now(AppDefaults.zoneId()).plusMonths(1)
         selectedDate = selectedMonth.atDay(10)
         val shift = fixtureShift(selectedDate)
+        val todayHistory = fixtureShift(LocalDate.now(AppDefaults.zoneId())).copy(
+            id = TODAY_HISTORY_SHIFT_ID,
+            objectiveNameSnapshot = TODAY_HISTORY_NAME,
+            objectiveAbbreviationSnapshot = "HST",
+            status = ShiftStatus.CANCELLED,
+        )
         val store = (context.applicationContext as MiGuardiaApplication).localDataStore
         store.clearAllDataForInstrumentation()
         runBlocking {
             check(store.workConfiguration.get() == null) {
                 "La preparación QA debe dejar una base sin configuración."
             }
+            store.v2Shifts.insert(
+                V2AppTestFixture.writeFor(
+                    store = store,
+                    shift = todayHistory,
+                    effectiveFrom = todayHistory.localStartDate,
+                ),
+            )
             store.v2Shifts.insert(
                 V2AppTestFixture.writeFor(
                     store = store,
@@ -85,7 +109,12 @@ class V2ReadyCalendarRecreationActivityTest {
 
     @Test
     fun recreationKeepsTheVisibleMonthAndOpenDayDetailInV2Ready() {
-        compose.onNodeWithContentDescription("Mes siguiente").performClick()
+        waitForTag("today-card-toggle")
+        compose.onNodeWithTag("today-card-toggle").performClick()
+        waitForText("Ocultar jornadas de hoy")
+        compose.onNodeWithTag("today-card-shift-$TODAY_HISTORY_SHIFT_ID").assertIsDisplayed()
+
+        compose.onNodeWithContentDescription("Mes siguiente").performScrollTo().performClick()
         waitForText(selectedMonth.displayName())
         waitForTag("day-$selectedDate")
         compose.onNodeWithTag("day-$selectedDate").performScrollTo().performClick()
@@ -102,6 +131,8 @@ class V2ReadyCalendarRecreationActivityTest {
         waitForText(selectedMonth.displayName())
         compose.onNodeWithText(selectedMonth.displayName()).assertIsDisplayed()
         compose.onNodeWithTag("day-$selectedDate").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Ocultar jornadas de hoy").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("today-card-shift-$TODAY_HISTORY_SHIFT_ID").assertIsDisplayed()
     }
 
     private fun waitForTag(tag: String) {
@@ -158,6 +189,8 @@ class V2ReadyCalendarRecreationActivityTest {
         const val SHIFT_NAME: String = "Lugar ficticio de recreación"
         const val SHIFT_ABBREVIATION: String = "RCV"
         const val SHIFT_IDENTITY: String = "$SHIFT_NAME ($SHIFT_ABBREVIATION)"
+        const val TODAY_HISTORY_NAME: String = "Registro histórico ficticio de hoy"
         val SHIFT_ID: UUID = UUID.fromString("95000000-0000-0000-0000-000000000001")
+        val TODAY_HISTORY_SHIFT_ID: UUID = UUID.fromString("95000000-0000-0000-0000-000000000002")
     }
 }

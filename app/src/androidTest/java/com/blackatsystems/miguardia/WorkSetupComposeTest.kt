@@ -129,7 +129,7 @@ class WorkSetupComposeTest {
         compose.onNodeWithTag("work-sector-nursing").assertIsSelected()
 
         compose.runOnIdle { state = needsFirstSetState(WorkSector.NURSING) }
-        compose.onNodeWithText("Próximo evento").assertIsDisplayed()
+        compose.onNodeWithTag("next-event-card").assertIsDisplayed()
         compose.onNodeWithText("Todavía no cargaste ningún lugar de trabajo").assertIsDisplayed()
     }
 
@@ -141,7 +141,7 @@ class WorkSetupComposeTest {
             actions = WorkSetupActions(openFirstWorkSet = { opened = true }),
         )
 
-        compose.onNodeWithText("Próximo evento").assertIsDisplayed()
+        compose.onNodeWithTag("next-event-card").assertIsDisplayed()
         compose.onNodeWithText("Todavía no cargaste ningún lugar de trabajo").assertIsDisplayed()
         compose.onNodeWithText("Cargar datos").assertDoesNotExist()
         compose.onNodeWithText("Editar calendario").assertDoesNotExist()

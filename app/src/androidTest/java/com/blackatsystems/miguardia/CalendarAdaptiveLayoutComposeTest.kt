@@ -30,6 +30,7 @@ import com.blackatsystems.miguardia.core.domain.calendar.projectCalendarMonth
 import com.blackatsystems.miguardia.core.domain.model.Shift
 import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
 import com.blackatsystems.miguardia.core.domain.nextevent.projectNextEvent
+import com.blackatsystems.miguardia.core.domain.nextevent.projectTodayCard
 import com.blackatsystems.miguardia.ui.MiGuardiaApp
 import com.blackatsystems.miguardia.ui.calendar.CalendarLoadState
 import com.blackatsystems.miguardia.ui.calendar.CalendarUiState
@@ -133,10 +134,10 @@ class CalendarAdaptiveLayoutComposeTest {
             bringGridStartIntoVerticalViewport()
             gridText("ABCDE", FIRST_SHIFT_DATE).performScrollTo().assertIsDisplayed()
             gridText("19:00–07:00", FIRST_SHIFT_DATE).performScrollTo().assertIsDisplayed()
-            gridText("Próx.", FIRST_SHIFT_DATE).performScrollTo().assertIsDisplayed()
+            gridText("Próxima", FIRST_SHIFT_DATE).performScrollTo().assertIsDisplayed()
             gridText("RGT", RIGHTMOST_SHIFT_DATE).performScrollTo().assertIsDisplayed()
             gridText("08:00–16:00", RIGHTMOST_SHIFT_DATE).performScrollTo().assertIsDisplayed()
-            gridText("Cancel.", RIGHTMOST_SHIFT_DATE).performScrollTo().assertIsDisplayed()
+            gridText("Cancelada", RIGHTMOST_SHIFT_DATE).performScrollTo().assertIsDisplayed()
             compose.onNodeWithTag("calendar-v2-load-shifts").performScrollTo().assertIsDisplayed()
             compose.onNodeWithTag("calendar-work-setup-action").performScrollTo().assertIsDisplayed()
         }
@@ -187,12 +188,21 @@ class CalendarAdaptiveLayoutComposeTest {
             onRetry = {},
             nextEventState = NextEventUiState(
                 loadState = NextEventLoadState.CONTENT,
-                result = projectNextEvent(
-                    referenceNow,
-                    AppDefaults.zoneId(),
-                    shifts,
-                    emptyList(),
-                    emptyList(),
+                result = projectTodayCard(
+                    now = referenceNow,
+                    zoneId = AppDefaults.zoneId(),
+                    todayShifts = shifts,
+                    previousDayCandidates = shifts,
+                    actualsByShiftId = emptyMap(),
+                    vacations = emptyList(),
+                    medicalLeaves = emptyList(),
+                    futureEvent = projectNextEvent(
+                        referenceNow,
+                        AppDefaults.zoneId(),
+                        shifts,
+                        emptyList(),
+                        emptyList(),
+                    ),
                 ),
             ),
             appZoom = appZoom,
