@@ -7,9 +7,9 @@ funcionales reunidas constituyen la base vigente para avanzar; cerrar esta etapa
 no significa que exista ya una implementación nueva.
 
 El bloque **Resumen personalizable** quedó auditado, corregido, probado
-físicamente e integrado por MAIN sin modificar Room V2 versión 5. El siguiente
-bloque del orden aprobado es **Próximo evento y notificaciones**, pero todavía
-no posee un prompt V2 habilitado ni una tarea autorizada.
+físicamente, integrado y publicado por MAIN sin modificar Room V2 versión 5.
+El siguiente bloque del orden aprobado es **Próximo evento y notificaciones**.
+Su prompt V2 ya está habilitado; la tarea todavía no fue abierta.
 
 MAIN 2.0 está reactivada para recibir los handoffs que Joaquin entregue,
 auditarlos, integrarlos, probarlos y cerrarlos. Joaquin decide cuándo pedir el
@@ -24,9 +24,10 @@ verificó hasta `0364b83`; esa autorización quedó consumida. Joaquin autorizó
 pasivas y disponibilidad. MAIN lo ejecutó y verificó en `80fe8e5`; esa
 autorización quedó consumida. Joaquin autorizó después publicar el cierre verde
 de Calendario final y tarjeta superior; MAIN lo ejecutó y verificó en
-`fd6891e`. Esa autorización también quedó consumida y no se extiende a pushes
-posteriores, tags, un Release, `main`, la publicación de la aplicación ni
-ninguna acción sobre el paquete o los datos de producción.
+`fd6891e`. Joaquin autorizó después publicar Resumen personalizable; MAIN lo
+ejecutó y verificó en `ad777bb`. Ambas autorizaciones quedaron consumidas y no
+se extienden a pushes posteriores, tags, un Release, `main`, la publicación de
+la aplicación ni ninguna acción sobre el paquete o los datos de producción.
 
 Decisión de producto del 2026-08-23: MiGuardia 1.0 fue una prueba interna sin
 usuarios y continúa únicamente como base de código. MiGuardia 2.0 no migra datos
@@ -861,6 +862,52 @@ dejaron hallazgos bloqueantes después de las correcciones. La auditoría durabl
 está en `docs/audits/2026-08-27-resumen-personalizable-v2.md`. Este cierre no
 autoriza push ni ninguna acción sobre producción.
 
+El checkpoint del Resumen fue publicado después por autorización expresa de
+Joaquin y quedó verificado en `ad777bb`; esa autorización está consumida.
+
+## Próximo evento y notificaciones — prompt habilitado
+
+El prompt `docs/prompts/PROXIMO_EVENTO_Y_NOTIFICACIONES_V2.md` quedó
+`HABILITADO`. La tarea todavía no fue abierta y no existe un candidato de
+código.
+
+La preparación de MAIN verificó que el motor actual debe adaptarse, no
+reemplazarse. La tarjeta superior ya comprende jornadas, vacaciones, carpetas
+médicas y horario real, pero todavía no disponibilidad ni toda la fotografía
+laboral V2. El planificador, reconciliador y receptor de notificaciones siguen
+centrados en jornadas, vacaciones y excepciones particulares, por lo que ambos
+consumidores hoy pueden interpretar fuentes distintas.
+
+El contrato nuevo fija:
+
+- una sola proyección pura y tipada para tarjeta y avisos;
+- jornadas manuales y recurrentes leídas como
+  `Shift + ShiftWorkSnapshot`;
+- disponibilidad calculada mediante sus tramos efectivos existentes;
+- jornada activa antes que disponibilidad activa y desempates deterministas;
+- franco explícito sólo como fallback visual;
+- cancelación, ausencia, vacaciones, carpeta médica y horario real como
+  invalidadores de avisos planificados obsoletos;
+- extras independientes excluidos del futuro porque ya son trabajo realizado;
+- preferencias globales compartidas y excepciones particulares sólo por
+  jornada;
+- identidad tipada compatible con el tracking histórico de DataStore;
+- vocabulario `Jornada` para los cuatro rubros y etiqueta histórica exacta
+  para Guardia pasiva, Disponible para llamado o Retén;
+- Room V2 versión 5, veintisiete tablas, permisos, manifiesto, dependencias y
+  canales preservados.
+
+Tres auditorías independientes de sólo lectura coincidieron en que no hace
+falta otra decisión de producto, una migración Room ni un permiso nuevo. La
+preparación está registrada en
+`docs/audits/2026-08-27-preparacion-proximo-evento-y-notificaciones-v2.md` y la
+arquitectura en
+`docs/adr/0032-proyeccion-unica-de-eventos-y-avisos-locales-v2.md`.
+
+El bloque exigirá una autorización nueva antes de usar Samsung o emuladores.
+Una alarma exacta real y un reinicio físico seguirán siendo puertas inmediatas
+separadas.
+
 ## Flujo vigente de MAIN
 
 - Joaquin entrega un handoff o pide preparar el prompt de una nueva tarea;
@@ -885,8 +932,9 @@ la integración, pruebas, documentación y checkpoints locales a cargo de MAIN.
 Esta autorización de flujo no permite recuperar el candidato mensual descartado
 ni amplía el alcance a tags, Release, `main`, publicación de la aplicación o
 producción. Las autorizaciones puntuales que publicaron disponibilidad y
-Calendario final ya fueron consumidas; no existe una autorización vigente para
-publicar el checkpoint del Resumen ni bloques posteriores.
+Calendario final, y la que publicó Resumen, ya fueron consumidas; no existe una
+autorización vigente para publicar el próximo checkpoint documental ni bloques
+posteriores.
 
 ## Backlog posterior
 
@@ -910,17 +958,17 @@ publicar el checkpoint del Resumen ni bloques posteriores.
   de situaciones especiales; quedan diferidos y no bloquean el Calendario;
 - consolidación adicional del motor de horas dentro de las superficies finales
   que realmente la necesiten;
-- adaptación posterior de notificaciones y de los consumidores restantes del
-  motor de próximo evento;
+- implementación de la adaptación de próximo evento y notificaciones; el
+  prompt ya está habilitado, pero la tarea no fue abierta;
 - cambio de `versionName`/`versionCode` para una futura entrega 2.0.
 
 ## Próximo paso
 
-Resumen personalizable quedó cerrado sin modificar Room V2 versión 5. El
-siguiente bloque del orden aprobado es **Próximo evento y notificaciones**.
-Antes de abrirlo, MAIN debe releer el estado actual, fijar qué consumidores V2
-entran, crear un prompt autosuficiente y esperar la autorización expresa de
-Joaquin. No hay otra dependencia habilitada en este momento.
+Resumen personalizable quedó cerrado y publicado sin modificar Room V2 versión
+5. El siguiente bloque del orden aprobado es **Próximo evento y
+notificaciones**. Su contrato autosuficiente ya está habilitado en
+`docs/prompts/PROXIMO_EVENTO_Y_NOTIFICACIONES_V2.md`; el próximo paso es abrir
+una única tarea especializada cuando Joaquin lo indique.
 
 La preparación y el cierre del Resumen están registrados respectivamente en
 `docs/audits/2026-08-27-preparacion-resumen-personalizable-v2.md` y
@@ -931,6 +979,7 @@ Quedan como verificaciones separadas el recorrido físico de alarma exacta
 —sólo con permiso explícito— y API 37 antes del candidato final. API 26 no se
 repitió con Room V2 versión 5; no corresponde una migración V1 real en el
 Samsung. Los pushes autorizados para disponibilidad y para Calendario final
-fueron ejecutados y consumidos en `80fe8e5` y `fd6891e`, respectivamente.
-Cualquier push posterior —incluido el checkpoint del Resumen—, tag, Release y
-toda operación sobre `main` o producción continúan prohibidos.
+fueron ejecutados y consumidos en `80fe8e5` y `fd6891e`, respectivamente. El
+push del Resumen también fue ejecutado y consumido en `ad777bb`. Cualquier push
+posterior, tag, Release y toda operación sobre `main` o producción continúan
+prohibidos.

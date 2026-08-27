@@ -36,6 +36,9 @@ Joaquin autorizó:
 - conservar como ejecutado y consumido en `fd6891e` el push autorizado por
   Joaquin el 2026-08-27 para publicar el cierre verde de Calendario final y
   tarjeta superior.
+- conservar como ejecutado y consumido en `ad777bb` el push autorizado por
+  Joaquin el 2026-08-27 para publicar el cierre verde de Resumen
+  personalizable.
 
 Todas las autorizaciones anteriores ya quedaron consumidas. No están
 habilitados pushes posteriores, tag, Release, operación sobre `main`, cambio en
@@ -316,6 +319,8 @@ mayor al planificado.
 - Joaquin autorizó después publicar Calendario final y tarjeta superior; MAIN
   lo ejecutó y verificó en `fd6891e`, por lo que esa autorización también quedó
   consumida.
+- Joaquin autorizó después publicar Resumen personalizable; MAIN lo ejecutó y
+  verificó en `ad777bb`, por lo que esa autorización también quedó consumida.
 - No hacer pushes posteriores a ese cierre, merge a `main`, tag, Release ni
   publicación de la aplicación.
 - No usar `reset --hard`, no limpiar worktrees históricos y no descartar cambios

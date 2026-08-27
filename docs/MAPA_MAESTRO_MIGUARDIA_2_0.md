@@ -171,7 +171,7 @@ Calendario final y tarjeta superior desplegable — cerrado
         ↓
 Resumen personalizable — cerrado
         ↓
-Próximo evento y notificaciones — siguiente bloque planificado, no habilitado
+Próximo evento y notificaciones — prompt habilitado, tarea no abierta
         ↓
 Auditoría integral del núcleo y compatibilidad Android
         ↓
