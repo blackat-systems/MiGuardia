@@ -77,6 +77,7 @@ class NavigationDrawerComposeTest {
 
         listOf(
             "Calendario",
+            "Resumen",
             "Mi forma de trabajar",
             "Feriados",
             "Vacaciones",
@@ -96,12 +97,17 @@ class NavigationDrawerComposeTest {
         }
         compose.onNodeWithText("Configuración").assertDoesNotExist()
         compose.onNodeWithTag("main-destination-calendar").assertIsSelected()
+        compose.onNodeWithTag("main-destination-summary").assertIsNotSelected()
         compose.onNodeWithTag("main-destination-appearance").assertIsNotSelected()
     }
 
     @Test
     fun selectingEachMainDestinationClosesDrawerAndShowsItsScreen() {
         setAppContent()
+
+        openDestination("main-destination-summary", "Resumen")
+        compose.onNodeWithTag("summary-overview").assertIsDisplayed()
+        compose.onNodeWithTag("main-navigation-drawer").assertIsNotDisplayed()
 
         openDestination("main-destination-appearance", "Tema de MiGuardia")
         listOf(

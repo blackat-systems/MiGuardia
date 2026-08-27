@@ -1,6 +1,6 @@
 # Resumen personalizable V2
 
-- Estado: **HABILITADO**
+- Estado: **CERRADO**
 - Fecha: 2026-08-27
 - Proyecto obligatorio:
   `C:\Users\Joaquin\Desktop\chatgptprojects\MiGuardia-2.0`

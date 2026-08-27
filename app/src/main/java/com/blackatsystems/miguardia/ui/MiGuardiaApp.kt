@@ -54,6 +54,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -61,6 +62,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -89,6 +91,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.TextUnit
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import com.blackatsystems.miguardia.R
 import com.blackatsystems.miguardia.core.domain.AppDefaults
 import com.blackatsystems.miguardia.core.domain.calendar.CalendarDay
@@ -155,6 +160,10 @@ import com.blackatsystems.miguardia.ui.photos.PhotosSurface
 import com.blackatsystems.miguardia.ui.photos.PhotosSurfaceHost
 import com.blackatsystems.miguardia.ui.photos.PhotosUiState
 import com.blackatsystems.miguardia.ui.photos.PhotosViewModel
+import com.blackatsystems.miguardia.ui.summary.SummaryActions
+import com.blackatsystems.miguardia.ui.summary.SummaryScreen
+import com.blackatsystems.miguardia.ui.summary.SummaryUiState
+import com.blackatsystems.miguardia.ui.summary.SummaryViewModel
 import com.blackatsystems.miguardia.ui.exceptions.ExceptionsActions
 import com.blackatsystems.miguardia.ui.exceptions.ExceptionsSurface
 import com.blackatsystems.miguardia.ui.exceptions.ExceptionsSurfaceHost
@@ -202,6 +211,7 @@ private enum class MainDestination(
     val glyph: String,
 ) {
     CALENDAR(R.string.calendar, R.string.drawer_calendar_description, "▦"),
+    SUMMARY(R.string.summary, R.string.drawer_summary_description, "≡"),
     APPEARANCE(R.string.appearance, R.string.drawer_appearance_description, "◐"),
 }
 
@@ -387,6 +397,7 @@ fun MiGuardiaApp(
     workSetupViewModel: WorkSetupViewModel,
     hoursAndExtrasViewModel: HoursAndExtrasViewModel,
     availabilityViewModel: AvailabilityViewModel,
+    summaryViewModel: SummaryViewModel,
     modifier: Modifier = Modifier,
     calendarNavigationRequest: Int = 0,
     appZoom: AppZoom = AppZoom.STANDARD,
@@ -408,6 +419,7 @@ fun MiGuardiaApp(
     val workSetupState by workSetupViewModel.uiState.collectAsStateWithLifecycle()
     val hoursAndExtrasState by hoursAndExtrasViewModel.uiState.collectAsStateWithLifecycle()
     val availabilityState by availabilityViewModel.uiState.collectAsStateWithLifecycle()
+    val summaryState by summaryViewModel.uiState.collectAsStateWithLifecycle()
     MiGuardiaApp(
         calendarState = calendarState,
         nextEventState = nextEventState,
@@ -448,6 +460,8 @@ fun MiGuardiaApp(
         hoursAndExtrasActions = HoursAndExtrasActions.from(hoursAndExtrasViewModel),
         availabilityState = availabilityState,
         availabilityActions = AvailabilityActions.from(availabilityViewModel),
+        summaryState = summaryState,
+        summaryActions = SummaryActions.from(summaryViewModel),
         calendarNavigationRequest = calendarNavigationRequest,
         appZoom = appZoom,
         onAppZoomChange = onAppZoomChange,
@@ -500,6 +514,8 @@ fun MiGuardiaApp(
     hoursAndExtrasActions: HoursAndExtrasActions = HoursAndExtrasActions(),
     availabilityState: AvailabilityUiState = AvailabilityUiState(),
     availabilityActions: AvailabilityActions = AvailabilityActions(),
+    summaryState: SummaryUiState = SummaryUiState(visibleMonth = calendarState.visibleMonth),
+    summaryActions: SummaryActions = SummaryActions(),
     calendarNavigationRequest: Int = 0,
     appZoom: AppZoom = AppZoom.STANDARD,
     onAppZoomChange: (AppZoom) -> Unit = {},
@@ -541,7 +557,40 @@ fun MiGuardiaApp(
     val v2ShiftActualActive = v2ShiftActualState.isBlocking
     val hoursAndExtrasActive = hoursAndExtrasState.isBlocking
     val availabilityActive = availabilityState.isBlocking
+    val hasExternalBlockingSurface = exceptionsState.surface != ExceptionsSurface.NONE ||
+        vacationState.surface != VacationSurface.NONE ||
+        photosState.surface != PhotosSurface.NONE ||
+        notificationState.surface != NotificationSurface.NONE ||
+        weatherState.surface != WeatherSurface.NONE ||
+        workSetupState.surface != WorkSetupSurface.NONE ||
+        v2ManualLoadActive ||
+        v2ShiftEditActive ||
+        v2RecurringActive ||
+        v2ShiftActualActive ||
+        hoursAndExtrasActive ||
+        availabilityActive
     var destination by rememberSaveable { androidx.compose.runtime.mutableStateOf(MainDestination.CALENDAR) }
+    val currentSetSummaryActive by rememberUpdatedState(summaryActions.setActive)
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(destination, lifecycleOwner, hasExternalBlockingSurface) {
+        val summaryIsVisible = destination == MainDestination.SUMMARY && !hasExternalBlockingSurface
+        val lifecycle = lifecycleOwner.lifecycle
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_START -> currentSetSummaryActive(summaryIsVisible)
+                Lifecycle.Event.ON_STOP -> currentSetSummaryActive(false)
+                else -> Unit
+            }
+        }
+        lifecycle.addObserver(observer)
+        if (lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+            currentSetSummaryActive(summaryIsVisible)
+        }
+        onDispose {
+            lifecycle.removeObserver(observer)
+            if (summaryIsVisible) currentSetSummaryActive(false)
+        }
+    }
     val displayedCalendarState = if (
         !v2ManualLoadActive && calendarState.interactionMode == CalendarInteractionMode.EDIT
     ) {
@@ -562,18 +611,8 @@ fun MiGuardiaApp(
     } else {
         null
     }
-    val hasBlockingSurface = exceptionsState.surface != ExceptionsSurface.NONE ||
-        vacationState.surface != VacationSurface.NONE ||
-        photosState.surface != PhotosSurface.NONE ||
-        notificationState.surface != NotificationSurface.NONE ||
-        weatherState.surface != WeatherSurface.NONE ||
-        workSetupState.surface != WorkSetupSurface.NONE ||
-        v2ManualLoadActive ||
-        v2ShiftEditActive ||
-        v2RecurringActive ||
-        v2ShiftActualActive ||
-        hoursAndExtrasActive ||
-        availabilityActive
+    val hasBlockingSurface = hasExternalBlockingSurface ||
+        (destination == MainDestination.SUMMARY && summaryState.hasSubsurface)
     val canOpenDrawer = !hasBlockingSurface && selectedDay == null
     LaunchedEffect(calendarNavigationRequest) {
         if (calendarNavigationRequest > 0) {
@@ -723,6 +762,11 @@ fun MiGuardiaApp(
                         selected = destination == MainDestination.CALENDAR,
                         onClick = { selectDestination(MainDestination.CALENDAR) },
                     )
+                    DrawerDestinationItem(
+                        item = MainDestination.SUMMARY,
+                        selected = destination == MainDestination.SUMMARY,
+                        onClick = { selectDestination(MainDestination.SUMMARY) },
+                    )
                     DrawerSectionTitle(R.string.drawer_section_work)
                     WorkDrawerActions.forEach { action ->
                         DrawerActionItem(action = action, onClick = { openDrawerAction(action) })
@@ -818,6 +862,12 @@ fun MiGuardiaApp(
                     },
                 )
 
+                MainDestination.SUMMARY -> SummaryScreen(
+                    state = summaryState,
+                    actions = summaryActions,
+                    contentPadding = innerPadding,
+                )
+
                 MainDestination.APPEARANCE -> AppearanceScreen(
                     contentPadding = innerPadding,
                     appZoom = appZoom,
@@ -848,7 +898,13 @@ fun MiGuardiaApp(
         },
     )
     BackHandler(
-        enabled = destination != MainDestination.CALENDAR && !hasBlockingSurface,
+        enabled = destination == MainDestination.SUMMARY && summaryState.hasSubsurface,
+        onBack = summaryActions.back,
+    )
+    BackHandler(
+        enabled = destination != MainDestination.CALENDAR &&
+            !(destination == MainDestination.SUMMARY && summaryState.hasSubsurface) &&
+            !hasBlockingSurface,
         onBack = { destination = MainDestination.CALENDAR },
     )
     BackHandler(

@@ -233,6 +233,44 @@ data class AvailabilityTotals(
     }
 }
 
+data class AvailabilityMinuteSegment(
+    val start: Instant,
+    val end: Instant,
+    val activeWorkKeys: List<String>,
+) {
+    init {
+        require(durationMinutes > 0L) { "Un tramo de disponibilidad debe tener duración positiva" }
+        require(activeWorkKeys == activeWorkKeys.distinct().sorted()) {
+            "Las fuentes que ocupan disponibilidad deben ser únicas y deterministas"
+        }
+    }
+
+    val durationMinutes: Long
+        get() = exactDurationMinutes(start, end)
+}
+
+data class AvailabilityIntervalBreakdown(
+    val totals: AvailabilityBreakdown,
+    val programmed: List<AvailabilityMinuteSegment>,
+    val effectiveElapsed: List<AvailabilityMinuteSegment>,
+    val replacedElapsed: List<AvailabilityMinuteSegment>,
+    val futurePending: List<AvailabilityMinuteSegment>,
+    val effectiveProjectedAtEnd: List<AvailabilityMinuteSegment>,
+    val futureOccupiedByPlannedWork: List<AvailabilityMinuteSegment>,
+) {
+    init {
+        require(sumAvailabilitySegments(programmed) == totals.programmedMinutes)
+        require(sumAvailabilitySegments(effectiveElapsed) == totals.effectiveElapsedMinutes)
+        require(sumAvailabilitySegments(replacedElapsed) == totals.replacedElapsedMinutes)
+        require(sumAvailabilitySegments(futurePending) == totals.futurePendingMinutes)
+        require(sumAvailabilitySegments(effectiveProjectedAtEnd) == totals.effectiveProjectedAtEndMinutes)
+        require(
+            sumAvailabilitySegments(futureOccupiedByPlannedWork) ==
+                totals.futureOccupiedByPlannedWorkMinutes,
+        )
+    }
+}
+
 fun sumAvailabilityBreakdowns(results: Iterable<AvailabilityBreakdown>): AvailabilityTotals =
     results.fold(
         AvailabilityTotals(0L, 0L, 0L, 0L, 0L, 0L),
@@ -264,18 +302,38 @@ fun calculateAvailabilityBreakdown(
     activeWork: Iterable<AvailabilityActiveWorkInterval>,
     isProtected: Boolean,
     clock: Clock,
-): AvailabilityBreakdown {
+): AvailabilityBreakdown = calculateAvailabilityIntervalBreakdown(
+    window = window,
+    activeWork = activeWork,
+    isProtected = isProtected,
+    clock = clock,
+).totals
+
+fun calculateAvailabilityIntervalBreakdown(
+    window: AvailabilityWindowRecord,
+    activeWork: Iterable<AvailabilityActiveWorkInterval>,
+    isProtected: Boolean,
+    clock: Clock,
+): AvailabilityIntervalBreakdown {
     val now = clock.instant().truncatedTo(ChronoUnit.MINUTES)
-    val programmed = window.durationMinutes
+    val programmed = listOf(AvailabilityMinuteSegment(window.start, window.end, emptyList()))
     if (isProtected) {
-        return AvailabilityBreakdown(
-            state = AvailabilityTemporalState.PROTECTED,
-            programmedMinutes = programmed,
-            effectiveElapsedMinutes = 0L,
-            replacedElapsedMinutes = 0L,
-            futurePendingMinutes = 0L,
-            effectiveProjectedAtEndMinutes = 0L,
-            futureOccupiedByPlannedWorkMinutes = 0L,
+        return AvailabilityIntervalBreakdown(
+            totals = AvailabilityBreakdown(
+                state = AvailabilityTemporalState.PROTECTED,
+                programmedMinutes = window.durationMinutes,
+                effectiveElapsedMinutes = 0L,
+                replacedElapsedMinutes = 0L,
+                futurePendingMinutes = 0L,
+                effectiveProjectedAtEndMinutes = 0L,
+                futureOccupiedByPlannedWorkMinutes = 0L,
+            ),
+            programmed = programmed,
+            effectiveElapsed = emptyList(),
+            replacedElapsed = emptyList(),
+            futurePending = emptyList(),
+            effectiveProjectedAtEnd = emptyList(),
+            futureOccupiedByPlannedWork = emptyList(),
         )
     }
     val elapsedEnd = when {
@@ -288,63 +346,93 @@ fun calculateAvailabilityBreakdown(
         now >= window.end -> window.end
         else -> now
     }
-    val clipped = activeWork.mapNotNull { source ->
-        val start = maxOf(window.start, source.start)
-        val end = minOf(window.end, source.end)
-        if (start < end) start to end else null
-    }
-    val replacedElapsed = unionMinutes(clipped, window.start, elapsedEnd)
-    val futureOccupied = unionMinutes(clipped, futureStart, window.end)
-    val elapsed = ChronoUnit.MINUTES.between(window.start, elapsedEnd)
-    val future = ChronoUnit.MINUTES.between(futureStart, window.end)
-    val totalReplaced = unionMinutes(clipped, window.start, window.end)
-    return AvailabilityBreakdown(
+    val partition = partitionAvailabilityWindow(window, activeWork)
+    val effectiveElapsed = partition.select(window.start, elapsedEnd) { it.activeWorkKeys.isEmpty() }
+    val replacedElapsed = partition.select(window.start, elapsedEnd) { it.activeWorkKeys.isNotEmpty() }
+    val futurePending = partition.select(futureStart, window.end) { it.activeWorkKeys.isEmpty() }
+    val projected = partition.filter { it.activeWorkKeys.isEmpty() }
+    val futureOccupied = partition.select(futureStart, window.end) { it.activeWorkKeys.isNotEmpty() }
+    val totals = AvailabilityBreakdown(
         state = when {
             now < window.start -> AvailabilityTemporalState.FUTURE
             now >= window.end -> AvailabilityTemporalState.COMPLETED
             else -> AvailabilityTemporalState.IN_PROGRESS
         },
-        programmedMinutes = programmed,
-        effectiveElapsedMinutes = Math.subtractExact(elapsed, replacedElapsed),
-        replacedElapsedMinutes = replacedElapsed,
-        futurePendingMinutes = Math.subtractExact(future, futureOccupied),
-        effectiveProjectedAtEndMinutes = Math.subtractExact(programmed, totalReplaced),
-        futureOccupiedByPlannedWorkMinutes = futureOccupied,
+        programmedMinutes = sumAvailabilitySegments(programmed),
+        effectiveElapsedMinutes = sumAvailabilitySegments(effectiveElapsed),
+        replacedElapsedMinutes = sumAvailabilitySegments(replacedElapsed),
+        futurePendingMinutes = sumAvailabilitySegments(futurePending),
+        effectiveProjectedAtEndMinutes = sumAvailabilitySegments(projected),
+        futureOccupiedByPlannedWorkMinutes = sumAvailabilitySegments(futureOccupied),
+    )
+    return AvailabilityIntervalBreakdown(
+        totals = totals,
+        programmed = programmed,
+        effectiveElapsed = effectiveElapsed,
+        replacedElapsed = replacedElapsed,
+        futurePending = futurePending,
+        effectiveProjectedAtEnd = projected,
+        futureOccupiedByPlannedWork = futureOccupied,
     )
 }
 
-private fun unionMinutes(
-    intervals: Iterable<Pair<Instant, Instant>>,
-    boundaryStart: Instant,
-    boundaryEnd: Instant,
-): Long {
-    if (boundaryStart >= boundaryEnd) return 0L
-    val ordered = intervals.mapNotNull { (rawStart, rawEnd) ->
-        val start = maxOf(boundaryStart, rawStart)
-        val end = minOf(boundaryEnd, rawEnd)
-        if (start < end) start to end else null
-    }.sortedBy { it.first }
-    var total = 0L
-    var currentStart: Instant? = null
-    var currentEnd: Instant? = null
-    ordered.forEach { (start, end) ->
-        val previousEnd = currentEnd
-        if (currentStart == null || previousEnd == null) {
-            currentStart = start
-            currentEnd = end
-        } else if (start <= previousEnd) {
-            currentEnd = maxOf(previousEnd, end)
-        } else {
-            total = Math.addExact(total, ChronoUnit.MINUTES.between(requireNotNull(currentStart), previousEnd))
-            currentStart = start
-            currentEnd = end
+private data class ClippedAvailabilitySource(
+    val key: String,
+    val start: Instant,
+    val end: Instant,
+)
+
+private fun partitionAvailabilityWindow(
+    window: AvailabilityWindowRecord,
+    activeWork: Iterable<AvailabilityActiveWorkInterval>,
+): List<AvailabilityMinuteSegment> {
+    val clipped = activeWork.mapNotNull { source ->
+        clipExactMinuteInterval(source.start, source.end, window.start, window.end)?.let { interval ->
+            ClippedAvailabilitySource(source.key, interval.start, interval.end)
         }
     }
-    currentStart?.let { start ->
-        total = Math.addExact(total, ChronoUnit.MINUTES.between(start, requireNotNull(currentEnd)))
+    val boundaries = buildSet {
+        add(window.start)
+        add(window.end)
+        clipped.forEach { source ->
+            add(source.start)
+            add(source.end)
+        }
+    }.sorted()
+    return boundaries.zipWithNext().fold(mutableListOf()) { segments, (start, end) ->
+        val keys = clipped
+            .asSequence()
+            .filter { source -> source.start < end && source.end > start }
+            .map(ClippedAvailabilitySource::key)
+            .distinct()
+            .sorted()
+            .toList()
+        val previous = segments.lastOrNull()
+        if (previous != null && previous.end == start && previous.activeWorkKeys == keys) {
+            segments[segments.lastIndex] = previous.copy(end = end)
+        } else {
+            segments += AvailabilityMinuteSegment(start, end, keys)
+        }
+        segments
     }
-    return total
 }
+
+private fun List<AvailabilityMinuteSegment>.select(
+    boundaryStart: Instant,
+    boundaryEnd: Instant,
+    predicate: (AvailabilityMinuteSegment) -> Boolean,
+): List<AvailabilityMinuteSegment> {
+    if (boundaryStart >= boundaryEnd) return emptyList()
+    return mapNotNull { segment ->
+        if (!predicate(segment)) return@mapNotNull null
+        clipExactMinuteInterval(segment.start, segment.end, boundaryStart, boundaryEnd)?.let { interval ->
+            AvailabilityMinuteSegment(interval.start, interval.end, segment.activeWorkKeys)
+        }
+    }
+}
+
+private fun sumAvailabilitySegments(segments: Iterable<AvailabilityMinuteSegment>): Long =
+    segments.fold(0L) { total, segment -> Math.addExact(total, segment.durationMinutes) }
 
 data class AvailabilityWindowVersion(
     val id: UUID,

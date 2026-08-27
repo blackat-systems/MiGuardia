@@ -179,7 +179,7 @@ class WorkSetupComposeTest {
         compose.onNodeWithContentDescription("Abrir menú").performClick()
 
         compose.onNodeWithTag("drawer-action-work-setup").assertIsDisplayed()
-        compose.onNodeWithText("Resumen").assertDoesNotExist()
+        compose.onNodeWithTag("main-destination-summary").assertIsDisplayed()
         compose.onNodeWithText("Perfil laboral").assertDoesNotExist()
         compose.onNodeWithText("Objetivos y horarios").assertDoesNotExist()
     }

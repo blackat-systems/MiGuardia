@@ -4,6 +4,7 @@ import android.app.Application
 import com.blackatsystems.miguardia.core.database.LocalDataStore
 import com.blackatsystems.miguardia.notifications.NotificationPreferencesStore
 import com.blackatsystems.miguardia.notifications.NotificationRuntime
+import com.blackatsystems.miguardia.ui.summary.SummaryPreferencesStore
 import com.blackatsystems.miguardia.weather.WeatherPreferencesStore
 import com.blackatsystems.miguardia.weather.WeatherRuntime
 
@@ -16,6 +17,9 @@ class MiGuardiaApplication : Application() {
     }
     val weatherPreferences: WeatherPreferencesStore by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         WeatherPreferencesStore(this)
+    }
+    val summaryPreferences: SummaryPreferencesStore by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
+        SummaryPreferencesStore(this)
     }
     val weatherRuntime: WeatherRuntime by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         WeatherRuntime(this, weatherPreferences)

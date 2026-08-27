@@ -169,9 +169,9 @@ Guardias pasivas y disponibilidad — cerrado
         ↓
 Calendario final y tarjeta superior desplegable — cerrado
         ↓
-Resumen personalizable — prompt habilitado
+Resumen personalizable — cerrado
         ↓
-Próximo evento y notificaciones
+Próximo evento y notificaciones — siguiente bloque planificado, no habilitado
         ↓
 Auditoría integral del núcleo y compatibilidad Android
         ↓

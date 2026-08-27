@@ -34,6 +34,8 @@ import com.blackatsystems.miguardia.ui.nextevent.NextEventViewModel
 import com.blackatsystems.miguardia.ui.notifications.NotificationViewModel
 import com.blackatsystems.miguardia.ui.photos.PhotosViewModel
 import com.blackatsystems.miguardia.ui.photos.SchedulePhotoFileStore
+import com.blackatsystems.miguardia.ui.summary.SummaryObserver
+import com.blackatsystems.miguardia.ui.summary.SummaryViewModel
 import com.blackatsystems.miguardia.ui.theme.AppThemeMode
 import com.blackatsystems.miguardia.ui.theme.AppZoom
 import com.blackatsystems.miguardia.ui.theme.MiGuardiaTheme
@@ -185,6 +187,32 @@ class MainActivity : ComponentActivity() {
         )
     }
 
+    private val summaryViewModel: SummaryViewModel by viewModels {
+        val application = application as MiGuardiaApplication
+        val dataStore = application.localDataStore
+        val clock = Clock.systemUTC()
+        val zoneId = AppDefaults.zoneId()
+        SummaryViewModel.Factory(
+            observer = SummaryObserver(
+                configurations = dataStore.workConfiguration,
+                catalogs = dataStore.workCatalog,
+                shifts = dataStore.v2Shifts,
+                actuals = dataStore.shiftActuals,
+                extras = dataStore.independentExtraWork,
+                availability = dataStore.availabilityWindows,
+                holidays = dataStore.holidays,
+                medicalLeaves = dataStore.medicalLeaves,
+                vacations = dataStore.vacations,
+                explicitStatuses = dataStore.explicitDayStatuses,
+                clock = clock,
+                zoneId = zoneId,
+            ),
+            preferencesStore = application.summaryPreferences,
+            clock = clock,
+            zoneId = zoneId,
+        )
+    }
+
     private val exceptionsViewModel: ExceptionsViewModel by viewModels {
         val dataStore = (application as MiGuardiaApplication).localDataStore
         ExceptionsViewModel.Factory(
@@ -242,6 +270,7 @@ class MainActivity : ComponentActivity() {
                     workSetupViewModel = workSetupViewModel,
                     hoursAndExtrasViewModel = hoursAndExtrasViewModel,
                     availabilityViewModel = availabilityViewModel,
+                    summaryViewModel = summaryViewModel,
                     calendarNavigationRequest = calendarNavigationRequest,
                     appZoom = appZoom,
                     onAppZoomChange = { selected ->

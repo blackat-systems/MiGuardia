@@ -6,11 +6,10 @@ PLANIFICACIÓN quedó cerrada por autorización expresa de Joaquin. Las decision
 funcionales reunidas constituyen la base vigente para avanzar; cerrar esta etapa
 no significa que exista ya una implementación nueva.
 
-El bloque **Calendario final y tarjeta superior** quedó auditado, corregido,
-probado físicamente, integrado por MAIN y publicado con autorización puntual en
-`fd6891e`, sin modificar Room V2 versión 5. Joaquin pidió preparar y abrir la
-etapa siguiente: **Resumen personalizable**. Su prompt quedó habilitado para una
-única dependencia especializada después del checkpoint documental.
+El bloque **Resumen personalizable** quedó auditado, corregido, probado
+físicamente e integrado por MAIN sin modificar Room V2 versión 5. El siguiente
+bloque del orden aprobado es **Próximo evento y notificaciones**, pero todavía
+no posee un prompt V2 habilitado ni una tarea autorizada.
 
 MAIN 2.0 está reactivada para recibir los handoffs que Joaquin entregue,
 auditarlos, integrarlos, probarlos y cerrarlos. Joaquin decide cuándo pedir el
@@ -810,6 +809,58 @@ repitió para este bloque sin cambios de Room y queda como evidencia de
 compatibilidad separada antes del candidato final. Este cierre no autoriza push
 ni ninguna acción sobre producción.
 
+## Resumen personalizable — cerrado
+
+El prompt `docs/prompts/RESUMEN_PERSONALIZABLE_V2.md` quedó `CERRADO`. Resumen
+es ahora un destino principal mensual y de sólo lectura. Reúne trabajo total,
+habitual, extras cuando existen, pendiente programado, cumplimiento por
+períodos completos y disponibilidad separada. Las ocho familias opcionales se
+pueden ordenar u ocultar sin modificar fórmulas ni historia laboral.
+
+Cada cifra abre el mismo libro exacto de contribuciones que produjo su valor.
+MAIN corrigió especialmente:
+
+- la representación exacta de `Planificado frente a real`, con una
+  contribución positiva del horario real y otra negativa del planificado;
+- la observación de fuentes necesarias para semanas o ciclos completos que
+  cruzan el límite del mes;
+- el apagado del observador cuando Resumen deja de estar visible o una
+  superficie funcional lo cubre;
+- la cola FIFO de preferencias para conservar dos cambios rápidos y permitir
+  reintento sin perder el orden;
+- los límites temporales para actualizar sólo cuando una cifra puede cambiar;
+- los estados de error para no repetir avisos ni confundir fallos de fuentes
+  con fallos de preferencias;
+- tres pruebas físicas que dependían de texto duplicado, del tamaño del
+  Samsung o de dos pulsaciones Atrás sin esperar la recomposición intermedia.
+
+Room V2 permanece en versión 5 con 27 tablas y los esquemas 1 a 5 intactos. La
+presentación usa un DataStore propio; no guarda totales, porcentajes, faltantes
+ni desgloses derivados.
+
+Evidencia final de MAIN:
+
+- JVM: 488/488 —dominio 301, base 12 y aplicación 175—;
+- lint: 0 errores y 6 avisos globales de versiones disponibles;
+- APK Debug, QA y ambos APK AndroidTest: compilados;
+- Samsung `SM-S938B`, API 36: Room y persistencia 107/107;
+- Samsung: 224/224 pruebas de aplicación ejecutadas correctamente y una prueba
+  histórica de alarmas omitida por su propio contrato;
+- las once pruebas específicas de Resumen pasaron 11/11 después de endurecer
+  sus esperas y selectores;
+- claro/oscuro, retrato/paisaje, zoom interno 100/150/200, detalle,
+  personalización, recreación y regresiones quedaron cubiertos físicamente;
+- MAIN inspeccionó directamente Resumen en oscuro al 100 %, claro al 200 %,
+  retrato, paisaje, desplazamiento y detalle de una cifra;
+- la orientación volvió a modo libre, no quedó ningún paquete
+  `com.blackatsystems.miguardia*` y producción no fue instalada, abierta,
+  consultada ni modificada.
+
+Las revisiones independientes de dominio, estado/reactividad e interfaz no
+dejaron hallazgos bloqueantes después de las correcciones. La auditoría durable
+está en `docs/audits/2026-08-27-resumen-personalizable-v2.md`. Este cierre no
+autoriza push ni ninguna acción sobre producción.
+
 ## Flujo vigente de MAIN
 
 - Joaquin entrega un handoff o pide preparar el prompt de una nueva tarea;
@@ -833,9 +884,9 @@ la integración, pruebas, documentación y checkpoints locales a cargo de MAIN.
 
 Esta autorización de flujo no permite recuperar el candidato mensual descartado
 ni amplía el alcance a tags, Release, `main`, publicación de la aplicación o
-producción. Joaquin autorizó un único push del cierre verde de disponibilidad
-el 2026-08-27; esa autorización se consume con este checkpoint y no habilita
-acciones posteriores.
+producción. Las autorizaciones puntuales que publicaron disponibilidad y
+Calendario final ya fueron consumidas; no existe una autorización vigente para
+publicar el checkpoint del Resumen ni bloques posteriores.
 
 ## Backlog posterior
 
@@ -859,38 +910,27 @@ acciones posteriores.
   de situaciones especiales; quedan diferidos y no bloquean el Calendario;
 - consolidación adicional del motor de horas dentro de las superficies finales
   que realmente la necesiten;
-- Resumen personalizable;
 - adaptación posterior de notificaciones y de los consumidores restantes del
   motor de próximo evento;
 - cambio de `versionName`/`versionCode` para una futura entrega 2.0.
 
 ## Próximo paso
 
-Calendario final y tarjeta superior quedaron cerrados y publicados sin
-modificar Room V2 versión 5. **Resumen personalizable**, punto 11 del orden
-aprobado, quedó definido y habilitado en
-`docs/prompts/RESUMEN_PERSONALIZABLE_V2.md`. Joaquin autorizó abrir una sola
-dependencia sobre el checkout compartido después de crear su checkpoint
-documental.
+Resumen personalizable quedó cerrado sin modificar Room V2 versión 5. El
+siguiente bloque del orden aprobado es **Próximo evento y notificaciones**.
+Antes de abrirlo, MAIN debe releer el estado actual, fijar qué consumidores V2
+entran, crear un prompt autosuficiente y esperar la autorización expresa de
+Joaquin. No hay otra dependencia habilitada en este momento.
 
-El Resumen debe consumir las fuentes ya consolidadas sin crear un segundo
-calendario, inventar referencias horarias ni reinterpretar fotografías
-históricas. Su contrato funcional, alcance visual y métricas exactas deberán
-quedar fijados en el próximo prompt antes de abrir otra dependencia.
-
-La preparación original y el cierre están registrados respectivamente en
-`docs/audits/2026-08-27-preparacion-calendario-final-y-tarjeta-superior-v2.md`
-y `docs/audits/2026-08-27-calendario-final-y-tarjeta-superior-v2.md`.
-
-La corrección de secuencia conserva la arquitectura de disponibilidad de
-`docs/adr/0030-disponibilidad-como-ventana-pasiva.md`. Las ampliaciones de
-situaciones especiales quedan diferidas hasta una decisión posterior de
-Joaquin.
+La preparación y el cierre del Resumen están registrados respectivamente en
+`docs/audits/2026-08-27-preparacion-resumen-personalizable-v2.md` y
+`docs/audits/2026-08-27-resumen-personalizable-v2.md`. Su arquitectura queda
+fijada por `docs/adr/0031-resumen-derivado-y-presentacion-personalizable.md`.
 
 Quedan como verificaciones separadas el recorrido físico de alarma exacta
 —sólo con permiso explícito— y API 37 antes del candidato final. API 26 no se
 repitió con Room V2 versión 5; no corresponde una migración V1 real en el
 Samsung. Los pushes autorizados para disponibilidad y para Calendario final
 fueron ejecutados y consumidos en `80fe8e5` y `fd6891e`, respectivamente.
-Cualquier push posterior, tag, Release y toda operación sobre `main` o
-producción continúan prohibidos.
+Cualquier push posterior —incluido el checkpoint del Resumen—, tag, Release y
+toda operación sobre `main` o producción continúan prohibidos.

@@ -168,7 +168,7 @@ class AvailabilityWindowTest {
 
     @Test
     fun inProgressWindowTruncatesNowToMinuteAndSeparatesFutureOccupiedWork() {
-        val result = calculateAvailabilityBreakdown(
+        val details = calculateAvailabilityIntervalBreakdown(
             record(instant(8), instant(16), DATE),
             listOf(
                 active("before", 7, 9, AvailabilityActiveWorkKind.SHIFT_PLANNED),
@@ -178,6 +178,7 @@ class AvailabilityWindowTest {
             false,
             Clock.fixed(Instant.parse("2026-08-27T12:30:59Z"), ZoneOffset.UTC),
         )
+        val result = details.totals
 
         assertEquals(AvailabilityTemporalState.IN_PROGRESS, result.state)
         assertEquals(90L, result.effectiveElapsedMinutes)
@@ -185,6 +186,31 @@ class AvailabilityWindowTest {
         assertEquals(90L, result.futurePendingMinutes)
         assertEquals(120L, result.futureOccupiedByPlannedWorkMinutes)
         assertEquals(180L, result.effectiveProjectedAtEndMinutes)
+        assertEquals(
+            listOf(instant(9) to instant(10), instant(12) to Instant.parse("2026-08-27T12:30:00Z")),
+            details.effectiveElapsed.map { it.start to it.end },
+        )
+        assertEquals(
+            listOf(instant(8) to instant(9), instant(10) to instant(12)),
+            details.replacedElapsed.map { it.start to it.end },
+        )
+        assertEquals(
+            listOf(Instant.parse("2026-08-27T12:30:00Z") to instant(14)),
+            details.futurePending.map { it.start to it.end },
+        )
+        listOf(
+            details.programmed,
+            details.effectiveElapsed,
+            details.replacedElapsed,
+            details.futurePending,
+            details.effectiveProjectedAtEnd,
+            details.futureOccupiedByPlannedWork,
+        ).flatten().forEach { segment ->
+            assertEquals(
+                java.time.temporal.ChronoUnit.MINUTES.between(segment.start, segment.end),
+                segment.durationMinutes,
+            )
+        }
     }
 
     @Test

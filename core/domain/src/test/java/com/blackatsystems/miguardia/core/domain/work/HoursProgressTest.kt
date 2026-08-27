@@ -200,6 +200,70 @@ class HoursProgressTest {
 
         assertEquals(60L, progress.regularWorkedMinutes)
         assertEquals(3L * 60L, progress.pendingScheduledMinutes)
+
+        val ledger = calculateHoursContributions(
+            segment,
+            listOf(active, future),
+            emptyList(),
+            CLOCK,
+            ZoneOffset.UTC,
+        )
+        assertEquals(
+            listOf(
+                Triple(instant("2026-08-25T11:00:00Z"), instant("2026-08-25T12:00:00Z"), HoursContributionPhase.WORKED),
+                Triple(instant("2026-08-25T12:00:00Z"), instant("2026-08-25T13:00:00Z"), HoursContributionPhase.PENDING),
+                Triple(instant("2026-08-25T14:00:00Z"), instant("2026-08-25T16:00:00Z"), HoursContributionPhase.PENDING),
+            ),
+            ledger.map { Triple(it.start, it.end, it.phase) },
+        )
+        assertTrue(ledger.all { it.minutes == java.time.temporal.ChronoUnit.MINUTES.between(it.start, it.end) })
+    }
+
+    @Test
+    fun explicitExtraInTheMiddleLeavesOnlyExactHabitualComplements() {
+        val segment = requireNotNull(resolveHoursReferenceSegment(fixedHistory(2_000), DATE))
+        val write = shiftWrite(
+            SHIFT_1_ID,
+            instant("2026-08-25T08:00:00Z"),
+            instant("2026-08-25T14:00:00Z"),
+        )
+        val source = WorkedShiftSource(
+            write.shift,
+            actual(
+                write,
+                instant("2026-08-25T08:00:00Z"),
+                instant("2026-08-25T14:00:00Z"),
+                listOf(
+                    interval(
+                        write,
+                        instant("2026-08-25T10:00:00Z"),
+                        instant("2026-08-25T11:00:00Z"),
+                        helps = true,
+                    ),
+                ),
+            ),
+        )
+
+        val ledger = calculateHoursContributions(
+            segment,
+            listOf(source),
+            emptyList(),
+            Clock.fixed(instant("2026-08-25T20:00:00Z"), ZoneOffset.UTC),
+            ZoneOffset.UTC,
+        )
+        val regular = ledger.filter { it.kind == HoursContributionKind.REGULAR_SHIFT }
+        val extra = ledger.single { it.kind == HoursContributionKind.SHIFT_EXTRA }
+
+        assertEquals(
+            listOf(
+                instant("2026-08-25T08:00:00Z") to instant("2026-08-25T10:00:00Z"),
+                instant("2026-08-25T11:00:00Z") to instant("2026-08-25T14:00:00Z"),
+            ),
+            regular.map { it.start to it.end },
+        )
+        assertEquals(5L * 60L, regular.sumOf { it.workedMinutes })
+        assertEquals(60L, extra.workedMinutes)
+        assertTrue(ledger.all { it.minutes == java.time.temporal.ChronoUnit.MINUTES.between(it.start, it.end) })
     }
 
     @Test

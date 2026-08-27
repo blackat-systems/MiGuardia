@@ -15,10 +15,11 @@
   la tarea siguiente por su cuenta.
 - **Contrato humano:** toda dependencia nueva explica primero `QUÉ HACE` y
   `POR QUÉ EXISTE`, tanto en su prompt como en su handoff.
-- **Última dependencia cerrada:** `Calendario final y tarjeta superior`,
-  auditada, corregida e integrada por MAIN sin modificar Room V2 versión 5.
-- **Próxima dependencia habilitada:** `Resumen personalizable`, autorizada por
-  Joaquin para una única tarea después del checkpoint documental.
+- **Última dependencia cerrada:** `Resumen personalizable`, auditada, corregida
+  e integrada por MAIN sin modificar Room V2 versión 5.
+- **Próxima dependencia habilitada:** ninguna. `Próximo evento y
+  notificaciones` es el siguiente bloque planificado, pero todavía no posee un
+  prompt V2 habilitado ni una tarea autorizada.
 - **Commits locales:** MAIN los crea automáticamente como checkpoints de
   bloques comprobados.
 - **Push puntual anterior de la rama 2.0:** ejecutado y verificado hasta
@@ -85,7 +86,7 @@ prevalecen para el estado operativo.
 | `EXTRAS_INDEPENDIENTES_Y_AVANCE_DE_HORAS_V2.md` | **CERRADO** | Extras sin jornada dueña, reinicio consciente de la referencia y avance de horas integrados sobre Room V2 versión 4 |
 | `GUARDIAS_PASIVAS_Y_DISPONIBILIDAD_V2.md` | **CERRADO** | Ventanas pasivas exactas integradas sobre Room V2 versión 5; sólo la unión del trabajo activo coincidente las reemplaza y nunca suman como horas trabajadas |
 | `CALENDARIO_FINAL_Y_TARJETA_SUPERIOR_V2.md` | **CERRADO** | Única grilla mensual consolidada y tarjeta desplegable con todas las jornadas de hoy, auditadas por MAIN |
-| `RESUMEN_PERSONALIZABLE_V2.md` | **HABILITADO** | Resumen mensual derivado, detalles ordenables y explicación exacta de cada cifra sin guardar totales ni modificar Room |
+| `RESUMEN_PERSONALIZABLE_V2.md` | **CERRADO** | Resumen mensual derivado, detalles ordenables y explicación exacta de cada cifra sin guardar totales ni modificar Room |
 
 ## Contratos históricos de MiGuardia 1.0
 
@@ -144,9 +145,10 @@ Joaquin indicó que quiere preparar o abrir la siguiente:
    `GUARDIAS_PASIVAS_Y_DISPONIBILIDAD_V2.md`;
 10. **Cerrado:** Calendario final y tarjeta superior mediante
     `CALENDARIO_FINAL_Y_TARJETA_SUPERIOR_V2.md`;
-11. **Habilitado:** Resumen personalizable mediante
+11. **Cerrado:** Resumen personalizable mediante
     `RESUMEN_PERSONALIZABLE_V2.md`;
-12. adaptación de próximo evento y notificaciones;
+12. **Planificado, no habilitado:** adaptación de próximo evento y
+    notificaciones;
 13. auditoría integral del núcleo;
 14. segunda capa: widget, informes, copias, bloqueo y Ayuda/recorrido inicial;
 15. auditoría de la aplicación completa y candidato local.

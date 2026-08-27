@@ -1,10 +1,11 @@
 package com.blackatsystems.miguardia.core.domain.work
 
+import com.blackatsystems.miguardia.core.domain.model.ExactMinuteInterval
 import com.blackatsystems.miguardia.core.domain.model.IndependentExtraWorkRecord
 import com.blackatsystems.miguardia.core.domain.model.Shift
 import com.blackatsystems.miguardia.core.domain.model.ShiftActualAggregate
 import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
-import com.blackatsystems.miguardia.core.domain.model.exactDurationMinutes
+import com.blackatsystems.miguardia.core.domain.model.subtractExactMinuteIntervals
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
@@ -167,6 +168,51 @@ data class ExtraClassProgress(
         get() = Math.addExact(shiftMinutes, independentMinutes)
 }
 
+enum class HoursContributionKind {
+    REGULAR_SHIFT,
+    SHIFT_EXTRA,
+    INDEPENDENT_EXTRA,
+}
+
+enum class HoursContributionPhase {
+    WORKED,
+    PENDING,
+}
+
+/**
+ * Una fila exacta del libro de horas compartido por avance y Resumen.
+ *
+ * Cada fila representa una sola fase y su intervalo coincide exactamente con
+ * sus minutos. Una fuente en curso se parte en filas WORKED/PENDING y una
+ * jornada con extras se particiona además en franjas habituales y extra.
+ */
+data class HoursContribution(
+    val contributionId: UUID,
+    val sourceId: UUID,
+    val ownerLocalDate: LocalDate,
+    val start: Instant,
+    val end: Instant,
+    val kind: HoursContributionKind,
+    val phase: HoursContributionPhase,
+    val extraClass: HistoricalExtraClassKey? = null,
+) {
+    init {
+        require(start < end) { "Una contribución de horas debe tener duración positiva" }
+        require((kind == HoursContributionKind.REGULAR_SHIFT) == (extraClass == null)) {
+            "Sólo las contribuciones extra deben conservar su clase histórica"
+        }
+    }
+
+    val minutes: Long
+        get() = ExactMinuteInterval(start, end).durationMinutes
+
+    val workedMinutes: Long
+        get() = if (phase == HoursContributionPhase.WORKED) minutes else 0L
+
+    val pendingMinutes: Long
+        get() = if (phase == HoursContributionPhase.PENDING) minutes else 0L
+}
+
 data class HoursProgress(
     val segment: HoursReferenceSegment,
     val regularWorkedMinutes: Long,
@@ -189,54 +235,46 @@ fun calculateHoursProgress(
     zoneId: ZoneId,
     protectionPeriods: Iterable<WorkProtectionPeriod> = emptyList(),
 ): HoursProgress {
-    val normalizedNow = clock.withZone(zoneId).instant().truncatedTo(ChronoUnit.MINUTES)
+    val contributions = calculateHoursContributions(
+        segment = segment,
+        shifts = shifts,
+        independentExtras = independentExtras,
+        clock = clock,
+        zoneId = zoneId,
+        protectionPeriods = protectionPeriods,
+    )
+    return summarizeHoursContributions(segment, contributions)
+}
+
+fun summarizeHoursContributions(
+    segment: HoursReferenceSegment,
+    contributions: Iterable<HoursContribution>,
+): HoursProgress {
     val classTotals = linkedMapOf<HistoricalExtraClassKey, MutableExtraMinutes>()
     var regular = 0L
     var pending = 0L
-
-    val protections = protectionPeriods.toList()
-    shifts.filter { it.ownerLocalDate in segment }.forEach { source ->
-        if (source.planned.status != ShiftStatus.PLANNED) return@forEach
-        val actual = source.actual
-        if (actual == null && protections.any { source.ownerLocalDate in it }) return@forEach
-        val start = actual?.record?.actualStart ?: source.planned.startAt
-        val end = actual?.record?.actualEnd ?: source.planned.endAt
-        val interval = elapsedInterval(start, end, normalizedNow)
-        pending = Math.addExact(pending, interval.pendingMinutes)
-        if (actual == null) {
-            regular = Math.addExact(regular, interval.workedMinutes)
-        } else {
-            var elapsedExtra = 0L
-            actual.extraIntervals.forEach { extra ->
-                val worked = elapsedInterval(extra.start, extra.end, normalizedNow).workedMinutes
-                elapsedExtra = Math.addExact(elapsedExtra, worked)
-                val key = HistoricalExtraClassKey(
-                    id = extra.extraWorkClassId,
-                    name = extra.classNameSnapshot,
-                    helpsMeetHoursReference = extra.helpsMeetHoursReferenceSnapshot,
-                    showDedicatedSummary = extra.showDedicatedSummarySnapshot,
-                )
-                val totals = classTotals.getOrPut(key, ::MutableExtraMinutes)
-                totals.shift = Math.addExact(totals.shift, worked)
+    contributions.forEach { contribution ->
+        pending = Math.addExact(pending, contribution.pendingMinutes)
+        when (contribution.kind) {
+            HoursContributionKind.REGULAR_SHIFT -> {
+                regular = Math.addExact(regular, contribution.workedMinutes)
             }
-            regular = Math.addExact(regular, Math.subtractExact(interval.workedMinutes, elapsedExtra))
+            HoursContributionKind.SHIFT_EXTRA,
+            HoursContributionKind.INDEPENDENT_EXTRA,
+            -> {
+                val totals = classTotals.getOrPut(requireNotNull(contribution.extraClass), ::MutableExtraMinutes)
+                when (contribution.kind) {
+                    HoursContributionKind.SHIFT_EXTRA -> {
+                        totals.shift = Math.addExact(totals.shift, contribution.workedMinutes)
+                    }
+                    HoursContributionKind.INDEPENDENT_EXTRA -> {
+                        totals.independent = Math.addExact(totals.independent, contribution.workedMinutes)
+                    }
+                    HoursContributionKind.REGULAR_SHIFT -> error("Rama imposible")
+                }
+            }
         }
     }
-
-    independentExtras
-        .filter { it.ownerLocalDate in segment }
-        .forEach { extra ->
-            val interval = elapsedInterval(extra.start, extra.end, normalizedNow)
-            pending = Math.addExact(pending, interval.pendingMinutes)
-            val key = HistoricalExtraClassKey(
-                id = extra.extraWorkClassId,
-                name = extra.snapshot.className,
-                helpsMeetHoursReference = extra.snapshot.helpsMeetHoursReference,
-                showDedicatedSummary = extra.snapshot.showDedicatedSummary,
-            )
-            val totals = classTotals.getOrPut(key, ::MutableExtraMinutes)
-            totals.independent = Math.addExact(totals.independent, interval.workedMinutes)
-        }
 
     val extras = classTotals.entries
         .sortedWith(compareBy({ it.key.name.lowercase() }, { it.key.id }))
@@ -265,6 +303,143 @@ fun calculateHoursProgress(
         excessMinutes = excess,
         completionPercentage = percentage,
     )
+}
+
+fun calculateHoursContributions(
+    segment: HoursReferenceSegment,
+    shifts: Iterable<WorkedShiftSource>,
+    independentExtras: Iterable<IndependentExtraWorkRecord>,
+    clock: Clock,
+    zoneId: ZoneId,
+    protectionPeriods: Iterable<WorkProtectionPeriod> = emptyList(),
+): List<HoursContribution> {
+    val normalizedNow = clock.withZone(zoneId).instant().truncatedTo(ChronoUnit.MINUTES)
+    val protections = protectionPeriods.toList()
+    return buildList {
+        shifts.filter { it.ownerLocalDate in segment }.forEach { source ->
+            if (source.planned.status != ShiftStatus.PLANNED) return@forEach
+            val actual = source.actual
+            if (actual == null && protections.any { source.ownerLocalDate in it }) return@forEach
+            val start = actual?.record?.actualStart ?: source.planned.startAt
+            val end = actual?.record?.actualEnd ?: source.planned.endAt
+            if (actual == null) {
+                addTemporalContributions(
+                    contributionId = source.planned.id,
+                    sourceId = source.planned.id,
+                    ownerLocalDate = source.ownerLocalDate,
+                    interval = ExactMinuteInterval(start, end),
+                    kind = HoursContributionKind.REGULAR_SHIFT,
+                    extraClass = null,
+                    now = normalizedNow,
+                )
+            } else {
+                require(actual.extraIntervals.all { extra -> extra.start >= start && extra.end <= end }) {
+                    "Los fragmentos extra deben permanecer dentro del horario real"
+                }
+                require(actual.extraIntervals.zipWithNext().none { (first, second) -> first.end > second.start }) {
+                    "Los fragmentos extra no pueden superponerse"
+                }
+                val extraIntervals = actual.extraIntervals.map { extra ->
+                    ExactMinuteInterval(extra.start, extra.end)
+                }
+                subtractExactMinuteIntervals(ExactMinuteInterval(start, end), extraIntervals).forEach { regular ->
+                    addTemporalContributions(
+                        contributionId = source.planned.id,
+                        sourceId = source.planned.id,
+                        ownerLocalDate = source.ownerLocalDate,
+                        interval = regular,
+                        kind = HoursContributionKind.REGULAR_SHIFT,
+                        extraClass = null,
+                        now = normalizedNow,
+                    )
+                }
+                actual.extraIntervals.forEach { extra ->
+                    addTemporalContributions(
+                        contributionId = extra.id,
+                        sourceId = source.planned.id,
+                        ownerLocalDate = source.ownerLocalDate,
+                        interval = ExactMinuteInterval(extra.start, extra.end),
+                        kind = HoursContributionKind.SHIFT_EXTRA,
+                        extraClass = HistoricalExtraClassKey(
+                            id = extra.extraWorkClassId,
+                            name = extra.classNameSnapshot,
+                            helpsMeetHoursReference = extra.helpsMeetHoursReferenceSnapshot,
+                            showDedicatedSummary = extra.showDedicatedSummarySnapshot,
+                        ),
+                        now = normalizedNow,
+                    )
+                }
+            }
+        }
+
+        independentExtras
+            .filter { it.ownerLocalDate in segment }
+            .forEach { extra ->
+                addTemporalContributions(
+                    contributionId = extra.id,
+                    sourceId = extra.id,
+                    ownerLocalDate = extra.ownerLocalDate,
+                    interval = ExactMinuteInterval(extra.start, extra.end),
+                    kind = HoursContributionKind.INDEPENDENT_EXTRA,
+                    extraClass = HistoricalExtraClassKey(
+                        id = extra.extraWorkClassId,
+                        name = extra.snapshot.className,
+                        helpsMeetHoursReference = extra.snapshot.helpsMeetHoursReference,
+                        showDedicatedSummary = extra.snapshot.showDedicatedSummary,
+                    ),
+                    now = normalizedNow,
+                )
+            }
+    }.sortedWith(
+        compareBy(
+            HoursContribution::start,
+            HoursContribution::end,
+            HoursContribution::phase,
+            HoursContribution::kind,
+            HoursContribution::contributionId,
+        ),
+    )
+}
+
+private fun MutableList<HoursContribution>.addTemporalContributions(
+    contributionId: UUID,
+    sourceId: UUID,
+    ownerLocalDate: LocalDate,
+    interval: ExactMinuteInterval,
+    kind: HoursContributionKind,
+    extraClass: HistoricalExtraClassKey?,
+    now: Instant,
+) {
+    val workedEnd = minOf(interval.end, now)
+    if (interval.start < workedEnd) {
+        add(
+            HoursContribution(
+                contributionId = contributionId,
+                sourceId = sourceId,
+                ownerLocalDate = ownerLocalDate,
+                start = interval.start,
+                end = workedEnd,
+                kind = kind,
+                phase = HoursContributionPhase.WORKED,
+                extraClass = extraClass,
+            ),
+        )
+    }
+    val pendingStart = maxOf(interval.start, now)
+    if (pendingStart < interval.end) {
+        add(
+            HoursContribution(
+                contributionId = contributionId,
+                sourceId = sourceId,
+                ownerLocalDate = ownerLocalDate,
+                start = pendingStart,
+                end = interval.end,
+                kind = kind,
+                phase = HoursContributionPhase.PENDING,
+                extraClass = extraClass,
+            ),
+        )
+    }
 }
 
 private operator fun HoursReferenceSegment.contains(date: LocalDate): Boolean =
@@ -301,24 +476,6 @@ private fun HoursReference.targetFor(
         when (val lookup = values.valueFor(keyFor(window))) {
             PerPeriodHoursLookup.Missing -> HoursTargetState.MissingPerPeriodValue
             is PerPeriodHoursLookup.Defined -> HoursTargetState.Defined(lookup.entry.requiredMinutes)
-        }
-    }
-}
-
-private data class ElapsedInterval(
-    val workedMinutes: Long,
-    val pendingMinutes: Long,
-)
-
-private fun elapsedInterval(start: Instant, end: Instant, now: Instant): ElapsedInterval {
-    require(start < end) { "Una fuente de trabajo debe tener duración positiva" }
-    val total = exactDurationMinutes(start, end)
-    return when {
-        !now.isAfter(start) -> ElapsedInterval(workedMinutes = 0L, pendingMinutes = total)
-        !now.isBefore(end) -> ElapsedInterval(workedMinutes = total, pendingMinutes = 0L)
-        else -> {
-            val worked = exactDurationMinutes(start, now)
-            ElapsedInterval(workedMinutes = worked, pendingMinutes = Math.subtractExact(total, worked))
         }
     }
 }
