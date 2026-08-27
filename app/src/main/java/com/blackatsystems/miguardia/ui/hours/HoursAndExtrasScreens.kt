@@ -58,6 +58,8 @@ import com.blackatsystems.miguardia.ui.components.PersistentMessage
 import com.blackatsystems.miguardia.ui.components.PrimaryAction
 import com.blackatsystems.miguardia.ui.components.SectionCard
 import com.blackatsystems.miguardia.ui.components.SurfaceHeader
+import com.blackatsystems.miguardia.ui.availability.AvailabilityHoursSection
+import com.blackatsystems.miguardia.ui.availability.AvailabilityUiState
 import com.blackatsystems.miguardia.ui.management.RgbColorPickerDialog
 import com.blackatsystems.miguardia.ui.theme.vigiliaColors
 import java.time.DayOfWeek
@@ -131,13 +133,14 @@ data class HoursAndExtrasActions(
 fun HoursAndExtrasSurfaceHost(
     state: HoursAndExtrasUiState,
     actions: HoursAndExtrasActions,
+    availabilityState: AvailabilityUiState = AvailabilityUiState(),
     onOpenExtraClassCatalog: () -> Unit = {},
 ) {
     when (state.surface) {
         HoursAndExtrasSurface.NONE -> Unit
         HoursAndExtrasSurface.PROGRESS -> {
             BackHandler(onBack = actions.close)
-            HoursProgressScreen(state, actions)
+            HoursProgressScreen(state, actions, availabilityState)
         }
         HoursAndExtrasSurface.REFERENCE_EDITOR -> {
             BackHandler(onBack = actions.backReference)
@@ -156,7 +159,11 @@ fun HoursAndExtrasSurfaceHost(
 }
 
 @Composable
-private fun HoursProgressScreen(state: HoursAndExtrasUiState, actions: HoursAndExtrasActions) {
+private fun HoursProgressScreen(
+    state: HoursAndExtrasUiState,
+    actions: HoursAndExtrasActions,
+    availabilityState: AvailabilityUiState,
+) {
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(Modifier.fillMaxSize().safeDrawingPadding()) {
             SurfaceHeader("Referencia y avance de horas", "Cerrar", actions.close)
@@ -175,14 +182,18 @@ private fun HoursProgressScreen(state: HoursAndExtrasUiState, actions: HoursAndE
                         modifier = Modifier.testTag("hours-progress-error"),
                     )
                 }
-                HoursAndExtrasLoadState.CONTENT -> HoursProgressContent(state, actions)
+                HoursAndExtrasLoadState.CONTENT -> HoursProgressContent(state, actions, availabilityState)
             }
         }
     }
 }
 
 @Composable
-private fun HoursProgressContent(state: HoursAndExtrasUiState, actions: HoursAndExtrasActions) {
+private fun HoursProgressContent(
+    state: HoursAndExtrasUiState,
+    actions: HoursAndExtrasActions,
+    availabilityState: AvailabilityUiState,
+) {
     val source = requireNotNull(state.source)
     val progress = source.progress
     Column(
@@ -252,6 +263,7 @@ private fun HoursProgressContent(state: HoursAndExtrasUiState, actions: HoursAnd
                 }
             }
         }
+        AvailabilityHoursSection(availabilityState)
         Button(
             onClick = actions.openReferenceEditor,
             modifier = Modifier.fillMaxWidth().testTag("hours-reference-configure"),

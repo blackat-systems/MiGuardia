@@ -6,12 +6,11 @@ PLANIFICACIÓN quedó cerrada por autorización expresa de Joaquin. Las decision
 funcionales reunidas constituyen la base vigente para avanzar; cerrar esta etapa
 no significa que exista ya una implementación nueva.
 
-El bloque **Extras independientes y avance de horas** quedó auditado, corregido,
-probado e integrado localmente por MAIN sobre Room V2 versión 4. El siguiente
-stage general queda dividido en tres dependencias consecutivas: guardias
-pasivas y disponibilidad; ausencias, cancelaciones y otras situaciones
-especiales; y conteo final de horas y cumplimiento. La primera tiene prompt
-habilitado, pero todavía no existe una tarea abierta ni código candidato.
+El bloque **Guardias pasivas y disponibilidad** quedó auditado, corregido,
+probado e integrado por MAIN sobre Room V2 versión 5. El stage general continúa
+con dos dependencias consecutivas: ausencias, cancelaciones y otras situaciones
+especiales; y conteo final de horas y cumplimiento. La primera es el próximo
+bloque recomendado, pero todavía no tiene prompt creado ni habilitado.
 
 MAIN 2.0 está reactivada para recibir los handoffs que Joaquin entregue,
 auditarlos, integrarlos, probarlos y cerrarlos. Joaquin decide cuándo pedir el
@@ -21,9 +20,11 @@ local que funciona como checkpoint. El push puntual autorizado el 2026-08-22 ya
 fijó en el remoto privado la base `836d908` de `Cargar jornadas` y quedó
 consumido. Joaquin autorizó el 2026-08-23 un único push adicional para publicar
 el checkpoint estable V2-only y esta recomendación futura. MAIN lo ejecutó y
-verificó hasta `0364b83`; esa autorización quedó consumida y no se extiende a
-pushes posteriores, tags, un Release, `main`, la publicación de la aplicación
-ni ninguna acción sobre el paquete o los datos de producción.
+verificó hasta `0364b83`; esa autorización quedó consumida. Joaquin autorizó el
+2026-08-27 un único push adicional para publicar el cierre verde de guardias
+pasivas y disponibilidad. Esa autorización se consume con este checkpoint y no
+se extiende a pushes posteriores, tags, un Release, `main`, la publicación de
+la aplicación ni ninguna acción sobre el paquete o los datos de producción.
 
 Decisión de producto del 2026-08-23: MiGuardia 1.0 fue una prueba interna sin
 usuarios y continúa únicamente como base de código. MiGuardia 2.0 no migra datos
@@ -166,14 +167,17 @@ y auditada en
     independientes, reinicio consciente y avance de horas.
   - `964b7cd0ce399ff20ba371fa6585e6e2850fd9b7`: extras independientes y avance
     de horas auditados, probados e integrados por MAIN.
+  - `11bbdb41f0a948f5c45dce6adb8b5c95a5b3c931`: contrato de guardias pasivas y
+    disponibilidad.
 - Al iniciar la preparación documental, la rama todavía no poseía upstream. El
   push puntual posterior fue ejecutado y verificado: rama local y remoto privado
   coincidían en `836d908`; esa autorización no puede reutilizarse.
 - El dominio nuevo vive en `core/domain/.../work/`; no se recuperó el candidato
   mensual descartado. El runtime V1 ya fue retirado. `MiGuardiaV2Database`
-  conserva su cadena explícita `1→2→3→4` y ya persiste configuración, carga,
+  conserva su cadena explícita `1→2→3→4→5` y ya persiste configuración, carga,
   edición/eliminación, recurrencias, horario real, clases extra, extras
-  independientes y el inicio consciente de la referencia de horas.
+  independientes, el inicio consciente de la referencia de horas y ventanas de
+  disponibilidad.
 
 ## Antecedente histórico descartado: candidato mensual
 
@@ -691,6 +695,53 @@ está en
 `docs/audits/2026-08-25-extras-independientes-y-avance-de-horas-v2.md`.
 Este cierre no autorizó push ni otra acción externa.
 
+## Guardias pasivas y disponibilidad — cerrado
+
+El prompt `docs/prompts/GUARDIAS_PASIVAS_Y_DISPONIBILIDAD_V2.md` quedó
+`CERRADO`. MiGuardia permite elegir No uso disponibilidad o uno de los tres
+nombres exactos Guardia pasiva, Disponible para llamado y Retén, con vigencia
+desde una fecha concreta.
+
+Desde la única grilla mensual se pueden registrar, consultar, corregir y
+eliminar ventanas exactas. Las ventanas contiguas son válidas y las
+superpuestas se rechazan. El trabajo activo reemplaza solamente la unión del
+tramo coincidente; la disponibilidad nunca se convierte en trabajo ni se suma
+al cumplimiento, faltante o superación.
+
+MAIN auditó dominio, Room, concurrencia e interfaz con tres revisiones
+independientes. Corrigió especialmente:
+
+- protecciones de vacaciones y carpeta médica en todos los días alcanzados por
+  una ventana multidiaria;
+- conflictos por configuración, edición o eliminación concurrentes;
+- conservación de la fotografía original del registro al editar y recrear;
+- validación de contexto y solapamiento en la frontera de dominio;
+- doble toque, navegación durante guardado, descarte consciente y reintento;
+- conservación de datos visibles ante errores temporales y actualización al
+  cruzar medianoche.
+
+Room V2 evoluciona mediante migración explícita `4→5`, agrega únicamente
+`availability_windows` y queda con 27 tablas. Los esquemas 1 a 4 permanecen
+byte a byte intactos.
+
+Evidencia final de MAIN:
+
+- JVM: 433/433 — dominio 265, base 12 y aplicación 156;
+- lint: 0 errores y 6 avisos globales de versiones disponibles;
+- APK Debug, QA y ambos APK AndroidTest: compilados;
+- Samsung `SM-S938B`, API 36: Room, migraciones y persistencia 107/107;
+- Samsung `SM-S938B`, API 36: aplicación y regresiones 190/190;
+- claro/oscuro, retrato/paisaje, zoom interno 100/150/200, recreación,
+  error/reintento y regresiones cubiertos por instrumentación física;
+- revisión visual humana en oscuro/retrato del Calendario, acceso laboral y
+  configuración de disponibilidad;
+- los tres paquetes QA fueron retirados y producción no fue tocada.
+
+La decisión arquitectónica está en ADR 0030 y la auditoría completa en
+`docs/audits/2026-08-27-guardias-pasivas-y-disponibilidad-v2.md`. API 26 no se
+repitió para Room V2 versión 5 y queda como evidencia de compatibilidad separada,
+no como bloqueo de este checkpoint.
+
 ## Flujo vigente de MAIN
 
 - Joaquin entrega un handoff o pide preparar el prompt de una nueva tarea;
@@ -714,9 +765,9 @@ la integración, pruebas, documentación y checkpoints locales a cargo de MAIN.
 
 Esta autorización de flujo no permite recuperar el candidato mensual descartado
 ni amplía el alcance a tags, Release, `main`, publicación de la aplicación o
-producción. La excepción original de la rama 2.0 se agotó al fijar la base de
-`Cargar jornadas`. El único push adicional del 2026-08-23 está limitado al
-cierre documentado arriba y no habilita acciones posteriores.
+producción. Joaquin autorizó un único push del cierre verde de disponibilidad
+el 2026-08-27; esa autorización se consume con este checkpoint y no habilita
+acciones posteriores.
 
 ## Backlog posterior
 
@@ -736,7 +787,6 @@ cierre documentado arriba y no habilita acciones posteriores.
 
 ## Todavía no implementado
 
-- persistencia de guardias pasivas y disponibilidad;
 - situaciones especiales y consolidación final del motor de horas y
   cumplimiento, con su presentación en Resumen y Calendario;
 - adaptación V2 de la tarjeta de próximo evento y de las notificaciones;
@@ -744,27 +794,23 @@ cierre documentado arriba y no habilita acciones posteriores.
 
 ## Próximo paso
 
-Extras independientes y avance de horas quedaron cerrados sobre Room V2 versión
-4. Para reducir riesgo, el stage siguiente se implementará en tres dependencias
-secuenciales:
+Guardias pasivas y disponibilidad quedaron cerradas sobre Room V2 versión 5.
+Para reducir riesgo, el stage continúa con dos dependencias secuenciales:
 
-1. **Guardias pasivas y disponibilidad**;
-2. **Ausencias, cancelaciones y otras situaciones especiales**;
-3. **Conteo final de horas y cumplimiento**.
+1. **Ausencias, cancelaciones y otras situaciones especiales**;
+2. **Conteo final de horas y cumplimiento**.
 
-La primera dependencia está definida en
-`docs/prompts/GUARDIAS_PASIVAS_Y_DISPONIBILIDAD_V2.md` y habilitada para el
-nuevo chat que Joaquin decida abrir. Registra ventanas exactas, usa Guardia
-pasiva, Disponible para llamado o Retén como nombres de un mismo concepto,
-rechaza disponibilidades superpuestas y descuenta sólo la unión del trabajo
-activo coincidente. No adelanta las otras dos dependencias.
+La próxima dependencia todavía no tiene prompt creado ni habilitado. Debe
+estabilizar Ausencia, cancelación por empleador, suspensión, licencia e
+intercambio consciente sin convertir categorías nuevas automáticamente en
+horas ni adelantar el conteo final.
 
 La separación y las reglas de la primera dependencia quedaron registradas en
 `docs/adr/0030-disponibilidad-como-ventana-pasiva.md`.
 
 Quedan como verificaciones separadas el recorrido físico de alarma exacta
-—sólo con permiso explícito— y API 37 antes del candidato final. API 26 ya fue
-verificada; no corresponde una migración V1 real en el Samsung.
-La autorización de push anterior ya fue consumida en `0364b83`. Este cierre
-crea sólo un checkpoint local. Cualquier otro push, tag, Release y toda
-operación sobre `main` o producción continúan prohibidos.
+—sólo con permiso explícito— y API 37 antes del candidato final. API 26 no se
+repitió con Room V2 versión 5; no corresponde una migración V1 real en el
+Samsung. Joaquin autorizó publicar este cierre una única vez. Cualquier push
+posterior, tag, Release y toda operación sobre `main` o producción continúan
+prohibidos.

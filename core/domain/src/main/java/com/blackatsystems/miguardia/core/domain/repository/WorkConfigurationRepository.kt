@@ -4,6 +4,8 @@ import com.blackatsystems.miguardia.core.domain.work.EffectiveRevision
 import com.blackatsystems.miguardia.core.domain.work.PerPeriodHoursValueMutation
 import com.blackatsystems.miguardia.core.domain.work.PerPeriodHoursValueWriteResult
 import com.blackatsystems.miguardia.core.domain.work.WorkConfiguration
+import com.blackatsystems.miguardia.core.domain.work.WorkConfigurationAvailabilityMutation
+import com.blackatsystems.miguardia.core.domain.work.WorkConfigurationAvailabilityWriteResult
 import com.blackatsystems.miguardia.core.domain.work.WorkConfigurationHistory
 import com.blackatsystems.miguardia.core.domain.work.WorkConfigurationReferenceMutation
 import com.blackatsystems.miguardia.core.domain.work.WorkConfigurationReferenceWriteResult
@@ -29,6 +31,12 @@ interface WorkConfigurationRepository {
         mutation: WorkConfigurationReferenceMutation,
     ): WorkConfigurationReferenceWriteResult = throw UnsupportedOperationException(
         "Este repositorio todavía no implementa la mutación atómica de referencia",
+    )
+
+    suspend fun applyAvailabilityMutation(
+        mutation: WorkConfigurationAvailabilityMutation,
+    ): WorkConfigurationAvailabilityWriteResult = throw UnsupportedOperationException(
+        "Este repositorio todavía no implementa la mutación atómica de disponibilidad",
     )
 
     suspend fun applyPerPeriodHoursValueMutation(

@@ -18,6 +18,8 @@ import com.blackatsystems.miguardia.core.domain.work.PerPeriodHoursValueMutation
 import com.blackatsystems.miguardia.core.domain.work.PerPeriodHoursValueWriteResult
 import com.blackatsystems.miguardia.core.domain.work.PerPeriodHoursValues
 import com.blackatsystems.miguardia.core.domain.work.WorkConfiguration
+import com.blackatsystems.miguardia.core.domain.work.WorkConfigurationAvailabilityMutation
+import com.blackatsystems.miguardia.core.domain.work.WorkConfigurationAvailabilityWriteResult
 import com.blackatsystems.miguardia.core.domain.work.WorkConfigurationHistory
 import com.blackatsystems.miguardia.core.domain.work.WorkConfigurationReferenceMutation
 import com.blackatsystems.miguardia.core.domain.work.WorkConfigurationReferenceWriteResult
@@ -259,6 +261,73 @@ internal class RoomWorkConfigurationRepository(
         PerPeriodHoursValueWriteResult.Conflict
     } catch (_: ReferenceWriteConflictException) {
         PerPeriodHoursValueWriteResult.Conflict
+    }
+
+    override suspend fun applyAvailabilityMutation(
+        mutation: WorkConfigurationAvailabilityMutation,
+    ): WorkConfigurationAvailabilityWriteResult = try {
+        database.withTransaction {
+            database.requireValidV2LocalData()
+            val current = requireHistory(mutation.expectedHistory.timeline.id)
+            if (!current.structurallyEquals(mutation.expectedHistory)) {
+                return@withTransaction WorkConfigurationAvailabilityWriteResult.Conflict
+            }
+            val existingSameDate = current.timeline.revisions.singleOrNull {
+                it.effectiveFrom == mutation.revision.effectiveFrom
+            }
+            if (existingSameDate != null && existingSameDate.id != mutation.revision.id) {
+                return@withTransaction WorkConfigurationAvailabilityWriteResult.Conflict
+            }
+            val previousAtStart = current.timeline.revisionAt(mutation.revision.effectiveFrom)
+                ?: invalid("La disponibilidad no puede comenzar antes de la configuración laboral.")
+            var propagateAvailability = true
+            val revisedTimeline = current.timeline.revisions.map { revision ->
+                when {
+                    revision.effectiveFrom == mutation.revision.effectiveFrom -> mutation.revision
+                    revision.effectiveFrom.isBefore(mutation.revision.effectiveFrom) -> revision
+                    !propagateAvailability -> revision
+                    revision.value.availabilityLabel == previousAtStart.value.availabilityLabel -> revision.copy(
+                        value = revision.value.copy(
+                            availabilityLabel = mutation.revision.value.availabilityLabel,
+                        ),
+                    )
+                    else -> {
+                        propagateAvailability = false
+                        revision
+                    }
+                }
+            }.let { revisions ->
+                if (existingSameDate == null) revisions + mutation.revision else revisions
+            }
+            val updated = validateHistory("La nueva disponibilidad no es válida.") {
+                WorkConfigurationHistory(
+                    timeline = EffectiveDateTimeline(current.timeline.id, revisedTimeline),
+                    perPeriodHoursValues = current.perPeriodHoursValues,
+                )
+            }
+            val encoded = mutation.revision.toEntity(current.timeline.id)
+            if (existingSameDate == null) {
+                dao.insertRevision(encoded.revision)
+            } else if (dao.updateRevision(encoded.revision) != 1) {
+                throw ReferenceWriteConflictException()
+            }
+            revisedTimeline
+                .filter { revision ->
+                    revision.id != mutation.revision.id &&
+                        current.timeline.revisions.single { it.id == revision.id } != revision
+                }
+                .forEach { revision ->
+                    if (dao.updateRevision(revision.toEntity(current.timeline.id).revision) != 1) {
+                        throw ReferenceWriteConflictException()
+                    }
+                }
+            database.requireValidV2LocalData()
+            WorkConfigurationAvailabilityWriteResult.Saved(updated)
+        }
+    } catch (_: SQLiteConstraintException) {
+        WorkConfigurationAvailabilityWriteResult.Conflict
+    } catch (_: ReferenceWriteConflictException) {
+        WorkConfigurationAvailabilityWriteResult.Conflict
     }
 
     private suspend fun requireHistory(timelineId: UUID): WorkConfigurationHistory {

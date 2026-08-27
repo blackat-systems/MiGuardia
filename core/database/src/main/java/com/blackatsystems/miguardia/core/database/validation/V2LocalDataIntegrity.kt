@@ -2,6 +2,7 @@ package com.blackatsystems.miguardia.core.database.validation
 
 import com.blackatsystems.miguardia.core.database.MiGuardiaV2Database
 import com.blackatsystems.miguardia.core.database.mapping.decodeWorkCatalog
+import com.blackatsystems.miguardia.core.database.mapping.toDomainAvailability
 import com.blackatsystems.miguardia.core.database.mapping.decodeRecurringPlanAggregate
 import com.blackatsystems.miguardia.core.database.mapping.encodeSector
 import com.blackatsystems.miguardia.core.database.mapping.toDomain
@@ -132,7 +133,45 @@ private suspend fun MiGuardiaV2Database.auditValidV2LocalData(): WorkConfigurati
     )
     validateShiftActuals(history = history, writes = writes)
     validateIndependentExtras(history = history, catalogs = catalogs)
+    validateAvailabilityWindows(history = history)
     return history
+}
+
+private suspend fun MiGuardiaV2Database.validateAvailabilityWindows(
+    history: WorkConfigurationHistory?,
+) {
+    val dao = availabilityWindowDao()
+    if (dao.getInvalidRowCount() != 0) {
+        invalidV2Data("La base contiene disponibilidades huérfanas o incoherentes.")
+    }
+    val records = dao.getAll().map { it.toDomainAvailability() }
+    if (records.isNotEmpty() && history == null) {
+        invalidV2Data("Hay disponibilidades sin una configuración laboral.")
+    }
+    records.groupBy { it.timelineId to it.sector }.values.forEach { contextRecords ->
+        contextRecords.sortedWith(compareBy({ it.start }, { it.id })).zipWithNext().forEach { (first, second) ->
+            if (first.end > second.start) {
+                invalidV2Data("Las disponibilidades ${first.id} y ${second.id} se superponen.")
+            }
+        }
+    }
+    records.forEach { record ->
+        val storedHistory = requireNotNull(history)
+        if (storedHistory.timeline.id != record.timelineId) {
+            invalidV2Data("La disponibilidad ${record.id} pertenece a otra línea temporal.")
+        }
+        val preservedRevision = storedHistory.timeline.revisions.singleOrNull {
+            it.id == record.configurationRevisionId
+        } ?: invalidV2Data(
+            "La disponibilidad ${record.id} no conserva una revisión existente.",
+        )
+        if (
+            preservedRevision.effectiveFrom.isAfter(record.ownerLocalDate) ||
+            preservedRevision.value.sector != record.sector
+        ) {
+            invalidV2Data("La revisión histórica de la disponibilidad ${record.id} no coincide con su fecha o sector.")
+        }
+    }
 }
 
 private suspend fun MiGuardiaV2Database.validateIndependentExtras(

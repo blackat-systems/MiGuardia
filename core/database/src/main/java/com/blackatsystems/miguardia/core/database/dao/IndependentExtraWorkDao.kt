@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.Flow
 internal data class IndependentShiftOccupancyRow(
     val shiftId: String,
     val zoneId: String,
+    val ownerLocalDate: String,
     val startEpochMillis: Long,
     val endEpochMillis: Long,
     val status: String,
@@ -69,6 +70,7 @@ internal interface IndependentExtraWorkDao {
     @Query(
         """SELECT shifts.id AS shiftId,
                    shifts.zoneId AS zoneId,
+                   shifts.localStartDate AS ownerLocalDate,
                    COALESCE(actual.actualStartEpochMillis, shifts.startEpochMillis) AS startEpochMillis,
                    COALESCE(actual.actualEndEpochMillis, shifts.endEpochMillis) AS endEpochMillis,
                    shifts.status AS status,

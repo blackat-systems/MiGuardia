@@ -165,7 +165,52 @@ class V2DatabaseMigrationInstrumentedTest {
     }
 
     @Test
-    fun migrationChainOneToTwoToThreeToFourPreservesVersionOneData() {
+    fun migrationFourToFivePreservesAllTwentySixPopulatedTablesAndCreatesExactEmptyAvailability() {
+        helper.createDatabase(DB_FOUR_TO_FIVE, 1).apply {
+            seedEveryVersionOneTable()
+            close()
+        }
+        helper.runMigrationsAndValidate(
+            DB_FOUR_TO_FIVE,
+            4,
+            true,
+            MiGuardiaV2Database.MIGRATION_1_2,
+            MiGuardiaV2Database.MIGRATION_2_3,
+            MiGuardiaV2Database.MIGRATION_3_4,
+        ).apply {
+            seedEveryVersionTwoRecurringTable()
+            seedEveryVersionThreeTable()
+            seedEveryVersionFourTable()
+            close()
+        }
+
+        val migrated = helper.runMigrationsAndValidate(
+            DB_FOUR_TO_FIVE,
+            5,
+            true,
+            MiGuardiaV2Database.MIGRATION_4_5,
+        )
+
+        (VERSION_TWO_TABLES + VERSION_THREE_TABLES + VERSION_FOUR_TABLES).forEach { table ->
+            assertTrue("La migración debe preservar $table", migrated.scalar("SELECT COUNT(*) FROM `$table`") > 0)
+        }
+        assertEquals(0, migrated.scalar("SELECT COUNT(*) FROM availability_windows"))
+        assertEquals(
+            27,
+            migrated.scalar(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' " +
+                    "AND name NOT LIKE 'sqlite_%' AND name NOT LIKE 'android_%' " +
+                    "AND name != 'room_master_table'",
+            ),
+        )
+        assertForeignKey(migrated, "availability_windows", "work_configuration_roots", "RESTRICT")
+        assertForeignKey(migrated, "availability_windows", "work_configuration_revisions", "RESTRICT")
+        assertHealthy(migrated)
+        migrated.close()
+    }
+
+    @Test
+    fun migrationChainOneToTwoToThreeToFourToFivePreservesVersionOneData() {
         helper.createDatabase(DB_CHAIN, 1).apply {
             seedEveryVersionOneTable()
             close()
@@ -173,17 +218,18 @@ class V2DatabaseMigrationInstrumentedTest {
 
         val migrated = helper.runMigrationsAndValidate(
             DB_CHAIN,
-            4,
+            5,
             true,
             MiGuardiaV2Database.MIGRATION_1_2,
             MiGuardiaV2Database.MIGRATION_2_3,
             MiGuardiaV2Database.MIGRATION_3_4,
+            MiGuardiaV2Database.MIGRATION_4_5,
         )
 
         VERSION_ONE_TABLES.forEach { table ->
             assertEquals("La cadena debe preservar $table", 1, migrated.scalar("SELECT COUNT(*) FROM `$table`"))
         }
-        (NEW_TABLES + VERSION_THREE_TABLES + VERSION_FOUR_TABLES).forEach { table ->
+        (NEW_TABLES + VERSION_THREE_TABLES + VERSION_FOUR_TABLES + VERSION_FIVE_TABLES).forEach { table ->
             assertEquals("La cadena debe iniciar $table vacía", 0, migrated.scalar("SELECT COUNT(*) FROM `$table`"))
         }
         assertHealthy(migrated)
@@ -291,6 +337,18 @@ class V2DatabaseMigrationInstrumentedTest {
             "INSERT INTO shift_extra_intervals VALUES " +
                 "('interval-1', 'shift-1', 'timeline-1', 'PRIVATE_SECURITY', 'class-1', " +
                 "1787497200000, 1787500800000, 'Hora extra', 1, 1, 1, 1)",
+        )
+    }
+
+    private fun androidx.sqlite.db.SupportSQLiteDatabase.seedEveryVersionFourTable() {
+        execSQL(
+            """INSERT INTO independent_extra_work_records VALUES (
+                'independent-1', 'timeline-1', 'PRIVATE_SECURITY', 'configuration-1',
+                'place-1', 'objective-1', 'type-1', 'template-1', 'class-1',
+                '2026-08-23', 'America/Argentina/Cordoba', 1787500800000, 1787504400000,
+                'Hospital migrado', 'HMI', 'Dirección ficticia', 'Jornada habitual',
+                'ACTIVE_WORK', -13408615, NULL, 'Hora extra', 1, 1, 1, 1
+            )""".trimIndent(),
         )
     }
 
@@ -439,6 +497,7 @@ class V2DatabaseMigrationInstrumentedTest {
         const val DB_TWO_TO_THREE = "v2-migration-2-3-test.db"
         const val DB_CHAIN = "v2-migration-1-3-test.db"
         const val DB_THREE_TO_FOUR = "v2-migration-3-4-test.db"
+        const val DB_FOUR_TO_FIVE = "v2-migration-4-5-test.db"
         val VERSION_ONE_TABLES = listOf(
             "objectives",
             "shifts",
@@ -472,5 +531,6 @@ class V2DatabaseMigrationInstrumentedTest {
             "shift_extra_intervals",
         )
         val VERSION_FOUR_TABLES = listOf("independent_extra_work_records")
+        val VERSION_FIVE_TABLES = listOf("availability_windows")
     }
 }

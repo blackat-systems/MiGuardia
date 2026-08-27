@@ -1,6 +1,6 @@
 # Guardias pasivas y disponibilidad V2
 
-- Estado: **HABILITADO — TAREA TODAVÍA NO ABIERTA**
+- Estado: **CERRADO — INTEGRADO POR MAIN**
 - Fecha: 2026-08-25
 - Proyecto obligatorio:
   C:\Users\Joaquin\Desktop\chatgptprojects\MiGuardia-2.0

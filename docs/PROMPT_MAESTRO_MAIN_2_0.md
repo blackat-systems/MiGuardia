@@ -29,11 +29,14 @@ Joaquin autorizó:
   `codex/miguardia-2.0` que fijó la base `836d908` de `Cargar jornadas`;
 - conservar como ejecutado y consumido en `0364b83` el único push adicional
   autorizado por Joaquin el 2026-08-23 para publicar el checkpoint estable
-  V2-only y la recomendación futura de Agenda profesional.
+  V2-only y la recomendación futura de Agenda profesional;
+- ejecutar el único push autorizado por Joaquin el 2026-08-27 sólo después del
+  cierre verde de guardias pasivas y disponibilidad.
 
-La autorización adicional ya quedó consumida. No habilita pushes posteriores,
-tag, Release, operación sobre `main`, cambio en producción ni otra acción
-externa irreversible. Esas puertas continúan separadas.
+Las autorizaciones anteriores ya quedaron consumidas. La autorización actual se
+consume con el único push de este cierre y no habilita pushes posteriores, tag,
+Release, operación sobre `main`, cambio en producción ni otra acción externa
+irreversible. Esas puertas continúan separadas.
 
 ## 2. Autoridad
 
@@ -59,7 +62,7 @@ de convertirla en una implementación amplia.
 - Kotlin y Compose continúan como base.
 - El código parte de MiGuardia 1.0 y puede reutilizar sus componentes probados.
 - El runtime actual abre únicamente `MiGuardiaV2Database`, archivo
-  `miguardia-v2.db`, Room versión 4 y cadena explícita `1→2→3→4`; la cadena Room
+  `miguardia-v2.db`, Room versión 5 y cadena explícita `1→2→3→4→5`; la cadena Room
   histórica y las rutas V1 ya no forman parte de la ejecución.
 - Se conservan inicialmente `minSdk 26`, `targetSdk 37`, `compileSdk 37` y Java
   17.
@@ -298,8 +301,10 @@ mayor al planificado.
   verificado en `836d908`; su autorización está consumida.
 - El único push adicional del 2026-08-23 publicó el cierre estable V2-only en
   `0364b83`; su autorización también quedó consumida.
-- No hacer pushes posteriores, merge a `main`, tag, Release ni publicación de
-  la aplicación.
+- Joaquin autorizó un único push del cierre verde de guardias pasivas y
+  disponibilidad el 2026-08-27; la autorización se consume con esa publicación.
+- No hacer pushes posteriores a ese cierre, merge a `main`, tag, Release ni
+  publicación de la aplicación.
 - No usar `reset --hard`, no limpiar worktrees históricos y no descartar cambios
   ajenos.
 

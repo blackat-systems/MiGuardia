@@ -116,6 +116,24 @@ data class WorkConfigurationReferenceMutation(
     }
 }
 
+data class WorkConfigurationAvailabilityMutation(
+    val expectedHistory: WorkConfigurationHistory,
+    val revision: EffectiveRevision<WorkConfiguration>,
+) {
+    init {
+        val previousAtStart = requireNotNull(
+            expectedHistory.timeline.revisionAt(revision.effectiveFrom),
+        ) { "La disponibilidad no puede comenzar antes de la configuración laboral" }
+        require(
+            revision.value.sector == previousAtStart.value.sector &&
+                revision.value.hoursReference == previousAtStart.value.hoursReference &&
+                revision.value.hoursReferenceStartedOn == previousAtStart.value.hoursReferenceStartedOn,
+        ) {
+            "Cambiar la disponibilidad no puede modificar el rubro ni la referencia de horas"
+        }
+    }
+}
+
 data class PerPeriodHoursValueMutation(
     val expectedHistory: WorkConfigurationHistory,
     val replacement: PerPeriodHoursEntry,
@@ -143,6 +161,11 @@ sealed interface PerPeriodHoursValueWriteResult {
 sealed interface WorkConfigurationReferenceWriteResult {
     data class Saved(val history: WorkConfigurationHistory) : WorkConfigurationReferenceWriteResult
     data object Conflict : WorkConfigurationReferenceWriteResult
+}
+
+sealed interface WorkConfigurationAvailabilityWriteResult {
+    data class Saved(val history: WorkConfigurationHistory) : WorkConfigurationAvailabilityWriteResult
+    data object Conflict : WorkConfigurationAvailabilityWriteResult
 }
 
 class EffectiveDateTimeline<T>(

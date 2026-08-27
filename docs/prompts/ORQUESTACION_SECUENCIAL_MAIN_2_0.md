@@ -234,9 +234,9 @@ La secuencia conocida al redactar este prompt es:
     ciclo. La persona elige la fecha de reinicio y no existe prorrateo
     automático —cerrado en `964b7cd`—.
 12. Registrar guardias pasivas y descontar sólo el trabajo coincidente
-    —prompt habilitado, tarea todavía no abierta—.
+    —cerrado por MAIN en el checkpoint de disponibilidad del 2026-08-27—.
 13. Registrar situaciones especiales sin convertirlas automáticamente en
-    horas.
+    horas —próximo bloque recomendado, prompt todavía no creado—.
 14. Consolidar el motor final de horas y cumplimiento con trabajo activo,
     extras, guardias pasivas y situaciones especiales.
 15. Terminar el Calendario y desplegar todas las jornadas del día.
@@ -554,23 +554,22 @@ acción sobre producción.
 
 ## 17. Estado inmediato
 
-El bloque **Extras independientes y avance de horas** quedó auditado, corregido,
-verificado y cerrado por MAIN en `964b7cd`. `MiGuardiaV2Database`,
-`miguardia-v2.db` y Room V2 versión 4 son la base activa, con cadena explícita
-`1→2→3→4`.
+El bloque **Guardias pasivas y disponibilidad** quedó auditado, corregido,
+verificado y cerrado por MAIN. `MiGuardiaV2Database`, `miguardia-v2.db` y Room
+V2 versión 5 son la base activa, con cadena explícita `1→2→3→4→5`.
 
-El stage general siguiente queda dividido, sin cambiar el mapa humano, en tres
+El stage general continúa dividido, sin cambiar el mapa humano, en tres
 dependencias secuenciales:
 
-1. guardias pasivas y disponibilidad;
-2. ausencias, cancelaciones y otras situaciones especiales;
+1. guardias pasivas y disponibilidad —cerrada—;
+2. ausencias, cancelaciones y otras situaciones especiales —próxima—;
 3. conteo final de horas y cumplimiento.
 
-El prompt `GUARDIAS_PASIVAS_Y_DISPONIBILIDAD_V2.md` está habilitado sobre esa
-base funcional. Define un único concepto con los nombres Guardia pasiva,
-Disponible para llamado o Retén; impide ventanas superpuestas y descuenta
-solamente la unión del trabajo activo coincidente.
+El prompt `GUARDIAS_PASIVAS_Y_DISPONIBILIDAD_V2.md` está `CERRADO`. El bloque
+define un único concepto con los nombres Guardia pasiva, Disponible para
+llamado o Retén; impide ventanas superpuestas y descuenta solamente la unión
+del trabajo activo coincidente.
 
-No hay una tarea especializada abierta ni código candidato. MAIN espera que
-Joaquin entregue el prompt al nuevo chat desde el checkpoint documental exacto
-de este contrato.
+No hay una tarea especializada abierta ni código candidato para el bloque
+siguiente. MAIN espera que Joaquin pida preparar el prompt de ausencias,
+cancelaciones y otras situaciones especiales.

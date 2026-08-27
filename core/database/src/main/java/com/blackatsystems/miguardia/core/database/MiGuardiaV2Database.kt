@@ -7,6 +7,7 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.blackatsystems.miguardia.core.database.dao.ExplicitDayStatusDao
+import com.blackatsystems.miguardia.core.database.dao.AvailabilityWindowDao
 import com.blackatsystems.miguardia.core.database.dao.HolidayDao
 import com.blackatsystems.miguardia.core.database.dao.IndependentExtraWorkDao
 import com.blackatsystems.miguardia.core.database.dao.MedicalLeaveDao
@@ -22,6 +23,7 @@ import com.blackatsystems.miguardia.core.database.dao.VacationDao
 import com.blackatsystems.miguardia.core.database.dao.WorkCatalogDao
 import com.blackatsystems.miguardia.core.database.dao.WorkConfigurationDao
 import com.blackatsystems.miguardia.core.database.entity.ExplicitDayStatusEntity
+import com.blackatsystems.miguardia.core.database.entity.AvailabilityWindowEntity
 import com.blackatsystems.miguardia.core.database.entity.ExtraWorkClassEntity
 import com.blackatsystems.miguardia.core.database.entity.HolidayEntity
 import com.blackatsystems.miguardia.core.database.entity.IndependentExtraWorkRecordEntity
@@ -76,8 +78,9 @@ import com.blackatsystems.miguardia.core.database.entity.WorkplaceRuleRevisionEn
         ShiftActualRecordEntity::class,
         ShiftExtraIntervalEntity::class,
         IndependentExtraWorkRecordEntity::class,
+        AvailabilityWindowEntity::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = true,
 )
 internal abstract class MiGuardiaV2Database : RoomDatabase() {
@@ -96,6 +99,7 @@ internal abstract class MiGuardiaV2Database : RoomDatabase() {
     internal abstract fun recurringPlanDao(): RecurringPlanDao
     internal abstract fun shiftActualDao(): ShiftActualDao
     internal abstract fun independentExtraWorkDao(): IndependentExtraWorkDao
+    internal abstract fun availabilityWindowDao(): AvailabilityWindowDao
 
     companion object {
         const val DATABASE_NAME: String = "miguardia-v2.db"
@@ -107,7 +111,7 @@ internal abstract class MiGuardiaV2Database : RoomDatabase() {
             context.applicationContext,
             MiGuardiaV2Database::class.java,
             databaseName,
-        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4).build()
+        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5).build()
 
         internal val MIGRATION_1_2: Migration = object : Migration(1, 2) {
             override fun migrate(db: SupportSQLiteDatabase) {
@@ -407,6 +411,44 @@ internal abstract class MiGuardiaV2Database : RoomDatabase() {
                     "CREATE INDEX IF NOT EXISTS " +
                         "`index_independent_extra_work_records_extraWorkClassId_timelineId_sector` " +
                         "ON `independent_extra_work_records` (`extraWorkClassId`, `timelineId`, `sector`)",
+                )
+            }
+        }
+
+        internal val MIGRATION_4_5: Migration = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """CREATE TABLE IF NOT EXISTS `availability_windows` (
+                        `id` TEXT NOT NULL,
+                        `timelineId` TEXT NOT NULL,
+                        `sector` TEXT NOT NULL,
+                        `configurationRevisionId` TEXT NOT NULL,
+                        `ownerLocalDate` TEXT NOT NULL,
+                        `zoneId` TEXT NOT NULL,
+                        `startEpochMillis` INTEGER NOT NULL,
+                        `endEpochMillis` INTEGER NOT NULL,
+                        `labelSnapshot` TEXT NOT NULL,
+                        `createdAtEpochMillis` INTEGER NOT NULL,
+                        `updatedAtEpochMillis` INTEGER NOT NULL,
+                        PRIMARY KEY(`id`),
+                        FOREIGN KEY(`timelineId`) REFERENCES `work_configuration_roots`(`timelineId`)
+                            ON UPDATE NO ACTION ON DELETE RESTRICT,
+                        FOREIGN KEY(`configurationRevisionId`, `timelineId`, `sector`)
+                            REFERENCES `work_configuration_revisions`(`id`, `timelineId`, `sector`)
+                            ON UPDATE NO ACTION ON DELETE RESTRICT
+                    )""".trimIndent(),
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_availability_windows_timelineId_sector_ownerLocalDate` " +
+                        "ON `availability_windows` (`timelineId`, `sector`, `ownerLocalDate`)",
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_availability_windows_timelineId_sector_startEpochMillis_endEpochMillis` " +
+                        "ON `availability_windows` (`timelineId`, `sector`, `startEpochMillis`, `endEpochMillis`)",
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_availability_windows_configurationRevisionId_timelineId_sector` " +
+                        "ON `availability_windows` (`configurationRevisionId`, `timelineId`, `sector`)",
                 )
             }
         }

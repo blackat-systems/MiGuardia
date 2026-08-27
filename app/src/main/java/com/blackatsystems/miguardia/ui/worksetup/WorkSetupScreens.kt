@@ -71,6 +71,7 @@ data class WorkSetupActions(
     val openRecurringPlans: () -> Unit = {},
     val openExtraClasses: () -> Unit = {},
     val openHoursProgress: () -> Unit = {},
+    val openAvailability: () -> Unit = {},
     val updatePlaceDraft: ((WorkPlaceDraft) -> WorkPlaceDraft) -> Unit = {},
     val updateTemplateDraft: ((WorkTemplateDraft) -> WorkTemplateDraft) -> Unit = {},
     val continueToTemplate: () -> Unit = {},
@@ -367,6 +368,12 @@ private fun WorkSetupOverview(state: WorkSetupUiState, actions: WorkSetupActions
                             .fillMaxWidth()
                             .testTag("work-setup-hours-progress"),
                     ) { Text("Referencia y avance de horas") }
+                    OutlinedButton(
+                        onClick = actions.openAvailability,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("work-setup-availability"),
+                    ) { Text("Guardias pasivas y disponibilidad") }
                 }
             }
         }

@@ -1,7 +1,7 @@
 # Índice canónico de prompts — MiGuardia
 
 - Estado: activo
-- Última auditoría completa: 2026-08-25
+- Última auditoría completa: 2026-08-27
 - Regla: un prompt sólo se ejecuta si este índice lo marca `ACTIVO` o
   `HABILITADO` y Joaquin autoriza la tarea
 
@@ -15,8 +15,10 @@
   la tarea siguiente por su cuenta.
 - **Contrato humano:** toda dependencia nueva explica primero `QUÉ HACE` y
   `POR QUÉ EXISTE`, tanto en su prompt como en su handoff.
-- **Próxima dependencia habilitada:** `Guardias pasivas y disponibilidad`; el
-  prompt está listo, pero la tarea todavía no fue abierta.
+- **Última dependencia cerrada:** `Guardias pasivas y disponibilidad`, auditada
+  e integrada por MAIN sobre Room V2 versión 5.
+- **Próxima dependencia recomendada:** `Ausencias, cancelaciones y otras
+  situaciones especiales`; todavía no tiene prompt creado ni habilitado.
 - **Commits locales:** MAIN los crea automáticamente como checkpoints de
   bloques comprobados.
 - **Push puntual anterior de la rama 2.0:** ejecutado y verificado hasta
@@ -26,6 +28,9 @@
   único push adicional para publicar el checkpoint estable V2-only y la
   recomendación futura de Agenda profesional. Esa autorización quedó
   consumida en `0364b83`.
+- **Push de este cierre:** Joaquin autorizó el 2026-08-27 publicar el checkpoint
+  verde de guardias pasivas y disponibilidad. La autorización se consume con
+  ese único push.
 - **Pushes posteriores, tag, Release, `main` y producción:** no autorizados.
 
 El prompt rector activo es `docs/PROMPT_MAESTRO_MAIN_2_0.md`. El mapa del
@@ -75,7 +80,7 @@ prevalecen para el estado operativo.
 | `REPETIR_JORNADAS_Y_CAMBIAR_DESDE_UNA_FECHA_V2.md` | **CERRADO** | Planes finitos, excepciones durables y cambios de una jornada o de todo lo futuro integrados sobre Room V2 versión 2 |
 | `REGISTRAR_HORARIO_REAL_Y_CLASIFICAR_HORAS_EXTRA_V2.md` | **CERRADO** | Horario real y extras exactas por jornada integrados sobre Room V2 versión 3, sin calcular todavía avance |
 | `EXTRAS_INDEPENDIENTES_Y_AVANCE_DE_HORAS_V2.md` | **CERRADO** | Extras sin jornada dueña, reinicio consciente de la referencia y avance de horas integrados sobre Room V2 versión 4 |
-| `GUARDIAS_PASIVAS_Y_DISPONIBILIDAD_V2.md` | **HABILITADO — TAREA NO ABIERTA** | Registra ventanas pasivas exactas y descuenta sólo la unión del trabajo activo coincidente, sin sumarlas como horas trabajadas |
+| `GUARDIAS_PASIVAS_Y_DISPONIBILIDAD_V2.md` | **CERRADO** | Ventanas pasivas exactas integradas sobre Room V2 versión 5; sólo la unión del trabajo activo coincidente las reemplaza y nunca suman como horas trabajadas |
 
 ## Contratos históricos de MiGuardia 1.0
 
@@ -131,9 +136,10 @@ Joaquin indicó que quiere preparar o abrir la siguiente:
    `EXTRAS_INDEPENDIENTES_Y_AVANCE_DE_HORAS_V2.md`; la persona elige la fecha
    de reinicio y no existe prorrateo automático;
 9. **Stage en curso, dividido en tres dependencias secuenciales:**
-   - **Habilitada, tarea todavía no abierta:** guardias pasivas y
-     disponibilidad mediante `GUARDIAS_PASIVAS_Y_DISPONIBILIDAD_V2.md`;
-   - después: ausencias, cancelaciones y otras situaciones especiales;
+   - **Cerrada:** guardias pasivas y disponibilidad mediante
+     `GUARDIAS_PASIVAS_Y_DISPONIBILIDAD_V2.md`;
+   - **Próxima recomendada, sin prompt habilitado:** ausencias, cancelaciones y
+     otras situaciones especiales;
    - después: conteo final de horas y cumplimiento;
 10. Calendario final y tarjeta superior;
 11. Resumen personalizable;
@@ -145,8 +151,9 @@ Joaquin indicó que quiere preparar o abrir la siguiente:
 Cuando Joaquin pide un prompt, MAIN lo habilita en este índice después de cerrar
 su contrato y dependencias, y crea automáticamente el checkpoint documental
 local verificado. Pedir el prompt no abre por sí solo la tarea. Las
-autorizaciones de push indicadas arriba ya fueron consumidas; cualquier
-publicación posterior requiere una autorización nueva.
+autorizaciones de push anteriores ya fueron consumidas; la autorización actual
+se consume con el único push de este cierre. Cualquier publicación posterior
+requiere una autorización nueva.
 
 Antes de los detalles técnicos, cada contrato debe explicar en lenguaje común
 qué resultado aporta y qué problema del proyecto justifica que esa dependencia

@@ -104,6 +104,11 @@ import com.blackatsystems.miguardia.core.domain.weather.WeatherUnitSystem
 import com.blackatsystems.miguardia.core.domain.weather.roundedTemperature
 import com.blackatsystems.miguardia.core.domain.weather.spanishLabel
 import com.blackatsystems.miguardia.ui.calendar.CalendarLoadState
+import com.blackatsystems.miguardia.ui.availability.AvailabilityActions
+import com.blackatsystems.miguardia.ui.availability.AvailabilityDaySection
+import com.blackatsystems.miguardia.ui.availability.AvailabilitySurfaceHost
+import com.blackatsystems.miguardia.ui.availability.AvailabilityUiState
+import com.blackatsystems.miguardia.ui.availability.AvailabilityViewModel
 import com.blackatsystems.miguardia.ui.calendar.CalendarInteractionMode
 import com.blackatsystems.miguardia.ui.calendar.CalendarUiState
 import com.blackatsystems.miguardia.ui.calendar.CalendarViewModel
@@ -379,6 +384,7 @@ fun MiGuardiaApp(
     weatherViewModel: WeatherViewModel,
     workSetupViewModel: WorkSetupViewModel,
     hoursAndExtrasViewModel: HoursAndExtrasViewModel,
+    availabilityViewModel: AvailabilityViewModel,
     modifier: Modifier = Modifier,
     calendarNavigationRequest: Int = 0,
     appZoom: AppZoom = AppZoom.STANDARD,
@@ -399,6 +405,7 @@ fun MiGuardiaApp(
     val weatherState by weatherViewModel.uiState.collectAsStateWithLifecycle()
     val workSetupState by workSetupViewModel.uiState.collectAsStateWithLifecycle()
     val hoursAndExtrasState by hoursAndExtrasViewModel.uiState.collectAsStateWithLifecycle()
+    val availabilityState by availabilityViewModel.uiState.collectAsStateWithLifecycle()
     MiGuardiaApp(
         calendarState = calendarState,
         nextEventState = nextEventState,
@@ -437,6 +444,8 @@ fun MiGuardiaApp(
         workSetupActions = WorkSetupActions.from(workSetupViewModel),
         hoursAndExtrasState = hoursAndExtrasState,
         hoursAndExtrasActions = HoursAndExtrasActions.from(hoursAndExtrasViewModel),
+        availabilityState = availabilityState,
+        availabilityActions = AvailabilityActions.from(availabilityViewModel),
         calendarNavigationRequest = calendarNavigationRequest,
         appZoom = appZoom,
         onAppZoomChange = onAppZoomChange,
@@ -487,6 +496,8 @@ fun MiGuardiaApp(
     workSetupActions: WorkSetupActions = WorkSetupActions(),
     hoursAndExtrasState: HoursAndExtrasUiState = HoursAndExtrasUiState(),
     hoursAndExtrasActions: HoursAndExtrasActions = HoursAndExtrasActions(),
+    availabilityState: AvailabilityUiState = AvailabilityUiState(),
+    availabilityActions: AvailabilityActions = AvailabilityActions(),
     calendarNavigationRequest: Int = 0,
     appZoom: AppZoom = AppZoom.STANDARD,
     onAppZoomChange: (AppZoom) -> Unit = {},
@@ -497,7 +508,8 @@ fun MiGuardiaApp(
         (v2ShiftEditState.isBlocking && v2ShiftEditState.isSaving) ||
             (v2RecurringState.isBlocking && v2RecurringState.isSaving) ||
             (v2ShiftActualState.isBlocking && v2ShiftActualState.isSaving) ||
-            (hoursAndExtrasState.isBlocking && hoursAndExtrasState.isSaving)
+            (hoursAndExtrasState.isBlocking && hoursAndExtrasState.isSaving) ||
+            (availabilityState.isBlocking && availabilityState.isSaving)
     if (
         !preserveV2WriteSurface &&
         (
@@ -526,6 +538,7 @@ fun MiGuardiaApp(
         )
     val v2ShiftActualActive = v2ShiftActualState.isBlocking
     val hoursAndExtrasActive = hoursAndExtrasState.isBlocking
+    val availabilityActive = availabilityState.isBlocking
     var destination by rememberSaveable { androidx.compose.runtime.mutableStateOf(MainDestination.CALENDAR) }
     val displayedCalendarState = if (
         !v2ManualLoadActive && calendarState.interactionMode == CalendarInteractionMode.EDIT
@@ -557,7 +570,8 @@ fun MiGuardiaApp(
         v2ShiftEditActive ||
         v2RecurringActive ||
         v2ShiftActualActive ||
-        hoursAndExtrasActive
+        hoursAndExtrasActive ||
+        availabilityActive
     val canOpenDrawer = !hasBlockingSurface && selectedDay == null
     LaunchedEffect(calendarNavigationRequest) {
         if (calendarNavigationRequest > 0) {
@@ -786,6 +800,8 @@ fun MiGuardiaApp(
                     v2RecurringActions = v2RecurringActions,
                     hoursAndExtrasState = hoursAndExtrasState,
                     hoursAndExtrasActions = hoursAndExtrasActions,
+                    availabilityState = availabilityState,
+                    availabilityActions = availabilityActions,
                     onOpenPhotos = { photosActions.open(calendarState.visibleMonth) },
                     appZoom = appZoom,
                     needsFirstWorkSet = needsFirstWorkSet,
@@ -872,7 +888,8 @@ fun MiGuardiaApp(
         !v2ShiftEditActive &&
         !v2RecurringActive &&
         !v2ShiftActualActive &&
-        !hoursAndExtrasActive
+        !hoursAndExtrasActive &&
+        !availabilityActive
     ) {
         ModalBottomSheet(
             onDismissRequest = onDismissDate,
@@ -904,6 +921,8 @@ fun MiGuardiaApp(
                 },
                 onCorrectIndependentExtra = hoursAndExtrasActions.openCorrectExtra,
                 onDeleteIndependentExtra = hoursAndExtrasActions.requestDelete,
+                availabilityState = availabilityState,
+                availabilityActions = availabilityActions,
             )
         }
     }
@@ -939,6 +958,10 @@ fun MiGuardiaApp(
                     workSetupActions.requestBack()
                     hoursAndExtrasActions.openProgress()
                 },
+                openAvailability = {
+                    workSetupActions.requestBack()
+                    availabilityActions.openOverview()
+                },
             ),
         )
     }
@@ -946,10 +969,14 @@ fun MiGuardiaApp(
         HoursAndExtrasSurfaceHost(
             state = hoursAndExtrasState,
             actions = hoursAndExtrasActions,
+            availabilityState = availabilityState,
             onOpenExtraClassCatalog = {
                 v2ShiftActualActions.openCatalog(workSetupState.rootState)
             },
         )
+    }
+    if (availabilityActive) {
+        AvailabilitySurfaceHost(availabilityState, availabilityActions)
     }
     if (v2ShiftEditActive) {
         V2ShiftEditSurfaceHost(
@@ -1123,6 +1150,8 @@ private fun CalendarScreen(
     v2RecurringActions: V2RecurringActions,
     hoursAndExtrasState: HoursAndExtrasUiState,
     hoursAndExtrasActions: HoursAndExtrasActions,
+    availabilityState: AvailabilityUiState,
+    availabilityActions: AvailabilityActions,
     appZoom: AppZoom,
     needsFirstWorkSet: Boolean,
     onOpenWorkSetup: () -> Unit,
@@ -1160,7 +1189,8 @@ private fun CalendarScreen(
             ?: v2ShiftActualState.infoMessage
             ?: v2ManualShiftLoadState.infoMessage
             ?: v2RecurringState.infoMessage
-            ?: hoursAndExtrasState.message,
+            ?: hoursAndExtrasState.message
+            ?: availabilityState.message,
         onDismiss = if (v2ShiftEditState.infoMessage != null) {
             v2ShiftEditActions.clearMessage
         } else if (v2ShiftActualState.infoMessage != null) {
@@ -1171,6 +1201,8 @@ private fun CalendarScreen(
             v2RecurringActions.clearMessage
         } else if (hoursAndExtrasState.message != null) {
             hoursAndExtrasActions.clearMessage
+        } else if (availabilityState.message != null) {
+            availabilityActions.clearMessage
         } else v2ManualShiftLoadActions.clearMessage,
     ) {
         BoxWithConstraints(
@@ -1226,10 +1258,18 @@ private fun CalendarScreen(
                         .orEmpty()
                         .groupingBy(IndependentExtraWorkRecord::ownerLocalDate)
                         .eachCount()
+                    val availabilityIndicators = availabilityState.source
+                        ?.windows
+                        .orEmpty()
+                        .groupBy { it.ownerLocalDate }
+                        .mapValues { (_, records) ->
+                            records.size to records.map { it.labelSnapshot }.distinct().joinToString(" / ")
+                        }
                     CalendarGridViewport(
                         month = state.visibleMonth,
                         days = state.days,
                         independentExtraCounts = independentExtraCounts,
+                        availabilityIndicators = availabilityIndicators,
                         today = today,
                         onPreviousMonth = previousMonth,
                         onNextMonth = nextMonth,
@@ -1353,6 +1393,7 @@ private fun CalendarGridViewport(
     month: YearMonth,
     days: List<CalendarDay>,
     independentExtraCounts: Map<LocalDate, Int>,
+    availabilityIndicators: Map<LocalDate, Pair<Int, String>>,
     today: LocalDate,
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit,
@@ -1389,6 +1430,7 @@ private fun CalendarGridViewport(
                     month = month,
                     days = days,
                     independentExtraCounts = independentExtraCounts,
+                    availabilityIndicators = availabilityIndicators,
                     today = today,
                     onPreviousMonth = onPreviousMonth,
                     onNextMonth = onNextMonth,
@@ -1570,6 +1612,7 @@ private fun MonthGrid(
     month: YearMonth,
     days: List<CalendarDay>,
     independentExtraCounts: Map<LocalDate, Int>,
+    availabilityIndicators: Map<LocalDate, Pair<Int, String>>,
     today: LocalDate,
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit,
@@ -1635,6 +1678,8 @@ private fun MonthGrid(
                         DayCell(
                             day = day,
                             independentExtraCount = independentExtraCounts[day.date] ?: 0,
+                            availabilityCount = availabilityIndicators[day.date]?.first ?: 0,
+                            availabilityLabel = availabilityIndicators[day.date]?.second,
                             isToday = day.date == today,
                             isSelected = day.date in selectedDates,
                             enabled = interactionMode == CalendarInteractionMode.VIEW ||
@@ -1663,6 +1708,8 @@ private fun MonthGrid(
 private fun DayCell(
     day: CalendarDay,
     independentExtraCount: Int,
+    availabilityCount: Int,
+    availabilityLabel: String?,
     isToday: Boolean,
     isSelected: Boolean,
     enabled: Boolean,
@@ -1675,6 +1722,8 @@ private fun DayCell(
         isToday,
         shiftDescription,
         independentExtraCount,
+        availabilityCount,
+        availabilityLabel,
     )
     val isCompletedDay = day.vacation == null &&
         day.shifts.isNotEmpty() &&
@@ -1780,6 +1829,18 @@ private fun DayCell(
                 fontWeight = FontWeight.Bold,
             )
         }
+        if (availabilityCount > 0) {
+            AutoSizeSingleLineText(
+                text = if (availabilityCount == 1) {
+                    requireNotNull(availabilityLabel)
+                } else {
+                    "$availabilityCount · ${requireNotNull(availabilityLabel)}"
+                },
+                maximum = 10.sp,
+                minimum = 6.sp,
+                fontWeight = FontWeight.Bold,
+            )
+        }
         val markers = buildList {
             when (day.explicitStatus) {
                 ExplicitDayStatusType.DAY_OFF -> add("F")
@@ -1849,6 +1910,8 @@ private fun DayDetailSheet(
     onRegisterIndependentExtra: () -> Unit = {},
     onCorrectIndependentExtra: (IndependentExtraWorkRecord) -> Unit = {},
     onDeleteIndependentExtra: (IndependentExtraWorkRecord) -> Unit = {},
+    availabilityState: AvailabilityUiState = AvailabilityUiState(),
+    availabilityActions: AvailabilityActions = AvailabilityActions(),
 ) {
     Column(
         modifier = Modifier
@@ -1867,6 +1930,7 @@ private fun DayDetailSheet(
         if (
             day.shifts.isEmpty() &&
             independentExtras.isEmpty() &&
+            availabilityState.windowsOn(day.date).isEmpty() &&
             day.explicitStatus == null &&
             !day.hasMedicalLeave
         ) {
@@ -1942,6 +2006,11 @@ private fun DayDetailSheet(
                 Text("Registrar trabajo extra")
             }
         }
+        AvailabilityDaySection(
+            date = day.date,
+            state = availabilityState,
+            actions = availabilityActions,
+        )
     }
 }
 
@@ -2176,6 +2245,8 @@ private fun CalendarDay.accessibilityDescription(
     isToday: Boolean,
     shiftDescription: String,
     independentExtraCount: Int,
+    availabilityCount: Int,
+    availabilityLabel: String?,
 ): String {
     val parts = mutableListOf(date.fullDisplayName())
     if (isToday) parts += "hoy"
@@ -2197,6 +2268,13 @@ private fun CalendarDay.accessibilityDescription(
             "un trabajo extra independiente"
         } else {
             "$independentExtraCount trabajos extra independientes"
+        }
+    }
+    if (availabilityCount > 0) {
+        parts += if (availabilityCount == 1) {
+            "una ventana de disponibilidad: ${requireNotNull(availabilityLabel)}"
+        } else {
+            "$availabilityCount ventanas de disponibilidad: ${requireNotNull(availabilityLabel)}"
         }
     }
     when (explicitStatus) {

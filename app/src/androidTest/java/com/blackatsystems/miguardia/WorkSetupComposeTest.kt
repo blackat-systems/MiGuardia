@@ -54,13 +54,17 @@ class WorkSetupComposeTest {
     val compose = createComposeRule()
 
     @Test
-    fun overviewOffersTheSingleReferenceAndHoursProgressEntry() {
+    fun overviewOffersHoursProgressAndAvailabilityEntries() {
         var opened = 0
+        var availabilityOpened = 0
         compose.setContent {
             MiGuardiaTheme {
                 WorkSetupSurfaceHost(
                     state = readyState(WorkSector.NURSING).copy(surface = WorkSetupSurface.OVERVIEW),
-                    actions = WorkSetupActions(openHoursProgress = { opened++ }),
+                    actions = WorkSetupActions(
+                        openHoursProgress = { opened++ },
+                        openAvailability = { availabilityOpened++ },
+                    ),
                 )
             }
         }
@@ -70,6 +74,11 @@ class WorkSetupComposeTest {
             .assertIsDisplayed()
             .performClick()
         compose.runOnIdle { assertEquals(1, opened) }
+        compose.onNodeWithTag("work-setup-availability")
+            .performScrollTo()
+            .assertIsDisplayed()
+            .performClick()
+        compose.runOnIdle { assertEquals(1, availabilityOpened) }
     }
 
     @Test
