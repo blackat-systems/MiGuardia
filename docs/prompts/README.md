@@ -17,8 +17,8 @@
   `POR QUÉ EXISTE`, tanto en su prompt como en su handoff.
 - **Última dependencia cerrada:** `Calendario final y tarjeta superior`,
   auditada, corregida e integrada por MAIN sin modificar Room V2 versión 5.
-- **Próxima etapa recomendada:** `Resumen personalizable`; todavía no existe un
-  prompt habilitado y MAIN espera la indicación de Joaquin para prepararlo.
+- **Próxima dependencia habilitada:** `Resumen personalizable`, autorizada por
+  Joaquin para una única tarea después del checkpoint documental.
 - **Commits locales:** MAIN los crea automáticamente como checkpoints de
   bloques comprobados.
 - **Push puntual anterior de la rama 2.0:** ejecutado y verificado hasta
@@ -31,6 +31,9 @@
 - **Push de disponibilidad:** Joaquin autorizó el 2026-08-27 publicar el
   checkpoint verde de guardias pasivas y disponibilidad. MAIN lo ejecutó y
   verificó en `80fe8e5`; la autorización quedó consumida.
+- **Push de Calendario final:** Joaquin autorizó el 2026-08-27 publicar el
+  checkpoint verde de Calendario final y tarjeta superior. MAIN lo ejecutó y
+  verificó en `fd6891e`; la autorización quedó consumida.
 - **Pushes posteriores, tag, Release, `main` y producción:** no autorizados.
 
 El prompt rector activo es `docs/PROMPT_MAESTRO_MAIN_2_0.md`. El mapa del
@@ -82,6 +85,7 @@ prevalecen para el estado operativo.
 | `EXTRAS_INDEPENDIENTES_Y_AVANCE_DE_HORAS_V2.md` | **CERRADO** | Extras sin jornada dueña, reinicio consciente de la referencia y avance de horas integrados sobre Room V2 versión 4 |
 | `GUARDIAS_PASIVAS_Y_DISPONIBILIDAD_V2.md` | **CERRADO** | Ventanas pasivas exactas integradas sobre Room V2 versión 5; sólo la unión del trabajo activo coincidente las reemplaza y nunca suman como horas trabajadas |
 | `CALENDARIO_FINAL_Y_TARJETA_SUPERIOR_V2.md` | **CERRADO** | Única grilla mensual consolidada y tarjeta desplegable con todas las jornadas de hoy, auditadas por MAIN |
+| `RESUMEN_PERSONALIZABLE_V2.md` | **HABILITADO** | Resumen mensual derivado, detalles ordenables y explicación exacta de cada cifra sin guardar totales ni modificar Room |
 
 ## Contratos históricos de MiGuardia 1.0
 
@@ -140,7 +144,8 @@ Joaquin indicó que quiere preparar o abrir la siguiente:
    `GUARDIAS_PASIVAS_Y_DISPONIBILIDAD_V2.md`;
 10. **Cerrado:** Calendario final y tarjeta superior mediante
     `CALENDARIO_FINAL_Y_TARJETA_SUPERIOR_V2.md`;
-11. **Siguiente recomendado, todavía no habilitado:** Resumen personalizable;
+11. **Habilitado:** Resumen personalizable mediante
+    `RESUMEN_PERSONALIZABLE_V2.md`;
 12. adaptación de próximo evento y notificaciones;
 13. auditoría integral del núcleo;
 14. segunda capa: widget, informes, copias, bloqueo y Ayuda/recorrido inicial;
@@ -149,9 +154,9 @@ Joaquin indicó que quiere preparar o abrir la siguiente:
 Cuando Joaquin pide un prompt, MAIN lo habilita en este índice después de cerrar
 su contrato y dependencias, y crea automáticamente el checkpoint documental
 local verificado. Pedir el prompt no abre por sí solo la tarea. Todas las
-autorizaciones de push anteriores, incluida la que publicó disponibilidad en
-`80fe8e5`, ya fueron consumidas. Cualquier publicación posterior requiere una
-autorización nueva.
+autorizaciones de push anteriores, incluidas las que publicaron disponibilidad
+en `80fe8e5` y Calendario final en `fd6891e`, ya fueron consumidas. Cualquier
+publicación posterior requiere una autorización nueva.
 
 Antes de los detalles técnicos, cada contrato debe explicar en lenguaje común
 qué resultado aporta y qué problema del proyecto justifica que esa dependencia

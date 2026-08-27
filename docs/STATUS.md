@@ -7,10 +7,10 @@ funcionales reunidas constituyen la base vigente para avanzar; cerrar esta etapa
 no significa que exista ya una implementación nueva.
 
 El bloque **Calendario final y tarjeta superior** quedó auditado, corregido,
-probado físicamente e integrado por MAIN sin modificar Room V2 versión 5. La
-próxima etapa recomendada del orden aprobado es **Resumen personalizable**. Su
-prompt todavía no fue creado ni habilitado; MAIN espera la indicación de Joaquin
-antes de prepararlo.
+probado físicamente, integrado por MAIN y publicado con autorización puntual en
+`fd6891e`, sin modificar Room V2 versión 5. Joaquin pidió preparar y abrir la
+etapa siguiente: **Resumen personalizable**. Su prompt quedó habilitado para una
+única dependencia especializada después del checkpoint documental.
 
 MAIN 2.0 está reactivada para recibir los handoffs que Joaquin entregue,
 auditarlos, integrarlos, probarlos y cerrarlos. Joaquin decide cuándo pedir el
@@ -23,9 +23,11 @@ el checkpoint estable V2-only y esta recomendación futura. MAIN lo ejecutó y
 verificó hasta `0364b83`; esa autorización quedó consumida. Joaquin autorizó el
 2026-08-27 un único push adicional para publicar el cierre verde de guardias
 pasivas y disponibilidad. MAIN lo ejecutó y verificó en `80fe8e5`; esa
-autorización quedó consumida y no se extiende a pushes posteriores, tags, un
-Release, `main`, la publicación de la aplicación ni ninguna acción sobre el
-paquete o los datos de producción.
+autorización quedó consumida. Joaquin autorizó después publicar el cierre verde
+de Calendario final y tarjeta superior; MAIN lo ejecutó y verificó en
+`fd6891e`. Esa autorización también quedó consumida y no se extiende a pushes
+posteriores, tags, un Release, `main`, la publicación de la aplicación ni
+ninguna acción sobre el paquete o los datos de producción.
 
 Decisión de producto del 2026-08-23: MiGuardia 1.0 fue una prueba interna sin
 usuarios y continúa únicamente como base de código. MiGuardia 2.0 no migra datos
@@ -175,6 +177,9 @@ y auditada en
     puntual.
   - `27601ddf50f16f6381eb998f0c01daecc9ced706`: contrato de Calendario final y
     tarjeta superior desplegable.
+  - `fd6891e446eaa574f3df14348d8d5b1cfd201f2d`: Calendario final y tarjeta
+    superior auditados, probados, integrados y publicados con autorización
+    puntual.
 - Al iniciar la preparación documental, la rama todavía no poseía upstream. El
   push puntual posterior fue ejecutado y verificado: rama local y remoto privado
   coincidían en `836d908`; esa autorización no puede reutilizarse.
@@ -861,10 +866,12 @@ acciones posteriores.
 
 ## Próximo paso
 
-Calendario final y tarjeta superior quedaron cerrados sin modificar Room V2
-versión 5. La próxima etapa recomendada es **Resumen personalizable**, punto 11
-del orden aprobado. Todavía no existe un prompt habilitado: MAIN lo prepara sólo
-cuando Joaquin lo pida.
+Calendario final y tarjeta superior quedaron cerrados y publicados sin
+modificar Room V2 versión 5. **Resumen personalizable**, punto 11 del orden
+aprobado, quedó definido y habilitado en
+`docs/prompts/RESUMEN_PERSONALIZABLE_V2.md`. Joaquin autorizó abrir una sola
+dependencia sobre el checkout compartido después de crear su checkpoint
+documental.
 
 El Resumen debe consumir las fuentes ya consolidadas sin crear un segundo
 calendario, inventar referencias horarias ni reinterpretar fotografías
@@ -883,7 +890,7 @@ Joaquin.
 Quedan como verificaciones separadas el recorrido físico de alarma exacta
 —sólo con permiso explícito— y API 37 antes del candidato final. API 26 no se
 repitió con Room V2 versión 5; no corresponde una migración V1 real en el
-Samsung. El push autorizado para disponibilidad fue ejecutado y consumido en
-`80fe8e5`. Calendario final no recibió una autorización de push. Cualquier push
-posterior, tag, Release y toda operación sobre `main` o producción continúan
-prohibidos.
+Samsung. Los pushes autorizados para disponibilidad y para Calendario final
+fueron ejecutados y consumidos en `80fe8e5` y `fd6891e`, respectivamente.
+Cualquier push posterior, tag, Release y toda operación sobre `main` o
+producción continúan prohibidos.

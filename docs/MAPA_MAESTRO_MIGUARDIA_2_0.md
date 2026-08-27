@@ -169,7 +169,7 @@ Guardias pasivas y disponibilidad — cerrado
         ↓
 Calendario final y tarjeta superior desplegable — cerrado
         ↓
-Resumen personalizable — siguiente recomendado
+Resumen personalizable — prompt habilitado
         ↓
 Próximo evento y notificaciones
         ↓

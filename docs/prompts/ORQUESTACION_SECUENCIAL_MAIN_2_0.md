@@ -64,6 +64,8 @@ Joaquin, que autoriza a MAIN a:
   V2-only y la recomendación futura de Agenda profesional;
 - conservar como ejecutado y consumido en `80fe8e5` el único push autorizado
   por Joaquin el 2026-08-27 para publicar guardias pasivas y disponibilidad;
+- conservar como ejecutado y consumido en `fd6891e` el push autorizado por
+  Joaquin el 2026-08-27 para publicar Calendario final y tarjeta superior;
 - preparar el prompt de una nueva tarea únicamente cuando Joaquin lo pida;
 - abrir o crear una tarea especializada únicamente cuando Joaquin lo pida.
 

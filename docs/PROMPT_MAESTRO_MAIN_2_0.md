@@ -33,6 +33,9 @@ Joaquin autorizó:
 - conservar como ejecutado y consumido en `80fe8e5` el único push autorizado
   por Joaquin el 2026-08-27 para publicar el cierre verde de guardias pasivas y
   disponibilidad.
+- conservar como ejecutado y consumido en `fd6891e` el push autorizado por
+  Joaquin el 2026-08-27 para publicar el cierre verde de Calendario final y
+  tarjeta superior.
 
 Todas las autorizaciones anteriores ya quedaron consumidas. No están
 habilitados pushes posteriores, tag, Release, operación sobre `main`, cambio en
@@ -310,6 +313,9 @@ mayor al planificado.
 - Joaquin autorizó un único push del cierre verde de guardias pasivas y
   disponibilidad el 2026-08-27; MAIN lo ejecutó y verificó en `80fe8e5`, por lo
   que la autorización quedó consumida.
+- Joaquin autorizó después publicar Calendario final y tarjeta superior; MAIN
+  lo ejecutó y verificó en `fd6891e`, por lo que esa autorización también quedó
+  consumida.
 - No hacer pushes posteriores a ese cierre, merge a `main`, tag, Release ni
   publicación de la aplicación.
 - No usar `reset --hard`, no limpiar worktrees históricos y no descartar cambios
