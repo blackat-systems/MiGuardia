@@ -9,7 +9,8 @@ no significa que exista ya una implementación nueva.
 El bloque **Próximo evento y notificaciones** quedó auditado, corregido,
 probado en Samsung API 36 y Android 8 API 26 e integrado por MAIN sin modificar
 Room V2 versión 5. La siguiente etapa del orden aprobado es la **auditoría
-integral del núcleo y compatibilidad Android**; no existe otro prompt de
+integral del núcleo y compatibilidad Android**. Su prompt de sólo lectura quedó
+habilitado, pero la tarea todavía no fue abierta. No existe otro prompt de
 implementación habilitado.
 
 MAIN 2.0 está reactivada para recibir los handoffs que Joaquin entregue,
@@ -121,10 +122,10 @@ y auditada en
   nuevas del paquete `work`—, lint aprobado y APK `debug` y de instrumentación
   `qa` compiladas. No se repitió QA física porque no cambió ninguna superficie
   Android; sigue vigente la línea base física de 169/169 de Puerta 0.
-- Continúa deliberadamente pendiente decidir cómo se muestra el cumplimiento si
-  una configuración cambia en medio de una semana o ciclo. El dominio conserva
-  por separado la vigencia por fecha y la ventana del período para no inventar
-  un prorrateo antes del bloque de motor y Resumen.
+- El pendiente histórico sobre cambios dentro de una semana o ciclo quedó
+  resuelto: la persona elige cuándo reiniciar el conteo, no existe prorrateo y
+  los tramos conservan por separado su vigencia y meta. El motor y el Resumen
+  ya consumen ese contrato.
 
 ## Estado Git consolidado actual
 
@@ -187,6 +188,8 @@ y auditada en
     auditado, probado, integrado y publicado con autorización puntual.
   - `af206fad8b6b2ac916bb891a20460d58b1aa01cb`: contrato de Próximo evento y
     notificaciones V2.
+  - `55dcd60aba2512597d3074f9978f228086ddf7ea`: Próximo evento y
+    notificaciones V2 auditados, probados e integrados por MAIN.
 - Al iniciar la preparación documental, la rama todavía no poseía upstream. El
   push puntual posterior fue ejecutado y verificado: rama local y remoto privado
   coincidían en `836d908`; esa autorización no puede reutilizarse.
@@ -916,6 +919,29 @@ arquitectura en
 `docs/adr/0032-proyeccion-unica-de-eventos-y-avisos-locales-v2.md` y el cierre
 en `docs/audits/2026-08-27-proximo-evento-y-notificaciones-v2.md`.
 
+## Auditoría integral del núcleo y compatibilidad Android — prompt habilitado
+
+Joaquin indicó el 2026-08-28 que esta puerta también se gestione como una
+dependencia especializada. MAIN preparó
+`docs/prompts/AUDITORIA_INTEGRAL_DEL_NUCLEO_Y_COMPATIBILIDAD_ANDROID_V2.md`
+contra la base funcional cerrada `55dcd60`.
+
+La dependencia no agrega funciones ni corrige el código que revisa. Su misión
+es contrastar juntos configuración, jornadas, recurrencias, horario real,
+extras, disponibilidad, Calendario, Horas, Resumen, próximo evento,
+notificaciones, Room y compatibilidad Android. Puede devolver el núcleo apto,
+MAIN bloqueada por un defecto reproducible o una auditoría parcial si falta una
+autorización o evidencia obligatoria.
+
+El prompt está **HABILITADO** y la tarea **todavía no fue abierta**. El propio
+prompt no autoriza ADB, instalaciones, limpiezas ni desinstalaciones. Samsung,
+emuladores, una alarma exacta real y un reinicio físico conservan sus puertas
+expresas. Tampoco autoriza push.
+
+La segunda capa —widget, informes, copias locales, bloqueo y Ayuda 2.0— sigue
+cerrada hasta que MAIN reciba el handoff independiente, contraste su evidencia
+y registre el resultado.
+
 ## Flujo vigente de MAIN
 
 - Joaquin entrega un handoff o pide preparar el prompt de una nueva tarea;
@@ -971,9 +997,11 @@ posteriores.
 ## Próximo paso
 
 Próximo evento y notificaciones quedó cerrado sin modificar Room V2 versión 5.
-El siguiente paso es la **auditoría integral del núcleo y compatibilidad
-Android**. No existe otro prompt de implementación habilitado y la segunda capa
-no se abre hasta superar esa puerta y recibir la indicación de Joaquin.
+El siguiente paso es abrir, cuando Joaquin lo indique, la dependencia
+**Auditoría integral del núcleo y compatibilidad Android** desde su prompt ya
+habilitado. La tarea todavía no está abierta, no existe otro prompt de
+implementación habilitado y la segunda capa no se abre hasta superar esa puerta
+y recibir la indicación de Joaquin.
 
 Quedan como verificaciones separadas el disparo físico de una alarma exacta, un
 reinicio real del Samsung y API 37. API 26 sí quedó comprobado con la base V2

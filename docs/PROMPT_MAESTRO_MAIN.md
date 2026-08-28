@@ -8,8 +8,9 @@
 > técnico heredado de MiGuardia 1.0. No debe usarse por sí solo para iniciar MAIN
 > 2.0. Primero deben leerse `docs/STATUS.md`,
 > `docs/PLANIFICACION_MIGUARDIA_2_0.md` y los ADR de 2.0. Al concluir
-> PLANIFICACIÓN se redactó `docs/PROMPT_MAESTRO_MAIN_2_0.md`, actualmente
-> pausado, que indica qué se
+> PLANIFICACIÓN se redactó `docs/PROMPT_MAESTRO_MAIN_2_0.md`; su estado
+> operativo vigente se consulta exclusivamente en `docs/prompts/README.md`. Ese
+> prompt indica qué se
 > conserva, qué se reemplaza y en qué orden se migra.
 
 > Versión inicial: 2026-08-13

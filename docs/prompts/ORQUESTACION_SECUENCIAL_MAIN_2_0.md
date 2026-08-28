@@ -247,8 +247,8 @@ La secuencia conocida al redactar este prompt es:
 15. Adaptar como un único bloque el motor de próximo evento y las
     notificaciones a todos los eventos compatibles —cerrado por MAIN el
     2026-08-27—.
-16. Auditar integralmente el núcleo y su compatibilidad Android —siguiente
-    etapa—.
+16. Auditar integralmente el núcleo y su compatibilidad Android —prompt
+    habilitado; tarea no abierta—.
 
 Las ampliaciones futuras de situaciones especiales y cualquier consolidación
 adicional del motor de horas quedan fuera de esta cadena inmediata. Sólo se
@@ -571,8 +571,13 @@ corregidos, verificados y cerrados por MAIN. `MiGuardiaV2Database`,
 `miguardia-v2.db` y Room V2 versión 5 continúan como base activa, con cadena
 explícita `1→2→3→4→5`.
 
-No existe otro prompt de implementación habilitado. La siguiente etapa del
-orden aprobado es la **auditoría integral del núcleo y compatibilidad Android**.
-MAIN debe tratarla como auditoría, conservar el checkout controlado y no abrir
-la segunda capa —widget, informes, copias, bloqueo y Ayuda 2.0— hasta completar
-esa puerta y recibir la indicación de Joaquin.
+Está habilitado
+`AUDITORIA_INTEGRAL_DEL_NUCLEO_Y_COMPATIBILIDAD_ANDROID_V2.md` como contrato de
+una dependencia auditora independiente y de sólo lectura. Joaquin todavía no
+pidió abrir esa tarea. No existe otro prompt de implementación habilitado.
+
+MAIN debe conservar el checkout controlado y no abrir la segunda capa —widget,
+informes, copias, bloqueo y Ayuda 2.0— hasta recibir el handoff de esa auditoría,
+contrastar su evidencia, completar la puerta y recibir la indicación de
+Joaquin. La auditoría puede detectar y describir defectos, pero no corregir el
+mismo objeto que revisa.

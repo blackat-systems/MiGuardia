@@ -468,7 +468,7 @@ No recuerda automáticamente esas respuestas para la próxima ocasión.
 10. Calendario final y tarjeta superior desplegable.
 11. Resumen personalizable.
 12. Próximo evento y notificaciones.
-13. Auditoría global, actualización QA y compatibilidad Android.
+13. Auditoría integral del núcleo, actualización QA y compatibilidad Android.
 
 Las ampliaciones futuras de situaciones especiales y cualquier consolidación
 adicional del motor se programan únicamente si Joaquin las vuelve a priorizar o

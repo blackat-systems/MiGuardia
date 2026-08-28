@@ -173,7 +173,8 @@ Resumen personalizable — cerrado
         ↓
 Próximo evento y notificaciones — cerrado
         ↓
-Auditoría integral del núcleo y compatibilidad Android — siguiente etapa
+Auditoría integral del núcleo y compatibilidad Android — prompt habilitado,
+tarea no abierta
         ↓
 Widget, informes, copias, bloqueo y Ayuda 2.0
         ↓
@@ -187,6 +188,12 @@ Las capacidades comunes preservadas
 ausencia/cancelación— continúan disponibles según su alcance actual. Un flujo
 V2 ampliado de situaciones especiales o una consolidación adicional de horas
 queda diferido y no bloquea este recorrido.
+
+Actualización del 2026-08-28: la auditoría integral se prepara como una
+dependencia especializada e independiente de sólo lectura. Puede inspeccionar
+y probar el sistema, pero no corregir el mismo objeto que audita. Su prompt
+está habilitado; Joaquin todavía no pidió abrir la tarea y la segunda capa
+permanece cerrada hasta superar esta puerta.
 
 MAIN integra un bloque por vez. Cada bloque debe compilar, pasar sus pruebas,
 preservar el alcance ajeno y quedar documentado antes del siguiente. El mapa

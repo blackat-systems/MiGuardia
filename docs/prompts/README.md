@@ -17,8 +17,10 @@
   `POR QUÉ EXISTE`, tanto en su prompt como en su handoff.
 - **Última dependencia cerrada:** `Próximo evento y avisos`, auditada,
   corregida e integrada por MAIN sin modificar Room V2 versión 5.
-- **Próxima etapa:** auditoría integral del núcleo y compatibilidad Android. No
-  hay otro prompt de implementación habilitado.
+- **Próxima etapa habilitada:**
+  `AUDITORIA_INTEGRAL_DEL_NUCLEO_Y_COMPATIBILIDAD_ANDROID_V2.md`, dependencia
+  independiente de sólo lectura. La tarea todavía no fue abierta y no hay otro
+  prompt de implementación habilitado.
 - **Commits locales:** MAIN los crea automáticamente como checkpoints de
   bloques comprobados.
 - **Push puntual anterior de la rama 2.0:** ejecutado y verificado hasta
@@ -90,6 +92,7 @@ prevalecen para el estado operativo.
 | `CALENDARIO_FINAL_Y_TARJETA_SUPERIOR_V2.md` | **CERRADO** | Única grilla mensual consolidada y tarjeta desplegable con todas las jornadas de hoy, auditadas por MAIN |
 | `RESUMEN_PERSONALIZABLE_V2.md` | **CERRADO** | Resumen mensual derivado, detalles ordenables y explicación exacta de cada cifra sin guardar totales ni modificar Room |
 | `PROXIMO_EVENTO_Y_NOTIFICACIONES_V2.md` | **CERRADO** | Una sola verdad V2 para la tarjeta y los avisos de jornadas o disponibilidad, auditada y verificada por MAIN |
+| `AUDITORIA_INTEGRAL_DEL_NUCLEO_Y_COMPATIBILIDAD_ANDROID_V2.md` | **HABILITADO / TAREA NO ABIERTA** | Revisa todo el núcleo junto, su persistencia y su comportamiento Android sin modificar el objeto auditado |
 
 ## Contratos históricos de MiGuardia 1.0
 
@@ -152,8 +155,9 @@ Joaquin indicó que quiere preparar o abrir la siguiente:
     `RESUMEN_PERSONALIZABLE_V2.md`;
 12. **Cerrado:** adaptación de próximo evento y notificaciones mediante
     `PROXIMO_EVENTO_Y_NOTIFICACIONES_V2.md`;
-13. **Siguiente etapa:** auditoría integral del núcleo y compatibilidad
-    Android;
+13. **Habilitado, tarea no abierta:** auditoría integral del núcleo y
+    compatibilidad Android mediante
+    `AUDITORIA_INTEGRAL_DEL_NUCLEO_Y_COMPATIBILIDAD_ANDROID_V2.md`;
 14. segunda capa: widget, informes, copias, bloqueo y Ayuda/recorrido inicial;
 15. auditoría de la aplicación completa y candidato local.
 

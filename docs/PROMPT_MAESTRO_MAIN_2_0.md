@@ -76,7 +76,7 @@ de convertirla en una implementación amplia.
 - `Objective`, `Shift`, la configuración laboral, el catálogo y las
   fotografías V2 son contratos vigentes; `ScheduleCombination` fue retirado.
 - El Calendario ya posee modos `VIEW` y `EDIT`, una sola grilla y carga múltiple.
-- Próximo evento y notificaciones poseen motores reutilizables.
+- Próximo evento y notificaciones consumen una única proyección V2 reutilizable.
 - El cálculo monetario anterior está retirado y no se reintroduce.
 - La configuración laboral pura y persistente ya existe en el árbol actual; no
   se recupera ninguna variante desde worktrees viejos.
@@ -191,6 +191,7 @@ Cuando Joaquin pida preparar una nueva tarea, crear o actualizar un prompt en
 
 - QUÉ HACE;
 - POR QUÉ EXISTE;
+- ROLE;
 - TASK;
 - CONTEXT;
 - INPUTS;
@@ -199,6 +200,7 @@ Cuando Joaquin pida preparar una nueva tarea, crear o actualizar un prompt en
 - DEPENDENCIES;
 - DO NOT;
 - VALIDATION;
+- HANDOFF A MAIN;
 - DONE WHEN.
 
 `QUÉ HACE` explica en lenguaje común la capacidad o el resultado concreto que
