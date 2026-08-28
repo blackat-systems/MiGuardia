@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.core.net.toUri
 import com.blackatsystems.miguardia.core.domain.model.Shift
+import com.blackatsystems.miguardia.core.domain.nextevent.NextEventItem
 import com.blackatsystems.miguardia.notifications.NotificationAttentionMode
 import com.blackatsystems.miguardia.notifications.NotificationPrivacy
 import com.blackatsystems.miguardia.notifications.NotificationRhythm
@@ -58,7 +59,6 @@ import com.blackatsystems.miguardia.ui.components.ScreenHeading
 import com.blackatsystems.miguardia.ui.components.SectionCard
 import com.blackatsystems.miguardia.ui.theme.vigiliaColors
 import java.time.format.DateTimeFormatter
-import java.util.UUID
 
 data class NotificationActions(
     val openGlobal: () -> Unit = {},
@@ -76,7 +76,7 @@ data class NotificationActions(
     val setShiftReminders: (Collection<Long>) -> Unit = {},
     val disableShift: () -> Unit = {},
     val useGlobalForShift: () -> Unit = {},
-    val restoreNotification: (UUID) -> Unit = {},
+    val restoreNotification: (String) -> Unit = {},
     val restoreAllNotifications: () -> Unit = {},
     val sendTestNotification: () -> Unit = {},
     val clearMessage: () -> Unit = {},
@@ -143,7 +143,7 @@ fun NotificationSurfaceHost(state: NotificationUiState, actions: NotificationAct
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
             ScreenHeading(
-                if (state.surface == NotificationSurface.GLOBAL) "Notificaciones" else "Avisos de la guardia",
+                if (state.surface == NotificationSurface.GLOBAL) "Notificaciones" else "Avisos de la jornada",
                 supportingText = if (state.surface == NotificationSurface.GLOBAL) {
                     "MiGuardia funciona aunque no concedas permisos; podés corregirlos después."
                 } else {
@@ -238,18 +238,23 @@ private fun GlobalSettings(
         supportingText = "Android necesita tu permiso para mostrar notificaciones.",
     ) {
         PermissionRow(
-            "Notificaciones",
+            "Permiso de Android",
             state.systemAccess.notificationPermissionGranted,
             if (state.systemAccess.notificationPermissionGranted) openAppSettings else requestPermission,
+        )
+        PermissionRow(
+            "Notificaciones de la aplicación",
+            state.systemAccess.appNotificationsEnabled,
+            openAppSettings,
         )
         TextButton(onClick = openAppSettings) {
             Text("Abrir ajustes de notificaciones")
         }
-        if (!state.systemAccess.notificationPermissionGranted) {
-            Text("Cuando lo resuelvas, vas a poder elegir cuándo y cómo querés recibir cada aviso.")
+        if (!state.systemAccess.notificationAccessGranted) {
+            Text("Cuando resuelvas ambos estados, vas a poder elegir cuándo y cómo querés recibir cada aviso.")
         }
     }
-    if (!state.systemAccess.notificationPermissionGranted) return
+    if (!state.systemAccess.notificationAccessGranted) return
 
     NotificationRhythmSettings(state, actions)
 
@@ -283,12 +288,12 @@ private fun GlobalSettings(
     SectionCard(
         title = "Permanencia",
         supportingText = if (state.preferences.persistentWhileActive) {
-            "Queda visible mientras la guardia está en curso."
+            "Queda visible mientras el evento está en curso."
         } else {
             "Podés descartarla como cualquier otra notificación."
         },
     ) {
-        ChoiceRow("Fija durante la guardia", state.preferences.persistentWhileActive) {
+        ChoiceRow("Fija durante el evento", state.preferences.persistentWhileActive) {
             actions.setPersistent(true)
         }
         ChoiceRow("Descartable", !state.preferences.persistentWhileActive) {
@@ -353,12 +358,12 @@ private fun GlobalSettings(
 private fun NotificationPreview(state: NotificationUiState, actions: NotificationActions) {
     SectionCard(
         title = "Vista previa",
-        supportingText = "Contenido ficticio. No crea guardias ni modifica tu calendario.",
+        supportingText = "Contenido ficticio. No crea jornadas ni modifica tu calendario.",
     ) {
         PulsoVigiliaPreview(state.preferences.privacy)
         Button(
             onClick = actions.sendTestNotification,
-            enabled = state.systemAccess.notificationPermissionGranted && !state.isSaving,
+            enabled = state.systemAccess.notificationAccessGranted && !state.isSaving,
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text("Enviar notificación de prueba")
@@ -376,14 +381,14 @@ private fun PulsoVigiliaPreview(privacy: NotificationPrivacy) {
         Color(0xFF8B5CFF)
     }
     val title = when (privacy) {
-        NotificationPrivacy.COMPLETE -> "PRÓXIMA GUARDIA · Hospital Norte"
-        NotificationPrivacy.REDUCED -> "PRÓXIMA GUARDIA"
+        NotificationPrivacy.COMPLETE -> "PRÓXIMA JORNADA · Hospital Norte"
+        NotificationPrivacy.REDUCED -> "PRÓXIMA JORNADA"
         NotificationPrivacy.HIDDEN -> "MiGuardia"
     }
     val schedule = when (privacy) {
         NotificationPrivacy.COMPLETE -> "NOR · 19:00–07:00"
         NotificationPrivacy.REDUCED -> "Horario 19:00–07:00"
-        NotificationPrivacy.HIDDEN -> "Tenés un aviso de guardia."
+        NotificationPrivacy.HIDDEN -> "Tenés un aviso de MiGuardia."
     }
     Surface(
         modifier = Modifier
@@ -460,40 +465,37 @@ private fun NotificationRhythmSettings(state: NotificationUiState, actions: Noti
 
 @Composable
 private fun RestorableNotifications(state: NotificationUiState, actions: NotificationActions) {
-    if (state.restorableShifts.isEmpty()) return
+    if (state.restorableEvents.isEmpty()) return
     val canRestore = state.preferences.enabled &&
-        state.systemAccess.notificationPermissionGranted &&
+        state.systemAccess.notificationAccessGranted &&
         !state.isSaving
     SectionCard(
-        title = if (state.restorableShifts.size == 1) {
+        title = if (state.restorableEvents.size == 1) {
             "Notificación oculta"
         } else {
             "Notificaciones ocultas"
         },
         supportingText = if (canRestore) {
-            "Podés volver a mostrar cada aviso mientras la guardia siga vigente."
+            "Podés volver a mostrar cada aviso mientras el evento siga vigente."
         } else {
             "Activá las notificaciones y resolvé el permiso para volver a mostrarlas."
         },
     ) {
-        state.restorableShifts.forEach { shift ->
+        state.restorableEvents.forEach { event ->
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
-                    "${shift.objectiveAbbreviationSnapshot} · " +
-                        "${shift.localStartDate.format(HiddenNotificationDateFormatter)} · " +
-                        "${shift.startTimeSnapshot.format(HiddenNotificationTimeFormatter)}–" +
-                        shift.endTimeSnapshot.format(HiddenNotificationTimeFormatter),
+                    event.restorableLabel(),
                     style = MaterialTheme.typography.titleSmall,
                 )
                 TextButton(
-                    onClick = { actions.restoreNotification(shift.id) },
+                    onClick = { actions.restoreNotification(event.identity.trackingKey) },
                     enabled = canRestore,
                 ) {
                     Text("Mostrar notificación nuevamente")
                 }
             }
         }
-        if (state.restorableShifts.size > 1) {
+        if (state.restorableEvents.size > 1) {
             OutlinedButton(
                 onClick = actions.restoreAllNotifications,
                 enabled = canRestore,
@@ -503,6 +505,17 @@ private fun RestorableNotifications(state: NotificationUiState, actions: Notific
             }
         }
     }
+}
+
+private fun NextEventItem.restorableLabel(): String = when (this) {
+    is NextEventItem.Shift ->
+        "$placeAbbreviationSnapshot · ${ownerLocalDate.format(HiddenNotificationDateFormatter)} · " +
+            "${startTimeSnapshot.format(HiddenNotificationTimeFormatter)}–" +
+            endTimeSnapshot.format(HiddenNotificationTimeFormatter)
+    is NextEventItem.Availability ->
+        "$labelSnapshot · ${ownerLocalDate.format(HiddenNotificationDateFormatter)} · " +
+            "${start.atZone(zoneId).toLocalTime().format(HiddenNotificationTimeFormatter)}–" +
+            end.atZone(zoneId).toLocalTime().format(HiddenNotificationTimeFormatter)
 }
 
 @Composable
@@ -516,7 +529,7 @@ private fun ShiftSettings(state: NotificationUiState, actions: NotificationActio
             override.reminderLeadMinutes.isEmpty() -> "Avisos desactivados"
             else -> "Configuración propia"
         },
-        supportingText = if (effective.isEmpty()) "Esta guardia no tendrá avisos." else reminderSummary(effective),
+        supportingText = if (effective.isEmpty()) "Esta jornada no tendrá avisos." else reminderSummary(effective),
     ) {
         when {
             override == null -> {
@@ -526,9 +539,9 @@ private fun ShiftSettings(state: NotificationUiState, actions: NotificationActio
                         showEditor = true
                     },
                     modifier = Modifier.fillMaxWidth(),
-                ) { Text("Personalizar esta guardia") }
+                ) { Text("Personalizar esta jornada") }
                 OutlinedButton(onClick = actions.disableShift, modifier = Modifier.fillMaxWidth()) {
-                    Text("Desactivar sólo en esta guardia")
+                    Text("Desactivar sólo en esta jornada")
                 }
             }
             override.reminderLeadMinutes.isEmpty() -> {
@@ -541,7 +554,7 @@ private fun ShiftSettings(state: NotificationUiState, actions: NotificationActio
                         showEditor = true
                     },
                     modifier = Modifier.fillMaxWidth(),
-                ) { Text("Personalizar esta guardia") }
+                ) { Text("Personalizar esta jornada") }
             }
             else -> {
                 Button(onClick = { showEditor = !showEditor }, modifier = Modifier.fillMaxWidth()) {
@@ -551,13 +564,13 @@ private fun ShiftSettings(state: NotificationUiState, actions: NotificationActio
                     Text("Usar configuración general")
                 }
                 TextButton(onClick = actions.disableShift, modifier = Modifier.fillMaxWidth()) {
-                    Text("Desactivar sólo en esta guardia")
+                    Text("Desactivar sólo en esta jornada")
                 }
             }
         }
     }
     if (showEditor && override?.reminderLeadMinutes?.isNotEmpty() == true) {
-        ReminderEditor("Horarios de esta guardia", effective) { actions.setShiftReminders(it) }
+        ReminderEditor("Horarios de esta jornada", effective) { actions.setShiftReminders(it) }
     }
 }
 
@@ -627,7 +640,7 @@ private fun ChoiceRow(label: String, selected: Boolean, onClick: () -> Unit) {
 }
 
 private fun privacyLabel(value: NotificationPrivacy): String = when (value) {
-    NotificationPrivacy.COMPLETE -> "Completa: objetivo, horario y puesto"
+    NotificationPrivacy.COMPLETE -> "Completa: tipo, lugar, horario y puesto"
     NotificationPrivacy.REDUCED -> "Reducida: estado y horario"
     NotificationPrivacy.HIDDEN -> "Oculta: mensaje genérico"
 }

@@ -207,7 +207,7 @@ class VacationComposeTest {
         }
 
         composeRule.onNodeWithText(
-            "Esta guardia se conserva, pero no computa horas porque su fecha inicial está en vacaciones.",
+            "Esta jornada se conserva, pero no computa horas porque su fecha inicial está en vacaciones.",
         ).assertExists()
         composeRule.onNodeWithText("Vacaciones:", substring = true).assertExists()
         assertTrue(days.single { it.date == vacation.startDate }.shifts.isNotEmpty())

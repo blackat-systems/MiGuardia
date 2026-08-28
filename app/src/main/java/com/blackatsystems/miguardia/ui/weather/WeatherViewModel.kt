@@ -3,7 +3,7 @@ package com.blackatsystems.miguardia.ui.weather
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.blackatsystems.miguardia.core.domain.nextevent.isEligibleUpcomingWork
+import com.blackatsystems.miguardia.core.domain.nextevent.isEligibleForWeather
 import com.blackatsystems.miguardia.core.domain.repository.ShiftRepository
 import com.blackatsystems.miguardia.core.domain.repository.VacationRepository
 import com.blackatsystems.miguardia.core.domain.weather.WeatherFailureKind
@@ -131,7 +131,7 @@ class WeatherViewModel(
                         val applicableVacations = vacations
                             .observeOverlapping(shift.localStartDate, shift.localStartDate)
                             .first()
-                        if (!shift.isEligibleUpcomingWork(runtime.clock.instant(), applicableVacations)) return@forEach
+                        if (!shift.isEligibleForWeather(runtime.clock.instant(), applicableVacations)) return@forEach
                         val summary = summarizeShiftWeather(shift.startAt, shift.endAt, forecast)
                         if (summary.coverage != WeatherCoverage.NONE) {
                             put(shiftId, ShiftWeatherBrief(summary, freshness))
@@ -286,7 +286,7 @@ class WeatherViewModel(
             return false
         }
         val applicableVacations = vacations.observeOverlapping(shift.localStartDate, shift.localStartDate).first()
-        val eligible = shift.isEligibleUpcomingWork(runtime.clock.instant(), applicableVacations)
+        val eligible = shift.isEligibleForWeather(runtime.clock.instant(), applicableVacations)
         _uiState.update {
             it.copy(
                 selectedShift = shift,

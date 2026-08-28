@@ -1,5 +1,6 @@
 package com.blackatsystems.miguardia
 
+import android.content.Intent
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -96,6 +97,20 @@ class AvailabilityActivityTest {
     fun closeActivity() {
         scenario?.close()
         scenario = null
+    }
+
+    @Test
+    fun notificationAvailabilityActionOpensItsOwnerDate() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        scenario?.close()
+        scenario = ActivityScenario.launch(
+            Intent(context, MainActivity::class.java)
+                .setAction(MainActivity.ACTION_VIEW_DATE)
+                .putExtra(MainActivity.EXTRA_OWNER_LOCAL_DATE, ownerDate.toString()),
+        )
+
+        waitForTag("availability-add-$ownerDate")
+        compose.onNodeWithTag("availability-add-$ownerDate").assertExists()
     }
 
     @Test

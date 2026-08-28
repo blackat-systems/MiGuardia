@@ -6,10 +6,11 @@ PLANIFICACIÓN quedó cerrada por autorización expresa de Joaquin. Las decision
 funcionales reunidas constituyen la base vigente para avanzar; cerrar esta etapa
 no significa que exista ya una implementación nueva.
 
-El bloque **Resumen personalizable** quedó auditado, corregido, probado
-físicamente, integrado y publicado por MAIN sin modificar Room V2 versión 5.
-El siguiente bloque del orden aprobado es **Próximo evento y notificaciones**.
-Su prompt V2 ya está habilitado; la tarea todavía no fue abierta.
+El bloque **Próximo evento y notificaciones** quedó auditado, corregido,
+probado en Samsung API 36 y Android 8 API 26 e integrado por MAIN sin modificar
+Room V2 versión 5. La siguiente etapa del orden aprobado es la **auditoría
+integral del núcleo y compatibilidad Android**; no existe otro prompt de
+implementación habilitado.
 
 MAIN 2.0 está reactivada para recibir los handoffs que Joaquin entregue,
 auditarlos, integrarlos, probarlos y cerrarlos. Joaquin decide cuándo pedir el
@@ -180,6 +181,12 @@ y auditada en
   - `fd6891e446eaa574f3df14348d8d5b1cfd201f2d`: Calendario final y tarjeta
     superior auditados, probados, integrados y publicados con autorización
     puntual.
+  - `9fad12e39b56a850ce528a2fd5398f3b15258864`: contrato de Resumen
+    personalizable.
+  - `ad777bbe7b57bf0fbc4903ef2c2949b31b5357ce`: Resumen personalizable
+    auditado, probado, integrado y publicado con autorización puntual.
+  - `af206fad8b6b2ac916bb891a20460d58b1aa01cb`: contrato de Próximo evento y
+    notificaciones V2.
 - Al iniciar la preparación documental, la rama todavía no poseía upstream. El
   push puntual posterior fue ejecutado y verificado: rama local y remoto privado
   coincidían en `836d908`; esa autorización no puede reutilizarse.
@@ -865,48 +872,49 @@ autoriza push ni ninguna acción sobre producción.
 El checkpoint del Resumen fue publicado después por autorización expresa de
 Joaquin y quedó verificado en `ad777bb`; esa autorización está consumida.
 
-## Próximo evento y notificaciones — prompt habilitado
+## Próximo evento y notificaciones — cerrado
 
 El prompt `docs/prompts/PROXIMO_EVENTO_Y_NOTIFICACIONES_V2.md` quedó
-`HABILITADO`. La tarea todavía no fue abierta y no existe un candidato de
-código.
+`CERRADO`. Tarjeta superior, observador y avisos consumen una única proyección
+V2 tipada para jornadas y tramos efectivos de disponibilidad. Recurrencias
+entran por sus jornadas materializadas; vacaciones, carpeta médica, ausencia,
+cancelación y horario real invalidan eventos obsoletos; los extras
+independientes no se convierten en eventos futuros.
 
-La preparación de MAIN verificó que el motor actual debe adaptarse, no
-reemplazarse. La tarjeta superior ya comprende jornadas, vacaciones, carpetas
-médicas y horario real, pero todavía no disponibilidad ni toda la fotografía
-laboral V2. El planificador, reconciliador y receptor de notificaciones siguen
-centrados en jornadas, vacaciones y excepciones particulares, por lo que ambos
-consumidores hoy pueden interpretar fuentes distintas.
+MAIN corrigió durante la auditoría prioridades temporales, reconciliaciones
+con fuentes concurrentes, límites de alarmas, reintentos, privacidad del grupo,
+restauración después de reemplazar el paquete y aislamiento de pruebas frente
+al runtime real de avisos. No se agregó otro motor, una migración Room, permisos
+o dependencias.
 
-El contrato nuevo fija:
+Evidencia final de MAIN:
 
-- una sola proyección pura y tipada para tarjeta y avisos;
-- jornadas manuales y recurrentes leídas como
-  `Shift + ShiftWorkSnapshot`;
-- disponibilidad calculada mediante sus tramos efectivos existentes;
-- jornada activa antes que disponibilidad activa y desempates deterministas;
-- franco explícito sólo como fallback visual;
-- cancelación, ausencia, vacaciones, carpeta médica y horario real como
-  invalidadores de avisos planificados obsoletos;
-- extras independientes excluidos del futuro porque ya son trabajo realizado;
-- preferencias globales compartidas y excepciones particulares sólo por
-  jornada;
-- identidad tipada compatible con el tracking histórico de DataStore;
-- vocabulario `Jornada` para los cuatro rubros y etiqueta histórica exacta
-  para Guardia pasiva, Disponible para llamado o Retén;
-- Room V2 versión 5, veintisiete tablas, permisos, manifiesto, dependencias y
-  canales preservados.
+- JVM: 498/498 —dominio 302, base 12 y aplicación 184—;
+- lint: 0 errores y 6 avisos globales de versiones disponibles;
+- APK Debug, QA y ambos APK AndroidTest: compilados;
+- Samsung `SM-S938B`, API 36: Room 107/107; suite completa previa del
+  candidato 233/233; matriz afectada final 84/84;
+- Samsung: permiso denegado, concedido y bloqueo de la aplicación comprobados;
+- Samsung: recorrido manual con jornada completada, Retén activo recortado por
+  trabajo coincidente y la misma franja 16:00–00:00 en tarjeta, Calendario y
+  aviso;
+- Android 8, API 26: matriz final 20/20 y reconstrucción real después de
+  `install -r` verificada;
+- claro/oscuro y zoom interno 100/200 inspeccionados; las pruebas cubren además
+  retrato/paisaje y zoom 150 %;
+- los paquetes QA quedaron desinstalados y producción no fue instalada,
+  abierta, consultada ni modificada.
 
-Tres auditorías independientes de sólo lectura coincidieron en que no hace
-falta otra decisión de producto, una migración Room ni un permiso nuevo. La
-preparación está registrada en
-`docs/audits/2026-08-27-preparacion-proximo-evento-y-notificaciones-v2.md` y la
+Room V2 continúa en versión 5 con 27 tablas y esquemas 1 a 5 intactos. La
+alarma exacta realmente disparada y un reinicio físico del Samsung no se
+ejecutaron porque conservan autorización inmediata separada. API 37 no estaba
+disponible en el entorno y no se descargó una imagen sin autorización.
+
+La preparación está registrada en
+`docs/audits/2026-08-27-preparacion-proximo-evento-y-notificaciones-v2.md`, la
 arquitectura en
-`docs/adr/0032-proyeccion-unica-de-eventos-y-avisos-locales-v2.md`.
-
-El bloque exigirá una autorización nueva antes de usar Samsung o emuladores.
-Una alarma exacta real y un reinicio físico seguirán siendo puertas inmediatas
-separadas.
+`docs/adr/0032-proyeccion-unica-de-eventos-y-avisos-locales-v2.md` y el cierre
+en `docs/audits/2026-08-27-proximo-evento-y-notificaciones-v2.md`.
 
 ## Flujo vigente de MAIN
 
@@ -958,28 +966,18 @@ posteriores.
   de situaciones especiales; quedan diferidos y no bloquean el Calendario;
 - consolidación adicional del motor de horas dentro de las superficies finales
   que realmente la necesiten;
-- implementación de la adaptación de próximo evento y notificaciones; el
-  prompt ya está habilitado, pero la tarea no fue abierta;
 - cambio de `versionName`/`versionCode` para una futura entrega 2.0.
 
 ## Próximo paso
 
-Resumen personalizable quedó cerrado y publicado sin modificar Room V2 versión
-5. El siguiente bloque del orden aprobado es **Próximo evento y
-notificaciones**. Su contrato autosuficiente ya está habilitado en
-`docs/prompts/PROXIMO_EVENTO_Y_NOTIFICACIONES_V2.md`; el próximo paso es abrir
-una única tarea especializada cuando Joaquin lo indique.
+Próximo evento y notificaciones quedó cerrado sin modificar Room V2 versión 5.
+El siguiente paso es la **auditoría integral del núcleo y compatibilidad
+Android**. No existe otro prompt de implementación habilitado y la segunda capa
+no se abre hasta superar esa puerta y recibir la indicación de Joaquin.
 
-La preparación y el cierre del Resumen están registrados respectivamente en
-`docs/audits/2026-08-27-preparacion-resumen-personalizable-v2.md` y
-`docs/audits/2026-08-27-resumen-personalizable-v2.md`. Su arquitectura queda
-fijada por `docs/adr/0031-resumen-derivado-y-presentacion-personalizable.md`.
-
-Quedan como verificaciones separadas el recorrido físico de alarma exacta
-—sólo con permiso explícito— y API 37 antes del candidato final. API 26 no se
-repitió con Room V2 versión 5; no corresponde una migración V1 real en el
-Samsung. Los pushes autorizados para disponibilidad y para Calendario final
-fueron ejecutados y consumidos en `80fe8e5` y `fd6891e`, respectivamente. El
-push del Resumen también fue ejecutado y consumido en `ad777bb`. Cualquier push
-posterior, tag, Release y toda operación sobre `main` o producción continúan
-prohibidos.
+Quedan como verificaciones separadas el disparo físico de una alarma exacta, un
+reinicio real del Samsung y API 37. API 26 sí quedó comprobado con la base V2
+actual. Los pushes autorizados para disponibilidad, Calendario final y Resumen
+fueron ejecutados y consumidos en `80fe8e5`, `fd6891e` y `ad777bb`. Cualquier
+push posterior, tag, Release y toda operación sobre `main` o producción
+continúan prohibidos.

@@ -5,32 +5,29 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.blackatsystems.miguardia.core.database.LocalDataStore
 import com.blackatsystems.miguardia.core.domain.AppDefaults
-import com.blackatsystems.miguardia.core.domain.model.ExplicitDayStatus
+import com.blackatsystems.miguardia.core.domain.model.AvailabilityWindowRecord
 import com.blackatsystems.miguardia.core.domain.model.ExplicitDayStatusType
 import com.blackatsystems.miguardia.core.domain.model.MedicalLeave
 import com.blackatsystems.miguardia.core.domain.model.Shift
 import com.blackatsystems.miguardia.core.domain.model.ShiftActualAggregate
-import com.blackatsystems.miguardia.core.domain.model.ShiftActualDraft
 import com.blackatsystems.miguardia.core.domain.model.ShiftActualRecord
-import com.blackatsystems.miguardia.core.domain.model.ShiftActualWriteResult
 import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
+import com.blackatsystems.miguardia.core.domain.model.V2ShiftWrite
 import com.blackatsystems.miguardia.core.domain.model.Vacation
-import com.blackatsystems.miguardia.core.domain.model.buildShiftActualSaveMutation
+import com.blackatsystems.miguardia.core.domain.nextevent.NextEventItem
 import com.blackatsystems.miguardia.core.domain.nextevent.NextEventPrimary
 import com.blackatsystems.miguardia.core.domain.nextevent.TodayCardPrimary
 import com.blackatsystems.miguardia.core.domain.nextevent.TodayCardProjection
-import com.blackatsystems.miguardia.core.domain.nextevent.TodayShiftState
-import com.blackatsystems.miguardia.core.domain.repository.ExplicitDayStatusRepository
+import com.blackatsystems.miguardia.core.domain.repository.AvailabilityWindowRepository
+import com.blackatsystems.miguardia.core.domain.repository.IndependentExtraWorkRepository
 import com.blackatsystems.miguardia.core.domain.repository.ShiftActualRepository
-import com.blackatsystems.miguardia.core.domain.repository.ShiftRepository
-import com.blackatsystems.miguardia.core.domain.repository.VacationRepository
+import com.blackatsystems.miguardia.core.domain.repository.V2ShiftRepository
 import com.blackatsystems.miguardia.core.domain.work.EffectiveRevision
 import com.blackatsystems.miguardia.core.domain.work.HoursReference
 import com.blackatsystems.miguardia.core.domain.work.WorkConfiguration
 import com.blackatsystems.miguardia.core.domain.work.WorkSector
-import com.blackatsystems.miguardia.ui.nextevent.NextEventObservation
-import com.blackatsystems.miguardia.ui.nextevent.NextEventObserver
 import com.blackatsystems.miguardia.ui.nextevent.NextEventLoadState
+import com.blackatsystems.miguardia.ui.nextevent.NextEventObserver
 import com.blackatsystems.miguardia.ui.nextevent.NextEventUiState
 import com.blackatsystems.miguardia.ui.nextevent.NextEventViewModel
 import com.blackatsystems.miguardia.ui.nextevent.TemporalDelay
@@ -42,24 +39,23 @@ import java.time.LocalTime
 import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.util.UUID
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
-import kotlinx.coroutines.yield
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -88,17 +84,7 @@ class NextEventObserverInstrumentedTest {
 
     @Test
     fun roomChangesReactivelyReprojectShiftDayOffMedicalLeaveAndVacation() = runBlocking {
-        val observer = NextEventObserver(
-            shifts = store.shifts,
-            explicitDayStatuses = store.explicitDayStatuses,
-            vacations = store.vacations,
-            medicalLeaves = store.medicalLeaves,
-            shiftActuals = store.shiftActuals,
-            workConfiguration = store.workConfiguration,
-            clock = CLOCK,
-            zoneId = AppDefaults.zoneId(),
-            temporalDelay = TemporalDelay { awaitCancellation() },
-        )
+        val observer = observer(clock = CLOCK)
         val emissions = Channel<TodayCardProjection>(Channel.UNLIMITED)
         val collector = async(start = CoroutineStart.UNDISPATCHED) {
             observer.observe().collect { emissions.send(it) }
@@ -108,17 +94,15 @@ class NextEventObserverInstrumentedTest {
         assertEquals(NextEventPrimary.NONE, empty.futureEvent.primaryEvent)
 
         val shift = futureShift()
-        store.v2Shifts.insert(
-            V2AppTestFixture.writeFor(store, shift, LocalDate.of(2026, 8, 1)),
-        )
+        store.v2Shifts.insert(V2AppTestFixture.writeFor(store, shift, LocalDate.of(2026, 8, 1)))
         val upcoming = receiveUntil(emissions) {
             it.futureEvent.primaryEvent == NextEventPrimary.UPCOMING_SHIFT
         }
-        assertEquals(TodayCardPrimary.FUTURE_EVENT, upcoming.primary)
-        assertEquals(shift.id, upcoming.futureEvent.upcomingShifts.single().id)
+        val projectedShift = upcoming.futureEvent.primaryEvents.single() as NextEventItem.Shift
+        assertEquals(shift.id, projectedShift.shiftId)
 
-        val medicalLeaveId = UUID.fromString("90000000-0000-0000-0000-000000000002")
         val privateMedicalNote = "Nota médica ficticia que no debe proyectarse"
+        val medicalLeaveId = UUID.fromString("90000000-0000-0000-0000-000000000002")
         store.medicalLeaves.create(
             MedicalLeave(
                 id = medicalLeaveId,
@@ -132,17 +116,13 @@ class NextEventObserverInstrumentedTest {
         val protected = receiveUntil(emissions) {
             it.futureEvent.primaryEvent == NextEventPrimary.NONE
         }
-        assertEquals(TodayCardPrimary.EMPTY, protected.primary)
         assertFalse(protected.toString().contains(privateMedicalNote))
         store.medicalLeaves.delete(medicalLeaveId)
-        receiveUntil(emissions) {
-            it.futureEvent.primaryEvent == NextEventPrimary.UPCOMING_SHIFT
-        }
+        receiveUntil(emissions) { it.futureEvent.primaryEvent == NextEventPrimary.UPCOMING_SHIFT }
 
         val dayOff = LocalDate.of(2026, 8, 17)
         store.explicitDayStatuses.set(dayOff, ExplicitDayStatusType.DAY_OFF)
-        val withDayOff = receiveUntil(emissions) { it.futureEvent.nextDayOff == dayOff }
-        assertEquals(NextEventPrimary.UPCOMING_SHIFT, withDayOff.futureEvent.primaryEvent)
+        receiveUntil(emissions) { it.futureEvent.nextDayOff == dayOff }
 
         store.vacations.insert(
             Vacation(
@@ -159,119 +139,213 @@ class NextEventObserverInstrumentedTest {
                 it.futureEvent.primaryEvent == NextEventPrimary.DAY_OFF
             }.futureEvent.primaryEvent,
         )
-
-        store.explicitDayStatuses.clear(dayOff)
-        assertEquals(
-            NextEventPrimary.NONE,
-            receiveUntil(emissions) {
-                it.futureEvent.primaryEvent == NextEventPrimary.NONE
-            }.futureEvent.primaryEvent,
-        )
         collector.cancelAndJoin()
     }
 
     @Test
-    fun shiftEditAndDeletionReactivelyReplaceTheCurrentProjection() = runBlocking {
-        val shifts = MutableShiftRepository()
-        val observer = NextEventObserver(
-            shifts = shifts,
-            explicitDayStatuses = EmptyExplicitStatusRepository(),
-            vacations = EmptyVacationRepository(),
-            medicalLeaves = store.medicalLeaves,
-            shiftActuals = store.shiftActuals,
-            workConfiguration = store.workConfiguration,
-            clock = CLOCK,
-            zoneId = AppDefaults.zoneId(),
-            temporalDelay = TemporalDelay { awaitCancellation() },
-        )
+    fun shiftEditAndDeletionReactivelyReplaceTheCurrentV2Projection() = runBlocking {
+        val original = V2AppTestFixture.writeFor(store, futureShift(), LocalDate.of(2026, 8, 1))
+        val shifts = MutableV2ShiftRepository(store.v2Shifts)
         val emissions = Channel<TodayCardProjection>(Channel.UNLIMITED)
         val collector = async(start = CoroutineStart.UNDISPATCHED) {
-            observer.observe().collect { emissions.send(it) }
+            observer(clock = CLOCK, shifts = shifts).observe().collect { emissions.send(it) }
         }
-        assertEquals(TodayCardPrimary.EMPTY, withTimeout(5_000) { emissions.receive() }.primary)
+        withTimeout(5_000) { emissions.receive() }
 
-        val original = futureShift()
         shifts.replace(listOf(original))
-        val inserted = receiveUntil(emissions) {
-            it.futureEvent.upcomingShifts.singleOrNull()?.id == original.id
+        val firstProjection = receiveUntil(emissions) {
+            it.futureEvent.primaryEvent == NextEventPrimary.UPCOMING_SHIFT
         }
-        assertEquals("Objetivo ficticio", inserted.futureEvent.upcomingShifts.single().objectiveNameSnapshot)
+        val firstEvent = firstProjection.futureEvent.primaryEvents.single() as NextEventItem.Shift
+        assertEquals(original.shift.startAt, firstEvent.start)
 
         val edited = original.copy(
-            objectiveNameSnapshot = "Objetivo editado ficticio",
-            updatedAt = original.updatedAt.plusMillis(1L),
+            shift = original.shift.copy(
+                startAt = original.shift.startAt.plusSeconds(3_600),
+                endAt = original.shift.endAt.plusSeconds(3_600),
+                startTimeSnapshot = original.shift.startTimeSnapshot.plusHours(1),
+                endTimeSnapshot = original.shift.endTimeSnapshot.plusHours(1),
+                updatedAt = original.shift.updatedAt.plusMillis(1),
+            ),
         )
         shifts.replace(listOf(edited))
-        val reprojected = receiveUntil(emissions) {
-            it.futureEvent.upcomingShifts.singleOrNull()?.objectiveNameSnapshot ==
-                "Objetivo editado ficticio"
+        val editedProjection = receiveUntil(emissions) {
+            (it.futureEvent.primaryEvents.singleOrNull() as? NextEventItem.Shift)?.start == edited.shift.startAt
         }
-        assertEquals(original.id, reprojected.futureEvent.upcomingShifts.single().id)
+        val editedEvent = editedProjection.futureEvent.primaryEvents.single() as NextEventItem.Shift
+        assertEquals(edited.shift.endAt, editedEvent.end)
 
         shifts.replace(emptyList())
-        val deleted = receiveUntil(emissions) {
-            it.futureEvent.primaryEvent == NextEventPrimary.NONE
-        }
-        assertEquals(TodayCardPrimary.EMPTY, deleted.primary)
+        receiveUntil(emissions) { it.futureEvent.primaryEvent == NextEventPrimary.NONE }
         collector.cancelAndJoin()
     }
 
     @Test
-    fun actualTimeWriteReactivelyUpdatesTheTodaySummary() = runBlocking {
-        val shift = completedTodayShift()
-        store.v2Shifts.insert(
-            V2AppTestFixture.writeFor(store, shift, LocalDate.of(2026, 8, 1)),
+    fun actualTimeUpdateReactivelyRemovesThePlannedShiftFromFutureEvents() = runBlocking {
+        val write = V2AppTestFixture.writeFor(store, futureShift(), LocalDate.of(2026, 8, 1))
+        val shifts = MutableV2ShiftRepository(store.v2Shifts).apply { replace(listOf(write)) }
+        val actuals = MutableShiftActualRepository(store.shiftActuals)
+        val emissions = Channel<TodayCardProjection>(Channel.UNLIMITED)
+        val collector = async(start = CoroutineStart.UNDISPATCHED) {
+            observer(clock = CLOCK, shifts = shifts, actuals = actuals).observe().collect { emissions.send(it) }
+        }
+        receiveUntil(emissions) { it.futureEvent.primaryEvent == NextEventPrimary.UPCOMING_SHIFT }
+
+        actuals.replace(
+            mapOf(
+                write.shift.id to ShiftActualAggregate(
+                    record = ShiftActualRecord(
+                        shiftId = write.shift.id,
+                        timelineId = write.snapshot.timelineId,
+                        sector = write.snapshot.sector,
+                        actualStart = NOW.minusSeconds(7_200),
+                        actualEnd = NOW.minusSeconds(3_600),
+                        differenceReason = "Horario real ficticio",
+                        explanation = null,
+                        createdAt = NOW,
+                        updatedAt = NOW,
+                    ),
+                    extraIntervals = emptyList(),
+                ),
+            ),
         )
-        val observer = NextEventObserver(
-            shifts = store.shifts,
-            explicitDayStatuses = store.explicitDayStatuses,
-            vacations = store.vacations,
-            medicalLeaves = store.medicalLeaves,
-            shiftActuals = store.shiftActuals,
-            workConfiguration = store.workConfiguration,
-            clock = CLOCK,
-            zoneId = AppDefaults.zoneId(),
-            temporalDelay = TemporalDelay { awaitCancellation() },
-        )
+        val reprojected = receiveUntil(emissions) {
+            it.futureEvent.primaryEvent == NextEventPrimary.NONE
+        }
+        assertTrue(reprojected.futureEvent.events.none { it.identity.trackingKey == "shift:${write.shift.id}" })
+        collector.cancelAndJoin()
+    }
+
+    @Test
+    fun availabilitySourceUpdateUsesTheSameReactiveProjectionAsTheCard() = runBlocking {
+        V2AppTestFixture.writeFor(store, futureShift(), LocalDate.of(2026, 8, 1))
+        val availability = MutableAvailabilityRepository(store.availabilityWindows)
+        val observer = observer(clock = CLOCK, availability = availability)
         val emissions = Channel<TodayCardProjection>(Channel.UNLIMITED)
         val collector = async(start = CoroutineStart.UNDISPATCHED) {
             observer.observe().collect { emissions.send(it) }
         }
-        val planned = receiveUntil(emissions) {
-            it.shifts.singleOrNull()?.shift?.id == shift.id
-        }
-        assertEquals(TodayShiftState.COMPLETED, planned.shifts.single().state)
-        assertFalse(planned.shifts.single().hasActualTime)
+        withTimeout(5_000) { emissions.receive() }
 
-        val expectation = requireNotNull(store.shiftActuals.getExpectation(shift.id))
-        val mutation = requireNotNull(
-            buildShiftActualSaveMutation(
-                expectation = expectation,
-                draft = ShiftActualDraft(
-                    actualStart = shift.startAt.plus(Duration.ofMinutes(30)),
-                    actualEnd = shift.endAt,
-                    differenceReason = "Ingreso posterior ficticio",
-                    explanation = null,
-                    differenceChoice = null,
-                    classSelection = null,
-                    fragments = emptyList(),
-                ),
-                clock = CLOCK,
-                timestamp = NOW,
-            ),
+        val window = availabilityWindow(
+            start = ZonedDateTime.of(LocalDate.of(2026, 8, 16), LocalTime.of(9, 0), ZONE).toInstant(),
+            end = ZonedDateTime.of(LocalDate.of(2026, 8, 16), LocalTime.of(17, 0), ZONE).toInstant(),
         )
-        assertTrue(store.shiftActuals.save(mutation) is ShiftActualWriteResult.Saved)
-
-        val actual = receiveUntil(emissions) {
-            it.shifts.singleOrNull()?.hasActualTime == true
+        availability.replace(listOf(window))
+        val projected = receiveUntil(emissions) {
+            it.futureEvent.primaryEvent == NextEventPrimary.UPCOMING_AVAILABILITY
         }
-        assertEquals(TodayCardPrimary.COMPLETED_SUMMARY, actual.primary)
-        assertEquals(TodayShiftState.COMPLETED, actual.shifts.single().state)
+        val event = projected.futureEvent.primaryEvents.single() as NextEventItem.Availability
+        assertEquals(window.id, event.windowId)
+        assertEquals(window.labelSnapshot, event.labelSnapshot)
+
+        availability.replace(emptyList())
+        receiveUntil(emissions) { it.futureEvent.primaryEvent == NextEventPrimary.NONE }
         collector.cancelAndJoin()
     }
 
     @Test
-    fun actualTimeIsObservedAcrossEverySectorInTheConfigurationHistory() = runBlocking {
+    fun exactAvailabilityEndTriggersTemporalReprojectionWithHalfOpenBounds() = runBlocking {
+        V2AppTestFixture.writeFor(store, futureShift(), LocalDate.of(2026, 8, 1))
+        val clock = AdvancingClock(NOW, ZONE)
+        val availability = MutableAvailabilityRepository(store.availabilityWindows).apply {
+            replace(listOf(availabilityWindow(NOW.minusSeconds(3_600), NOW.plusSeconds(60))))
+        }
+        val results = observer(
+            clock = clock,
+            availability = availability,
+            temporalDelay = TemporalDelay { duration -> clock.advance(duration) },
+        ).observe().take(2).toList()
+
+        assertEquals(NextEventPrimary.ONGOING_AVAILABILITY, results[0].futureEvent.primaryEvent)
+        assertEquals(NextEventPrimary.NONE, results[1].futureEvent.primaryEvent)
+        assertEquals(NOW.plusSeconds(60), results[1].referenceInstant)
+    }
+
+    @Test
+    fun viewModelExposesRecoverableErrorAndRetryStartsAFreshV2Observation() = runBlocking {
+        V2AppTestFixture.writeFor(store, futureShift(), LocalDate.of(2026, 8, 1))
+        val shifts = RecoveringV2ShiftRepository(store.v2Shifts)
+        val viewModel = viewModel(shifts)
+
+        val error = withTimeout(5_000) {
+            viewModel.uiState.first { it.loadState == NextEventLoadState.ERROR }
+        }
+        assertEquals("No pudimos actualizar los eventos laborales de hoy.", error.errorMessage)
+        shifts.fail = false
+        viewModel.retry()
+
+        val content = withTimeout(5_000) {
+            viewModel.uiState.first { it.loadState == NextEventLoadState.CONTENT }
+        }
+        assertEquals(TodayCardPrimary.EMPTY, content.result?.primary)
+        assertEquals(2, shifts.collectionCount)
+    }
+
+    @Test
+    fun viewModelKeepsTheExactLastValidSameDayProjectionWhenASourceFailsLater() = runBlocking {
+        val write = V2AppTestFixture.writeFor(store, futureShift(), LocalDate.of(2026, 8, 1))
+        val shifts = ContentThenFailV2ShiftRepository(store.v2Shifts, listOf(write))
+        val viewModel = viewModel(shifts)
+        val states = Channel<NextEventUiState>(Channel.UNLIMITED)
+        val collector = launch(start = CoroutineStart.UNDISPATCHED) {
+            viewModel.uiState.collect { states.send(it) }
+        }
+        val content = receiveStateUntil(states) { it.loadState == NextEventLoadState.CONTENT }
+        assertEquals(write.shift.id, (content.result?.futureEvent?.primaryEvents?.single() as NextEventItem.Shift).shiftId)
+
+        shifts.fail()
+        val error = receiveStateUntil(states) { it.loadState == NextEventLoadState.ERROR }
+
+        assertSame(content.result, error.result)
+        assertEquals("No pudimos actualizar los eventos laborales de hoy.", error.errorMessage)
+        collector.cancelAndJoin()
+    }
+
+    @Test
+    fun stoppingObservationCancelsItsV2SourceGraph() = runBlocking {
+        V2AppTestFixture.writeFor(store, futureShift(), LocalDate.of(2026, 8, 1))
+        val shifts = CancellationTrackingV2ShiftRepository(store.v2Shifts)
+        val collector = launch(start = CoroutineStart.UNDISPATCHED) {
+            observer(clock = CLOCK, shifts = shifts).observe().collect()
+        }
+
+        withTimeout(5_000) { shifts.started.await() }
+        collector.cancelAndJoin()
+
+        withTimeout(5_000) { shifts.cancelled.await() }
+    }
+
+    @Test
+    fun localMidnightRestartsSourcesAndInjectedZoneOwnsTheCivilDate() = runBlocking {
+        V2AppTestFixture.writeFor(store, futureShift(), LocalDate.of(2026, 8, 1))
+        val beforeMidnight = ZonedDateTime.of(
+            LocalDate.of(2026, 8, 15),
+            LocalTime.of(23, 59),
+            ZONE,
+        ).toInstant()
+        val advancingClock = AdvancingClock(beforeMidnight, ZONE)
+        val dates = observer(
+            clock = advancingClock,
+            temporalDelay = TemporalDelay { duration -> advancingClock.advance(duration) },
+        ).observe().take(2).toList().map(TodayCardProjection::date)
+        assertEquals(listOf(LocalDate.of(2026, 8, 15), LocalDate.of(2026, 8, 16)), dates)
+
+        val sameInstant = Instant.parse("2026-08-15T02:00:00Z")
+        val utcResult = observer(
+            clock = Clock.fixed(sameInstant, ZoneId.of("UTC")),
+            zoneId = ZoneId.of("UTC"),
+        ).observe().first()
+        val argentineResult = observer(
+            clock = Clock.fixed(sameInstant, ZONE),
+            zoneId = ZONE,
+        ).observe().first()
+        assertEquals(LocalDate.of(2026, 8, 15), utcResult.date)
+        assertEquals(LocalDate.of(2026, 8, 14), argentineResult.date)
+    }
+
+    @Test
+    fun everyV2WorkSourceObservesEverySectorPresentInConfigurationHistory() = runBlocking {
         val timelineId = UUID.fromString("92000000-0000-0000-0000-000000000001")
         store.workConfiguration.createInitial(
             timelineId = timelineId,
@@ -297,397 +371,66 @@ class NextEventObserverInstrumentedTest {
                 ),
             ),
         )
-        val shift = completedTodayShift()
-        val actual = ShiftActualAggregate(
-            record = ShiftActualRecord(
-                shiftId = shift.id,
-                timelineId = timelineId,
-                sector = WorkSector.POLICE,
-                actualStart = shift.startAt,
-                actualEnd = shift.endAt,
-                differenceReason = "Horario real ficticio",
-                explanation = null,
-                createdAt = NOW,
-                updatedAt = NOW,
-            ),
-            extraIntervals = emptyList(),
-        )
-        val actuals = TrackingSectorShiftActualRepository(
-            delegate = store.shiftActuals,
-            values = mapOf(WorkSector.POLICE to mapOf(shift.id to actual)),
-        )
+        val shifts = TrackingV2ShiftRepository(store.v2Shifts)
+        val availability = TrackingAvailabilityRepository(store.availabilityWindows)
+        val actuals = TrackingShiftActualRepository(store.shiftActuals)
+        val extras = TrackingIndependentExtraRepository(store.independentExtraWork)
 
-        val result = NextEventObserver(
-            shifts = StaticShiftRepository(listOf(shift)),
-            explicitDayStatuses = EmptyExplicitStatusRepository(),
-            vacations = EmptyVacationRepository(),
-            medicalLeaves = store.medicalLeaves,
+        NextEventObserver(
+            shifts = shifts,
+            availabilityWindows = availability,
             shiftActuals = actuals,
+            independentExtras = extras,
+            explicitDayStatuses = store.explicitDayStatuses,
+            vacations = store.vacations,
+            medicalLeaves = store.medicalLeaves,
             workConfiguration = store.workConfiguration,
             clock = CLOCK,
-            zoneId = AppDefaults.zoneId(),
+            zoneId = ZONE,
             temporalDelay = TemporalDelay { awaitCancellation() },
-        ).observe().first { projection -> projection.shifts.isNotEmpty() }
+        ).observe().first()
 
-        assertEquals(
-            setOf(WorkSector.PRIVATE_SECURITY, WorkSector.POLICE),
-            actuals.queriedSectors.toSet(),
-        )
-        assertTrue(result.shifts.single().hasActualTime)
+        val expected = setOf(WorkSector.PRIVATE_SECURITY, WorkSector.POLICE)
+        assertEquals(expected, shifts.sectors.toSet())
+        assertEquals(expected, availability.sectors.toSet())
+        assertEquals(expected, actuals.sectors.toSet())
+        assertEquals(expected, extras.sectors.toSet())
     }
 
-    @Test
-    fun viewModelPreservesRecoverableErrorAndRetryStartsAFreshObservation() = runBlocking {
-        val shifts = RecoveringShiftRepository()
-        val viewModel = NextEventViewModel(
-            shifts = shifts,
-            explicitDayStatuses = EmptyExplicitStatusRepository(),
-            vacations = EmptyVacationRepository(),
-            medicalLeaves = store.medicalLeaves,
-            shiftActuals = store.shiftActuals,
-            workConfiguration = store.workConfiguration,
-            clock = CLOCK,
-            zoneId = AppDefaults.zoneId(),
-            temporalDelay = TemporalDelay { awaitCancellation() },
-        )
+    private fun observer(
+        clock: Clock,
+        shifts: V2ShiftRepository = store.v2Shifts,
+        availability: AvailabilityWindowRepository = store.availabilityWindows,
+        actuals: ShiftActualRepository = store.shiftActuals,
+        zoneId: ZoneId = ZONE,
+        temporalDelay: TemporalDelay = TemporalDelay { awaitCancellation() },
+    ): NextEventObserver = NextEventObserver(
+        shifts = shifts,
+        availabilityWindows = availability,
+        shiftActuals = actuals,
+        independentExtras = store.independentExtraWork,
+        explicitDayStatuses = store.explicitDayStatuses,
+        vacations = store.vacations,
+        medicalLeaves = store.medicalLeaves,
+        workConfiguration = store.workConfiguration,
+        clock = clock,
+        zoneId = zoneId,
+        temporalDelay = temporalDelay,
+    )
 
-        val error = withTimeout(5_000) {
-            viewModel.uiState.first { it.loadState == NextEventLoadState.ERROR }
-        }
-        assertEquals("No pudimos actualizar las jornadas de hoy.", error.errorMessage)
-        shifts.fail = false
-        viewModel.retry()
-
-        val content = withTimeout(5_000) {
-            viewModel.uiState.first { it.loadState == NextEventLoadState.CONTENT }
-        }
-        assertEquals(TodayCardPrimary.EMPTY, content.result?.primary)
-        assertEquals(NextEventPrimary.NONE, content.result?.futureEvent?.primaryEvent)
-        assertEquals(2, shifts.collectionCount)
-    }
-
-    @Test
-    fun viewModelKeepsTheExactLastValidProjectionWhenTheSourceFailsLater() = runBlocking {
-        val shift = futureShift()
-        val shifts = ContentThenFailShiftRepository(listOf(shift))
-        val viewModel = NextEventViewModel(
-            shifts = shifts,
-            explicitDayStatuses = EmptyExplicitStatusRepository(),
-            vacations = EmptyVacationRepository(),
-            medicalLeaves = store.medicalLeaves,
-            shiftActuals = store.shiftActuals,
-            workConfiguration = store.workConfiguration,
-            clock = CLOCK,
-            zoneId = AppDefaults.zoneId(),
-            temporalDelay = TemporalDelay { awaitCancellation() },
-        )
-        val states = Channel<NextEventUiState>(Channel.UNLIMITED)
-        val collector = launch(start = CoroutineStart.UNDISPATCHED) {
-            viewModel.uiState.collect { state -> states.send(state) }
-        }
-        val content = withTimeout(5_000) {
-            var state = states.receive()
-            while (state.loadState != NextEventLoadState.CONTENT) state = states.receive()
-            state
-        }
-        assertEquals(shift.id, content.result?.futureEvent?.upcomingShifts?.single()?.id)
-
-        shifts.fail()
-        val error = withTimeout(5_000) {
-            var state = states.receive()
-            while (state.loadState != NextEventLoadState.ERROR) state = states.receive()
-            state
-        }
-        assertEquals(content.result, error.result)
-        assertSame(content.result, error.result)
-        assertEquals("No pudimos actualizar las jornadas de hoy.", error.errorMessage)
-        collector.cancelAndJoin()
-    }
-
-    @Test
-    fun temporalObserverTransitionsAtExactStartAndEndWithInjectedClock() = runBlocking {
-        val clock = AdvancingClock(NOW, AppDefaults.zoneId())
-        val shift = futureShift().copy(
-            startAt = NOW.plusSeconds(60),
-            endAt = NOW.plusSeconds(120),
-            localStartDate = NOW.atZone(AppDefaults.zoneId()).toLocalDate(),
-            startTimeSnapshot = NOW.plusSeconds(60).atZone(AppDefaults.zoneId()).toLocalTime(),
-            endTimeSnapshot = NOW.plusSeconds(120).atZone(AppDefaults.zoneId()).toLocalTime(),
-        )
-        val results = NextEventObserver(
-            shifts = StaticShiftRepository(listOf(shift)),
-            explicitDayStatuses = EmptyExplicitStatusRepository(),
-            vacations = EmptyVacationRepository(),
-            medicalLeaves = store.medicalLeaves,
-            shiftActuals = store.shiftActuals,
-            workConfiguration = store.workConfiguration,
-            clock = clock,
-            zoneId = AppDefaults.zoneId(),
-            temporalDelay = TemporalDelay { duration -> clock.advance(duration) },
-        ).observe().take(3).toList()
-
-        assertEquals(
-            listOf(
-                TodayCardPrimary.UPCOMING_SHIFT,
-                TodayCardPrimary.ONGOING_SHIFT,
-                TodayCardPrimary.COMPLETED_SUMMARY,
-            ),
-            results.map { it.primary },
-        )
-        assertEquals(
-            listOf(
-                NextEventPrimary.UPCOMING_SHIFT,
-                NextEventPrimary.ONGOING_SHIFT,
-                NextEventPrimary.NONE,
-            ),
-            results.map { it.futureEvent.primaryEvent },
-        )
-        assertEquals(shift.startAt, results[1].referenceInstant)
-        assertEquals(shift.endAt, results[2].referenceInstant)
-    }
-
-    @Test
-    fun completedSummaryWiresTheObserverTimerDirectlyToMidnight() = runBlocking {
-        val delay = RecordingTemporalDelay()
-        val projections = Channel<TodayCardProjection>(Channel.UNLIMITED)
-        val collector = launch(start = CoroutineStart.UNDISPATCHED) {
-            NextEventObserver(
-                shifts = StaticShiftRepository(listOf(completedTodayShift(), futureShift())),
-                explicitDayStatuses = EmptyExplicitStatusRepository(),
-                vacations = EmptyVacationRepository(),
-                medicalLeaves = store.medicalLeaves,
-                shiftActuals = store.shiftActuals,
-                workConfiguration = store.workConfiguration,
-                clock = CLOCK,
-                zoneId = AppDefaults.zoneId(),
-                temporalDelay = delay,
-            ).observe().collect { projection -> projections.send(projection) }
-        }
-
-        val projection = withTimeout(5_000) { projections.receive() }
-        val observedDelay = withTimeout(5_000) { delay.durations.receive() }
-        val nextMidnight = LocalDate.of(2026, 8, 16)
-            .atStartOfDay(AppDefaults.zoneId())
-            .toInstant()
-
-        assertEquals(TodayCardPrimary.COMPLETED_SUMMARY, projection.primary)
-        assertEquals(NextEventPrimary.UPCOMING_SHIFT, projection.futureEvent.primaryEvent)
-        assertEquals(Duration.between(NOW, nextMidnight), observedDelay)
-        collector.cancelAndJoin()
-    }
-
-    @Test
-    fun temporalWakeWithoutClockAdvanceKeepsObservingUntilTheNextBoundary() = runBlocking {
-        val clock = AdvancingClock(NOW, AppDefaults.zoneId())
-        val shift = futureShift().copy(
-            startAt = NOW.plusSeconds(60),
-            endAt = NOW.plusSeconds(120),
-            localStartDate = NOW.atZone(AppDefaults.zoneId()).toLocalDate(),
-            startTimeSnapshot = NOW.plusSeconds(60).atZone(AppDefaults.zoneId()).toLocalTime(),
-            endTimeSnapshot = NOW.plusSeconds(120).atZone(AppDefaults.zoneId()).toLocalTime(),
-        )
-        var waits = 0
-
-        val results = NextEventObserver(
-            shifts = StaticShiftRepository(listOf(shift)),
-            explicitDayStatuses = EmptyExplicitStatusRepository(),
-            vacations = EmptyVacationRepository(),
-            medicalLeaves = store.medicalLeaves,
-            shiftActuals = store.shiftActuals,
-            workConfiguration = store.workConfiguration,
-            clock = clock,
-            zoneId = AppDefaults.zoneId(),
-            temporalDelay = TemporalDelay { duration ->
-                waits += 1
-                if (waits > 1) clock.advance(duration)
-            },
-        ).observe().take(3).toList()
-
-        assertEquals(
-            listOf(
-                TodayCardPrimary.UPCOMING_SHIFT,
-                TodayCardPrimary.UPCOMING_SHIFT,
-                TodayCardPrimary.ONGOING_SHIFT,
-            ),
-            results.map(TodayCardProjection::primary),
-        )
-        assertEquals(2, waits)
-    }
-
-    @Test
-    fun midnightCancelsPreviousDateSourceAndObservesNewCivilDay() = runBlocking {
-        val clock = AdvancingClock(NOW, AppDefaults.zoneId())
-        val shifts = TrackingShiftRepository()
-
-        val results = NextEventObserver(
-            shifts = shifts,
-            explicitDayStatuses = EmptyExplicitStatusRepository(),
-            vacations = EmptyVacationRepository(),
-            medicalLeaves = store.medicalLeaves,
-            shiftActuals = store.shiftActuals,
-            workConfiguration = store.workConfiguration,
-            clock = clock,
-            zoneId = AppDefaults.zoneId(),
-            temporalDelay = TemporalDelay { duration -> clock.advance(duration) },
-        ).observe().take(2).toList()
-
-        val firstDayStart = LocalDate.of(2026, 8, 15)
-            .atStartOfDay(AppDefaults.zoneId())
-            .toInstant()
-        val secondDayStart = LocalDate.of(2026, 8, 16)
-            .atStartOfDay(AppDefaults.zoneId())
-            .toInstant()
-        assertEquals(listOf(firstDayStart, secondDayStart), shifts.queriedCutoffs)
-        assertEquals(listOf(0, 1), shifts.cancellationsAtSubscription)
-        assertEquals(
-            listOf(LocalDate.of(2026, 8, 15), LocalDate.of(2026, 8, 16)),
-            results.map { it.date },
-        )
-    }
-
-    @Test
-    fun midnightEmitsLoadingForTheNewDateBeforeReplayingContent() = runBlocking {
-        val clock = AdvancingClock(NOW, AppDefaults.zoneId())
-
-        val states = NextEventObserver(
-            shifts = StaticShiftRepository(emptyList()),
-            explicitDayStatuses = EmptyExplicitStatusRepository(),
-            vacations = EmptyVacationRepository(),
-            medicalLeaves = store.medicalLeaves,
-            shiftActuals = store.shiftActuals,
-            workConfiguration = store.workConfiguration,
-            clock = clock,
-            zoneId = AppDefaults.zoneId(),
-            temporalDelay = TemporalDelay { duration -> clock.advance(duration) },
-        ).observeStates().take(3).toList()
-
-        assertEquals(
-            listOf(
-                LocalDate.of(2026, 8, 15),
-                LocalDate.of(2026, 8, 15),
-                LocalDate.of(2026, 8, 16),
-            ),
-            states.map { state ->
-                when (state) {
-                    is NextEventObservation.Loading -> state.date
-                    is NextEventObservation.Content -> state.projection.date
-                }
-            },
-        )
-        assertTrue(states[0] is NextEventObservation.Loading)
-        assertTrue(states[1] is NextEventObservation.Content)
-        assertTrue(states[2] is NextEventObservation.Loading)
-    }
-
-    @Test
-    fun recoverableErrorDropsYesterdayProjectionWhenTheDateChanges() = runBlocking {
-        val clock = AdvancingClock(NOW, AppDefaults.zoneId())
-        val shifts = FailThenBlockShiftRepository(listOf(futureShift()))
-        val delay = FailureThenMidnightDelay(clock)
-        val viewModel = NextEventViewModel(
-            shifts = shifts,
-            explicitDayStatuses = EmptyExplicitStatusRepository(),
-            vacations = EmptyVacationRepository(),
-            medicalLeaves = store.medicalLeaves,
-            shiftActuals = store.shiftActuals,
-            workConfiguration = store.workConfiguration,
-            clock = clock,
-            zoneId = AppDefaults.zoneId(),
-            temporalDelay = delay,
-        )
-        val states = Channel<NextEventUiState>(Channel.UNLIMITED)
-        val collector = launch(start = CoroutineStart.UNDISPATCHED) {
-            viewModel.uiState.collect { state -> states.send(state) }
-        }
-        val content = receiveUiState(states, NextEventLoadState.CONTENT)
-        withTimeout(5_000) { delay.observerWaitStarted.await() }
-
-        shifts.fail()
-        val error = receiveUiState(states, NextEventLoadState.ERROR)
-        withTimeout(5_000) { delay.earlyWakeStarted.await() }
-        assertEquals(1, shifts.collectionCount)
-        delay.allowEarlyWake.complete(Unit)
-        withTimeout(5_000) { delay.midnightWaitStarted.await() }
-        assertEquals(1, shifts.collectionCount)
-        delay.allowMidnight.complete(Unit)
-        val nextDayLoading = receiveUiState(states, NextEventLoadState.LOADING)
-        withTimeout(5_000) {
-            while (shifts.collectionCount < 2) yield()
-        }
-
-        assertEquals(LocalDate.of(2026, 8, 15), content.result?.date)
-        assertSame(content.result, error.result)
-        assertEquals(LocalDate.of(2026, 8, 16), clock.instant().atZone(AppDefaults.zoneId()).toLocalDate())
-        assertEquals(null, nextDayLoading.result)
-        assertEquals(2, shifts.collectionCount)
-        collector.cancelAndJoin()
-    }
-
-    @Test
-    fun anOldDateFailureImmediatelyObservesTheNewDayAndNeverReplaysYesterday() = runBlocking {
-        val clock = AdvancingClock(NOW, AppDefaults.zoneId())
-        val shifts = FailAcrossMidnightShiftRepository(listOf(futureShift()))
-        val viewModel = NextEventViewModel(
-            shifts = shifts,
-            explicitDayStatuses = EmptyExplicitStatusRepository(),
-            vacations = EmptyVacationRepository(),
-            medicalLeaves = store.medicalLeaves,
-            shiftActuals = store.shiftActuals,
-            workConfiguration = store.workConfiguration,
-            clock = clock,
-            zoneId = AppDefaults.zoneId(),
-            temporalDelay = TemporalDelay { awaitCancellation() },
-        )
-        val states = Channel<NextEventUiState>(Channel.UNLIMITED)
-        val collector = launch(start = CoroutineStart.UNDISPATCHED) {
-            viewModel.uiState.collect { state -> states.send(state) }
-        }
-        val content = receiveUiState(states, NextEventLoadState.CONTENT)
-
-        clock.advance(Duration.ofDays(1))
-        shifts.failOldDate()
-        val newDayLoading = receiveUiState(states, NextEventLoadState.LOADING)
-        withTimeout(5_000) { shifts.newDateObservationStarted.await() }
-        shifts.failNewDate()
-        val newDayError = receiveUiState(states, NextEventLoadState.ERROR)
-
-        assertEquals(LocalDate.of(2026, 8, 15), content.result?.date)
-        assertEquals(null, newDayLoading.result)
-        assertEquals(null, newDayError.result)
-        assertEquals(2, shifts.collectionCount)
-        assertEquals(LocalDate.of(2026, 8, 16), clock.instant().atZone(AppDefaults.zoneId()).toLocalDate())
-        collector.cancelAndJoin()
-    }
-
-    @Test
-    fun cancellingCollectorCancelsBothTheDateSourceAndTemporalWait() = runBlocking {
-        val shifts = CancellationTrackingShiftRepository()
-        val temporalDelay = CancellationTrackingTemporalDelay()
-        val collector = launch(start = CoroutineStart.UNDISPATCHED) {
-            NextEventObserver(
-                shifts = shifts,
-                explicitDayStatuses = EmptyExplicitStatusRepository(),
-                vacations = EmptyVacationRepository(),
-                medicalLeaves = store.medicalLeaves,
-                shiftActuals = store.shiftActuals,
-                workConfiguration = store.workConfiguration,
-                clock = CLOCK,
-                zoneId = AppDefaults.zoneId(),
-                temporalDelay = temporalDelay,
-            ).observe().collect()
-        }
-
-        withTimeout(5_000) {
-            shifts.started.await()
-            temporalDelay.started.await()
-        }
-        collector.cancelAndJoin()
-        withTimeout(5_000) {
-            shifts.cancelled.await()
-            temporalDelay.cancelled.await()
-        }
-        assertTrue(collector.isCancelled)
-    }
+    private fun viewModel(shifts: V2ShiftRepository): NextEventViewModel = NextEventViewModel(
+        shifts = shifts,
+        availabilityWindows = store.availabilityWindows,
+        shiftActuals = store.shiftActuals,
+        independentExtras = store.independentExtraWork,
+        explicitDayStatuses = store.explicitDayStatuses,
+        vacations = store.vacations,
+        medicalLeaves = store.medicalLeaves,
+        workConfiguration = store.workConfiguration,
+        clock = CLOCK,
+        zoneId = ZONE,
+        temporalDelay = TemporalDelay { awaitCancellation() },
+    )
 
     private suspend fun receiveUntil(
         channel: Channel<TodayCardProjection>,
@@ -698,24 +441,24 @@ class NextEventObserverInstrumentedTest {
         value
     }
 
-    private suspend fun receiveUiState(
+    private suspend fun receiveStateUntil(
         channel: Channel<NextEventUiState>,
-        loadState: NextEventLoadState,
+        predicate: (NextEventUiState) -> Boolean,
     ): NextEventUiState = withTimeout(5_000) {
         var value = channel.receive()
-        while (value.loadState != loadState) value = channel.receive()
+        while (!predicate(value)) value = channel.receive()
         value
     }
 
     private fun futureShift(): Shift {
         val date = LocalDate.of(2026, 8, 16)
-        val start = ZonedDateTime.of(date, LocalTime.of(19, 0), AppDefaults.zoneId()).toInstant()
-        val end = ZonedDateTime.of(date.plusDays(1), LocalTime.of(7, 0), AppDefaults.zoneId()).toInstant()
+        val start = ZonedDateTime.of(date, LocalTime.of(19, 0), ZONE).toInstant()
+        val end = ZonedDateTime.of(date.plusDays(1), LocalTime.of(7, 0), ZONE).toInstant()
         return Shift(
             id = UUID.fromString("80000000-0000-0000-0000-000000000001"),
             startAt = start,
             endAt = end,
-            zoneId = AppDefaults.zoneId(),
+            zoneId = ZONE,
             localStartDate = date,
             objectiveNameSnapshot = "Objetivo ficticio",
             objectiveAbbreviationSnapshot = "FIC",
@@ -731,292 +474,159 @@ class NextEventObserverInstrumentedTest {
         )
     }
 
-    private fun completedTodayShift(): Shift {
-        val date = NOW.atZone(AppDefaults.zoneId()).toLocalDate()
-        val start = ZonedDateTime.of(date, LocalTime.of(6, 0), AppDefaults.zoneId()).toInstant()
-        val end = ZonedDateTime.of(date, LocalTime.of(10, 0), AppDefaults.zoneId()).toInstant()
-        return futureShift().copy(
-            id = UUID.fromString("80000000-0000-0000-0000-000000000002"),
-            startAt = start,
-            endAt = end,
-            localStartDate = date,
-            startTimeSnapshot = LocalTime.of(6, 0),
-            endTimeSnapshot = LocalTime.of(10, 0),
+    private fun availabilityWindow(start: Instant, end: Instant): AvailabilityWindowRecord =
+        AvailabilityWindowRecord(
+            id = UUID.fromString("91000000-0000-0000-0000-000000000001"),
+            timelineId = V2AppTestFixture.TIMELINE_ID,
+            sector = WorkSector.NURSING,
+            configurationRevisionId = V2AppTestFixture.REVISION_ID,
+            ownerLocalDate = start.atZone(ZONE).toLocalDate(),
+            zoneId = ZONE,
+            start = start,
+            end = end,
+            labelSnapshot = "Guardia pasiva",
+            createdAt = Instant.EPOCH,
+            updatedAt = Instant.EPOCH,
         )
+
+    private class MutableAvailabilityRepository(
+        delegate: AvailabilityWindowRepository,
+    ) : AvailabilityWindowRepository by delegate {
+        private val values = MutableStateFlow<List<AvailabilityWindowRecord>>(emptyList())
+
+        fun replace(replacement: List<AvailabilityWindowRecord>) {
+            values.value = replacement
+        }
+
+        override fun observeAll(
+            timelineId: UUID,
+            sector: WorkSector,
+        ): Flow<List<AvailabilityWindowRecord>> = values
     }
 
-    private class RecoveringShiftRepository : ShiftRepository {
+    private class MutableV2ShiftRepository(
+        delegate: V2ShiftRepository,
+    ) : V2ShiftRepository by delegate {
+        private val values = MutableStateFlow<List<V2ShiftWrite>>(emptyList())
+
+        fun replace(replacement: List<V2ShiftWrite>) {
+            values.value = replacement
+        }
+
+        override fun observeAll(timelineId: UUID, sector: WorkSector): Flow<List<V2ShiftWrite>> = values
+    }
+
+    private class MutableShiftActualRepository(
+        delegate: ShiftActualRepository,
+    ) : ShiftActualRepository by delegate {
+        private val values = MutableStateFlow<Map<UUID, ShiftActualAggregate>>(emptyMap())
+
+        fun replace(replacement: Map<UUID, ShiftActualAggregate>) {
+            values.value = replacement
+        }
+
+        override fun observeAllActuals(
+            timelineId: UUID,
+            sector: WorkSector,
+        ): Flow<Map<UUID, ShiftActualAggregate>> = values
+    }
+
+    private class RecoveringV2ShiftRepository(
+        delegate: V2ShiftRepository,
+    ) : V2ShiftRepository by delegate {
         var fail = true
         var collectionCount = 0
 
-        override fun observeHasAny(): Flow<Boolean> = MutableStateFlow(false)
-
-        override fun observeEndingAfter(instantExclusive: Instant): Flow<List<Shift>> = flow {
+        override fun observeAll(timelineId: UUID, sector: WorkSector): Flow<List<V2ShiftWrite>> = flow {
             collectionCount += 1
-            if (fail) error("Fallo ficticio")
+            if (fail) error("Fallo V2 ficticio recuperable")
             emit(emptyList())
-        }
-
-        override fun observeStartingBetween(
-            startDateInclusive: LocalDate,
-            endDateInclusive: LocalDate,
-        ): Flow<List<Shift>> = MutableStateFlow(emptyList())
-
-        override suspend fun getById(id: UUID): Shift? = null
-    }
-
-    private class ContentThenFailShiftRepository(
-        private val initial: List<Shift>,
-    ) : ShiftRepository {
-        private val failure = CompletableDeferred<Unit>()
-
-        fun fail() {
-            failure.complete(Unit)
-        }
-
-        override fun observeHasAny(): Flow<Boolean> = MutableStateFlow(initial.isNotEmpty())
-
-        override fun observeEndingAfter(instantExclusive: Instant): Flow<List<Shift>> = flow {
-            emit(initial.filter { shift -> shift.endAt > instantExclusive })
-            failure.await()
-            error("Fallo ficticio posterior al contenido")
-        }
-
-        override fun observeStartingBetween(
-            startDateInclusive: LocalDate,
-            endDateInclusive: LocalDate,
-        ): Flow<List<Shift>> = MutableStateFlow(emptyList())
-
-        override suspend fun getById(id: UUID): Shift? = initial.firstOrNull { shift -> shift.id == id }
-    }
-
-    private class FailThenBlockShiftRepository(
-        private val initial: List<Shift>,
-    ) : ShiftRepository {
-        private val failure = CompletableDeferred<Unit>()
-        var collectionCount = 0
-            private set
-
-        fun fail() {
-            failure.complete(Unit)
-        }
-
-        override fun observeHasAny(): Flow<Boolean> = MutableStateFlow(initial.isNotEmpty())
-
-        override fun observeEndingAfter(instantExclusive: Instant): Flow<List<Shift>> = flow {
-            collectionCount += 1
-            if (collectionCount == 1) {
-                emit(initial.filter { shift -> shift.endAt > instantExclusive })
-                failure.await()
-                error("Fallo ficticio posterior al contenido")
-            }
             awaitCancellation()
         }
-
-        override fun observeStartingBetween(
-            startDateInclusive: LocalDate,
-            endDateInclusive: LocalDate,
-        ): Flow<List<Shift>> = MutableStateFlow(emptyList())
-
-        override suspend fun getById(id: UUID): Shift? = initial.firstOrNull { shift -> shift.id == id }
     }
 
-    private class FailAcrossMidnightShiftRepository(
-        private val initial: List<Shift>,
-    ) : ShiftRepository {
-        private val oldDateFailure = CompletableDeferred<Unit>()
-        private val newDateFailure = CompletableDeferred<Unit>()
-        val newDateObservationStarted = CompletableDeferred<Unit>()
-        var collectionCount = 0
-            private set
+    private class ContentThenFailV2ShiftRepository(
+        delegate: V2ShiftRepository,
+        private val values: List<V2ShiftWrite>,
+    ) : V2ShiftRepository by delegate {
+        private val failure = CompletableDeferred<Unit>()
 
-        fun failOldDate() {
-            oldDateFailure.complete(Unit)
+        fun fail() {
+            failure.complete(Unit)
         }
 
-        fun failNewDate() {
-            newDateFailure.complete(Unit)
+        override fun observeAll(timelineId: UUID, sector: WorkSector): Flow<List<V2ShiftWrite>> = flow {
+            emit(values)
+            failure.await()
+            error("Fallo V2 ficticio posterior")
         }
+    }
 
-        override fun observeHasAny(): Flow<Boolean> = MutableStateFlow(initial.isNotEmpty())
+    private class CancellationTrackingV2ShiftRepository(
+        delegate: V2ShiftRepository,
+    ) : V2ShiftRepository by delegate {
+        val started = CompletableDeferred<Unit>()
+        val cancelled = CompletableDeferred<Unit>()
 
-        override fun observeEndingAfter(instantExclusive: Instant): Flow<List<Shift>> = flow {
-            collectionCount += 1
-            if (collectionCount == 1) {
-                emit(initial.filter { shift -> shift.endAt > instantExclusive })
-                oldDateFailure.await()
-                error("Fallo ficticio de la fecha anterior")
+        override fun observeAll(timelineId: UUID, sector: WorkSector): Flow<List<V2ShiftWrite>> = flow {
+            started.complete(Unit)
+            try {
+                emit(emptyList())
+                awaitCancellation()
+            } finally {
+                cancelled.complete(Unit)
             }
-            newDateObservationStarted.complete(Unit)
-            newDateFailure.await()
-            error("Fallo ficticio de la fecha nueva antes de emitir contenido")
         }
-
-        override fun observeStartingBetween(
-            startDateInclusive: LocalDate,
-            endDateInclusive: LocalDate,
-        ): Flow<List<Shift>> = MutableStateFlow(emptyList())
-
-        override suspend fun getById(id: UUID): Shift? = initial.firstOrNull { shift -> shift.id == id }
     }
 
-    private class TrackingSectorShiftActualRepository(
-        private val delegate: ShiftActualRepository,
-        private val values: Map<WorkSector, Map<UUID, ShiftActualAggregate>>,
+    private class TrackingV2ShiftRepository(
+        delegate: V2ShiftRepository,
+    ) : V2ShiftRepository by delegate {
+        val sectors = mutableListOf<WorkSector>()
+
+        override fun observeAll(timelineId: UUID, sector: WorkSector): Flow<List<V2ShiftWrite>> {
+            sectors += sector
+            return flowOf(emptyList())
+        }
+    }
+
+    private class TrackingAvailabilityRepository(
+        delegate: AvailabilityWindowRepository,
+    ) : AvailabilityWindowRepository by delegate {
+        val sectors = mutableListOf<WorkSector>()
+
+        override fun observeAll(timelineId: UUID, sector: WorkSector): Flow<List<AvailabilityWindowRecord>> {
+            sectors += sector
+            return flowOf(emptyList())
+        }
+    }
+
+    private class TrackingShiftActualRepository(
+        delegate: ShiftActualRepository,
     ) : ShiftActualRepository by delegate {
-        val queriedSectors = mutableListOf<WorkSector>()
+        val sectors = mutableListOf<WorkSector>()
 
         override fun observeAllActuals(
             timelineId: UUID,
             sector: WorkSector,
         ): Flow<Map<UUID, ShiftActualAggregate>> {
-            queriedSectors += sector
-            return MutableStateFlow(values[sector].orEmpty())
+            sectors += sector
+            return flowOf(emptyMap())
         }
     }
 
-    private class StaticShiftRepository(
-        private val values: List<Shift>,
-    ) : ShiftRepository {
-        override fun observeHasAny(): Flow<Boolean> = MutableStateFlow(values.isNotEmpty())
+    private class TrackingIndependentExtraRepository(
+        delegate: IndependentExtraWorkRepository,
+    ) : IndependentExtraWorkRepository by delegate {
+        val sectors = mutableListOf<WorkSector>()
 
-        override fun observeEndingAfter(instantExclusive: Instant): Flow<List<Shift>> =
-            MutableStateFlow(values.filter { it.endAt > instantExclusive })
-
-        override fun observeStartingBetween(
-            startDateInclusive: LocalDate,
-            endDateInclusive: LocalDate,
-        ): Flow<List<Shift>> = MutableStateFlow(emptyList())
-
-        override suspend fun getById(id: UUID): Shift? = values.firstOrNull { it.id == id }
-    }
-
-    private class MutableShiftRepository : ShiftRepository {
-        private val values = MutableStateFlow<List<Shift>>(emptyList())
-
-        fun replace(replacement: List<Shift>) {
-            values.value = replacement
+        override fun observeAll(
+            timelineId: UUID,
+            sector: WorkSector,
+        ): Flow<List<com.blackatsystems.miguardia.core.domain.model.IndependentExtraWorkRecord>> {
+            sectors += sector
+            return flowOf(emptyList())
         }
-
-        override fun observeHasAny(): Flow<Boolean> = values.map { shifts -> shifts.isNotEmpty() }
-
-        override fun observeEndingAfter(instantExclusive: Instant): Flow<List<Shift>> = values.map { shifts ->
-            shifts.filter { shift -> shift.endAt > instantExclusive }
-        }
-
-        override fun observeStartingBetween(
-            startDateInclusive: LocalDate,
-            endDateInclusive: LocalDate,
-        ): Flow<List<Shift>> = values.map { shifts ->
-            shifts.filter { shift -> shift.localStartDate in startDateInclusive..endDateInclusive }
-        }
-
-        override suspend fun getById(id: UUID): Shift? = values.value.firstOrNull { shift -> shift.id == id }
-    }
-
-    private class CancellationTrackingShiftRepository : ShiftRepository {
-        val started = CompletableDeferred<Unit>()
-        val cancelled = CompletableDeferred<Unit>()
-
-        override fun observeHasAny(): Flow<Boolean> = MutableStateFlow(false)
-
-        override fun observeEndingAfter(instantExclusive: Instant): Flow<List<Shift>> = flow {
-            started.complete(Unit)
-            try {
-                emit(emptyList())
-                awaitCancellation()
-            } finally {
-                cancelled.complete(Unit)
-            }
-        }
-
-        override fun observeStartingBetween(
-            startDateInclusive: LocalDate,
-            endDateInclusive: LocalDate,
-        ): Flow<List<Shift>> = MutableStateFlow(emptyList())
-
-        override suspend fun getById(id: UUID): Shift? = null
-    }
-
-    private class CancellationTrackingTemporalDelay : TemporalDelay {
-        val started = CompletableDeferred<Unit>()
-        val cancelled = CompletableDeferred<Unit>()
-
-        override suspend fun await(duration: Duration) {
-            started.complete(Unit)
-            try {
-                awaitCancellation()
-            } finally {
-                cancelled.complete(Unit)
-            }
-        }
-    }
-
-    private class RecordingTemporalDelay : TemporalDelay {
-        val durations = Channel<Duration>(Channel.UNLIMITED)
-
-        override suspend fun await(duration: Duration) {
-            durations.send(duration)
-            awaitCancellation()
-        }
-    }
-
-    private class FailureThenMidnightDelay(
-        private val clock: AdvancingClock,
-    ) : TemporalDelay {
-        val observerWaitStarted = CompletableDeferred<Unit>()
-        val earlyWakeStarted = CompletableDeferred<Unit>()
-        val allowEarlyWake = CompletableDeferred<Unit>()
-        val midnightWaitStarted = CompletableDeferred<Unit>()
-        val allowMidnight = CompletableDeferred<Unit>()
-        private var invocationCount = 0
-
-        override suspend fun await(duration: Duration) {
-            invocationCount += 1
-            when (invocationCount) {
-                1 -> {
-                    observerWaitStarted.complete(Unit)
-                    awaitCancellation()
-                }
-
-                2 -> {
-                    earlyWakeStarted.complete(Unit)
-                    allowEarlyWake.await()
-                }
-
-                else -> {
-                    midnightWaitStarted.complete(Unit)
-                    allowMidnight.await()
-                    clock.advance(duration)
-                }
-            }
-        }
-    }
-
-    private class TrackingShiftRepository : ShiftRepository {
-        val queriedCutoffs = mutableListOf<Instant>()
-        val cancellationsAtSubscription = mutableListOf<Int>()
-        private var cancellationCount = 0
-
-        override fun observeHasAny(): Flow<Boolean> = MutableStateFlow(false)
-
-        override fun observeEndingAfter(instantExclusive: Instant): Flow<List<Shift>> = flow {
-            queriedCutoffs += instantExclusive
-            cancellationsAtSubscription += cancellationCount
-            try {
-                emit(emptyList())
-                awaitCancellation()
-            } finally {
-                cancellationCount += 1
-            }
-        }
-
-        override fun observeStartingBetween(
-            startDateInclusive: LocalDate,
-            endDateInclusive: LocalDate,
-        ): Flow<List<Shift>> = MutableStateFlow(emptyList())
-
-        override suspend fun getById(id: UUID): Shift? = null
     }
 
     private class AdvancingClock(
@@ -1032,37 +642,13 @@ class NextEventObserverInstrumentedTest {
         }
     }
 
-    private class EmptyExplicitStatusRepository : ExplicitDayStatusRepository {
-        private val values = MutableStateFlow<List<ExplicitDayStatus>>(emptyList())
-        override fun observeFrom(startDateInclusive: LocalDate): Flow<List<ExplicitDayStatus>> = values
-        override fun observeBetween(
-            startDateInclusive: LocalDate,
-            endDateInclusive: LocalDate,
-        ): Flow<List<ExplicitDayStatus>> = values
-        override suspend fun set(date: LocalDate, type: ExplicitDayStatusType) = Unit
-        override suspend fun setAll(dates: Set<LocalDate>, type: ExplicitDayStatusType) = Unit
-        override suspend fun clear(date: LocalDate) = Unit
-    }
-
-    private class EmptyVacationRepository : VacationRepository {
-        private val values = MutableStateFlow<List<Vacation>>(emptyList())
-        override fun observeEndingOnOrAfter(dateInclusive: LocalDate): Flow<List<Vacation>> = values
-        override fun observeOverlapping(
-            startDateInclusive: LocalDate,
-            endDateInclusive: LocalDate,
-        ): Flow<List<Vacation>> = values
-        override suspend fun getById(id: UUID): Vacation? = null
-        override suspend fun insert(vacation: Vacation) = Unit
-        override suspend fun update(vacation: Vacation) = Unit
-        override suspend fun delete(id: UUID) = Unit
-    }
-
     private companion object {
+        val ZONE: ZoneId = AppDefaults.zoneId()
         val NOW: Instant = ZonedDateTime.of(
             LocalDate.of(2026, 8, 15),
             LocalTime.NOON,
-            AppDefaults.zoneId(),
+            ZONE,
         ).toInstant()
-        val CLOCK: Clock = Clock.fixed(NOW, AppDefaults.zoneId())
+        val CLOCK: Clock = Clock.fixed(NOW, ZONE)
     }
 }

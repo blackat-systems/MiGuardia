@@ -276,7 +276,7 @@ class CalendarComposeTest {
             }
         }
 
-        compose.onNodeWithText("Clima durante la guardia").performScrollTo().performClick()
+        compose.onNodeWithText("Clima durante la jornada").performScrollTo().performClick()
 
         val weatherTitle = compose.onNodeWithText("Clima de la guardia")
         compose.waitUntil(5_000L) {

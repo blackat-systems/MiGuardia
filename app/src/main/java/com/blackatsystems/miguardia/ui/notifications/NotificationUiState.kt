@@ -2,6 +2,7 @@ package com.blackatsystems.miguardia.ui.notifications
 
 import com.blackatsystems.miguardia.core.domain.model.Shift
 import com.blackatsystems.miguardia.core.domain.model.ShiftNotificationConfig
+import com.blackatsystems.miguardia.core.domain.nextevent.NextEventItem
 import com.blackatsystems.miguardia.notifications.NotificationPreferences
 import com.blackatsystems.miguardia.notifications.NotificationSystemAccessState
 
@@ -20,7 +21,7 @@ data class NotificationUiState(
     ),
     val selectedShift: Shift? = null,
     val shiftOverride: ShiftNotificationConfig? = null,
-    val restorableShifts: List<Shift> = emptyList(),
+    val restorableEvents: List<NextEventItem> = emptyList(),
     val isLoading: Boolean = true,
     val isSaving: Boolean = false,
     val errorMessage: String? = null,

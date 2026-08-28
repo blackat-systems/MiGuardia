@@ -13,7 +13,6 @@ import com.blackatsystems.miguardia.notifications.NotificationPrivacy
 import com.blackatsystems.miguardia.notifications.NotificationRhythm
 import com.blackatsystems.miguardia.notifications.NotificationRuntime
 import com.blackatsystems.miguardia.notifications.NotificationSystemAccess
-import java.util.UUID
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,19 +33,19 @@ class NotificationViewModel(
     private val writeMutex = Mutex()
     private var preferencesJob: Job? = null
     private var shiftJob: Job? = null
-    private var restorableShiftsJob: Job? = null
+    private var restorableEventsJob: Job? = null
 
     init {
         observePreferences()
-        observeRestorableShifts()
+        observeRestorableEvents()
     }
 
-    private fun observeRestorableShifts() {
-        restorableShiftsJob?.cancel()
-        restorableShiftsJob = viewModelScope.launch {
-            runtime.restorableShifts
+    private fun observeRestorableEvents() {
+        restorableEventsJob?.cancel()
+        restorableEventsJob = viewModelScope.launch {
+            runtime.restorableEvents
                 .catch { showError("No pudimos leer las notificaciones ocultas.") }
-                .collect { shifts -> _uiState.update { it.copy(restorableShifts = shifts) } }
+                .collect { events -> _uiState.update { it.copy(restorableEvents = events) } }
         }
     }
 
@@ -91,7 +90,7 @@ class NotificationViewModel(
         }
         shiftJob = viewModelScope.launch {
             configs.observeForShift(shift.id)
-                .catch { showError("No pudimos leer los avisos de esta guardia.") }
+                .catch { showError("No pudimos leer los avisos de esta jornada.") }
                 .collect { config ->
                     _uiState.update { it.copy(shiftOverride = config, isLoading = false) }
                 }
@@ -111,7 +110,10 @@ class NotificationViewModel(
         }
     }
 
-    fun refreshSystemAccess() = _uiState.update { it.copy(systemAccess = systemAccess.read()) }
+    fun refreshSystemAccess() {
+        _uiState.update { it.copy(systemAccess = systemAccess.read()) }
+        runtime.reconcile()
+    }
     fun setEnabled(value: Boolean) = launchWrite { preferencesStore.setEnabled(value) }
     fun setPreciseTiming(value: Boolean) = launchWrite { preferencesStore.setPreciseTiming(value) }
     fun setPersistent(value: Boolean) = launchWrite { preferencesStore.setPersistentWhileActive(value) }
@@ -137,21 +139,21 @@ class NotificationViewModel(
         launchWrite { configs.clear(shift.id) }
     }
 
-    fun restoreNotification(shiftId: UUID) = launchOperation {
-        if (runtime.restoreNow(shiftId.toString())) {
+    fun restoreNotification(eventKey: String) = launchOperation {
+        if (runtime.restoreNow(eventKey)) {
             "Notificación mostrada nuevamente."
         } else {
-            "La guardia ya no podía mostrar esa notificación."
+            "El evento ya no podía mostrar esa notificación."
         }
     }
 
     fun restoreAllNotifications() {
-        val shiftIds = _uiState.value.restorableShifts.map(Shift::id)
-        if (shiftIds.isEmpty()) return
+        val eventKeys = _uiState.value.restorableEvents.map { event -> event.identity.trackingKey }
+        if (eventKeys.isEmpty()) return
         launchOperation {
-            val restored = shiftIds.count { runtime.restoreNow(it.toString()) }
+            val restored = eventKeys.count { runtime.restoreNow(it) }
             when (restored) {
-                0 -> "Las guardias ya no podían mostrar esas notificaciones."
+                0 -> "Los eventos ya no podían mostrar esas notificaciones."
                 1 -> "Se mostró nuevamente una notificación."
                 else -> "Se mostraron nuevamente $restored notificaciones."
             }
@@ -159,7 +161,7 @@ class NotificationViewModel(
     }
 
     fun sendTestNotification() = launchOperation {
-        if (!systemAccess.read().notificationPermissionGranted) {
+        if (!systemAccess.read().notificationAccessGranted) {
             return@launchOperation "Primero permití las notificaciones en Android."
         }
         runtime.showTestNotification(preferencesStore.current())
@@ -171,7 +173,7 @@ class NotificationViewModel(
     fun retry() {
         _uiState.update { it.copy(isLoading = true, errorMessage = null) }
         observePreferences()
-        observeRestorableShifts()
+        observeRestorableEvents()
         _uiState.value.selectedShift?.let(::openShift)
         refreshSystemAccess()
     }

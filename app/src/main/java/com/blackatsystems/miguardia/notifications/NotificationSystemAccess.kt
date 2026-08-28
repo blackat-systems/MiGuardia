@@ -11,7 +11,14 @@ import androidx.core.content.ContextCompat
 data class NotificationSystemAccessState(
     val notificationPermissionGranted: Boolean,
     val exactAlarmAccessGranted: Boolean,
-)
+    val appNotificationsEnabled: Boolean = notificationPermissionGranted,
+) {
+    val notificationAccessGranted: Boolean
+        get() = notificationAccessGranted(
+            runtimePermissionGranted = notificationPermissionGranted,
+            appNotificationsEnabled = appNotificationsEnabled,
+        )
+}
 
 class NotificationSystemAccess(private val context: Context) {
     fun read(): NotificationSystemAccessState {
@@ -21,12 +28,10 @@ class NotificationSystemAccess(private val context: Context) {
                 Manifest.permission.POST_NOTIFICATIONS,
             ) == PackageManager.PERMISSION_GRANTED
         return NotificationSystemAccessState(
-            notificationPermissionGranted = notificationAccessGranted(
-                runtimePermissionGranted = runtimePermissionGranted,
-                appNotificationsEnabled = NotificationManagerCompat.from(context).areNotificationsEnabled(),
-            ),
+            notificationPermissionGranted = runtimePermissionGranted,
             exactAlarmAccessGranted = Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
                 context.getSystemService(AlarmManager::class.java).canScheduleExactAlarms(),
+            appNotificationsEnabled = NotificationManagerCompat.from(context).areNotificationsEnabled(),
         )
     }
 }

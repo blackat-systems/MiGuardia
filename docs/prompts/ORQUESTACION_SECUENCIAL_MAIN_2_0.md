@@ -66,6 +66,8 @@ Joaquin, que autoriza a MAIN a:
   por Joaquin el 2026-08-27 para publicar guardias pasivas y disponibilidad;
 - conservar como ejecutado y consumido en `fd6891e` el push autorizado por
   Joaquin el 2026-08-27 para publicar Calendario final y tarjeta superior;
+- conservar como ejecutado y consumido en `ad777bb` el push autorizado por
+  Joaquin el 2026-08-27 para publicar Resumen personalizable;
 - preparar el prompt de una nueva tarea únicamente cuando Joaquin lo pida;
 - abrir o crear una tarea especializada únicamente cuando Joaquin lo pida.
 
@@ -222,7 +224,7 @@ La secuencia conocida al redactar este prompt es:
 4. Crear lugares, tipos y horarios guardados.
 5. Elegir el rubro y preparar el primer lugar de trabajo.
 
-### Núcleo laboral pendiente o en curso
+### Secuencia del núcleo laboral
 
 6. Elegir días y cargar jornadas desde horarios guardados —cerrado en
    `ae57686`.
@@ -239,19 +241,22 @@ La secuencia conocida al redactar este prompt es:
     automático —cerrado en `964b7cd`—.
 12. Registrar guardias pasivas y descontar sólo el trabajo coincidente
     —cerrado por MAIN en el checkpoint de disponibilidad del 2026-08-27—.
-13. Terminar el Calendario y desplegar todas las jornadas del día —próximo
-    bloque habilitado—.
-14. Mostrar y personalizar el Resumen de horas.
-15. Adaptar el motor de próximo evento a MiGuardia 2.0.
-16. Adaptar las notificaciones a todos los eventos compatibles.
-17. Auditar integralmente el núcleo y su compatibilidad Android.
+13. Terminar el Calendario y desplegar todas las jornadas del día —cerrado en
+    `fd6891e`—.
+14. Mostrar y personalizar el Resumen de horas —cerrado en `ad777bb`—.
+15. Adaptar como un único bloque el motor de próximo evento y las
+    notificaciones a todos los eventos compatibles —cerrado por MAIN el
+    2026-08-27—.
+16. Auditar integralmente el núcleo y su compatibilidad Android —siguiente
+    etapa—.
 
 Las ampliaciones futuras de situaciones especiales y cualquier consolidación
 adicional del motor de horas quedan fuera de esta cadena inmediata. Sólo se
 reinsertan por una nueva indicación de Joaquin o por una dependencia real
 demostrada durante una auditoría posterior.
 
-El motor de próximo evento debe estabilizarse antes de adaptar notificaciones.
+El motor de próximo evento y las notificaciones quedaron estabilizados como un
+único bloque para impedir reglas divergentes entre tarjeta y avisos.
 La edición individual reutiliza Room v7 y no amplía el esquema. El retiro del
 modo V1 debe cerrar la falsa compatibilidad de datos sin descartar componentes
 útiles antes de que un bloque posterior vuelva a ampliar la persistencia.
@@ -265,12 +270,12 @@ mayor autoridad cambia, se actualizan primero el grafo, el índice y el estado.
 
 Sólo después de cerrar y auditar el núcleo laboral:
 
-20. Adaptar el widget al motor final de próximo evento.
-21. Generar informes locales de jornadas y horas.
-22. Crear y restaurar copias locales seguras.
-23. Proteger el acceso local a MiGuardia.
-24. Completar la Ayuda y el recorrido inicial sobre la interfaz definitiva.
-25. Auditar la aplicación completa y emitir el candidato local MiGuardia 2.0.
+17. Adaptar el widget al motor final de próximo evento.
+18. Generar informes locales de jornadas y horas.
+19. Crear y restaurar copias locales seguras.
+20. Proteger el acceso local a MiGuardia.
+21. Completar la Ayuda y el recorrido inicial sobre la interfaz definitiva.
+22. Auditar la aplicación completa y emitir el candidato local MiGuardia 2.0.
 
 Estas cinco superficies locales permanecen en la hoja de ruta después del
 checkpoint del núcleo. Cada una se prepara sólo cuando Joaquin pida su prompt o
@@ -560,18 +565,14 @@ acción sobre producción.
 
 ## 17. Estado inmediato
 
-El bloque **Guardias pasivas y disponibilidad** quedó auditado, corregido,
-verificado y cerrado por MAIN. `MiGuardiaV2Database`, `miguardia-v2.db` y Room
-V2 versión 5 son la base activa, con cadena explícita `1→2→3→4→5`.
+Los bloques **Calendario final y tarjeta superior**, **Resumen
+personalizable** y **Próximo evento y notificaciones** quedaron auditados,
+corregidos, verificados y cerrados por MAIN. `MiGuardiaV2Database`,
+`miguardia-v2.db` y Room V2 versión 5 continúan como base activa, con cadena
+explícita `1→2→3→4→5`.
 
-Guardias pasivas y disponibilidad está cerrada. Por indicación expresa de
-Joaquin, el siguiente bloque es **Calendario final y tarjeta superior**.
-
-El prompt `GUARDIAS_PASIVAS_Y_DISPONIBILIDAD_V2.md` está `CERRADO`. El bloque
-define un único concepto con los nombres Guardia pasiva, Disponible para
-llamado o Retén; impide ventanas superpuestas y descuenta solamente la unión
-del trabajo activo coincidente.
-
-El prompt `CALENDARIO_FINAL_Y_TARJETA_SUPERIOR_V2.md` está habilitado. No hay
-una tarea especializada abierta ni código candidato para ese bloque hasta que
-Joaquin entregue el prompt a la nueva tarea o pida abrirla.
+No existe otro prompt de implementación habilitado. La siguiente etapa del
+orden aprobado es la **auditoría integral del núcleo y compatibilidad Android**.
+MAIN debe tratarla como auditoría, conservar el checkout controlado y no abrir
+la segunda capa —widget, informes, copias, bloqueo y Ayuda 2.0— hasta completar
+esa puerta y recibir la indicación de Joaquin.

@@ -20,7 +20,8 @@ import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import com.blackatsystems.miguardia.MainActivity
 import com.blackatsystems.miguardia.R
-import com.blackatsystems.miguardia.core.domain.model.Shift
+import com.blackatsystems.miguardia.core.domain.nextevent.NextEventIdentity
+import com.blackatsystems.miguardia.core.domain.nextevent.NextEventItem
 import java.security.MessageDigest
 import java.time.Duration
 import java.time.Instant
@@ -30,53 +31,74 @@ internal class ShiftNotificationPresenter(private val context: Context) {
     private val manager = NotificationManagerCompat.from(context)
 
     fun show(
-        shift: Shift,
+        event: NextEventItem,
         now: Instant,
         preferences: NotificationPreferences,
         weatherText: String? = null,
         silentUpdate: Boolean = false,
     ) {
-        val ongoing = now >= shift.startAt
-        val timeRange = "${shift.startTimeSnapshot.format(TimeFormatter)}–${shift.endTimeSnapshot.format(TimeFormatter)}"
-        val card = NotificationCard(
-            state = if (ongoing) "EN CURSO" else "PRÓXIMA GUARDIA",
-            objective = shift.objectiveNameSnapshot,
-            abbreviation = shift.objectiveAbbreviationSnapshot,
-            schedule = timeRange,
-            position = shift.position?.takeIf(String::isNotBlank),
-            weather = weatherText,
-            accentColor = shift.colorArgbSnapshot,
-            countdownBase = SystemClock.elapsedRealtime() + Duration.between(
-                now,
-                if (ongoing) shift.endAt else shift.startAt,
-            ).toMillis().coerceAtLeast(0L),
-            countdownLabel = if (ongoing) "Finaliza en %s" else "Comienza en %s",
-            privacy = preferences.privacy,
-        )
+        val ongoing = now >= event.start
+        val timeRange = when (event) {
+            is NextEventItem.Shift ->
+                "${event.startTimeSnapshot.format(TimeFormatter)}–${event.endTimeSnapshot.format(TimeFormatter)}"
+            is NextEventItem.Availability ->
+                "${event.start.atZone(event.zoneId).toLocalTime().format(TimeFormatter)}–" +
+                    event.end.atZone(event.zoneId).toLocalTime().format(TimeFormatter)
+        }
+        val card = when (event) {
+            is NextEventItem.Shift -> NotificationCard(
+                state = if (ongoing) "JORNADA EN CURSO" else "PRÓXIMA JORNADA",
+                objective = "${event.workTypeNameSnapshot} · ${event.placeNameSnapshot}",
+                abbreviation = event.placeAbbreviationSnapshot,
+                schedule = timeRange,
+                position = event.positionSnapshot?.takeIf(String::isNotBlank),
+                weather = weatherText,
+                accentColor = event.colorArgbSnapshot,
+                countdownBase = event.countdownBase(now, ongoing),
+                countdownLabel = if (ongoing) "Finaliza en %s" else "Comienza en %s",
+                privacy = preferences.privacy,
+            )
+            is NextEventItem.Availability -> NotificationCard(
+                state = if (ongoing) "DISPONIBILIDAD ACTIVA" else "PRÓXIMA DISPONIBILIDAD",
+                objective = event.labelSnapshot,
+                abbreviation = null,
+                schedule = timeRange,
+                position = null,
+                weather = null,
+                accentColor = VIGILIA_ACCENT,
+                countdownBase = event.countdownBase(now, ongoing),
+                countdownLabel = if (ongoing) "Finaliza en %s" else "Comienza en %s",
+                privacy = preferences.privacy,
+            )
+        }
         val views = createViews(card)
         val channelId = ensureChannel(preferences)
-        val dismissPendingIntent = dismissIntent(shift)
+        val dismissPendingIntent = dismissIntent(event.identity)
+        val persistentDuringActiveEvent = preferences.persistentWhileActive && ongoing
         views.expanded.setOnClickPendingIntent(R.id.notification_dismiss, dismissPendingIntent)
-
+        val detailsAction = event.detailsAction()
         val builder = baseBuilder(channelId, card, views)
             .setColor(card.displayedAccent())
             .setGroup(GROUP_KEY)
             .setOnlyAlertOnce(silentUpdate)
-            .setOngoing(preferences.persistentWhileActive)
-            .setAutoCancel(!preferences.persistentWhileActive)
-            .setContentIntent(actionIntent(MainActivity.ACTION_VIEW_SHIFT, shift, now))
+            .setOngoing(persistentDuringActiveEvent)
+            .setAutoCancel(!persistentDuringActiveEvent)
+            .setContentIntent(actionIntent(detailsAction, event, now))
             .setDeleteIntent(dismissPendingIntent)
-            .addAction(secureAction("Ver detalles", MainActivity.ACTION_VIEW_SHIFT, shift, now))
-            .addAction(secureAction("Cómo llegar", MainActivity.ACTION_DIRECTIONS, shift, now))
+            .addAction(secureAction("Ver detalles", detailsAction, event, now))
+        if (event is NextEventItem.Shift && event.hasHistoricalAddress) {
+            builder.addAction(secureAction("Cómo llegar", MainActivity.ACTION_DIRECTIONS, event, now))
+        }
         if (silentUpdate) builder.setSilent(true)
         applyPrivacy(builder, channelId, card)
-        notifySafely(shift.id.toString(), NOTIFICATION_ID, builder.build())
+        cancelLegacyTag(event.identity)
+        notifySafely(event.identity.trackingKey, NOTIFICATION_ID, builder.build())
     }
 
     fun showTestNotification(preferences: NotificationPreferences) {
         val card = NotificationCard(
-            state = "PRUEBA · PRÓXIMA",
-            objective = "Hospital Norte",
+            state = "PRUEBA · PRÓXIMA JORNADA",
+            objective = "Jornada habitual · Hospital Norte",
             abbreviation = "NOR",
             schedule = "19:00–07:00",
             position = "Acceso principal",
@@ -107,8 +129,10 @@ internal class ShiftNotificationPresenter(private val context: Context) {
         notifySafely(PREVIEW_TAG, PREVIEW_NOTIFICATION_ID, builder.build())
     }
 
-    fun cancel(shiftId: String) {
-        manager.cancel(shiftId, NOTIFICATION_ID)
+    fun cancel(eventKey: String) {
+        val identity = NextEventIdentity.parseTrackingKey(eventKey) ?: return
+        manager.cancel(identity.trackingKey, NOTIFICATION_ID)
+        cancelLegacyTag(identity)
     }
 
     fun updateGroupSummary(count: Int, preferences: NotificationPreferences) {
@@ -117,19 +141,31 @@ internal class ShiftNotificationPresenter(private val context: Context) {
             return
         }
         val channelId = ensureChannel(preferences)
+        val summary = notificationGroupSummaryContent(count, preferences.privacy)
         val notification = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle("$count guardias")
-            .setContentText("Avisos de guardias activos o próximos")
+            .setContentTitle(summary.title)
+            .setContentText(summary.text)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setGroup(GROUP_KEY)
             .setGroupSummary(true)
             .setOnlyAlertOnce(true)
             .setSilent(true)
-            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
-            .setPublicVersion(publicVersion(channelId, "MiGuardia", "$count avisos de guardia"))
+            .setVisibility(summary.visibility)
+            .setPublicVersion(publicVersion(channelId, summary.publicTitle, summary.publicText))
             .build()
         notifySafely(GROUP_SUMMARY_TAG, GROUP_SUMMARY_ID, notification)
+    }
+
+    private fun NextEventItem.countdownBase(now: Instant, ongoing: Boolean): Long =
+        SystemClock.elapsedRealtime() + Duration.between(
+            now,
+            if (ongoing) end else start,
+        ).toMillis().coerceAtLeast(0L)
+
+    private fun NextEventItem.detailsAction(): String = when (this) {
+        is NextEventItem.Shift -> MainActivity.ACTION_VIEW_SHIFT
+        is NextEventItem.Availability -> MainActivity.ACTION_VIEW_DATE
     }
 
     private fun baseBuilder(
@@ -193,7 +229,7 @@ internal class ShiftNotificationPresenter(private val context: Context) {
                 .setPublicVersion(publicVersion(channelId, card.state, "Horario ${card.schedule}"))
             NotificationPrivacy.HIDDEN -> builder
                 .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
-                .setPublicVersion(publicVersion(channelId, "MiGuardia", "Tenés un aviso de guardia."))
+                .setPublicVersion(publicVersion(channelId, "MiGuardia", "Tenés un aviso de MiGuardia."))
         }
     }
 
@@ -220,15 +256,19 @@ internal class ShiftNotificationPresenter(private val context: Context) {
     private fun secureAction(
         title: String,
         action: String,
-        shift: Shift,
+        event: NextEventItem,
         boundary: Instant,
     ): NotificationCompat.Action = NotificationCompat.Action.Builder(
         0,
         title,
-        actionIntent(action, shift, boundary),
+        actionIntent(action, event, boundary),
     ).setAuthenticationRequired(true).build()
 
-    private fun actionIntent(action: String, shift: Shift, boundary: Instant): PendingIntent {
+    private fun actionIntent(
+        action: String,
+        event: NextEventItem,
+        boundary: Instant,
+    ): PendingIntent {
         val intent = Intent(context, MainActivity::class.java)
             .setAction(action)
             .setData(
@@ -236,35 +276,47 @@ internal class ShiftNotificationPresenter(private val context: Context) {
                     .scheme("miguardia")
                     .authority("notification-action")
                     .appendPath(action.substringAfterLast('.'))
-                    .appendPath(shift.id.toString())
-                    .appendPath(boundary.toEpochMilli().toString())
+                    .appendQueryParameter("event", event.identity.trackingKey)
+                    .appendQueryParameter("boundary", boundary.toEpochMilli().toString())
                     .build(),
             )
-            .putExtra(MainActivity.EXTRA_SHIFT_ID, shift.id.toString())
+        when (event) {
+            is NextEventItem.Shift -> intent.putExtra(MainActivity.EXTRA_SHIFT_ID, event.shiftId.toString())
+            is NextEventItem.Availability -> intent.putExtra(
+                MainActivity.EXTRA_OWNER_LOCAL_DATE,
+                event.ownerLocalDate.toString(),
+            )
+        }
         return PendingIntent.getActivity(
             context,
-            "${action}|${shift.id}|${boundary.toEpochMilli()}".hashCode(),
+            "$action|${event.identity.trackingKey}|${boundary.toEpochMilli()}".hashCode(),
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
     }
 
-    private fun dismissIntent(shift: Shift): PendingIntent {
+    private fun dismissIntent(identity: NextEventIdentity): PendingIntent {
         val intent = Intent(context, ShiftAlarmReceiver::class.java)
             .setAction(ShiftAlarmReceiver.ACTION_NOTIFICATION_DISMISSED)
             .setData(
                 Uri.Builder()
                     .scheme("miguardia")
                     .authority("notification-dismissed")
-                    .appendPath(shift.id.toString())
+                    .appendQueryParameter("event", identity.trackingKey)
                     .build(),
             )
         return PendingIntent.getBroadcast(
             context,
-            "dismiss|${shift.id}".hashCode(),
+            "dismiss|${identity.trackingKey}".hashCode(),
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
+    }
+
+    private fun cancelLegacyTag(identity: NextEventIdentity) {
+        if (identity is NextEventIdentity.Shift) {
+            manager.cancel(identity.shiftId.toString(), NOTIFICATION_ID)
+        }
     }
 
     private fun ensureChannel(preferences: NotificationPreferences): String {
@@ -290,8 +342,8 @@ internal class ShiftNotificationPresenter(private val context: Context) {
         } else {
             NotificationManager.IMPORTANCE_DEFAULT
         }
-        val channel = NotificationChannel(id, "Avisos de guardia", importance).apply {
-            description = "Recordatorios y estado de las guardias configuradas."
+        val channel = NotificationChannel(id, "Avisos laborales", importance).apply {
+            description = "Recordatorios y estado de jornadas y disponibilidad configuradas."
             when (preferences.attentionMode) {
                 NotificationAttentionMode.SOUND_AND_VIBRATION -> {
                     setSound(
@@ -323,7 +375,7 @@ internal class ShiftNotificationPresenter(private val context: Context) {
     private data class NotificationCard(
         val state: String,
         val objective: String,
-        val abbreviation: String,
+        val abbreviation: String?,
         val schedule: String,
         val position: String?,
         val weather: String?,
@@ -339,9 +391,9 @@ internal class ShiftNotificationPresenter(private val context: Context) {
             NotificationPrivacy.HIDDEN -> "MiGuardia"
         }
         fun compactSchedule(): String = when (privacy) {
-            NotificationPrivacy.COMPLETE -> "$abbreviation · $schedule"
+            NotificationPrivacy.COMPLETE -> listOfNotNull(abbreviation, schedule).joinToString(" · ")
             NotificationPrivacy.REDUCED -> "Horario $schedule"
-            NotificationPrivacy.HIDDEN -> "Tenés un aviso de guardia."
+            NotificationPrivacy.HIDDEN -> "Tenés un aviso de MiGuardia."
         }
         fun expandedState(): String = when (privacy) {
             NotificationPrivacy.COMPLETE,
@@ -351,9 +403,9 @@ internal class ShiftNotificationPresenter(private val context: Context) {
         }
         fun expandedObjective(): String? = if (privacy == NotificationPrivacy.COMPLETE) objective else null
         fun expandedSchedule(): String? = when (privacy) {
-            NotificationPrivacy.COMPLETE -> "$abbreviation · Horario $schedule"
+            NotificationPrivacy.COMPLETE -> listOfNotNull(abbreviation, "Horario $schedule").joinToString(" · ")
             NotificationPrivacy.REDUCED -> "Horario $schedule"
-            NotificationPrivacy.HIDDEN -> "Tenés un aviso de guardia."
+            NotificationPrivacy.HIDDEN -> "Tenés un aviso de MiGuardia."
         }
         fun expandedPosition(): String? = if (privacy == NotificationPrivacy.COMPLETE) {
             position?.let { "Puesto: $it" }
@@ -379,5 +431,43 @@ internal class ShiftNotificationPresenter(private val context: Context) {
         private const val VIGILIA_ACCENT = 0xFF8B5CFF.toInt()
         private const val HIDDEN_ACCENT = 0xFF665E70.toInt()
         private val TimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+    }
+}
+
+internal data class NotificationGroupSummaryContent(
+    val title: String,
+    val text: String,
+    val visibility: Int,
+    val publicTitle: String,
+    val publicText: String,
+)
+
+internal fun notificationGroupSummaryContent(
+    count: Int,
+    privacy: NotificationPrivacy,
+): NotificationGroupSummaryContent {
+    require(count > 1) { "Un resumen agrupado necesita al menos dos eventos" }
+    return when (privacy) {
+        NotificationPrivacy.COMPLETE -> NotificationGroupSummaryContent(
+            title = "$count eventos",
+            text = "Avisos laborales activos o próximos",
+            visibility = NotificationCompat.VISIBILITY_PUBLIC,
+            publicTitle = "$count eventos",
+            publicText = "Avisos laborales activos o próximos",
+        )
+        NotificationPrivacy.REDUCED -> NotificationGroupSummaryContent(
+            title = "$count avisos",
+            text = "Avisos activos o próximos",
+            visibility = NotificationCompat.VISIBILITY_PRIVATE,
+            publicTitle = "MiGuardia",
+            publicText = "$count avisos",
+        )
+        NotificationPrivacy.HIDDEN -> NotificationGroupSummaryContent(
+            title = "MiGuardia",
+            text = "Tenés avisos de MiGuardia.",
+            visibility = NotificationCompat.VISIBILITY_PRIVATE,
+            publicTitle = "MiGuardia",
+            publicText = "Tenés avisos de MiGuardia.",
+        )
     }
 }

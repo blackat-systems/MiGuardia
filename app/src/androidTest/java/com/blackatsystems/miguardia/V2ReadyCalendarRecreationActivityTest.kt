@@ -1,6 +1,7 @@
 package com.blackatsystems.miguardia
 
 import android.app.KeyguardManager
+import android.content.Intent
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -133,6 +134,23 @@ class V2ReadyCalendarRecreationActivityTest {
         compose.onNodeWithTag("day-$selectedDate").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Ocultar jornadas de hoy").performScrollTo().assertIsDisplayed()
         compose.onNodeWithTag("today-card-shift-$TODAY_HISTORY_SHIFT_ID").assertIsDisplayed()
+    }
+
+    @Test
+    fun notificationShiftActionResolvesTheV2PairAndOpensItsOwnerDate() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        scenario?.close()
+        scenario = ActivityScenario.launch(
+            Intent(context, MainActivity::class.java)
+                .setAction(MainActivity.ACTION_VIEW_SHIFT)
+                .putExtra(MainActivity.EXTRA_SHIFT_ID, SHIFT_ID.toString()),
+        )
+
+        waitForText(SHIFT_IDENTITY)
+        compose.onNodeWithText(selectedDate.fullDisplayName()).assertIsDisplayed()
+        compose.onNodeWithTag("shift-notifications-$SHIFT_ID")
+            .performScrollTo()
+            .assertIsDisplayed()
     }
 
     private fun waitForTag(tag: String) {

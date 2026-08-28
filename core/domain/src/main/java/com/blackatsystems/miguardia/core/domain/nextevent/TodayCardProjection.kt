@@ -1,9 +1,9 @@
 package com.blackatsystems.miguardia.core.domain.nextevent
 
 import com.blackatsystems.miguardia.core.domain.model.MedicalLeave
-import com.blackatsystems.miguardia.core.domain.model.Shift
 import com.blackatsystems.miguardia.core.domain.model.ShiftActualAggregate
 import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
+import com.blackatsystems.miguardia.core.domain.model.V2ShiftWrite
 import com.blackatsystems.miguardia.core.domain.model.Vacation
 import com.blackatsystems.miguardia.core.domain.model.effectiveWorkedInterval
 import java.time.Duration
@@ -31,23 +31,21 @@ enum class TodayCardPrimary {
     EMPTY,
 }
 
-/**
- * Minimal, privacy-safe representation consumed by the top card.
- *
- * It deliberately exposes neither medical notes nor actual-time explanations.
- */
+/** Privacy-safe row consumed by the top card. */
 data class TodayShiftSummary(
-    val shift: Shift,
+    val event: NextEventItem.Shift,
     val state: TodayShiftState,
     val hasActualTime: Boolean,
     val isVacationProtected: Boolean,
     val isMedicalLeaveProtected: Boolean,
-    val startedYesterday: Boolean,
+    val startedBeforeToday: Boolean,
 )
 
-data class TodayCardProjection(
+@ConsistentCopyVisibility
+data class TodayCardProjection private constructor(
     val referenceInstant: Instant,
     val date: LocalDate,
+    val zoneId: ZoneId,
     val shifts: List<TodayShiftSummary>,
     val primary: TodayCardPrimary,
     val primaryShift: TodayShiftSummary?,
@@ -57,129 +55,163 @@ data class TodayCardProjection(
     val futureEvent: NextEventResult,
 ) {
     val canExpand: Boolean
-        get() = shifts.size > 1 || primary == TodayCardPrimary.COMPLETED_SUMMARY ||
-            primary == TodayCardPrimary.NO_WORK_TODAY
+        get() = shifts.isNotEmpty()
+
+    companion object {
+        internal fun create(
+            referenceInstant: Instant,
+            date: LocalDate,
+            zoneId: ZoneId,
+            shifts: List<TodayShiftSummary>,
+            primary: TodayCardPrimary,
+            primaryShift: TodayShiftSummary?,
+            todayShiftCount: Int,
+            completedTodayCount: Int,
+            remaining: Duration,
+            futureEvent: NextEventResult,
+        ): TodayCardProjection = TodayCardProjection(
+            referenceInstant = referenceInstant,
+            date = date,
+            zoneId = zoneId,
+            shifts = Collections.unmodifiableList(shifts.toList()),
+            primary = primary,
+            primaryShift = primaryShift,
+            todayShiftCount = todayShiftCount,
+            completedTodayCount = completedTodayCount,
+            remaining = remaining,
+            futureEvent = futureEvent,
+        )
+    }
 }
 
 /**
- * Builds the immutable projection for the civil date that owns the top card.
- * Planned snapshots remain untouched even when an actual interval exists.
+ * Builds the day-owned rows while delegating active/upcoming eligibility and
+ * priority exclusively to [futureEvent].
  */
 fun projectTodayCard(
     now: Instant,
     zoneId: ZoneId,
-    todayShifts: List<Shift>,
-    previousDayCandidates: List<Shift>,
+    shifts: List<V2ShiftWrite>,
     actualsByShiftId: Map<UUID, ShiftActualAggregate>,
     vacations: List<Vacation>,
     medicalLeaves: List<MedicalLeave>,
     futureEvent: NextEventResult,
 ): TodayCardProjection {
+    require(futureEvent.referenceInstant == now && futureEvent.zoneId == zoneId) {
+        "La tarjeta y la proyeccion laboral deben compartir instante y zona"
+    }
     val today = now.atZone(zoneId).toLocalDate()
-    val yesterday = today.minusDays(1)
-    val uniqueToday = todayShifts
+    val writesById = shifts
+        .toList()
+        .groupBy { it.shift.id }
+        .mapValues { (id, copies) ->
+            require(copies.distinct().size == 1) {
+                "La jornada $id aparece con dos fotografias V2 incompatibles"
+            }
+            copies.first()
+        }
+    val todayRows = writesById.values
         .asSequence()
-        .filter { shift -> shift.localStartDate == today }
-        .distinctBy(Shift::id)
-        .map { shift ->
-            shift.toTodaySummary(
+        .filter { write -> write.shift.localStartDate == today }
+        .map { write ->
+            write.toTodaySummary(
                 now = now,
-                yesterday = yesterday,
-                actual = actualsByShiftId[shift.id],
+                today = today,
+                actual = actualsByShiftId[write.shift.id],
                 vacations = vacations,
                 medicalLeaves = medicalLeaves,
             )
         }
         .sortedWith(TodayShiftSummaryOrder)
         .toList()
-    val activeFromYesterday = previousDayCandidates
-        .asSequence()
-        .filter { shift -> shift.localStartDate == yesterday }
-        .distinctBy(Shift::id)
-        .map { shift ->
-            shift.toTodaySummary(
+    val activeHistoricalRows = futureEvent.activeEvents
+        .filterIsInstance<NextEventItem.Shift>()
+        .filter { event -> event.ownerLocalDate < today }
+        .mapNotNull { event ->
+            writesById[event.shiftId]?.toTodaySummary(
                 now = now,
-                yesterday = yesterday,
-                actual = actualsByShiftId[shift.id],
+                today = today,
+                actual = actualsByShiftId[event.shiftId],
                 vacations = vacations,
                 medicalLeaves = medicalLeaves,
             )
         }
-        .filter { summary -> summary.state == TodayShiftState.IN_PROGRESS }
-        .toList()
-    val visible = (activeFromYesterday + uniqueToday)
-        .distinctBy { summary -> summary.shift.id }
+    val visible = (activeHistoricalRows + todayRows)
+        .distinctBy { summary -> summary.event.shiftId }
         .sortedWith(TodayShiftSummaryOrder)
-    val ongoing = visible.firstOrNull { summary -> summary.state == TodayShiftState.IN_PROGRESS }
-    val upcomingToday = uniqueToday.firstOrNull { summary -> summary.state == TodayShiftState.UPCOMING }
-    val completedTodayCount = uniqueToday.count { summary -> summary.state == TodayShiftState.COMPLETED }
+    val primaryEvent = futureEvent.primaryEvents.firstOrNull()
+    val primaryShift = (primaryEvent as? NextEventItem.Shift)?.let { event ->
+        visible.firstOrNull { summary -> summary.event.shiftId == event.shiftId }
+    }
+    val completedTodayCount = todayRows.count { summary -> summary.state == TodayShiftState.COMPLETED }
+    val primaryEventStartsToday = primaryEvent?.start?.atZone(zoneId)?.toLocalDate() == today
     val primary = when {
-        ongoing != null -> TodayCardPrimary.ONGOING_SHIFT
-        upcomingToday != null -> TodayCardPrimary.UPCOMING_SHIFT
+        futureEvent.primaryEvent == NextEventPrimary.ONGOING_SHIFT && primaryShift != null -> {
+            TodayCardPrimary.ONGOING_SHIFT
+        }
+        futureEvent.primaryEvent == NextEventPrimary.UPCOMING_SHIFT &&
+            primaryShift?.event?.ownerLocalDate == today -> TodayCardPrimary.UPCOMING_SHIFT
+        futureEvent.primaryEvent == NextEventPrimary.ONGOING_AVAILABILITY -> TodayCardPrimary.FUTURE_EVENT
+        futureEvent.primaryEvent == NextEventPrimary.UPCOMING_AVAILABILITY && primaryEventStartsToday -> {
+            TodayCardPrimary.FUTURE_EVENT
+        }
         completedTodayCount > 0 -> TodayCardPrimary.COMPLETED_SUMMARY
-        uniqueToday.isNotEmpty() -> TodayCardPrimary.NO_WORK_TODAY
+        todayRows.isNotEmpty() -> TodayCardPrimary.NO_WORK_TODAY
         futureEvent.primaryEvent != NextEventPrimary.NONE -> TodayCardPrimary.FUTURE_EVENT
         else -> TodayCardPrimary.EMPTY
     }
-    val primaryShift = when (primary) {
-        TodayCardPrimary.ONGOING_SHIFT -> ongoing
-        TodayCardPrimary.UPCOMING_SHIFT -> upcomingToday
-        TodayCardPrimary.COMPLETED_SUMMARY,
-        TodayCardPrimary.NO_WORK_TODAY,
-        TodayCardPrimary.FUTURE_EVENT,
-        TodayCardPrimary.EMPTY,
-        -> null
-    }
-    val remaining = primaryShift?.let { summary ->
-        val actual = actualsByShiftId[summary.shift.id]
-        val (start, end) = effectiveWorkedInterval(summary.shift, actual)
-        when (primary) {
-            TodayCardPrimary.ONGOING_SHIFT -> Duration.between(now, end)
-            TodayCardPrimary.UPCOMING_SHIFT -> Duration.between(now, start)
-            else -> Duration.ZERO
-        }
-    }?.coerceNonNegative() ?: Duration.ZERO
-    val immutableFutureEvent = futureEvent.copy(
-        ongoingShifts = Collections.unmodifiableList(futureEvent.ongoingShifts.toList()),
-        upcomingShifts = Collections.unmodifiableList(futureEvent.upcomingShifts.toList()),
-    )
 
-    return TodayCardProjection(
+    return TodayCardProjection.create(
         referenceInstant = now,
         date = today,
-        shifts = Collections.unmodifiableList(visible.toList()),
+        zoneId = zoneId,
+        shifts = visible,
         primary = primary,
-        primaryShift = primaryShift,
-        todayShiftCount = uniqueToday.size,
+        primaryShift = primaryShift.takeIf {
+            primary == TodayCardPrimary.ONGOING_SHIFT || primary == TodayCardPrimary.UPCOMING_SHIFT
+        },
+        todayShiftCount = todayRows.size,
         completedTodayCount = completedTodayCount,
-        remaining = remaining,
-        futureEvent = immutableFutureEvent,
+        remaining = if (
+            primary == TodayCardPrimary.ONGOING_SHIFT ||
+            primary == TodayCardPrimary.UPCOMING_SHIFT ||
+            primary == TodayCardPrimary.FUTURE_EVENT
+        ) {
+            futureEvent.remaining
+        } else {
+            Duration.ZERO
+        },
+        futureEvent = futureEvent,
     )
 }
 
 private val TodayShiftSummaryOrder: Comparator<TodayShiftSummary> =
-    Comparator { first, second -> NextEventShiftOrder.compare(first.shift, second.shift) }
+    compareBy<TodayShiftSummary>(
+        { it.event.start },
+        { it.event.end },
+        { it.event.shiftId.toString() },
+    )
 
-private fun Shift.toTodaySummary(
+private fun V2ShiftWrite.toTodaySummary(
     now: Instant,
-    yesterday: LocalDate,
+    today: LocalDate,
     actual: ShiftActualAggregate?,
     vacations: List<Vacation>,
     medicalLeaves: List<MedicalLeave>,
 ): TodayShiftSummary {
     val vacationProtected = vacations.any { vacation ->
-        localStartDate in vacation.startDate..vacation.endDateInclusive
+        shift.localStartDate in vacation.startDate..vacation.endDateInclusive
     }
     val medicalLeaveProtected = medicalLeaves.any { leave ->
-        localStartDate in leave.startDate..leave.endDateInclusive
+        shift.localStartDate in leave.startDate..leave.endDateInclusive
     }
-    val state = when (status) {
+    val state = when (shift.status) {
         ShiftStatus.CANCELLED -> TodayShiftState.CANCELLED
         ShiftStatus.ABSENT -> TodayShiftState.ABSENT
         ShiftStatus.PLANNED -> when {
             actual == null && (vacationProtected || medicalLeaveProtected) -> TodayShiftState.PROTECTED
             else -> {
-                val (effectiveStart, effectiveEnd) = effectiveWorkedInterval(this, actual)
+                val (effectiveStart, effectiveEnd) = effectiveWorkedInterval(shift, actual)
                 when {
                     now < effectiveStart -> TodayShiftState.UPCOMING
                     now < effectiveEnd -> TodayShiftState.IN_PROGRESS
@@ -189,13 +221,11 @@ private fun Shift.toTodaySummary(
         }
     }
     return TodayShiftSummary(
-        shift = this,
+        event = toNextEventItem(),
         state = state,
         hasActualTime = actual != null,
         isVacationProtected = vacationProtected,
         isMedicalLeaveProtected = medicalLeaveProtected,
-        startedYesterday = localStartDate == yesterday,
+        startedBeforeToday = shift.localStartDate < today,
     )
 }
-
-private fun Duration.coerceNonNegative(): Duration = if (isNegative) Duration.ZERO else this

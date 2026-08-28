@@ -3,9 +3,11 @@ package com.blackatsystems.miguardia
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -14,6 +16,7 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.UiDevice
 import com.blackatsystems.miguardia.core.domain.AppDefaults
+import com.blackatsystems.miguardia.core.domain.model.AvailabilityWindowRecord
 import com.blackatsystems.miguardia.core.domain.model.ExplicitDayStatus
 import com.blackatsystems.miguardia.core.domain.model.ExplicitDayStatusType
 import com.blackatsystems.miguardia.core.domain.model.MedicalLeave
@@ -21,11 +24,15 @@ import com.blackatsystems.miguardia.core.domain.model.Shift
 import com.blackatsystems.miguardia.core.domain.model.ShiftActualAggregate
 import com.blackatsystems.miguardia.core.domain.model.ShiftActualRecord
 import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
+import com.blackatsystems.miguardia.core.domain.model.ShiftWorkSnapshot
+import com.blackatsystems.miguardia.core.domain.model.V2ShiftWrite
 import com.blackatsystems.miguardia.core.domain.model.Vacation
+import com.blackatsystems.miguardia.core.domain.nextevent.NextEventInput
 import com.blackatsystems.miguardia.core.domain.nextevent.TodayCardProjection
 import com.blackatsystems.miguardia.core.domain.nextevent.projectNextEvent
 import com.blackatsystems.miguardia.core.domain.nextevent.projectTodayCard
 import com.blackatsystems.miguardia.core.domain.work.WorkSector
+import com.blackatsystems.miguardia.core.domain.work.WorkTypeBehavior
 import com.blackatsystems.miguardia.ui.MiGuardiaApp
 import com.blackatsystems.miguardia.ui.calendar.CalendarLoadState
 import com.blackatsystems.miguardia.ui.calendar.CalendarUiState
@@ -58,7 +65,7 @@ class NextEventComposeTest {
             }
         }
 
-        compose.onNodeWithText("Buscando jornadas y francos…").assertExists()
+        compose.onNodeWithText("Buscando jornadas, disponibilidad y francos…").assertExists()
         compose.runOnIdle {
             state = NextEventUiState(
                 loadState = NextEventLoadState.ERROR,
@@ -98,6 +105,78 @@ class NextEventComposeTest {
     }
 
     @Test
+    fun activeAvailabilityKeepsItsHistoricalLabelAndDoesNotBecomeAShift() {
+        val availability = availability(
+            id = "11000000-0000-0000-0000-000000000001",
+            start = instant(2026, 8, 15, 9, 0),
+            end = instant(2026, 8, 15, 17, 0),
+            label = "Retén",
+        )
+
+        setCard(projection(availability = listOf(availability)))
+
+        compose.onNodeWithText("Disponibilidad activa").assertExists()
+        compose.onNodeWithText("Retén").assertExists()
+        compose.onNodeWithText("15/08/2026 · 09:00–17:00").assertExists()
+        compose.onNodeWithText("Termina en 5 h").assertExists()
+        compose.onNodeWithText("1 jornada", substring = true).assertDoesNotExist()
+        compose.onNodeWithText("Puesto:", substring = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun simultaneousUpcomingShiftAndAvailabilityRemainVisibleWithoutChangingShiftCount() {
+        val start = instant(2026, 8, 15, 13, 0)
+        val shift = shift(
+            id = "12000000-0000-0000-0000-000000000001",
+            start = start,
+            end = instant(2026, 8, 15, 17, 0),
+        )
+        val availability = availability(
+            id = "12000000-0000-0000-0000-000000000001",
+            start = start,
+            end = instant(2026, 8, 15, 18, 0),
+            label = "Disponible para llamado",
+            sector = WorkSector.MEDICINE,
+        )
+
+        setCard(projection(shifts = listOf(shift), availability = listOf(availability)))
+
+        compose.onNodeWithText("Próxima jornada").assertExists()
+        compose.onNodeWithText("También: Disponible para llamado · 13:00–18:00").assertExists()
+        compose.onNodeWithText("2 jornadas comparten este estado.").assertDoesNotExist()
+        compose.onNodeWithText("Ver jornadas de hoy").assertExists()
+    }
+
+    @Test
+    fun availabilityRemainsReadableInLightDarkAndEveryInternalZoom() {
+        val result = projection(
+            availability = listOf(
+                availability(
+                    id = "13000000-0000-0000-0000-000000000001",
+                    start = instant(2026, 8, 15, 9, 0),
+                    end = instant(2026, 8, 15, 17, 0),
+                    label = "Guardia pasiva",
+                ),
+            ),
+        )
+        var dark by mutableStateOf(false)
+        var zoom by mutableStateOf(AppZoom.STANDARD)
+        compose.setContent {
+            MiGuardiaTheme(darkTheme = dark, appZoom = zoom) {
+                NextEventCard(contentState(result), {})
+            }
+        }
+
+        AppZoom.entries.forEach { option ->
+            compose.runOnIdle { zoom = option }
+            compose.onNodeWithText("Disponibilidad activa").assertIsDisplayed()
+            compose.onNodeWithText("Guardia pasiva").assertIsDisplayed()
+        }
+        compose.runOnIdle { dark = true }
+        compose.onNodeWithContentDescription("Disponibilidad activa", substring = true).assertIsDisplayed()
+    }
+
+    @Test
     fun sameTimeUpcomingShiftsStayDifferentiatedAndExpandInStableOrder() {
         val start = instant(2026, 8, 15, 13, 0)
         val end = instant(2026, 8, 15, 17, 0)
@@ -120,7 +199,7 @@ class NextEventComposeTest {
 
         compose.onNodeWithText("Próxima jornada").assertExists()
         compose.onNodeWithText("UNO · Objetivo ficticio uno").assertExists()
-        compose.onNodeWithText("13:00–17:00", substring = true).assertExists()
+        compose.onAllNodesWithText("13:00–17:00", substring = true).assertCountEquals(2)
         compose.onNodeWithText("Comienza en 1 h").assertExists()
         compose.onNodeWithText("2 jornadas hoy.").assertExists()
         compose.onNodeWithTag("today-card-list").assertDoesNotExist()
@@ -386,7 +465,7 @@ class NextEventComposeTest {
         compose.runOnIdle { state = contentState(projection()) }
         compose.onNodeWithText("Sin próximos eventos").assertExists()
         compose.onNodeWithText(
-            "No hay jornadas pendientes ni francos marcados explícitamente desde hoy.",
+            "No hay jornadas, disponibilidad ni francos explícitos pendientes desde hoy.",
         ).assertExists()
     }
 
@@ -409,7 +488,7 @@ class NextEventComposeTest {
 
         compose.onNodeWithText("Sin próximos eventos").assertExists()
         compose.onNodeWithText(
-            "No hay jornadas pendientes ni francos marcados explícitamente desde hoy.",
+            "No hay jornadas, disponibilidad ni francos explícitos pendientes desde hoy.",
         ).assertExists()
         compose.onNodeWithText("Próxima jornada").assertDoesNotExist()
         compose.onNodeWithText("FIC · Objetivo ficticio").assertDoesNotExist()
@@ -538,26 +617,30 @@ class NextEventComposeTest {
     private fun projection(
         now: Instant = NOW,
         shifts: List<Shift> = emptyList(),
+        availability: List<AvailabilityWindowRecord> = emptyList(),
         statuses: List<ExplicitDayStatus> = emptyList(),
         actuals: Map<UUID, ShiftActualAggregate> = emptyMap(),
         vacations: List<Vacation> = emptyList(),
         medicalLeaves: List<MedicalLeave> = emptyList(),
     ): TodayCardProjection {
-        val date = now.atZone(AppDefaults.zoneId()).toLocalDate()
+        val writes = shifts.map(::v2Write)
         val futureEvent = projectNextEvent(
             now = now,
             zoneId = AppDefaults.zoneId(),
-            shifts = shifts,
-            explicitDayStatuses = statuses,
-            vacations = vacations,
-            medicalLeaves = medicalLeaves,
-            actualShiftIds = actuals.keys,
+            input = NextEventInput(
+                shifts = writes,
+                availabilityWindows = availability,
+                actualsByShiftId = actuals,
+                independentExtras = emptyList(),
+                explicitDayStatuses = statuses,
+                vacations = vacations,
+                medicalLeaves = medicalLeaves,
+            ),
         )
         return projectTodayCard(
             now = now,
             zoneId = AppDefaults.zoneId(),
-            todayShifts = shifts.filter { shift -> shift.localStartDate == date },
-            previousDayCandidates = shifts.filter { shift -> shift.localStartDate == date.minusDays(1) },
+            shifts = writes,
             actualsByShiftId = actuals,
             vacations = vacations,
             medicalLeaves = medicalLeaves,
@@ -614,6 +697,26 @@ class NextEventComposeTest {
         updatedAt = Instant.EPOCH,
     )
 
+    private fun availability(
+        id: String,
+        start: Instant,
+        end: Instant,
+        label: String,
+        sector: WorkSector = WorkSector.PRIVATE_SECURITY,
+    ) = AvailabilityWindowRecord(
+        id = UUID.fromString(id),
+        timelineId = UUID(0L, 601L),
+        sector = sector,
+        configurationRevisionId = UUID(0L, 602L),
+        ownerLocalDate = start.atZone(AppDefaults.zoneId()).toLocalDate(),
+        zoneId = AppDefaults.zoneId(),
+        start = start,
+        end = end,
+        labelSnapshot = label,
+        createdAt = Instant.EPOCH,
+        updatedAt = Instant.EPOCH,
+    )
+
     private fun actualFor(
         shift: Shift,
         start: Instant,
@@ -633,6 +736,22 @@ class NextEventComposeTest {
             updatedAt = Instant.EPOCH,
         ),
         extraIntervals = emptyList(),
+    )
+
+    private fun v2Write(shift: Shift): V2ShiftWrite = V2ShiftWrite(
+        shift = shift,
+        snapshot = ShiftWorkSnapshot(
+            shiftId = shift.id,
+            timelineId = UUID(0L, 601L),
+            sector = WorkSector.PRIVATE_SECURITY,
+            configurationRevisionId = UUID(0L, 602L),
+            workPlaceId = UUID(0L, 603L),
+            objectiveId = shift.sourceObjectiveId,
+            templateId = UUID(0L, 604L),
+            workTypeId = UUID(0L, 605L),
+            workTypeNameSnapshot = "Jornada ficticia",
+            workTypeBehaviorSnapshot = WorkTypeBehavior.ACTIVE_WORK,
+        ),
     )
 
     private fun vacation() = Vacation(

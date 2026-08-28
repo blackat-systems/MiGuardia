@@ -20,6 +20,7 @@ import androidx.core.net.toUri
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
 import com.blackatsystems.miguardia.core.domain.AppDefaults
+import com.blackatsystems.miguardia.core.domain.model.V2ShiftLookup
 import com.blackatsystems.miguardia.notifications.NotificationSystemAccess
 import com.blackatsystems.miguardia.ui.MiGuardiaApp
 import com.blackatsystems.miguardia.ui.calendar.CalendarViewModel
@@ -70,11 +71,13 @@ class MainActivity : ComponentActivity() {
     private val nextEventViewModel: NextEventViewModel by viewModels {
         val dataStore = (application as MiGuardiaApplication).localDataStore
         NextEventViewModel.Factory(
-            shifts = dataStore.shifts,
+            shifts = dataStore.v2Shifts,
+            availabilityWindows = dataStore.availabilityWindows,
             explicitDayStatuses = dataStore.explicitDayStatuses,
             vacations = dataStore.vacations,
             medicalLeaves = dataStore.medicalLeaves,
             shiftActuals = dataStore.shiftActuals,
+            independentExtras = dataStore.independentExtraWork,
             workConfiguration = dataStore.workConfiguration,
         )
     }
@@ -301,19 +304,31 @@ class MainActivity : ComponentActivity() {
         availabilityViewModel.refresh()
         notificationViewModel.refreshSystemAccess()
         weatherViewModel.onResume()
-        (application as MiGuardiaApplication).notificationRuntime.reconcile()
     }
 
     private fun handleNotificationIntent(source: Intent?) {
         val action = source?.action ?: return
         if (action !in NotificationActions) return
+        if (action == ACTION_VIEW_DATE) {
+            val ownerDate = source.getStringExtra(EXTRA_OWNER_LOCAL_DATE)
+                ?.let { runCatching { java.time.LocalDate.parse(it) }.getOrNull() }
+                ?: return
+            calendarViewModel.openDate(ownerDate)
+            calendarNavigationRequest++
+            return
+        }
         val shiftId = source.getStringExtra(EXTRA_SHIFT_ID)
             ?.let { runCatching { UUID.fromString(it) }.getOrNull() }
             ?: return
         lifecycleScope.launch {
-            val shift = (application as MiGuardiaApplication).localDataStore.shifts.getById(shiftId)
+            val shift = when (
+                val lookup = (application as MiGuardiaApplication).localDataStore.v2Shifts.getShift(shiftId)
+            ) {
+                is V2ShiftLookup.V2 -> lookup.write.shift
+                V2ShiftLookup.Missing -> null
+            }
             if (shift == null) {
-                Toast.makeText(this@MainActivity, "La guardia ya no está disponible.", Toast.LENGTH_LONG).show()
+                Toast.makeText(this@MainActivity, "La jornada ya no está disponible.", Toast.LENGTH_LONG).show()
                 return@launch
             }
             when (action) {
@@ -336,7 +351,7 @@ class MainActivity : ComponentActivity() {
                         calendarNavigationRequest++
                         Toast.makeText(
                             this@MainActivity,
-                            if (address == null) "Esta guardia no tiene una dirección guardada." else "No hay una aplicación compatible para abrir la dirección.",
+                            if (address == null) "Esta jornada no tiene una dirección guardada." else "No hay una aplicación compatible para abrir la dirección.",
                             Toast.LENGTH_LONG,
                         ).show()
                     }
@@ -347,11 +362,13 @@ class MainActivity : ComponentActivity() {
 
     companion object {
         const val ACTION_VIEW_SHIFT = "com.blackatsystems.miguardia.action.VIEW_SHIFT"
+        const val ACTION_VIEW_DATE = "com.blackatsystems.miguardia.action.VIEW_DATE"
         const val ACTION_DIRECTIONS = "com.blackatsystems.miguardia.action.DIRECTIONS"
         const val EXTRA_SHIFT_ID = "shift_id"
+        const val EXTRA_OWNER_LOCAL_DATE = "owner_local_date"
         const val DISPLAY_PREFERENCES = "miguardia_display_preferences"
         const val APP_ZOOM_PERCENT = "app_zoom_percent"
         const val APP_THEME_MODE = "app_theme_mode"
-        private val NotificationActions = setOf(ACTION_VIEW_SHIFT, ACTION_DIRECTIONS)
+        private val NotificationActions = setOf(ACTION_VIEW_SHIFT, ACTION_VIEW_DATE, ACTION_DIRECTIONS)
     }
 }

@@ -1,20 +1,17 @@
 package com.blackatsystems.miguardia.ui.nextevent
 
-import com.blackatsystems.miguardia.core.domain.model.ExplicitDayStatus
-import com.blackatsystems.miguardia.core.domain.model.MedicalLeave
-import com.blackatsystems.miguardia.core.domain.model.Shift
-import com.blackatsystems.miguardia.core.domain.model.ShiftActualAggregate
-import com.blackatsystems.miguardia.core.domain.model.Vacation
 import com.blackatsystems.miguardia.core.domain.nextevent.NextEventPrimary
 import com.blackatsystems.miguardia.core.domain.nextevent.NextEventResult
 import com.blackatsystems.miguardia.core.domain.nextevent.TodayCardPrimary
 import com.blackatsystems.miguardia.core.domain.nextevent.TodayCardProjection
 import com.blackatsystems.miguardia.core.domain.nextevent.projectNextEvent
 import com.blackatsystems.miguardia.core.domain.nextevent.projectTodayCard
+import com.blackatsystems.miguardia.core.domain.repository.AvailabilityWindowRepository
 import com.blackatsystems.miguardia.core.domain.repository.ExplicitDayStatusRepository
+import com.blackatsystems.miguardia.core.domain.repository.IndependentExtraWorkRepository
 import com.blackatsystems.miguardia.core.domain.repository.MedicalLeaveRepository
 import com.blackatsystems.miguardia.core.domain.repository.ShiftActualRepository
-import com.blackatsystems.miguardia.core.domain.repository.ShiftRepository
+import com.blackatsystems.miguardia.core.domain.repository.V2ShiftRepository
 import com.blackatsystems.miguardia.core.domain.repository.VacationRepository
 import com.blackatsystems.miguardia.core.domain.repository.WorkConfigurationRepository
 import java.time.Clock
@@ -24,7 +21,6 @@ import java.time.LocalTime
 import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit
-import java.util.UUID
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancelAndJoin
@@ -35,23 +31,12 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterIsInstance
-import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
-
-data class NextEventSourceData(
-    val shifts: List<Shift>,
-    val explicitDayStatuses: List<ExplicitDayStatus>,
-    val vacations: List<Vacation>,
-    val medicalLeaves: List<MedicalLeave>,
-    val actualsByShiftId: Map<UUID, ShiftActualAggregate>,
-)
 
 internal sealed interface NextEventObservation {
     data class Loading(val date: LocalDate) : NextEventObservation
@@ -68,23 +53,35 @@ fun interface TemporalDelay {
 }
 
 class NextEventObserver(
-    private val shifts: ShiftRepository,
-    private val explicitDayStatuses: ExplicitDayStatusRepository,
-    private val vacations: VacationRepository,
-    private val medicalLeaves: MedicalLeaveRepository,
-    private val shiftActuals: ShiftActualRepository,
-    private val workConfiguration: WorkConfigurationRepository,
+    shifts: V2ShiftRepository,
+    availabilityWindows: AvailabilityWindowRepository,
+    shiftActuals: ShiftActualRepository,
+    independentExtras: IndependentExtraWorkRepository,
+    explicitDayStatuses: ExplicitDayStatusRepository,
+    vacations: VacationRepository,
+    medicalLeaves: MedicalLeaveRepository,
+    workConfiguration: WorkConfigurationRepository,
     private val clock: Clock,
     private val zoneId: ZoneId,
     private val temporalDelay: TemporalDelay = TemporalDelay { duration ->
         delay(duration.toMillis().coerceAtLeast(1L))
     },
 ) {
-    fun observe(): Flow<TodayCardProjection> = observeStates()
-            .filterIsInstance<NextEventObservation.Content>()
-            .map { content -> content.projection }
+    private val sources = V2WorkEventSourceObserver(
+        shifts = shifts,
+        availabilityWindows = availabilityWindows,
+        shiftActuals = shiftActuals,
+        independentExtras = independentExtras,
+        explicitDayStatuses = explicitDayStatuses,
+        vacations = vacations,
+        medicalLeaves = medicalLeaves,
+        workConfiguration = workConfiguration,
+    )
 
-    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    fun observe(): Flow<TodayCardProjection> = observeStates()
+        .filterIsInstance<NextEventObservation.Content>()
+        .map { content -> content.projection }
+
     internal fun observeStates(): Flow<NextEventObservation> = flow {
         coroutineScope {
             while (currentCoroutineContext().isActive) {
@@ -93,7 +90,7 @@ class NextEventObserver(
                 val updates = Channel<NextEventSourceData>(Channel.CONFLATED)
                 val sourceJob = launch {
                     try {
-                        observeDate(observedDate).collect { source -> updates.send(source) }
+                        sources.observe(observedDate).collect { source -> updates.send(source) }
                         updates.close()
                     } catch (cancelled: CancellationException) {
                         throw cancelled
@@ -104,16 +101,13 @@ class NextEventObserver(
                 try {
                     var source = updates.receiveCatching().getOrThrow()
                     var observeAnotherDate = false
-                    while (
-                        !observeAnotherDate &&
-                        currentCoroutineContext().isActive
-                    ) {
+                    while (!observeAnotherDate && currentCoroutineContext().isActive) {
                         val now = clock.instant()
                         if (now.atZone(zoneId).toLocalDate() != observedDate) {
                             observeAnotherDate = true
                             continue
                         }
-                        val projection = source.project(now, observedDate)
+                        val projection = source.project(now)
                         emit(NextEventObservation.Content(projection))
                         when (
                             val wakeup = awaitSourceOrTime(
@@ -129,10 +123,7 @@ class NextEventObserver(
                 } catch (cancelled: CancellationException) {
                     throw cancelled
                 } catch (error: Throwable) {
-                    throw NextEventObservationFailure(
-                        observedDate = observedDate,
-                        cause = error,
-                    )
+                    throw NextEventObservationFailure(observedDate, error)
                 } finally {
                     sourceJob.cancelAndJoin()
                     updates.cancel()
@@ -141,82 +132,22 @@ class NextEventObserver(
         }
     }
 
-    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-    private fun observeDate(date: LocalDate): Flow<NextEventSourceData> {
-        val startOfDay = date.atStartOfDay(zoneId).toInstant()
-        return shifts.observeEndingAfter(startOfDay).flatMapLatest { observedShifts ->
-            val lastRelevantDate = observedShifts
-                .maxOfOrNull(Shift::localStartDate)
-                ?.coerceAtLeast(date)
-                ?: date
-            combine(
-                explicitDayStatuses.observeFrom(date),
-                vacations.observeEndingOnOrAfter(date.minusDays(1)),
-                medicalLeaves.observeIntersecting(date.minusDays(1), lastRelevantDate),
-                observeActuals(),
-            ) { statuses, observedVacations, observedMedicalLeaves, actuals ->
-                NextEventSourceData(
-                    shifts = observedShifts,
-                    explicitDayStatuses = statuses,
-                    vacations = observedVacations,
-                    medicalLeaves = observedMedicalLeaves,
-                    actualsByShiftId = actuals,
-                )
-            }
-        }
-    }
-
-    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-    private fun observeActuals(): Flow<Map<UUID, ShiftActualAggregate>> =
-        workConfiguration.observe().flatMapLatest { history ->
-            val timeline = history?.timeline
-                ?: return@flatMapLatest flowOf(emptyMap())
-            val sectors = timeline.revisions
-                .map { revision -> revision.value.sector }
-                .distinct()
-            if (sectors.isEmpty()) {
-                flowOf(emptyMap())
-            } else {
-                combine(
-                    sectors.map { sector ->
-                        shiftActuals.observeAllActuals(
-                            timelineId = timeline.id,
-                            sector = sector,
-                        )
-                    },
-                ) { actualsBySector ->
-                    buildMap {
-                        actualsBySector.forEach { actuals -> putAll(actuals) }
-                    }
-                }
-            }
-        }
-
-    private fun NextEventSourceData.project(
-        now: java.time.Instant,
-        date: LocalDate,
-    ): TodayCardProjection {
+    private fun NextEventSourceData.project(now: java.time.Instant): TodayCardProjection {
         val future = projectNextEvent(
             now = now,
             zoneId = zoneId,
-            shifts = shifts,
-            explicitDayStatuses = explicitDayStatuses,
-            vacations = vacations,
-            medicalLeaves = medicalLeaves,
-            actualShiftIds = actualsByShiftId.keys,
+            input = toInput(),
         )
         return projectTodayCard(
             now = now,
             zoneId = zoneId,
-            todayShifts = shifts.filter { shift -> shift.localStartDate == date },
-            previousDayCandidates = shifts.filter { shift -> shift.localStartDate == date.minusDays(1) },
+            shifts = shifts,
             actualsByShiftId = actualsByShiftId,
             vacations = vacations,
             medicalLeaves = medicalLeaves,
             futureEvent = future,
         )
     }
-
 }
 
 internal suspend fun awaitSourceOrTime(
@@ -224,17 +155,17 @@ internal suspend fun awaitSourceOrTime(
     duration: Duration,
     temporalDelay: TemporalDelay,
 ): ObserverWakeup = coroutineScope {
-        val timeAwait = async { temporalDelay.await(duration) }
-        try {
-            select {
-                updates.onReceiveCatching { source ->
-                    ObserverWakeup.Source(source.getOrThrow())
-                }
-                timeAwait.onAwait { ObserverWakeup.Time }
+    val timeAwait = async { temporalDelay.await(duration) }
+    try {
+        select {
+            updates.onReceiveCatching { source ->
+                ObserverWakeup.Source(source.getOrThrow())
             }
-        } finally {
-            timeAwait.cancelAndJoin()
+            timeAwait.onAwait { ObserverWakeup.Time }
         }
+    } finally {
+        timeAwait.cancelAndJoin()
+    }
 }
 
 internal sealed interface ObserverWakeup {
@@ -264,22 +195,17 @@ internal fun nextRefreshDelay(
     result: NextEventResult,
 ): Duration {
     val nextLocalMidnight = now.plus(durationUntilNextMidnight(now, zoneId))
-    val shiftBoundary = sequenceOf(
-        result.ongoingShifts.asSequence().map(Shift::endAt),
-        result.upcomingShifts.asSequence().map(Shift::startAt),
-    )
-        .flatten()
+    val eventBoundary = result.events
+        .asSequence()
+        .flatMap { event -> sequenceOf(event.start, event.end) }
         .filter { boundary -> boundary > now }
         .minOrNull()
-    val nextMinute = if (
-        result.primaryEvent == NextEventPrimary.ONGOING_SHIFT ||
-        result.primaryEvent == NextEventPrimary.UPCOMING_SHIFT
-    ) {
+    val nextMinute = if (result.primaryEvent != NextEventPrimary.NONE && result.primaryEvent != NextEventPrimary.DAY_OFF) {
         now.truncatedTo(ChronoUnit.MINUTES).plus(1L, ChronoUnit.MINUTES)
     } else {
         null
     }
-    val boundary = listOfNotNull(nextLocalMidnight, shiftBoundary, nextMinute).minOrNull()
+    val boundary = listOfNotNull(nextLocalMidnight, eventBoundary, nextMinute).minOrNull()
         ?: nextLocalMidnight
     return Duration.between(now, boundary).let { duration ->
         if (duration.isNegative || duration.isZero) Duration.ofMillis(1L) else duration

@@ -1,6 +1,6 @@
 # Próximo evento y notificaciones V2
 
-- Estado: **HABILITADO — TAREA PENDIENTE DE APERTURA**
+- Estado: **CERRADO — IMPLEMENTADO, AUDITADO Y VERIFICADO POR MAIN**
 - Fecha: 2026-08-27
 - Proyecto obligatorio:
   `C:\Users\Joaquin\Desktop\chatgptprojects\MiGuardia-2.0`

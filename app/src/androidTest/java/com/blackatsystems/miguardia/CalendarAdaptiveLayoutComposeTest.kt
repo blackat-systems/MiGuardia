@@ -21,6 +21,7 @@ import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.unit.Dp
@@ -29,13 +30,19 @@ import com.blackatsystems.miguardia.core.domain.AppDefaults
 import com.blackatsystems.miguardia.core.domain.calendar.projectCalendarMonth
 import com.blackatsystems.miguardia.core.domain.model.Shift
 import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
+import com.blackatsystems.miguardia.core.domain.model.ShiftWorkSnapshot
+import com.blackatsystems.miguardia.core.domain.model.V2ShiftWrite
+import com.blackatsystems.miguardia.core.domain.nextevent.NextEventInput
 import com.blackatsystems.miguardia.core.domain.nextevent.projectNextEvent
 import com.blackatsystems.miguardia.core.domain.nextevent.projectTodayCard
+import com.blackatsystems.miguardia.core.domain.work.WorkSector
+import com.blackatsystems.miguardia.core.domain.work.WorkTypeBehavior
 import com.blackatsystems.miguardia.ui.MiGuardiaApp
 import com.blackatsystems.miguardia.ui.calendar.CalendarLoadState
 import com.blackatsystems.miguardia.ui.calendar.CalendarUiState
 import com.blackatsystems.miguardia.ui.nextevent.NextEventLoadState
 import com.blackatsystems.miguardia.ui.nextevent.NextEventUiState
+import com.blackatsystems.miguardia.ui.notifications.NotificationActions
 import com.blackatsystems.miguardia.ui.theme.AppZoom
 import com.blackatsystems.miguardia.ui.theme.MiGuardiaTheme
 import java.time.Instant
@@ -143,6 +150,34 @@ class CalendarAdaptiveLayoutComposeTest {
         }
     }
 
+    @Test
+    fun shiftDetailKeepsItsParticularNotificationSettingsReachable() {
+        var openedShiftId: UUID? = null
+        var dismissals = 0
+        compose.setContent {
+            MiGuardiaTheme {
+                CalendarUnderTest(
+                    appZoom = AppZoom.STANDARD,
+                    referenceNow = AFTER_SHIFTS_NOW,
+                    detailDate = FIRST_SHIFT_DATE,
+                    onDismissDate = { dismissals += 1 },
+                    notificationActions = NotificationActions(
+                        openShift = { shift -> openedShiftId = shift.id },
+                    ),
+                )
+            }
+        }
+
+        compose.onNodeWithTag("shift-notifications-84000000-0000-0000-0000-000000000001")
+            .performScrollTo()
+            .assertIsDisplayed()
+            .performClick()
+        compose.runOnIdle {
+            assertEquals(UUID.fromString("84000000-0000-0000-0000-000000000001"), openedShiftId)
+            assertEquals(1, dismissals)
+        }
+    }
+
     private fun setCalendarViewport(
         height: Dp,
         darkTheme: () -> Boolean = { false },
@@ -176,35 +211,45 @@ class CalendarAdaptiveLayoutComposeTest {
     private fun CalendarUnderTest(
         appZoom: AppZoom,
         referenceNow: Instant = REFERENCE_NOW,
+        detailDate: LocalDate? = null,
+        onDismissDate: () -> Unit = {},
+        notificationActions: NotificationActions = NotificationActions(),
     ) {
         val shifts = fixtureShifts()
+        val writes = shifts.map(::v2Write)
         MiGuardiaApp(
-            calendarState = calendarState(referenceNow, shifts),
+            calendarState = calendarState(referenceNow, shifts).copy(detailDate = detailDate),
             onPreviousMonth = {},
             onNextMonth = {},
             onToday = {},
             onSelectDate = {},
-            onDismissDate = {},
+            onDismissDate = onDismissDate,
             onRetry = {},
             nextEventState = NextEventUiState(
                 loadState = NextEventLoadState.CONTENT,
                 result = projectTodayCard(
                     now = referenceNow,
                     zoneId = AppDefaults.zoneId(),
-                    todayShifts = shifts,
-                    previousDayCandidates = shifts,
+                    shifts = writes,
                     actualsByShiftId = emptyMap(),
                     vacations = emptyList(),
                     medicalLeaves = emptyList(),
                     futureEvent = projectNextEvent(
-                        referenceNow,
-                        AppDefaults.zoneId(),
-                        shifts,
-                        emptyList(),
-                        emptyList(),
+                        now = referenceNow,
+                        zoneId = AppDefaults.zoneId(),
+                        input = NextEventInput(
+                            shifts = writes,
+                            availabilityWindows = emptyList(),
+                            actualsByShiftId = emptyMap(),
+                            independentExtras = emptyList(),
+                            explicitDayStatuses = emptyList(),
+                            vacations = emptyList(),
+                            medicalLeaves = emptyList(),
+                        ),
                     ),
                 ),
             ),
+            notificationActions = notificationActions,
             appZoom = appZoom,
         )
     }
@@ -279,6 +324,22 @@ class CalendarAdaptiveLayoutComposeTest {
             updatedAt = Instant.EPOCH,
         )
     }
+
+    private fun v2Write(shift: Shift): V2ShiftWrite = V2ShiftWrite(
+        shift = shift,
+        snapshot = ShiftWorkSnapshot(
+            shiftId = shift.id,
+            timelineId = UUID(0L, 841L),
+            sector = WorkSector.PRIVATE_SECURITY,
+            configurationRevisionId = UUID(0L, 842L),
+            workPlaceId = UUID(0L, 843L),
+            objectiveId = shift.sourceObjectiveId,
+            templateId = UUID(0L, 844L),
+            workTypeId = UUID(0L, 845L),
+            workTypeNameSnapshot = "Jornada ficticia",
+            workTypeBehaviorSnapshot = WorkTypeBehavior.ACTIVE_WORK,
+        ),
+    )
 
     private fun SemanticsNodeInteraction.verticalScrollRange(): ScrollAxisRange =
         fetchSemanticsNode().config[SemanticsProperties.VerticalScrollAxisRange]

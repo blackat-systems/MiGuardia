@@ -168,7 +168,7 @@ class CalendarCommonV2ComposeTest {
             }
         }
 
-        compose.onNodeWithText("Clima durante la guardia").assertExists()
+        compose.onNodeWithText("Clima durante la jornada").assertExists()
         compose.onNodeWithText("Lluvia · 8–14 °C").assertExists()
         compose.onNodeWithText("Probabilidad máxima de lluvia: 70 %").assertExists()
         compose.onNodeWithText("Cobertura completa del horario").assertExists()

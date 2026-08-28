@@ -171,9 +171,9 @@ Calendario final y tarjeta superior desplegable — cerrado
         ↓
 Resumen personalizable — cerrado
         ↓
-Próximo evento y notificaciones — prompt habilitado, tarea no abierta
+Próximo evento y notificaciones — cerrado
         ↓
-Auditoría integral del núcleo y compatibilidad Android
+Auditoría integral del núcleo y compatibilidad Android — siguiente etapa
         ↓
 Widget, informes, copias, bloqueo y Ayuda 2.0
         ↓

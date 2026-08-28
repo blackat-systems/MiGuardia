@@ -12,6 +12,7 @@ import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import com.blackatsystems.miguardia.core.domain.model.validateReminderLeadMinutes
+import com.blackatsystems.miguardia.core.domain.nextevent.NextEventIdentity
 import java.io.IOException
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
@@ -101,11 +102,11 @@ class NotificationPreferencesStore private constructor(
         }
         .map(::toPreferences)
 
-    internal val dismissedShiftIdsFlow: Flow<Set<String>> = dataStore.data
+    internal val dismissedEventKeysFlow: Flow<Set<String>> = dataStore.data
         .catch { error ->
             if (error is IOException) emit(emptyPreferences()) else throw error
         }
-        .map { values -> values[DismissedShiftIds].orEmpty() }
+        .map { values -> normalizeEventKeys(values[DismissedShiftIds].orEmpty()) }
         .distinctUntilChanged()
 
     suspend fun current(): NotificationPreferences = preferences.first()
@@ -168,45 +169,59 @@ class NotificationPreferencesStore private constructor(
         it[InstalledExactMode] = exact
     }
 
-    internal suspend fun displayedShiftIds(): Set<String> =
-        dataStore.data.first()[DisplayedShiftIds].orEmpty()
+    internal suspend fun displayedEventKeys(): Set<String> =
+        normalizeEventKeys(dataStore.data.first()[DisplayedShiftIds].orEmpty())
 
-    internal suspend fun setDisplayedShiftIds(ids: Set<String>) = update {
-        it[DisplayedShiftIds] = ids
+    internal suspend fun setDisplayedEventKeys(keys: Set<String>) = update {
+        it[DisplayedShiftIds] = normalizeEventKeys(keys)
     }
 
-    internal suspend fun dismissedShiftIds(): Set<String> =
-        dataStore.data.first()[DismissedShiftIds].orEmpty()
+    internal suspend fun dismissedEventKeys(): Set<String> =
+        normalizeEventKeys(dataStore.data.first()[DismissedShiftIds].orEmpty())
 
-    internal suspend fun markDismissed(shiftId: String) = update { values ->
-        values[DisplayedShiftIds] = values[DisplayedShiftIds].orEmpty() - shiftId
-        values[DismissedShiftIds] = values[DismissedShiftIds].orEmpty() + shiftId
+    internal suspend fun markDismissed(eventKey: String) = update { values ->
+        val normalized = requireEventKey(eventKey)
+        values[DisplayedShiftIds] = normalizeEventKeys(values[DisplayedShiftIds].orEmpty()) - normalized
+        values[DismissedShiftIds] = normalizeEventKeys(values[DismissedShiftIds].orEmpty()) + normalized
     }
 
-    internal suspend fun markDisplayed(shiftId: String) = update { values ->
-        values[DismissedShiftIds] = values[DismissedShiftIds].orEmpty() - shiftId
-        values[DisplayedShiftIds] = values[DisplayedShiftIds].orEmpty() + shiftId
+    internal suspend fun markDisplayed(eventKey: String) = update { values ->
+        val normalized = requireEventKey(eventKey)
+        values[DismissedShiftIds] = normalizeEventKeys(values[DismissedShiftIds].orEmpty()) - normalized
+        values[DisplayedShiftIds] = normalizeEventKeys(values[DisplayedShiftIds].orEmpty()) + normalized
     }
 
-    internal suspend fun markDisplayedUnlessDismissed(shiftId: String): Boolean {
+    internal suspend fun markDisplayedUnlessDismissed(eventKey: String): Boolean {
         var accepted = false
         update { values ->
-            if (shiftId !in values[DismissedShiftIds].orEmpty()) {
-                values[DisplayedShiftIds] = values[DisplayedShiftIds].orEmpty() + shiftId
+            val normalized = requireEventKey(eventKey)
+            val dismissed = normalizeEventKeys(values[DismissedShiftIds].orEmpty())
+            if (normalized !in dismissed) {
+                values[DisplayedShiftIds] =
+                    normalizeEventKeys(values[DisplayedShiftIds].orEmpty()) + normalized
                 accepted = true
             }
         }
         return accepted
     }
 
-    internal suspend fun clearShiftTracking(shiftId: String) = update { values ->
-        values[DisplayedShiftIds] = values[DisplayedShiftIds].orEmpty() - shiftId
-        values[DismissedShiftIds] = values[DismissedShiftIds].orEmpty() - shiftId
+    internal suspend fun clearEventTracking(eventKey: String) = update { values ->
+        val normalized = requireEventKey(eventKey)
+        values[DisplayedShiftIds] = normalizeEventKeys(values[DisplayedShiftIds].orEmpty()) - normalized
+        values[DismissedShiftIds] = normalizeEventKeys(values[DismissedShiftIds].orEmpty()) - normalized
     }
 
-    internal suspend fun setDismissedShiftIds(ids: Set<String>) = update {
-        it[DismissedShiftIds] = ids
+    internal suspend fun setDismissedEventKeys(keys: Set<String>) = update {
+        it[DismissedShiftIds] = normalizeEventKeys(keys)
     }
+
+    private fun requireEventKey(value: String): String = requireNotNull(
+        NextEventIdentity.parseTrackingKey(value)?.trackingKey,
+    ) { "La identidad de aviso no es valida" }
+
+    private fun normalizeEventKeys(values: Set<String>): Set<String> = values
+        .mapNotNull { value -> NextEventIdentity.parseTrackingKey(value)?.trackingKey }
+        .toCollection(linkedSetOf())
 
     private suspend fun update(block: (androidx.datastore.preferences.core.MutablePreferences) -> Unit) {
         dataStore.edit(block)

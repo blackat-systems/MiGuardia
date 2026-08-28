@@ -102,7 +102,7 @@ import com.blackatsystems.miguardia.core.domain.calendar.ShiftTemporalStatus
 import com.blackatsystems.miguardia.core.domain.model.ExplicitDayStatusType
 import com.blackatsystems.miguardia.core.domain.model.IndependentExtraWorkRecord
 import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
-import com.blackatsystems.miguardia.core.domain.nextevent.isEligibleUpcomingWork
+import com.blackatsystems.miguardia.core.domain.nextevent.isEligibleForWeather
 import com.blackatsystems.miguardia.core.domain.weather.WeatherCoverage
 import com.blackatsystems.miguardia.core.domain.weather.WeatherFreshness
 import com.blackatsystems.miguardia.core.domain.weather.WeatherUnitSystem
@@ -927,7 +927,7 @@ fun MiGuardiaApp(
     val weatherBriefIds = selectedDay
         ?.shifts
         ?.map(CalendarShift::shift)
-        ?.filter { it.isEligibleUpcomingWork(calendarState.referenceInstant, listOfNotNull(selectedDay.vacation)) }
+        ?.filter { it.isEligibleForWeather(calendarState.referenceInstant, listOfNotNull(selectedDay.vacation)) }
         ?.mapTo(linkedSetOf()) { it.id }
         .orEmpty()
     LaunchedEffect(weatherBriefIds, weatherState.preferences.enabled) {
@@ -961,6 +961,10 @@ fun MiGuardiaApp(
                 onOpenNotes = { shift ->
                     onDismissDate()
                     exceptionsActions.openNotes(shift)
+                },
+                onOpenNotifications = { shift ->
+                    onDismissDate()
+                    notificationActions.openShift(shift)
                 },
                 onOpenWeather = { shiftId ->
                     onDismissDate()
@@ -2016,6 +2020,7 @@ private fun DayDetailSheet(
     referenceInstant: java.time.Instant,
     onEditDay: (() -> Unit)?,
     onOpenNotes: (com.blackatsystems.miguardia.core.domain.model.Shift) -> Unit,
+    onOpenNotifications: (com.blackatsystems.miguardia.core.domain.model.Shift) -> Unit,
     onOpenWeather: (java.util.UUID) -> Unit,
     weatherState: WeatherUiState,
     v2ShiftEditState: V2ShiftEditUiState? = null,
@@ -2059,8 +2064,9 @@ private fun DayDetailSheet(
                 calendarShift = calendarShift,
                 excludedByVacation = day.vacation != null && calendarShift.shift.status == ShiftStatus.PLANNED,
                 onOpenNotes = onOpenNotes,
+                onOpenNotifications = onOpenNotifications,
                 onOpenWeather = if (
-                    calendarShift.shift.isEligibleUpcomingWork(referenceInstant, listOfNotNull(day.vacation))
+                    calendarShift.shift.isEligibleForWeather(referenceInstant, listOfNotNull(day.vacation))
                 ) {
                     onOpenWeather
                 } else {
@@ -2136,6 +2142,7 @@ private fun ShiftDetail(
     calendarShift: CalendarShift,
     excludedByVacation: Boolean = false,
     onOpenNotes: (com.blackatsystems.miguardia.core.domain.model.Shift) -> Unit,
+    onOpenNotifications: (com.blackatsystems.miguardia.core.domain.model.Shift) -> Unit,
     onOpenWeather: ((java.util.UUID) -> Unit)? = null,
     weatherEnabled: Boolean = false,
     weatherUnit: WeatherUnitSystem = WeatherUnitSystem.CELSIUS,
@@ -2169,6 +2176,14 @@ private fun ShiftDetail(
             OutlinedButton(onClick = { onOpenNotes(shift) }, modifier = Modifier.fillMaxWidth()) {
                 Text("Notas")
             }
+            OutlinedButton(
+                onClick = { onOpenNotifications(shift) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("shift-notifications-${shift.id}"),
+            ) {
+                Text("Avisos de esta jornada")
+            }
             if (onOpenWeather != null) {
                 ShiftWeatherBriefCard(
                     enabled = weatherEnabled,
@@ -2180,7 +2195,7 @@ private fun ShiftDetail(
             }
             if (excludedByVacation) {
                 Text(
-                    "Esta guardia se conserva, pero no computa horas porque su fecha inicial está en vacaciones.",
+                    "Esta jornada se conserva, pero no computa horas porque su fecha inicial está en vacaciones.",
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
@@ -2205,7 +2220,7 @@ private fun ShiftWeatherBriefCard(
             modifier = Modifier.padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            Text("Clima durante la guardia", fontWeight = FontWeight.Bold)
+            Text("Clima durante la jornada", fontWeight = FontWeight.Bold)
             when {
                 !enabled -> Text("Clima está desactivado. Podés activarlo desde el menú Clima.")
                 brief != null -> {

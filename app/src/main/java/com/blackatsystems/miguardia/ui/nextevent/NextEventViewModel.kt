@@ -5,10 +5,12 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.blackatsystems.miguardia.core.domain.AppDefaults
 import com.blackatsystems.miguardia.core.domain.nextevent.TodayCardProjection
+import com.blackatsystems.miguardia.core.domain.repository.AvailabilityWindowRepository
 import com.blackatsystems.miguardia.core.domain.repository.ExplicitDayStatusRepository
+import com.blackatsystems.miguardia.core.domain.repository.IndependentExtraWorkRepository
 import com.blackatsystems.miguardia.core.domain.repository.MedicalLeaveRepository
 import com.blackatsystems.miguardia.core.domain.repository.ShiftActualRepository
-import com.blackatsystems.miguardia.core.domain.repository.ShiftRepository
+import com.blackatsystems.miguardia.core.domain.repository.V2ShiftRepository
 import com.blackatsystems.miguardia.core.domain.repository.VacationRepository
 import com.blackatsystems.miguardia.core.domain.repository.WorkConfigurationRepository
 import java.time.Duration
@@ -29,11 +31,13 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 
 class NextEventViewModel(
-    shifts: ShiftRepository,
+    shifts: V2ShiftRepository,
+    availabilityWindows: AvailabilityWindowRepository,
     explicitDayStatuses: ExplicitDayStatusRepository,
     vacations: VacationRepository,
     medicalLeaves: MedicalLeaveRepository,
     shiftActuals: ShiftActualRepository,
+    independentExtras: IndependentExtraWorkRepository,
     workConfiguration: WorkConfigurationRepository,
     private val clock: Clock,
     private val zoneId: ZoneId,
@@ -45,10 +49,12 @@ class NextEventViewModel(
     private var lastValidResult: TodayCardProjection? = null
     private val observer = NextEventObserver(
         shifts = shifts,
+        availabilityWindows = availabilityWindows,
         explicitDayStatuses = explicitDayStatuses,
         vacations = vacations,
         medicalLeaves = medicalLeaves,
         shiftActuals = shiftActuals,
+        independentExtras = independentExtras,
         workConfiguration = workConfiguration,
         clock = clock,
         zoneId = zoneId,
@@ -86,7 +92,7 @@ class NextEventViewModel(
                         NextEventUiState(
                             loadState = NextEventLoadState.ERROR,
                             result = currentLastValidResult(currentDate),
-                            errorMessage = "No pudimos actualizar las jornadas de hoy.",
+                            errorMessage = "No pudimos actualizar los eventos laborales de hoy.",
                         ),
                     )
                     awaitCivilDateChange(failedDate)
@@ -97,7 +103,7 @@ class NextEventViewModel(
                         NextEventUiState(
                             loadState = NextEventLoadState.ERROR,
                             result = currentLastValidResult(),
-                            errorMessage = "No pudimos actualizar las jornadas de hoy.",
+                            errorMessage = "No pudimos actualizar los eventos laborales de hoy.",
                         ),
                     )
                 }
@@ -135,11 +141,13 @@ class NextEventViewModel(
     }
 
     class Factory(
-        private val shifts: ShiftRepository,
+        private val shifts: V2ShiftRepository,
+        private val availabilityWindows: AvailabilityWindowRepository,
         private val explicitDayStatuses: ExplicitDayStatusRepository,
         private val vacations: VacationRepository,
         private val medicalLeaves: MedicalLeaveRepository,
         private val shiftActuals: ShiftActualRepository,
+        private val independentExtras: IndependentExtraWorkRepository,
         private val workConfiguration: WorkConfigurationRepository,
         private val clock: Clock = Clock.system(AppDefaults.zoneId()),
         private val zoneId: ZoneId = AppDefaults.zoneId(),
@@ -149,10 +157,12 @@ class NextEventViewModel(
             @Suppress("UNCHECKED_CAST")
             return NextEventViewModel(
                 shifts = shifts,
+                availabilityWindows = availabilityWindows,
                 explicitDayStatuses = explicitDayStatuses,
                 vacations = vacations,
                 medicalLeaves = medicalLeaves,
                 shiftActuals = shiftActuals,
+                independentExtras = independentExtras,
                 workConfiguration = workConfiguration,
                 clock = clock,
                 zoneId = zoneId,

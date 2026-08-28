@@ -2,8 +2,11 @@ package com.blackatsystems.miguardia.notifications
 
 import android.content.Context
 import com.blackatsystems.miguardia.core.database.LocalDataStore
-import com.blackatsystems.miguardia.core.domain.model.Shift
+import com.blackatsystems.miguardia.core.domain.notification.NotificationBoundaryIdentity
+import com.blackatsystems.miguardia.core.domain.nextevent.NextEventItem
+import com.blackatsystems.miguardia.ui.nextevent.V2WorkEventSourceObserver
 import com.blackatsystems.miguardia.weather.WeatherRuntime
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -17,9 +20,18 @@ class NotificationRuntime(
     weatherRuntime: WeatherRuntime,
 ) {
     internal val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    private val reconciler = NotificationReconciler(
-        shifts = localDataStore.shifts,
+    private val sources = V2WorkEventSourceObserver(
+        shifts = localDataStore.v2Shifts,
+        availabilityWindows = localDataStore.availabilityWindows,
+        shiftActuals = localDataStore.shiftActuals,
+        independentExtras = localDataStore.independentExtraWork,
+        explicitDayStatuses = localDataStore.explicitDayStatuses,
         vacations = localDataStore.vacations,
+        medicalLeaves = localDataStore.medicalLeaves,
+        workConfiguration = localDataStore.workConfiguration,
+    )
+    private val reconciler = NotificationReconciler(
+        sources = sources,
         configs = localDataStore.shiftNotificationConfigs,
         preferences = preferences,
         alarmScheduler = AndroidShiftAlarmScheduler(context.applicationContext),
@@ -31,14 +43,18 @@ class NotificationRuntime(
 
     fun start() = reconciler.start()
 
-    val restorableShifts: Flow<List<Shift>> = reconciler.observeRestorableShifts()
+    val restorableEvents: Flow<List<NextEventItem>> = reconciler.observeRestorableEvents()
 
     fun reconcile() {
-        scope.launch { reconciler.reconcileOnce() }
+        scope.launch {
+            runNotificationOperation { reconciler.reconcileOnce() }
+        }
     }
 
     fun rebuild() {
-        scope.launch { reconciler.rebuildOnce() }
+        scope.launch {
+            runNotificationOperation { reconciler.rebuildOnce() }
+        }
     }
 
     fun showTestNotification(preferences: NotificationPreferences) {
@@ -49,7 +65,19 @@ class NotificationRuntime(
 
     internal suspend fun rebuildNow() = reconciler.rebuildOnce()
 
-    internal suspend fun dismissNow(shiftId: String) = reconciler.dismissShift(shiftId)
+    internal suspend fun dismissNow(eventKey: String) = reconciler.dismissEvent(eventKey)
 
-    internal suspend fun restoreNow(shiftId: String): Boolean = reconciler.restoreShift(shiftId)
+    internal suspend fun restoreNow(eventKey: String): Boolean = reconciler.restoreEvent(eventKey)
+
+    internal suspend fun deliverNow(identity: NotificationBoundaryIdentity) =
+        reconciler.deliverBoundary(identity)
+}
+
+internal suspend fun runNotificationOperation(block: suspend () -> Unit): Boolean = try {
+    block()
+    true
+} catch (cancelled: CancellationException) {
+    throw cancelled
+} catch (_: Exception) {
+    false
 }

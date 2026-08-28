@@ -4,20 +4,15 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import com.blackatsystems.miguardia.MiGuardiaApplication
-import com.blackatsystems.miguardia.core.domain.model.ShiftNotificationConfig
-import com.blackatsystems.miguardia.core.domain.nextevent.isEligibleUpcomingWork
-import com.blackatsystems.miguardia.core.domain.notification.NotificationBoundaryType
-import java.time.Instant
-import java.util.UUID
-import kotlinx.coroutines.flow.first
+import com.blackatsystems.miguardia.core.domain.nextevent.NextEventIdentity
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
 class ShiftAlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val application = context.applicationContext as? MiGuardiaApplication ?: return
-        val dismissedShiftId = readDismissedShiftId(intent)
-        val identity = if (dismissedShiftId == null) {
+        val dismissedEventKey = readDismissedEventKey(intent)
+        val identity = if (dismissedEventKey == null) {
             AndroidShiftAlarmScheduler.readIdentity(intent) ?: return
         } else {
             null
@@ -25,107 +20,20 @@ class ShiftAlarmReceiver : BroadcastReceiver() {
         val pendingResult = goAsync()
         application.notificationRuntime.scope.launch {
             try {
-                if (dismissedShiftId != null) {
-                    application.notificationRuntime.dismissNow(dismissedShiftId.toString())
-                    return@launch
-                }
-                checkNotNull(identity)
-                val presenter = ShiftNotificationPresenter(application)
-                val preferences = application.notificationPreferences.current()
-                val dataStore = application.localDataStore
-                val shift = dataStore.shifts.getById(identity.shiftId) ?: run {
-                    presenter.cancel(identity.shiftId.toString())
-                    application.notificationPreferences.clearShiftTracking(identity.shiftId.toString())
-                    return@launch
-                }
-                val now = Instant.now()
-                if (now < identity.triggerAt) return@launch
-                if (identity.type == NotificationBoundaryType.END) {
-                    if (identity.triggerAt == shift.endAt) {
-                        presenter.cancel(identity.shiftId.toString())
-                        application.notificationPreferences.clearShiftTracking(identity.shiftId.toString())
-                    }
-                    return@launch
-                }
-                if (!preferences.enabled || !NotificationSystemAccess(application).read().notificationPermissionGranted) {
-                    presenter.cancel(identity.shiftId.toString())
-                    application.notificationPreferences.clearShiftTracking(identity.shiftId.toString())
-                    return@launch
-                }
-                val vacations = dataStore.vacations
-                    .observeEndingOnOrAfter(shift.localStartDate)
-                    .first()
-                if (!shift.isEligibleUpcomingWork(now, vacations)) {
-                    presenter.cancel(identity.shiftId.toString())
-                    application.notificationPreferences.clearShiftTracking(identity.shiftId.toString())
-                    return@launch
-                }
-                val override = dataStore.shiftNotificationConfigs.getForShift(shift.id)
-                if (!identity.isStillCurrent(shift.startAt, shift.endAt, preferences, override)) {
-                    return@launch
-                }
-                val shiftId = shift.id.toString()
-                if (!application.notificationPreferences.markDisplayedUnlessDismissed(shiftId)) {
-                    presenter.cancel(shiftId)
-                    return@launch
-                }
-                val cachedWeather = if (preferences.privacy == NotificationPrivacy.COMPLETE) {
-                    application.weatherRuntime.notificationTextFromCache(shift, now)
-                } else {
-                    null
-                }
-                presenter.show(shift, now, preferences, cachedWeather)
-                if (shiftId in application.notificationPreferences.dismissedShiftIds()) {
-                    presenter.cancel(shiftId)
-                    return@launch
-                }
-                if (cachedWeather == null && preferences.privacy == NotificationPrivacy.COMPLETE) {
-                    val refreshedWeather = withTimeoutOrNull(8_000L) {
-                        application.weatherRuntime.refreshNotificationText(shift)
-                    }
-                    if (refreshedWeather != null) {
-                        val currentPreferences = application.notificationPreferences.current()
-                        val currentShift = dataStore.shifts.getById(identity.shiftId)
-                        val updateAt = Instant.now()
-                        val currentVacations = currentShift?.let {
-                            dataStore.vacations.observeEndingOnOrAfter(it.localStartDate).first()
-                        }.orEmpty()
-                        if (
-                            currentShift != null &&
-                            currentPreferences.enabled &&
-                            currentPreferences.privacy == NotificationPrivacy.COMPLETE &&
-                            currentShift.id.toString() !in application.notificationPreferences.dismissedShiftIds() &&
-                            NotificationSystemAccess(application).read().notificationPermissionGranted &&
-                            currentShift.isEligibleUpcomingWork(updateAt, currentVacations) &&
-                            identity.isStillCurrent(
-                                currentShift.startAt,
-                                currentShift.endAt,
-                                currentPreferences,
-                                dataStore.shiftNotificationConfigs.getForShift(currentShift.id),
-                            )
-                        ) {
-                            presenter.show(
-                                currentShift,
-                                updateAt,
-                                currentPreferences,
-                                refreshedWeather,
-                                silentUpdate = true,
-                            )
-                            if (
-                                currentShift.id.toString() in
-                                application.notificationPreferences.dismissedShiftIds()
-                            ) {
-                                presenter.cancel(currentShift.id.toString())
-                            }
+                withTimeoutOrNull(RECEIVER_WORK_TIMEOUT_MILLIS) {
+                    runNotificationOperation {
+                        if (dismissedEventKey != null) {
+                            application.notificationRuntime.dismissNow(dismissedEventKey)
+                        } else {
+                            application.notificationRuntime.deliverNow(checkNotNull(identity))
                         }
+                    }
+                    runNotificationOperation {
+                        application.notificationRuntime.reconcileNow()
                     }
                 }
             } finally {
-                try {
-                    application.notificationRuntime.reconcileNow()
-                } finally {
-                    pendingResult.finish()
-                }
+                pendingResult.finish()
             }
         }
     }
@@ -134,31 +42,15 @@ class ShiftAlarmReceiver : BroadcastReceiver() {
         const val ACTION_DELIVER_BOUNDARY = "com.blackatsystems.miguardia.action.DELIVER_SHIFT_BOUNDARY"
         const val ACTION_NOTIFICATION_DISMISSED =
             "com.blackatsystems.miguardia.action.SHIFT_NOTIFICATION_DISMISSED"
+        private const val RECEIVER_WORK_TIMEOUT_MILLIS = 8_000L
     }
 }
 
-private fun readDismissedShiftId(intent: Intent): UUID? {
+private fun readDismissedEventKey(intent: Intent): String? {
     if (intent.action != ShiftAlarmReceiver.ACTION_NOTIFICATION_DISMISSED) return null
     if (intent.data?.scheme != "miguardia" || intent.data?.authority != "notification-dismissed") return null
-    return intent.data?.lastPathSegment
-        ?.let { runCatching { UUID.fromString(it) }.getOrNull() }
-}
-
-private fun com.blackatsystems.miguardia.core.domain.notification.NotificationBoundaryIdentity.isStillCurrent(
-    startAt: Instant,
-    endAt: Instant,
-    preferences: NotificationPreferences,
-    override: ShiftNotificationConfig?,
-): Boolean = when (type) {
-    NotificationBoundaryType.REMINDER -> {
-        val lead = leadMinutes
-        val configured = override?.reminderLeadMinutes ?: preferences.globalReminderLeadMinutes
-        lead != null &&
-            override?.reminderLeadMinutes?.isEmpty() != true &&
-            lead in configured &&
-            triggerAt == startAt.minusSeconds(lead * 60L)
-    }
-    NotificationBoundaryType.START ->
-        override?.reminderLeadMinutes?.isEmpty() != true && triggerAt == startAt
-    NotificationBoundaryType.END -> triggerAt == endAt
+    val encoded = intent.data?.getQueryParameter("event") ?: intent.data?.lastPathSegment
+    return encoded
+        ?.let(NextEventIdentity::parseTrackingKey)
+        ?.trackingKey
 }

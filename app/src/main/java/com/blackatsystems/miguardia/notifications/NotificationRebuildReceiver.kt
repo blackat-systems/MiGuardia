@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import com.blackatsystems.miguardia.MiGuardiaApplication
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 class NotificationRebuildReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -19,7 +20,11 @@ class NotificationRebuildReceiver : BroadcastReceiver() {
         val pendingResult = goAsync()
         application.notificationRuntime.scope.launch {
             try {
-                application.notificationRuntime.rebuildNow()
+                withTimeoutOrNull(RECEIVER_WORK_TIMEOUT_MILLIS) {
+                    runNotificationOperation {
+                        application.notificationRuntime.rebuildNow()
+                    }
+                }
             } finally {
                 pendingResult.finish()
             }
@@ -36,5 +41,6 @@ class NotificationRebuildReceiver : BroadcastReceiver() {
         )
         const val ACTION_EXACT_ALARM_ACCESS_CHANGED =
             "android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED"
+        const val RECEIVER_WORK_TIMEOUT_MILLIS = 8_000L
     }
 }

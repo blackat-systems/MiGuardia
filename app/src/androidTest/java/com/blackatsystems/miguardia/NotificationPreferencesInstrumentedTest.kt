@@ -51,7 +51,7 @@ class NotificationPreferencesInstrumentedTest {
         first.setAttentionMode(NotificationAttentionMode.VIBRATION_ONLY)
         first.setGlobalReminderLeadMinutes(listOf(360L, 720L))
         first.setSoundUri(Uri.parse("content://settings/system/notification_sound"))
-        first.markDismissed(DISMISSED_SHIFT_ID)
+        first.markDismissed(LEGACY_SHIFT_ID)
 
         firstScope.cancel()
         delay(100)
@@ -65,7 +65,7 @@ class NotificationPreferencesInstrumentedTest {
         assertEquals(NotificationAttentionMode.VIBRATION_ONLY, saved.attentionMode)
         assertEquals(listOf(360L, 720L), saved.globalReminderLeadMinutes)
         assertEquals("content://settings/system/notification_sound", saved.soundUri.toString())
-        assertEquals(setOf(DISMISSED_SHIFT_ID), second.dismissedShiftIds())
+        assertEquals(setOf(SHIFT_KEY), second.dismissedEventKeys())
         secondScope.cancel()
         directory.deleteRecursively()
         Unit
@@ -74,7 +74,7 @@ class NotificationPreferencesInstrumentedTest {
     @Test
     fun applyingRhythmIsAtomicAndDoesNotEraseNotificationTracking() = runBlocking {
         val store = isolatedStore()
-        store.markDismissed(DISMISSED_SHIFT_ID)
+        store.markDismissed(SHIFT_KEY)
 
         store.applyRhythm(NotificationRhythm.ACCOMPANIED)
         val accompanied = store.current()
@@ -83,7 +83,7 @@ class NotificationPreferencesInstrumentedTest {
         assertEquals(NotificationPrivacy.COMPLETE, accompanied.privacy)
         assertEquals(NotificationAttentionMode.SOUND_AND_VIBRATION, accompanied.attentionMode)
         assertEquals(NotificationRhythm.ACCOMPANIED, accompanied.rhythm())
-        assertEquals(setOf(DISMISSED_SHIFT_ID), store.dismissedShiftIds())
+        assertEquals(setOf(SHIFT_KEY), store.dismissedEventKeys())
 
         store.applyRhythm(NotificationRhythm.DISCREET)
         val discreet = store.current()
@@ -92,7 +92,7 @@ class NotificationPreferencesInstrumentedTest {
         assertEquals(NotificationPrivacy.REDUCED, discreet.privacy)
         assertEquals(NotificationAttentionMode.SILENT, discreet.attentionMode)
         assertEquals(NotificationRhythm.DISCREET, discreet.rhythm())
-        assertEquals(setOf(DISMISSED_SHIFT_ID), store.dismissedShiftIds())
+        assertEquals(setOf(SHIFT_KEY), store.dismissedEventKeys())
     }
 
     @Test
@@ -101,14 +101,20 @@ class NotificationPreferencesInstrumentedTest {
         store.setGlobalReminderLeadMinutes(listOf(360L))
         assertEquals(NotificationRhythm.CUSTOM, store.current().rhythm())
 
-        store.markDismissed(DISMISSED_SHIFT_ID)
-        assertFalse(store.markDisplayedUnlessDismissed(DISMISSED_SHIFT_ID))
-        assertEquals(setOf(DISMISSED_SHIFT_ID), store.dismissedShiftIds())
-        assertFalse(DISMISSED_SHIFT_ID in store.displayedShiftIds())
+        store.markDismissed(SHIFT_KEY)
+        assertFalse(store.markDisplayedUnlessDismissed(SHIFT_KEY))
+        assertEquals(setOf(SHIFT_KEY), store.dismissedEventKeys())
+        assertFalse(SHIFT_KEY in store.displayedEventKeys())
 
-        store.clearShiftTracking(DISMISSED_SHIFT_ID)
-        assertTrue(store.markDisplayedUnlessDismissed(DISMISSED_SHIFT_ID))
-        assertTrue(DISMISSED_SHIFT_ID in store.displayedShiftIds())
+        store.clearEventTracking(SHIFT_KEY)
+        assertTrue(store.markDisplayedUnlessDismissed(SHIFT_KEY))
+        assertTrue(SHIFT_KEY in store.displayedEventKeys())
+
+        store.markDismissed(AVAILABILITY_KEY)
+        assertTrue(AVAILABILITY_KEY in store.dismissedEventKeys())
+        assertFalse(store.markDisplayedUnlessDismissed(AVAILABILITY_KEY))
+        store.clearEventTracking(AVAILABILITY_KEY)
+        assertTrue(store.markDisplayedUnlessDismissed(AVAILABILITY_KEY))
     }
 
     private fun isolatedStore(): NotificationPreferencesStore = NotificationPreferencesStore(
@@ -117,6 +123,9 @@ class NotificationPreferencesInstrumentedTest {
     )
 
     private companion object {
-        const val DISMISSED_SHIFT_ID = "00000000-0000-0000-0000-000000000807"
+        const val LEGACY_SHIFT_ID = "00000000-0000-0000-0000-000000000807"
+        const val SHIFT_KEY = "shift:$LEGACY_SHIFT_ID"
+        const val AVAILABILITY_KEY =
+            "availability:00000000-0000-0000-0000-000000000808:1788278400000:1788282000000"
     }
 }

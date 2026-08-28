@@ -13,6 +13,9 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.blackatsystems.miguardia.core.domain.AppDefaults
+import com.blackatsystems.miguardia.core.domain.model.AvailabilityWindowDraft
+import com.blackatsystems.miguardia.core.domain.model.AvailabilityWindowMutation
+import com.blackatsystems.miguardia.core.domain.model.AvailabilityWindowWriteResult
 import com.blackatsystems.miguardia.core.domain.model.Shift
 import com.blackatsystems.miguardia.core.domain.model.ShiftOccupancyExpectation
 import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
@@ -22,13 +25,24 @@ import com.blackatsystems.miguardia.core.domain.model.V2ShiftLookup
 import com.blackatsystems.miguardia.core.domain.model.V2ShiftWrite
 import com.blackatsystems.miguardia.core.domain.model.V2ShiftWriteExpectation
 import com.blackatsystems.miguardia.core.domain.model.Vacation
+import com.blackatsystems.miguardia.core.domain.model.buildAvailabilityWindowRecord
 import com.blackatsystems.miguardia.core.domain.notification.NotificationBoundaryIdentity
 import com.blackatsystems.miguardia.core.domain.notification.NotificationBoundaryType
+import com.blackatsystems.miguardia.core.domain.nextevent.NextEventIdentity
+import com.blackatsystems.miguardia.core.domain.nextevent.toNextEventItem
+import com.blackatsystems.miguardia.notifications.AndroidShiftAlarmScheduler
+import com.blackatsystems.miguardia.notifications.NotificationPrivacy
 import com.blackatsystems.miguardia.notifications.NotificationSystemAccess
 import com.blackatsystems.miguardia.notifications.ShiftAlarmReceiver
 import com.blackatsystems.miguardia.notifications.ShiftNotificationPresenter
+import com.blackatsystems.miguardia.core.domain.work.AvailabilityLabel
+import com.blackatsystems.miguardia.core.domain.work.EffectiveRevision
+import com.blackatsystems.miguardia.core.domain.work.ResolvedWorkConfigurationRevision
+import com.blackatsystems.miguardia.core.domain.work.WorkConfigurationAvailabilityMutation
+import com.blackatsystems.miguardia.core.domain.work.WorkConfigurationAvailabilityWriteResult
 import java.time.Instant
 import java.time.LocalTime
+import java.time.temporal.ChronoUnit
 import java.util.UUID
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -47,7 +61,153 @@ class NotificationAlarmEndToEndInstrumentedTest {
         check(application.packageName == QA_APPLICATION_ID) {
             "La preparación instrumentada sólo puede limpiar el paquete QA."
         }
-        application.localDataStore.clearAllDataForInstrumentation()
+        val arguments = InstrumentationRegistry.getArguments()
+        val packageReplacementPhase = arguments.getString(PACKAGE_REPLACEMENT_PHASE_ARGUMENT)
+        if (packageReplacementPhase != null) {
+            check(arguments.getString("class") == PACKAGE_REPLACEMENT_TEST_TARGET) {
+                "La fase de reemplazo QA exige filtrar únicamente su prueba dedicada."
+            }
+        }
+        if (packageReplacementPhase != PACKAGE_REPLACEMENT_VERIFY) {
+            application.localDataStore.clearAllDataForInstrumentation()
+        }
+    }
+
+    @Test
+    fun typedAndLegacyAlarmPayloadsRemainReconstructible() {
+        val eventIdentity = NextEventIdentity.Availability(
+            windowId = UUID.fromString("00000000-0000-0000-0000-000000000730"),
+            segmentStart = Instant.parse("2026-09-01T19:00:00Z"),
+            segmentEnd = Instant.parse("2026-09-02T07:00:00Z"),
+        )
+        val typed = NotificationBoundaryIdentity(
+            eventIdentity = eventIdentity,
+            type = NotificationBoundaryType.START,
+            triggerAt = eventIdentity.segmentStart,
+        )
+        val typedIntent = boundaryIntent(typed.opaqueKey)
+        assertEquals(typed, AndroidShiftAlarmScheduler.readIdentity(typedIntent))
+
+        val legacyKey = "$REACTIVE_SHIFT_ID|START|1788289200000|0"
+        val legacy = AndroidShiftAlarmScheduler.readIdentity(boundaryIntent(legacyKey))
+        assertEquals(REACTIVE_SHIFT_ID, legacy?.shiftId)
+        assertEquals(NotificationBoundaryType.START, legacy?.type)
+    }
+
+    @Test
+    fun rebuildRestoresCurrentBoundaries() = runBlocking {
+        val application = ApplicationProvider.getApplicationContext<MiGuardiaApplication>()
+        assumeTrue(
+            "La reconstrucción instrumentada sólo puede modificar el paquete QA.",
+            application.packageName == QA_APPLICATION_ID,
+        )
+        when (
+            val phase = InstrumentationRegistry.getArguments()
+                .getString(PACKAGE_REPLACEMENT_PHASE_ARGUMENT)
+        ) {
+            null -> verifyExplicitRebuild(application)
+            PACKAGE_REPLACEMENT_PREPARE -> preparePackageReplacementRebuild(application)
+            PACKAGE_REPLACEMENT_VERIFY -> verifyPackageReplacementRebuild(application)
+            else -> error("Fase de reemplazo QA desconocida: $phase")
+        }
+    }
+
+    private suspend fun verifyExplicitRebuild(application: MiGuardiaApplication) {
+        grantPostNotificationsIfRequired(application)
+        val manager = application.getSystemService(NotificationManager::class.java)
+        val fixture = createRebuildFixture(application, manager)
+        try {
+            application.notificationRuntime.rebuildNow()
+            assertRebuildResult(application, fixture)
+        } finally {
+            clearRebuildFixture(application, manager)
+        }
+    }
+
+    private suspend fun preparePackageReplacementRebuild(application: MiGuardiaApplication) {
+        grantPostNotificationsIfRequired(application)
+        val manager = application.getSystemService(NotificationManager::class.java)
+        val fixture = createRebuildFixture(application, manager)
+        val scheduler = AndroidShiftAlarmScheduler(application)
+        fixture.currentBoundaries.forEach(scheduler::cancel)
+        assertEquals(fixture.currentBoundaries, installedFor(application, REBUILD_SHIFT_ID))
+    }
+
+    private suspend fun verifyPackageReplacementRebuild(application: MiGuardiaApplication) {
+        grantPostNotificationsIfRequired(application)
+        val manager = application.getSystemService(NotificationManager::class.java)
+        val persisted = requireV2Write(application, REBUILD_SHIFT_ID)
+        val fixture = RebuildFixture(
+            persistedEvent = persisted.toNextEventItem(),
+            trackingKey = "shift:$REBUILD_SHIFT_ID",
+            currentBoundaries = installedFor(application, REBUILD_SHIFT_ID),
+        )
+        try {
+            assertTrue("La preparación QA debe conservar las fronteras registradas.", fixture.currentBoundaries.isNotEmpty())
+            val externallyVerifiedEpoch = InstrumentationRegistry.getArguments()
+                .getString(PACKAGE_REPLACEMENT_REBUILT_EPOCH_ARGUMENT)
+                ?.toLongOrNull()
+            assertEquals(
+                "La fase verify exige el instante confirmado externamente en AlarmManager tras instalar -r.",
+                fixture.persistedEvent.end.toEpochMilli(),
+                externallyVerifiedEpoch,
+            )
+            assertRebuildResult(application, fixture)
+        } finally {
+            clearRebuildFixture(application, manager)
+        }
+    }
+
+    private suspend fun createRebuildFixture(
+        application: MiGuardiaApplication,
+        manager: NotificationManager,
+    ): RebuildFixture {
+        val now = Instant.now().truncatedTo(ChronoUnit.MINUTES)
+        val shift = futureShift(
+            id = REBUILD_SHIFT_ID,
+            start = now.minus(1, ChronoUnit.MINUTES),
+            end = now.plus(60, ChronoUnit.MINUTES),
+            createdAt = now.minus(1, ChronoUnit.DAYS),
+        )
+        val trackingKey = "shift:${shift.id}"
+        application.notificationPreferences.setEnabled(false)
+        application.notificationRuntime.rebuildNow()
+        application.notificationPreferences.setDisplayedEventKeys(emptySet())
+        application.notificationPreferences.setDismissedEventKeys(emptySet())
+        manager.cancelAll()
+        application.notificationPreferences.setPrivacy(NotificationPrivacy.COMPLETE)
+        application.notificationPreferences.setGlobalReminderLeadMinutes(listOf(60L))
+        application.notificationPreferences.setPreciseTiming(false)
+        application.notificationPreferences.setEnabled(true)
+        val persisted = insertV2(application, shift)
+        application.notificationRuntime.reconcileNow()
+        waitUntil(5_000L) {
+            manager.activeNotifications.any { notification -> notification.tag == trackingKey }
+        }
+        val currentBoundaries = installedFor(application, shift.id)
+        assertTrue("La jornada activa debe conservar al menos su frontera final.", currentBoundaries.isNotEmpty())
+        val persistedEvent = persisted.toNextEventItem()
+        return RebuildFixture(persistedEvent, trackingKey, currentBoundaries)
+    }
+
+    private suspend fun assertRebuildResult(
+        application: MiGuardiaApplication,
+        fixture: RebuildFixture,
+    ) {
+        assertEquals(fixture.currentBoundaries, installedFor(application, REBUILD_SHIFT_ID))
+        assertEquals(setOf(fixture.trackingKey), application.notificationPreferences.displayedEventKeys())
+    }
+
+    private suspend fun clearRebuildFixture(
+        application: MiGuardiaApplication,
+        manager: NotificationManager,
+    ) {
+        application.notificationPreferences.setEnabled(false)
+        application.notificationPreferences.setPreciseTiming(false)
+        application.notificationPreferences.clearEventTracking("shift:$REBUILD_SHIFT_ID")
+        deleteIfPresent(application, REBUILD_SHIFT_ID)
+        application.notificationRuntime.rebuildNow()
+        manager.cancelAll()
     }
 
     @Test
@@ -153,20 +313,21 @@ class NotificationAlarmEndToEndInstrumentedTest {
         )
         try {
             application.notificationPreferences.setEnabled(true)
-            insertV2(application, shift)
-            ShiftNotificationPresenter(application).show(shift, now, application.notificationPreferences.current())
-            application.notificationPreferences.markDisplayed(shift.id.toString())
+            val write = insertV2(application, shift)
+            val event = write.toNextEventItem()
+            ShiftNotificationPresenter(application).show(event, now, application.notificationPreferences.current())
+            application.notificationPreferences.markDisplayed(event.identity.trackingKey)
 
             application.sendBroadcast(boundaryIntent(application, staleEnd))
             waitUntil(5_000L) {
-                manager.activeNotifications.any { it.tag == shift.id.toString() }
+                manager.activeNotifications.any { it.tag == event.identity.trackingKey }
             }
-            assertTrue(manager.activeNotifications.any { it.tag == shift.id.toString() })
+            assertTrue(manager.activeNotifications.any { it.tag == event.identity.trackingKey })
         } finally {
             application.notificationPreferences.setEnabled(false)
-            application.notificationPreferences.clearShiftTracking(shift.id.toString())
+            application.notificationPreferences.clearEventTracking("shift:${shift.id}")
             deleteIfPresent(application, shift.id)
-            manager.cancel(shift.id.toString(), 1042)
+            manager.cancel("shift:${shift.id}", 1042)
             application.notificationRuntime.reconcile()
         }
     }
@@ -182,25 +343,26 @@ class NotificationAlarmEndToEndInstrumentedTest {
         try {
             application.notificationPreferences.setEnabled(true)
             application.notificationPreferences.setPersistentWhileActive(false)
-            insertV2(application, shift)
-            ShiftNotificationPresenter(application).show(shift, now, application.notificationPreferences.current())
-            application.notificationPreferences.markDisplayed(shift.id.toString())
-            val posted = manager.activeNotifications.first { it.tag == shift.id.toString() }.notification
+            val write = insertV2(application, shift)
+            val event = write.toNextEventItem()
+            ShiftNotificationPresenter(application).show(event, now, application.notificationPreferences.current())
+            application.notificationPreferences.markDisplayed(event.identity.trackingKey)
+            val posted = manager.activeNotifications.first { it.tag == event.identity.trackingKey }.notification
 
             assertTrue(posted.deleteIntent != null)
             val dismissControl = posted.bigContentView.apply(application, null)
                 .findViewById<TextView>(R.id.notification_dismiss)
             assertEquals("Eliminar notificación", dismissControl.text.toString())
             assertTrue(dismissControl.hasOnClickListeners())
-            application.notificationRuntime.dismissNow(shift.id.toString())
+            application.notificationRuntime.dismissNow(event.identity.trackingKey)
             waitUntil(5_000L) {
-                shift.id.toString() in application.notificationPreferences.dismissedShiftIds()
+                event.identity.trackingKey in application.notificationPreferences.dismissedEventKeys()
             }
             application.notificationRuntime.reconcileNow()
             waitUntil(5_000L) {
-                manager.activeNotifications.none { it.tag == shift.id.toString() }
+                manager.activeNotifications.none { it.tag == event.identity.trackingKey }
             }
-            assertFalse(manager.activeNotifications.any { it.tag == shift.id.toString() })
+            assertFalse(manager.activeNotifications.any { it.tag == event.identity.trackingKey })
 
             application.sendBroadcast(
                 boundaryIntent(
@@ -213,22 +375,113 @@ class NotificationAlarmEndToEndInstrumentedTest {
                 ),
             )
             SystemClock.sleep(1_000L)
-            assertTrue(shift.id.toString() in application.notificationPreferences.dismissedShiftIds())
-            assertFalse(manager.activeNotifications.any { it.tag == shift.id.toString() })
+            assertTrue(event.identity.trackingKey in application.notificationPreferences.dismissedEventKeys())
+            assertFalse(manager.activeNotifications.any { it.tag == event.identity.trackingKey })
 
-            assertTrue(application.notificationRuntime.restoreNow(shift.id.toString()))
+            assertTrue(application.notificationRuntime.restoreNow(event.identity.trackingKey))
             waitUntil(5_000L) {
-                manager.activeNotifications.any { it.tag == shift.id.toString() }
+                manager.activeNotifications.any { it.tag == event.identity.trackingKey }
             }
-            val restored = manager.activeNotifications.first { it.tag == shift.id.toString() }.notification
+            val restored = manager.activeNotifications.first { it.tag == event.identity.trackingKey }.notification
             assertTrue(restored.flags and Notification.FLAG_ONLY_ALERT_ONCE != 0)
-            assertFalse(shift.id.toString() in application.notificationPreferences.dismissedShiftIds())
-            assertTrue(shift.id.toString() in application.notificationPreferences.displayedShiftIds())
+            assertFalse(event.identity.trackingKey in application.notificationPreferences.dismissedEventKeys())
+            assertTrue(event.identity.trackingKey in application.notificationPreferences.displayedEventKeys())
         } finally {
             application.notificationPreferences.setEnabled(false)
-            application.notificationPreferences.clearShiftTracking(shift.id.toString())
+            application.notificationPreferences.clearEventTracking("shift:${shift.id}")
             deleteIfPresent(application, shift.id)
-            manager.cancel(shift.id.toString(), 1042)
+            manager.cancel("shift:${shift.id}", 1042)
+            application.notificationRuntime.reconcile()
+        }
+    }
+
+    @Test
+    fun availabilityStartBoundaryReadsThePersistedV2WindowAndPostsItsHistoricalLabel() = runBlocking {
+        val application = ApplicationProvider.getApplicationContext<MiGuardiaApplication>()
+        assumeTrue("Las notificaciones instrumentadas sólo pueden tocar el paquete QA.", application.packageName.endsWith(".qa"))
+        grantPostNotificationsIfRequired(application)
+        val manager = application.getSystemService(NotificationManager::class.java)
+        val zone = AppDefaults.zoneId()
+        val now = Instant.now().truncatedTo(ChronoUnit.MINUTES)
+        val windowId = AVAILABILITY_WINDOW_ID
+        val windowStart = now.minus(1, ChronoUnit.MINUTES)
+        val windowEnd = now.plus(60, ChronoUnit.MINUTES)
+        val ownerDate = windowStart.atZone(zone).toLocalDate()
+        val seed = futureShift(
+            id = AVAILABILITY_SEED_SHIFT_ID,
+            start = now.plus(120, ChronoUnit.MINUTES),
+            end = now.plus(180, ChronoUnit.MINUTES),
+            createdAt = now.minus(1, ChronoUnit.DAYS),
+        )
+        var trackingKey: String? = null
+        try {
+            V2AppTestFixture.writeFor(application.localDataStore, seed, ownerDate)
+            val originalHistory = requireNotNull(application.localDataStore.workConfiguration.get())
+            val previous = requireNotNull(originalHistory.timeline.revisionAt(ownerDate))
+            val configurationResult = application.localDataStore.workConfiguration.applyAvailabilityMutation(
+                WorkConfigurationAvailabilityMutation(
+                    originalHistory,
+                    EffectiveRevision(
+                        id = AVAILABILITY_REVISION_ID,
+                        effectiveFrom = ownerDate,
+                        value = previous.value.copy(availabilityLabel = AvailabilityLabel.ON_CALL_RETAINER),
+                    ),
+                ),
+            )
+            assertTrue(configurationResult is WorkConfigurationAvailabilityWriteResult.Saved)
+            val resolved = ResolvedWorkConfigurationRevision.resolve(
+                history = requireNotNull(application.localDataStore.workConfiguration.get()),
+                date = ownerDate,
+            )
+            val record = buildAvailabilityWindowRecord(
+                draft = AvailabilityWindowDraft(
+                    id = windowId,
+                    ownerLocalDate = ownerDate,
+                    zoneId = zone,
+                    start = windowStart,
+                    end = windowEnd,
+                ),
+                configuration = resolved,
+                timestamp = now,
+            )
+            val expectation = application.localDataStore.availabilityWindows.captureExpectation(
+                id = null,
+                configuration = resolved,
+                windowStart = windowStart,
+                windowEnd = windowEnd,
+            )
+            assertTrue(
+                application.localDataStore.availabilityWindows.applyMutation(
+                    AvailabilityWindowMutation(expectation, record),
+                ) is AvailabilityWindowWriteResult.Saved,
+            )
+            val eventIdentity = NextEventIdentity.Availability(windowId, windowStart, windowEnd)
+            trackingKey = eventIdentity.trackingKey
+            application.notificationPreferences.setEnabled(true)
+
+            application.sendBroadcast(
+                boundaryIntent(
+                    application,
+                    NotificationBoundaryIdentity(
+                        eventIdentity = eventIdentity,
+                        type = NotificationBoundaryType.START,
+                        triggerAt = windowStart,
+                    ),
+                ),
+            )
+            waitUntil(5_000L) {
+                manager.activeNotifications.any { it.tag == eventIdentity.trackingKey }
+            }
+            val posted = manager.activeNotifications.first { it.tag == eventIdentity.trackingKey }.notification
+            assertTrue(posted.extras.getString(Notification.EXTRA_TITLE).orEmpty().contains("Retén"))
+            assertFalse(posted.extras.toString().contains("Dirección"))
+        } finally {
+            application.notificationPreferences.setEnabled(false)
+            trackingKey?.let { key ->
+                application.notificationPreferences.clearEventTracking(key)
+                manager.cancel(key, ShiftNotificationPresenter.NOTIFICATION_ID)
+            }
+            application.localDataStore.clearAllDataForInstrumentation()
             application.notificationRuntime.reconcile()
         }
     }
@@ -259,10 +512,10 @@ class NotificationAlarmEndToEndInstrumentedTest {
             insertV2(application, shift)
             application.notificationRuntime.reconcile()
 
-            val reminder = waitForNotification(notificationManager, "PRÓXIMA GUARDIA", 75_000L)
+            val reminder = waitForNotification(notificationManager, "PRÓXIMA JORNADA", 75_000L)
             assertTrue(reminder.extras.getString(Notification.EXTRA_TEXT).orEmpty().contains("QAT"))
 
-            val ongoing = waitForNotification(notificationManager, "EN CURSO", 135_000L)
+            val ongoing = waitForNotification(notificationManager, "JORNADA EN CURSO", 135_000L)
             assertFalse(ongoing.extras.getBoolean(Notification.EXTRA_SHOW_CHRONOMETER))
             assertFalse(ongoing.extras.getBoolean(Notification.EXTRA_CHRONOMETER_COUNT_DOWN))
             assertFalse(ongoing.extras.getBoolean(Notification.EXTRA_SHOW_WHEN))
@@ -272,14 +525,14 @@ class NotificationAlarmEndToEndInstrumentedTest {
             assertTrue(countdown.format.toString().startsWith("Finaliza en"))
 
             waitUntil(75_000L) {
-                notificationManager.activeNotifications.none { it.tag == SHIFT_ID.toString() }
+                notificationManager.activeNotifications.none { it.tag == "shift:$SHIFT_ID" }
             }
-            assertFalse(notificationManager.activeNotifications.any { it.tag == SHIFT_ID.toString() })
+            assertFalse(notificationManager.activeNotifications.any { it.tag == "shift:$SHIFT_ID" })
         } finally {
             application.notificationPreferences.setEnabled(false)
             deleteIfPresent(application, SHIFT_ID)
             application.notificationRuntime.reconcile()
-            notificationManager.cancel(SHIFT_ID.toString(), 1042)
+            notificationManager.cancel("shift:$SHIFT_ID", 1042)
         }
     }
 
@@ -346,7 +599,7 @@ class NotificationAlarmEndToEndInstrumentedTest {
 
     private suspend fun installedFor(application: MiGuardiaApplication, shiftId: UUID): Set<String> =
         application.notificationPreferences.installedBoundaryKeys().filterTo(linkedSetOf()) {
-            it.startsWith(shiftId.toString())
+            it.startsWith("v2|shift:$shiftId|")
         }
 
     private fun boundaryIntent(
@@ -354,13 +607,17 @@ class NotificationAlarmEndToEndInstrumentedTest {
         identity: NotificationBoundaryIdentity,
     ): Intent = Intent(application, ShiftAlarmReceiver::class.java)
         .setAction(ShiftAlarmReceiver.ACTION_DELIVER_BOUNDARY)
-        .setData(
-            Uri.Builder()
-                .scheme("miguardia")
-                .authority("shift-alarm")
-                .appendQueryParameter("boundary", identity.opaqueKey)
-                .build(),
-        )
+        .setData(boundaryData(identity.opaqueKey))
+
+    private fun boundaryIntent(opaqueKey: String): Intent = Intent()
+        .setAction(ShiftAlarmReceiver.ACTION_DELIVER_BOUNDARY)
+        .setData(boundaryData(opaqueKey))
+
+    private fun boundaryData(opaqueKey: String): Uri = Uri.Builder()
+        .scheme("miguardia")
+        .authority("shift-alarm")
+        .appendQueryParameter("boundary", opaqueKey)
+        .build()
 
     private suspend fun waitForNotification(
         manager: NotificationManager,
@@ -370,7 +627,7 @@ class NotificationAlarmEndToEndInstrumentedTest {
         var found: Notification? = null
         waitUntil(timeoutMillis) {
             found = manager.activeNotifications
-                .firstOrNull { it.tag == SHIFT_ID.toString() }
+                .firstOrNull { it.tag == "shift:$SHIFT_ID" }
                 ?.notification
                 ?.takeIf { it.extras.getString(Notification.EXTRA_TITLE).orEmpty().startsWith(expectedTitle) }
             found != null
@@ -389,10 +646,26 @@ class NotificationAlarmEndToEndInstrumentedTest {
 
     private companion object {
         const val QA_APPLICATION_ID: String = "com.blackatsystems.miguardia.qa"
+        const val PACKAGE_REPLACEMENT_PHASE_ARGUMENT: String = "packageReplacementPhase"
+        const val PACKAGE_REPLACEMENT_REBUILT_EPOCH_ARGUMENT: String = "packageReplacementRebuiltEpoch"
+        const val PACKAGE_REPLACEMENT_PREPARE: String = "prepare"
+        const val PACKAGE_REPLACEMENT_VERIFY: String = "verify"
+        const val PACKAGE_REPLACEMENT_TEST_TARGET: String =
+            "com.blackatsystems.miguardia.NotificationAlarmEndToEndInstrumentedTest#rebuildRestoresCurrentBoundaries"
         val SHIFT_ID: UUID = UUID.fromString("00000000-0000-0000-0000-000000000801")
         val REACTIVE_SHIFT_ID: UUID = UUID.fromString("00000000-0000-0000-0000-000000000802")
         val VACATION_ID: UUID = UUID.fromString("00000000-0000-0000-0000-000000000803")
         val STALE_END_SHIFT_ID: UUID = UUID.fromString("00000000-0000-0000-0000-000000000804")
         val DISMISS_SHIFT_ID: UUID = UUID.fromString("00000000-0000-0000-0000-000000000805")
+        val AVAILABILITY_WINDOW_ID: UUID = UUID.fromString("00000000-0000-0000-0000-000000000806")
+        val AVAILABILITY_SEED_SHIFT_ID: UUID = UUID.fromString("00000000-0000-0000-0000-000000000807")
+        val AVAILABILITY_REVISION_ID: UUID = UUID.fromString("00000000-0000-0000-0000-000000000808")
+        val REBUILD_SHIFT_ID: UUID = UUID.fromString("00000000-0000-0000-0000-000000000809")
     }
+
+    private data class RebuildFixture(
+        val persistedEvent: com.blackatsystems.miguardia.core.domain.nextevent.NextEventItem.Shift,
+        val trackingKey: String,
+        val currentBoundaries: Set<String>,
+    )
 }
