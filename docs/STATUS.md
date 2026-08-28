@@ -8,10 +8,11 @@ no significa que exista ya una implementación nueva.
 
 El bloque **Próximo evento y notificaciones** quedó auditado, corregido,
 probado en Samsung API 36 y Android 8 API 26 e integrado por MAIN sin modificar
-Room V2 versión 5. La siguiente etapa del orden aprobado es la **auditoría
-integral del núcleo y compatibilidad Android**. Su prompt de sólo lectura quedó
-habilitado, pero la tarea todavía no fue abierta. No existe otro prompt de
-implementación habilitado.
+Room V2 versión 5. La dependencia **Auditoría integral del núcleo y
+compatibilidad Android** ya fue ejecutada y devolvió `AUDITORÍA PARCIAL — NO
+CERRABLE`: no reprodujo defectos P0/P1, pero faltan tres pruebas cruzadas y la
+matriz Android actual. No existe otro prompt habilitado y la segunda capa sigue
+cerrada.
 
 MAIN 2.0 está reactivada para recibir los handoffs que Joaquin entregue,
 auditarlos, integrarlos, probarlos y cerrarlos. Joaquin decide cuándo pedir el
@@ -919,7 +920,7 @@ arquitectura en
 `docs/adr/0032-proyeccion-unica-de-eventos-y-avisos-locales-v2.md` y el cierre
 en `docs/audits/2026-08-27-proximo-evento-y-notificaciones-v2.md`.
 
-## Auditoría integral del núcleo y compatibilidad Android — prompt habilitado
+## Auditoría integral del núcleo y compatibilidad Android — resultado parcial
 
 Joaquin indicó el 2026-08-28 que esta puerta también se gestione como una
 dependencia especializada. MAIN preparó
@@ -933,14 +934,38 @@ notificaciones, Room y compatibilidad Android. Puede devolver el núcleo apto,
 MAIN bloqueada por un defecto reproducible o una auditoría parcial si falta una
 autorización o evidencia obligatoria.
 
-El prompt está **HABILITADO** y la tarea **todavía no fue abierta**. El propio
-prompt no autoriza ADB, instalaciones, limpiezas ni desinstalaciones. Samsung,
-emuladores, una alarma exacta real y un reinicio físico conservan sus puertas
-expresas. Tampoco autoriza push.
+La dependencia auditó el HEAD documental `7570d25`, cuyo código funcional es
+idéntico a `55dcd60`, y devolvió `AUDITORÍA PARCIAL — NO CERRABLE`. Su batería
+local forzada quedó verde: 498/498 pruebas JVM, lint sin errores y APK Debug,
+QA, Release y ambos AndroidTest compilados. MAIN comprobó los XML, artefactos,
+Room, Git y contratos estructurales, y revalidó el conjunto Gradle sin cambios
+con `BUILD SUCCESSFUL`.
+
+No se reprodujeron defectos P0/P1. MAIN confirmó tres huecos reales:
+
+- falta una fotografía transversal única que reconcilie Calendario, Horas,
+  Resumen, tarjeta y avisos desde las mismas fuentes, UUID, reloj y zona;
+- falta una carrera CAS instrumentada entre dos escritores reales que parten
+  de la misma fotografía;
+- falta demostrar explícitamente que consultar Calendario, Resumen y tarjeta
+  no modifica filas, timestamps ni versiones de datos.
+
+La instrumentación actual no fue ejecutada. La evidencia física del 2026-08-27
+se conserva como heredada, no repetida. Los XML conectados presentes son
+anteriores: Room conserva 107/107, mientras el único XML de aplicación conserva
+84 casos con un fallo histórico previo al APK final; por eso no se usa como
+evidencia del HEAD actual. Android 13/API 33 no tiene imagen instalada. API 37
+también carece de imagen utilizable y puede seguir pendiente hasta el candidato
+final.
+
+El prompt auditor queda **PAUSADO / NO REEJECUTAR** hasta cerrar los tres huecos.
+No autoriza ADB, imágenes, instalaciones, limpiezas, una alarma exacta real,
+reinicio físico ni push. El resultado durable está en
+`docs/audits/2026-08-28-auditoria-integral-del-nucleo-y-compatibilidad-android-v2-parcial.md`.
 
 La segunda capa —widget, informes, copias locales, bloqueo y Ayuda 2.0— sigue
-cerrada hasta que MAIN reciba el handoff independiente, contraste su evidencia
-y registre el resultado.
+cerrada hasta integrar las pruebas correctivas, ejecutar Samsung API 36,
+Android 8/API 26 y Android 13/API 33, y repetir esta puerta.
 
 ## Flujo vigente de MAIN
 
@@ -996,16 +1021,18 @@ posteriores.
 
 ## Próximo paso
 
-Próximo evento y notificaciones quedó cerrado sin modificar Room V2 versión 5.
-El siguiente paso es abrir, cuando Joaquin lo indique, la dependencia
-**Auditoría integral del núcleo y compatibilidad Android** desde su prompt ya
-habilitado. La tarea todavía no está abierta, no existe otro prompt de
-implementación habilitado y la segunda capa no se abre hasta superar esa puerta
-y recibir la indicación de Joaquin.
+La auditoría integral quedó parcial. El siguiente paso recomendado es preparar,
+cuando Joaquin lo pida, una sola dependencia correctiva de pruebas para la
+fotografía transversal, la carrera CAS y las consultas sin escrituras. No debe
+cambiar comportamiento productivo salvo que una prueba nueva reproduzca un
+defecto real.
 
-Quedan como verificaciones separadas el disparo físico de una alarma exacta, un
-reinicio real del Samsung y API 37. API 26 sí quedó comprobado con la base V2
-actual. Los pushes autorizados para disponibilidad, Calendario final y Resumen
-fueron ejecutados y consumidos en `80fe8e5`, `fd6891e` y `ad777bb`. Cualquier
-push posterior, tag, Release y toda operación sobre `main` o producción
-continúan prohibidos.
+Después de integrar esa dependencia corresponde repetir la batería local y,
+con autorizaciones expresas y un serial por vez, ejecutar Samsung API 36,
+Android 8/API 26 y una imagen exacta Android 13/API 33. El disparo físico de una
+alarma exacta, un reinicio real del Samsung y API 37 conservan puertas separadas.
+
+No existe otro prompt habilitado. Los pushes autorizados para disponibilidad,
+Calendario final y Resumen fueron ejecutados y consumidos en `80fe8e5`,
+`fd6891e` y `ad777bb`. Cualquier push posterior, tag, Release y toda operación
+sobre `main` o producción continúan prohibidos.

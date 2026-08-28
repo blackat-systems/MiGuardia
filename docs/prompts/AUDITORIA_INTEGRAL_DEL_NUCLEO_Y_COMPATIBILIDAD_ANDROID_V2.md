@@ -1,6 +1,6 @@
 # Auditoría integral del núcleo y compatibilidad Android V2
 
-- Estado: **HABILITADO — AUDITORÍA DE SÓLO LECTURA / TAREA NO ABIERTA**
+- Estado: **PAUSADO — AUDITORÍA PARCIAL RECIBIDA / NO REEJECUTAR**
 - Fecha: 2026-08-28
 - Proyecto obligatorio:
   `C:\Users\Joaquin\Desktop\chatgptprojects\MiGuardia-2.0`
