@@ -54,7 +54,7 @@ La base común de la aplicación incluye:
 - carga manual individual y múltiple;
 - próximos eventos;
 - notas, feriados, vacaciones, carpetas médicas y fotos;
-- notificaciones, clima, futuros widgets, informes y copias;
+- notificaciones, clima, widget, informes y copias;
 - privacidad local y ausencia de cuentas o sincronización.
 
 La interfaz puede cambiar palabras según el sector, pero reutiliza la misma
@@ -181,9 +181,9 @@ Matriz Android 36/26/33 — cerrada
         ↓
 Repetición de auditoría integral — NÚCLEO APTO PARA SEGUNDA CAPA
         ↓
-Widget de próximo evento — prompt habilitado / tarea no abierta
+Widget de próximo evento — cerrado; Samsung verde, API 26/33 pendientes
         ↓
-Informes
+Informes — próximo bloque recomendado / todavía no habilitado
         ↓
 Copias y restauración locales
         ↓
@@ -216,10 +216,11 @@ Android 13/API 33. La repetición integral devolvió
 `NÚCLEO APTO PARA SEGUNDA CAPA` sin findings abiertos. La segunda capa queda
 desbloqueada y su primer bloque es Widget.
 
-Actualización posterior del 2026-08-29: por indicación de Joaquin, MAIN cerró
-el contrato `WIDGET_DE_PROXIMO_EVENTO_V2.md`. El prompt queda habilitado sobre
-la proyección V2 única y la tarea todavía no fue abierta. La implementación
-será secuencial, sin Glance, sin cambio de Room y sin otra dependencia activa.
+Actualización posterior del 2026-08-29: MAIN recibió, auditó, corrigió y cerró
+`WIDGET_DE_PROXIMO_EVENTO_V2.md`. La batería local y Samsung API 36 quedaron
+verdes, sin Glance ni cambio de Room. Android 8/API 26 y Android 13/API 33 se
+conservan como compatibilidad pendiente. Informes es el próximo bloque
+recomendado, pero todavía no fue preparado ni abierto.
 
 MAIN integra un bloque por vez. Cada bloque debe compilar, pasar sus pruebas,
 preservar el alcance ajeno y quedar documentado antes del siguiente. El mapa

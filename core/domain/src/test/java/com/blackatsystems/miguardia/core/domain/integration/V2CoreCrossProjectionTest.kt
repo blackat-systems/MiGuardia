@@ -60,6 +60,11 @@ import com.blackatsystems.miguardia.core.domain.work.calculateHoursContributions
 import com.blackatsystems.miguardia.core.domain.work.calculateHoursProgress
 import com.blackatsystems.miguardia.core.domain.work.resolveHoursReferenceSegment
 import com.blackatsystems.miguardia.core.domain.work.summarizeHoursContributions
+import com.blackatsystems.miguardia.core.domain.widget.WidgetMode
+import com.blackatsystems.miguardia.core.domain.widget.WidgetPrivacy
+import com.blackatsystems.miguardia.core.domain.widget.WidgetProjectionConfig
+import com.blackatsystems.miguardia.core.domain.widget.WidgetSize
+import com.blackatsystems.miguardia.core.domain.widget.projectWidget
 import java.time.Clock
 import java.time.DayOfWeek
 import java.time.Instant
@@ -149,6 +154,15 @@ class V2CoreCrossProjectionTest {
                 medicalLeaves = listOf(fixture.medicalLeave),
             ),
         )
+        val widget = projectWidget(
+            result = nextEvent,
+            config = WidgetProjectionConfig(
+                mode = WidgetMode.AUTOMATIC,
+                privacy = WidgetPrivacy.COMPLETE,
+                size = WidgetSize.EXPANDED,
+                configured = true,
+            ),
+        )
         val todayCard = projectTodayCard(
             now = fixture.clock.instant(),
             zoneId = fixture.zoneId,
@@ -228,6 +242,10 @@ class V2CoreCrossProjectionTest {
         assertEquals(Instant.parse("2026-08-25T18:00:00Z"), resumedAvailability.start)
         assertEquals(Instant.parse("2026-08-25T20:00:00Z"), resumedAvailability.end)
         assertTrue(nextEvent.events.none { it is NextEventItem.Shift })
+        assertEquals(
+            nextEvent.primaryEvents.map { it.identity },
+            widget.events.map { it.identity },
+        )
 
         assertEquals(TodayCardPrimary.FUTURE_EVENT, todayCard.primary)
         assertEquals(nextEvent, todayCard.futureEvent)
@@ -237,6 +255,7 @@ class V2CoreCrossProjectionTest {
 
         val boundary = notificationPlan.boundaries.single()
         assertEquals(resumedAvailability.identity, boundary.identity.eventIdentity)
+        assertEquals(boundary.identity.eventIdentity, widget.events.single().identity)
         assertEquals(NotificationBoundaryType.END, boundary.identity.type)
         assertEquals(Instant.parse("2026-08-25T20:00:00Z"), boundary.identity.triggerAt)
         assertEquals(null, boundary.identity.leadMinutes)

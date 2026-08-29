@@ -8,12 +8,20 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.blackatsystems.miguardia.core.database.LocalDataStore
 import com.blackatsystems.miguardia.core.domain.model.Shift
 import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
+import com.blackatsystems.miguardia.core.domain.nextevent.NextEventIdentity
 import com.blackatsystems.miguardia.core.domain.nextevent.NextEventItem
 import com.blackatsystems.miguardia.core.domain.nextevent.NextEventPrimary
 import com.blackatsystems.miguardia.core.domain.nextevent.TodayCardPrimary
+import com.blackatsystems.miguardia.core.domain.nextevent.projectNextEvent
+import com.blackatsystems.miguardia.core.domain.widget.WidgetMode
+import com.blackatsystems.miguardia.core.domain.widget.WidgetPrivacy
+import com.blackatsystems.miguardia.core.domain.widget.WidgetProjectionConfig
+import com.blackatsystems.miguardia.core.domain.widget.WidgetSize
+import com.blackatsystems.miguardia.core.domain.widget.projectWidget
 import com.blackatsystems.miguardia.ui.calendar.CalendarMonthObserver
 import com.blackatsystems.miguardia.ui.nextevent.NextEventObserver
 import com.blackatsystems.miguardia.ui.nextevent.TemporalDelay
+import com.blackatsystems.miguardia.ui.nextevent.V2WorkEventSourceObserver
 import com.blackatsystems.miguardia.ui.summary.SummaryObserver
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
@@ -38,7 +46,7 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class V2ReadOnlySurfacesInstrumentedTest {
     @Test
-    fun calendarSummaryAndTodayCardQueriesLeaveAllApplicationTablesUnchanged() = runBlocking {
+    fun calendarSummaryTodayCardAndWidgetQueriesLeaveAllApplicationTablesUnchanged() = runBlocking {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
         val databaseName = "v2-read-only-surfaces-${UUID.randomUUID()}.db"
         var store = LocalDataStore.create(context, databaseName)
@@ -113,6 +121,33 @@ class V2ReadOnlySurfacesInstrumentedTest {
                 (todayCard.futureEvent.primaryEvents.single() as NextEventItem.Shift).shiftId,
             )
             assertUnchanged(baseline, logicalSnapshot(sqlite), "después de la tarjeta superior")
+
+            val widget = withTimeout(5_000) {
+                val source = V2WorkEventSourceObserver(
+                    shifts = store.v2Shifts,
+                    availabilityWindows = store.availabilityWindows,
+                    shiftActuals = store.shiftActuals,
+                    independentExtras = store.independentExtraWork,
+                    explicitDayStatuses = store.explicitDayStatuses,
+                    vacations = store.vacations,
+                    medicalLeaves = store.medicalLeaves,
+                    workConfiguration = store.workConfiguration,
+                ).observe(WORK_DATE).first()
+                projectWidget(
+                    result = projectNextEvent(NOW, ZONE, source.toInput()),
+                    config = WidgetProjectionConfig(
+                        mode = WidgetMode.AUTOMATIC,
+                        privacy = WidgetPrivacy.COMPLETE,
+                        size = WidgetSize.EXPANDED,
+                        configured = true,
+                    ),
+                )
+            }
+            assertEquals(
+                shift.id,
+                (widget.events.single().identity as NextEventIdentity.Shift).shiftId,
+            )
+            assertUnchanged(baseline, logicalSnapshot(sqlite), "después del Widget")
 
             store.close()
             storeIsOpen = false

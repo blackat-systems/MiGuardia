@@ -1,7 +1,8 @@
 # Widget de próximo evento V2
 
-- Estado: **HABILITADO — TAREA NO ABIERTA**
+- Estado: **CERRADO — IMPLEMENTADO, AUDITADO Y VERIFICADO POR MAIN EN SAMSUNG API 36**
 - Fecha: 2026-08-29
+- Cierre MAIN: 2026-08-29
 - Proyecto obligatorio:
   `C:\Users\Joaquin\Desktop\chatgptprojects\MiGuardia-2.0`
 - Rama obligatoria: `codex/miguardia-2.0`
@@ -12,6 +13,11 @@
 - HEAD de entrada: el checkpoint documental exacto que MAIN informe al abrir
   la tarea
 - Nombre humano: **Widget de próximo evento**
+
+> Nota de cierre: el cuerpo conserva el contrato y las puertas vigentes al
+> abrir la dependencia. La evidencia ejecutada y los pendientes actuales están
+> registrados en
+> `docs/audits/2026-08-29-widget-de-proximo-evento-v2-main.md`.
 
 ## QUÉ HACE
 

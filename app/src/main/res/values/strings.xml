@@ -8,6 +8,7 @@
     <string name="vacations">Vacaciones</string>
     <string name="notifications">Notificaciones</string>
     <string name="weather">Clima</string>
+    <string name="widget_home">Widget de inicio</string>
     <string name="appearance">Apariencia</string>
     <string name="open_menu">Abrir menú</string>
     <string name="drawer_tagline">Tu guardia, clara y a mano.</string>
@@ -21,6 +22,7 @@
     <string name="drawer_vacations_description">Períodos y días corridos.</string>
     <string name="drawer_notifications_description">Recordatorios y privacidad.</string>
     <string name="drawer_weather_description">Pronóstico para tus guardias.</string>
+    <string name="drawer_widget_description">Próximo evento en la pantalla de inicio.</string>
     <string name="drawer_appearance_description">Tema y zoom de MiGuardia.</string>
     <string name="next_guard">Próximo evento</string>
     <string name="appearance_intro">Elegí cómo se ve MiGuardia sin modificar los ajustes de Android.</string>
@@ -54,4 +56,12 @@
     <string name="sunday_short">D</string>
     <string name="sunday">Domingo</string>
     <string name="notification_dismiss">Eliminar notificación</string>
+    <string name="widget_description">Próxima jornada, franco o evento laboral de MiGuardia.</string>
+    <string name="widget_content_description">Widget de próximo evento de MiGuardia</string>
+    <string name="widget_configure">Configurar</string>
+    <string name="widget_initial_title">WIDGET DE INICIO</string>
+    <string name="widget_initial_primary">Configurá este widget para empezar.</string>
+    <string name="widget_preview_title">PRÓXIMA JORNADA</string>
+    <string name="widget_preview_primary">Turno ficticio · Objetivo Norte</string>
+    <string name="widget_preview_schedule">29/08 · 19:00–07:00</string>
 </resources>

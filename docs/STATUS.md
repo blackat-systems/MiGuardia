@@ -6,13 +6,12 @@ PLANIFICACIÓN quedó cerrada por autorización expresa de Joaquin. Las decision
 funcionales reunidas constituyen la base vigente para avanzar; cerrar esta etapa
 no significa que exista ya una implementación nueva.
 
-El núcleo laboral V2 quedó aprobado por MAIN. Sus tres pruebas cruzadas, la
-batería local y la matriz Samsung API 36, Android 8/API 26 y Android 13/API 33
-están verificadas. La repetición de **Auditoría integral del núcleo y
-compatibilidad Android** devolvió `NÚCLEO APTO PARA SEGUNDA CAPA` sin findings
-abiertos. La segunda capa queda desbloqueada y Widget es el próximo bloque;
-Joaquin pidió continuar y MAIN dejó `WIDGET_DE_PROXIMO_EVENTO_V2.md`
-`HABILITADO`. La tarea implementadora todavía no fue abierta.
+El núcleo laboral V2 quedó aprobado por MAIN. La segunda capa está
+desbloqueada y su primer bloque, **Widget de próximo evento**, quedó
+implementado, auditado, corregido y verificado por MAIN en Samsung API 36.
+Android 8/API 26 y Android 13/API 33 permanecen como compatibilidad pendiente.
+Informes es el próximo bloque recomendado, pero todavía no fue preparado ni
+abierto.
 
 MAIN 2.0 está reactivada para recibir los handoffs que Joaquin entregue,
 auditarlos, integrarlos, probarlos y cerrarlos. Joaquin decide cuándo pedir el
@@ -1078,14 +1077,14 @@ FINDINGS: ninguno
 El prompt auditor queda `CERRADO`. La evidencia durable está en
 `docs/audits/2026-08-29-auditoria-integral-del-nucleo-y-compatibilidad-android-v2.md`.
 
-## Widget de próximo evento — prompt habilitado / tarea no abierta
+## Widget de próximo evento — cerrado por MAIN
 
-Joaquin indicó continuar con el primer bloque de la segunda capa. MAIN auditó
-el contrato histórico, la planificación V2, ADR 0032, el núcleo actual, las
-rutas de navegación, `RemoteViews` de Notificaciones y la caché de Clima.
+MAIN recibió el handoff implementado directamente en el checkout compartido,
+auditó cada frontera con tres revisiones independientes y corrigió findings de
+inmutabilidad, frontera temporal, identidad de `PendingIntent`, cambio de tema,
+recreación del guardado y cobertura Activity/UI.
 
-El prompt `docs/prompts/WIDGET_DE_PROXIMO_EVENTO_V2.md` queda `HABILITADO` con
-estas decisiones cerradas:
+El candidato conserva estas decisiones cerradas:
 
 - tres modos por instancia: Próxima jornada, Próximo franco explícito y
   Automático;
@@ -1098,13 +1097,16 @@ estas decisiones cerradas:
 - acceso visible `Widget de inicio` dentro de `Avisos y contexto`;
 - Room V5, veintisiete tablas, permisos, Gradle, SDK, versión y package
   intactos;
-- Samsung, emuladores, alarma exacta real, reinicio y push continúan como
-  puertas separadas.
+- Samsung API 36: app QA 248/248 y Room 108/108; matriz dirigida 27/27;
+- preview 3×2, configuración, privacidad Oculta, resize, retrato/paisaje y
+  navegación verificados en One UI Launcher;
+- Android 8/API 26 y Android 13/API 33: pendientes de autorización;
+- alarma exacta real, reinicio y push continúan como puertas separadas.
 
-La tarea no fue creada ni abierta. No existe implementación nueva y no debe
-declararse el Widget terminado desde esta preparación documental.
-La evidencia de preparación está en
-`docs/audits/2026-08-29-preparacion-widget-de-proximo-evento-v2.md`.
+La evidencia MAIN está en
+`docs/audits/2026-08-29-widget-de-proximo-evento-v2-main.md`. El bloque queda
+cerrado con API 26/API 33 registradas como compatibilidad pendiente, no como
+evidencia simulada.
 
 ## Flujo vigente de MAIN
 
@@ -1147,9 +1149,9 @@ posteriores.
   diagnósticos, tratamientos ni evoluciones. Psicología requeriría aprobar por
   separado la ampliación del catálogo actual de cuatro sectores;
 - monetización y distribución;
-- segunda capa ordenada: Widget —prompt habilitado, aún no implementado—,
-  informes, copias y restauración locales, bloqueo y Ayuda y recorrido inicial
-  2.0;
+- segunda capa ordenada: Widget —cerrado por MAIN; Samsung verde, API 26/API 33
+  pendientes de compatibilidad—, informes, copias y restauración locales,
+  bloqueo y Ayuda y recorrido inicial 2.0;
 - logo y tipografías definitivas.
 
 ## Todavía no implementado
@@ -1162,11 +1164,12 @@ posteriores.
 
 ## Próximo paso
 
-El núcleo quedó aprobado y la segunda capa está desbloqueada. El prompt
-**Widget de próximo evento** está habilitado y es el único contrato
-implementador vigente. El siguiente paso es abrir una única tarea desde el
-checkpoint documental que MAIN informe y esperar su handoff antes de preparar
-Informes.
+El núcleo quedó aprobado y la segunda capa está desbloqueada. **Widget de
+próximo evento** ya pasó auditoría, correcciones, batería local y Samsung API
+36. MAIN crea su checkpoint local automático. El siguiente bloque recomendado
+es **Informes locales de jornadas y horas**, pero su prompt o tarea sólo se
+prepara cuando Joaquin lo indique. API 26/API 33 permanecen pendientes para la
+matriz de compatibilidad posterior.
 
 El disparo físico de una alarma exacta, un reinicio real del Samsung y API 37
 conservan puertas separadas para el candidato final. Los pushes autorizados para

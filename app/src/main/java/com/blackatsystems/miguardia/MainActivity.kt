@@ -1,5 +1,6 @@
 package com.blackatsystems.miguardia
 
+import android.appwidget.AppWidgetManager
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
@@ -10,6 +11,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -44,6 +46,8 @@ import com.blackatsystems.miguardia.ui.theme.vigiliaSystemBarStyle
 import com.blackatsystems.miguardia.ui.vacation.VacationViewModel
 import com.blackatsystems.miguardia.ui.weather.WeatherViewModel
 import com.blackatsystems.miguardia.ui.worksetup.WorkSetupViewModel
+import com.blackatsystems.miguardia.ui.widget.WidgetViewModel
+import com.blackatsystems.miguardia.widget.WidgetConfigurationActivity
 import kotlinx.coroutines.launch
 import java.time.Clock
 import java.util.UUID
@@ -66,6 +70,14 @@ class MainActivity : ComponentActivity() {
             runtime = application.weatherRuntime,
             shifts = application.localDataStore.shifts,
             vacations = application.localDataStore.vacations,
+        )
+    }
+    private val widgetViewModel: WidgetViewModel by viewModels {
+        val application = application as MiGuardiaApplication
+        WidgetViewModel.Factory(
+            context = application,
+            preferences = application.widgetPreferences,
+            runtime = application.widgetRuntime,
         )
     }
     private val nextEventViewModel: NextEventViewModel by viewModels {
@@ -245,6 +257,9 @@ class MainActivity : ComponentActivity() {
                 )
             }
             val useDarkTheme = appThemeMode.resolve(isSystemInDarkTheme())
+            LaunchedEffect(useDarkTheme) {
+                (application as MiGuardiaApplication).widgetRuntime.refreshAll()
+            }
             val systemBarStyle = vigiliaSystemBarStyle(useDarkTheme)
             SideEffect {
                 window.statusBarColor = systemBarStyle.backgroundArgb
@@ -270,6 +285,7 @@ class MainActivity : ComponentActivity() {
                     photosViewModel = photosViewModel,
                     notificationViewModel = notificationViewModel,
                     weatherViewModel = weatherViewModel,
+                    widgetViewModel = widgetViewModel,
                     workSetupViewModel = workSetupViewModel,
                     hoursAndExtrasViewModel = hoursAndExtrasViewModel,
                     availabilityViewModel = availabilityViewModel,
@@ -285,6 +301,7 @@ class MainActivity : ComponentActivity() {
                         appThemeMode = selected
                         preferences.edit { putString(APP_THEME_MODE, selected.name) }
                     },
+                    onWidgetReconfigure = ::openWidgetConfiguration,
                 )
             }
         }
@@ -304,11 +321,21 @@ class MainActivity : ComponentActivity() {
         availabilityViewModel.refresh()
         notificationViewModel.refreshSystemAccess()
         weatherViewModel.onResume()
+        widgetViewModel.refresh()
     }
 
     private fun handleNotificationIntent(source: Intent?) {
         val action = source?.action ?: return
         if (action !in NotificationActions) return
+        if (action == ACTION_OPEN_CALENDAR) {
+            calendarViewModel.clearSelectedDate()
+            calendarNavigationRequest++
+            return
+        }
+        if (action == ACTION_OPEN_WEATHER) {
+            weatherViewModel.openGlobal()
+            return
+        }
         if (action == ACTION_VIEW_DATE) {
             val ownerDate = source.getStringExtra(EXTRA_OWNER_LOCAL_DATE)
                 ?.let { runCatching { java.time.LocalDate.parse(it) }.getOrNull() }
@@ -360,15 +387,32 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun openWidgetConfiguration(appWidgetId: Int) {
+        if (appWidgetId <= 0) return
+        startActivity(
+            Intent(this, WidgetConfigurationActivity::class.java)
+                .setAction(AppWidgetManager.ACTION_APPWIDGET_CONFIGURE)
+                .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId),
+        )
+    }
+
     companion object {
         const val ACTION_VIEW_SHIFT = "com.blackatsystems.miguardia.action.VIEW_SHIFT"
         const val ACTION_VIEW_DATE = "com.blackatsystems.miguardia.action.VIEW_DATE"
         const val ACTION_DIRECTIONS = "com.blackatsystems.miguardia.action.DIRECTIONS"
+        const val ACTION_OPEN_CALENDAR = "com.blackatsystems.miguardia.action.OPEN_CALENDAR"
+        const val ACTION_OPEN_WEATHER = "com.blackatsystems.miguardia.action.OPEN_WEATHER"
         const val EXTRA_SHIFT_ID = "shift_id"
         const val EXTRA_OWNER_LOCAL_DATE = "owner_local_date"
         const val DISPLAY_PREFERENCES = "miguardia_display_preferences"
         const val APP_ZOOM_PERCENT = "app_zoom_percent"
         const val APP_THEME_MODE = "app_theme_mode"
-        private val NotificationActions = setOf(ACTION_VIEW_SHIFT, ACTION_VIEW_DATE, ACTION_DIRECTIONS)
+        private val NotificationActions = setOf(
+            ACTION_VIEW_SHIFT,
+            ACTION_VIEW_DATE,
+            ACTION_DIRECTIONS,
+            ACTION_OPEN_CALENDAR,
+            ACTION_OPEN_WEATHER,
+        )
     }
 }

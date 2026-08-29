@@ -181,6 +181,11 @@ import com.blackatsystems.miguardia.ui.weather.WeatherActions
 import com.blackatsystems.miguardia.ui.weather.ShiftWeatherBrief
 import com.blackatsystems.miguardia.ui.weather.WeatherSurface
 import com.blackatsystems.miguardia.ui.weather.WeatherSurfaceHost
+import com.blackatsystems.miguardia.ui.widget.WidgetActions
+import com.blackatsystems.miguardia.ui.widget.WidgetSurface
+import com.blackatsystems.miguardia.ui.widget.WidgetSurfaceHost
+import com.blackatsystems.miguardia.ui.widget.WidgetUiState
+import com.blackatsystems.miguardia.ui.widget.WidgetViewModel
 import com.blackatsystems.miguardia.ui.weather.WeatherUiState
 import com.blackatsystems.miguardia.ui.weather.WeatherViewModel
 import com.blackatsystems.miguardia.ui.worksetup.V2FirstWorkSetGuide
@@ -226,6 +231,7 @@ private enum class DrawerAction(
     VACATIONS(R.string.vacations, R.string.drawer_vacations_description, "∿", "drawer-action-vacations"),
     NOTIFICATIONS(R.string.notifications, R.string.drawer_notifications_description, "◌", "drawer-action-notifications"),
     WEATHER(R.string.weather, R.string.drawer_weather_description, "☁", "drawer-action-weather"),
+    WIDGET(R.string.widget_home, R.string.drawer_widget_description, "▣", "drawer-action-widget"),
 }
 
 private val WorkDrawerActions = listOf(
@@ -236,6 +242,7 @@ private val WorkDrawerActions = listOf(
 private val ContextDrawerActions = listOf(
     DrawerAction.NOTIFICATIONS,
     DrawerAction.WEATHER,
+    DrawerAction.WIDGET,
 )
 
 @Composable
@@ -394,6 +401,7 @@ fun MiGuardiaApp(
     photosViewModel: PhotosViewModel,
     notificationViewModel: NotificationViewModel,
     weatherViewModel: WeatherViewModel,
+    widgetViewModel: WidgetViewModel,
     workSetupViewModel: WorkSetupViewModel,
     hoursAndExtrasViewModel: HoursAndExtrasViewModel,
     availabilityViewModel: AvailabilityViewModel,
@@ -404,6 +412,7 @@ fun MiGuardiaApp(
     onAppZoomChange: (AppZoom) -> Unit = {},
     appThemeMode: AppThemeMode = AppThemeMode.SYSTEM,
     onAppThemeModeChange: (AppThemeMode) -> Unit = {},
+    onWidgetReconfigure: (Int) -> Unit = {},
 ) {
     val calendarState by calendarViewModel.uiState.collectAsStateWithLifecycle()
     val nextEventState by nextEventViewModel.uiState.collectAsStateWithLifecycle()
@@ -416,6 +425,7 @@ fun MiGuardiaApp(
     val photosState by photosViewModel.uiState.collectAsStateWithLifecycle()
     val notificationState by notificationViewModel.uiState.collectAsStateWithLifecycle()
     val weatherState by weatherViewModel.uiState.collectAsStateWithLifecycle()
+    val widgetState by widgetViewModel.uiState.collectAsStateWithLifecycle()
     val workSetupState by workSetupViewModel.uiState.collectAsStateWithLifecycle()
     val hoursAndExtrasState by hoursAndExtrasViewModel.uiState.collectAsStateWithLifecycle()
     val availabilityState by availabilityViewModel.uiState.collectAsStateWithLifecycle()
@@ -454,6 +464,8 @@ fun MiGuardiaApp(
         notificationActions = NotificationActions.from(notificationViewModel),
         weatherState = weatherState,
         weatherActions = WeatherActions.from(weatherViewModel),
+        widgetState = widgetState,
+        widgetActions = WidgetActions.from(widgetViewModel, onWidgetReconfigure),
         workSetupState = workSetupState,
         workSetupActions = WorkSetupActions.from(workSetupViewModel),
         hoursAndExtrasState = hoursAndExtrasState,
@@ -508,6 +520,8 @@ fun MiGuardiaApp(
     notificationActions: NotificationActions = NotificationActions(),
     weatherState: WeatherUiState = WeatherUiState(),
     weatherActions: WeatherActions = WeatherActions(),
+    widgetState: WidgetUiState = WidgetUiState(),
+    widgetActions: WidgetActions = WidgetActions(),
     workSetupState: WorkSetupUiState = previewV2WorkSetupUiState(),
     workSetupActions: WorkSetupActions = WorkSetupActions(),
     hoursAndExtrasState: HoursAndExtrasUiState = HoursAndExtrasUiState(),
@@ -562,6 +576,7 @@ fun MiGuardiaApp(
         photosState.surface != PhotosSurface.NONE ||
         notificationState.surface != NotificationSurface.NONE ||
         weatherState.surface != WeatherSurface.NONE ||
+        widgetState.surface != WidgetSurface.NONE ||
         workSetupState.surface != WorkSetupSurface.NONE ||
         v2ManualLoadActive ||
         v2ShiftEditActive ||
@@ -737,6 +752,7 @@ fun MiGuardiaApp(
                 DrawerAction.VACATIONS -> vacationActions.openList(calendarState.visibleMonth)
                 DrawerAction.NOTIFICATIONS -> notificationActions.openGlobal()
                 DrawerAction.WEATHER -> weatherActions.openGlobal()
+                DrawerAction.WIDGET -> widgetActions.open()
             }
         }
     }
@@ -1003,6 +1019,9 @@ fun MiGuardiaApp(
     }
     if (weatherState.surface != WeatherSurface.NONE) {
         WeatherSurfaceHost(weatherState, weatherActions)
+    }
+    if (widgetState.surface != WidgetSurface.NONE) {
+        WidgetSurfaceHost(widgetState, widgetActions)
     }
     if (workSetupState.surface != WorkSetupSurface.NONE) {
         WorkSetupSurfaceHost(

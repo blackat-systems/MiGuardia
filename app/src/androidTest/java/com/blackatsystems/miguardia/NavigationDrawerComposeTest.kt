@@ -49,6 +49,9 @@ import com.blackatsystems.miguardia.ui.vacation.VacationUiState
 import com.blackatsystems.miguardia.ui.weather.WeatherSurface
 import com.blackatsystems.miguardia.ui.weather.WeatherActions
 import com.blackatsystems.miguardia.ui.weather.WeatherUiState
+import com.blackatsystems.miguardia.ui.widget.WidgetActions
+import com.blackatsystems.miguardia.ui.widget.WidgetSurface
+import com.blackatsystems.miguardia.ui.widget.WidgetUiState
 import com.blackatsystems.miguardia.ui.worksetup.WorkSetupActions
 import com.blackatsystems.miguardia.core.domain.work.WorkSetupState
 import com.blackatsystems.miguardia.ui.worksetup.WorkSetupSurface
@@ -83,6 +86,7 @@ class NavigationDrawerComposeTest {
             "Vacaciones",
             "Notificaciones",
             "Clima",
+            "Widget de inicio",
             "Apariencia",
         ).forEach { label ->
             compose.onAllNodes(
@@ -145,6 +149,7 @@ class NavigationDrawerComposeTest {
                     ),
                     notificationActions = NotificationActions(openGlobal = { opened += "notifications" }),
                     weatherActions = WeatherActions(openGlobal = { opened += "weather" }),
+                    widgetActions = WidgetActions(open = { opened += "widget" }),
                 )
             }
         }
@@ -155,6 +160,7 @@ class NavigationDrawerComposeTest {
             "drawer-action-vacations",
             "drawer-action-notifications",
             "drawer-action-weather",
+            "drawer-action-widget",
         ).forEach(::openAction)
 
         compose.runOnIdle {
@@ -165,6 +171,7 @@ class NavigationDrawerComposeTest {
                     "vacations:$expectedMonth",
                     "notifications",
                     "weather",
+                    "widget",
                 ),
                 opened,
             )
@@ -223,6 +230,7 @@ class NavigationDrawerComposeTest {
         var photos by mutableStateOf(PhotosUiState(month = month))
         var notifications by mutableStateOf(NotificationUiState())
         var weather by mutableStateOf(WeatherUiState())
+        var widget by mutableStateOf(WidgetUiState())
         var workSetup by mutableStateOf(previewV2WorkSetupUiState())
         val ready = workSetup.rootState as WorkSetupState.V2Ready
         var recurring by mutableStateOf(V2RecurringUiState())
@@ -241,6 +249,7 @@ class NavigationDrawerComposeTest {
                     photosState = photos,
                     notificationState = notifications,
                     weatherState = weather,
+                    widgetState = widget,
                     workSetupState = workSetup,
                     v2RecurringState = recurring,
                 )
@@ -277,6 +286,11 @@ class NavigationDrawerComposeTest {
         assertMenuBlocked()
         compose.runOnIdle {
             weather = weather.copy(surface = WeatherSurface.NONE)
+            widget = widget.copy(surface = WidgetSurface.GLOBAL)
+        }
+        assertMenuBlocked()
+        compose.runOnIdle {
+            widget = widget.copy(surface = WidgetSurface.NONE)
             recurring = V2RecurringUiState(
                 stage = V2RecurringStage.FORM,
                 timelineId = ready.timelineId,

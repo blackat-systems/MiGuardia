@@ -275,7 +275,8 @@ mayor autoridad cambia, se actualizan primero el grafo, el índice y el estado.
 Sólo después de cerrar y auditar el núcleo laboral:
 
 17. Adaptar el widget al motor final de próximo evento
-    —`WIDGET_DE_PROXIMO_EVENTO_V2.md` habilitado; tarea no abierta—.
+    —cerrado por MAIN el 2026-08-29; Samsung API 36 verde, Android 8/API 26 y
+    Android 13/API 33 pendientes de compatibilidad—.
 18. Generar informes locales de jornadas y horas.
 19. Crear y restaurar copias locales seguras.
 20. Proteger el acceso local a MiGuardia.
@@ -581,7 +582,9 @@ Android 8/API 26 y Android 13/API 33 fue ejecutada. La repetición de
 `AUDITORIA_INTEGRAL_DEL_NUCLEO_Y_COMPATIBILIDAD_ANDROID_V2.md` cerró con
 `NÚCLEO APTO PARA SEGUNDA CAPA` y sin findings abiertos.
 
-Por indicación de Joaquin, `WIDGET_DE_PROXIMO_EVENTO_V2.md` es el único prompt
-implementador habilitado. Su tarea todavía no fue abierta. MAIN debe conservar
-el checkout controlado, integrar este bloque antes de preparar Informes y no
-heredar ninguna autorización anterior de ADB, push, alarma exacta o reinicio.
+`WIDGET_DE_PROXIMO_EVENTO_V2.md` quedó cerrado por MAIN después de corregir los
+findings de dominio, runtime y UI y verificar la batería local y Samsung API 36.
+Android 8/API 26 y Android 13/API 33 siguen pendientes de compatibilidad. MAIN
+debe conservar el checkout controlado y esperar la indicación de Joaquin antes
+de preparar Informes; no hereda ninguna autorización anterior de ADB, push,
+alarma exacta o reinicio.

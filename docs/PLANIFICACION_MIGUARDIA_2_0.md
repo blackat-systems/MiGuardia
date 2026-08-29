@@ -546,7 +546,8 @@ Validación por impacto:
 Después del checkpoint y la auditoría del núcleo laboral, la hoja de ruta
 continúa con:
 
-1. widget basado en el motor final de próximo evento;
+1. widget basado en el motor final de próximo evento —cerrado por MAIN; Samsung
+   verde, API 26/API 33 pendientes de compatibilidad—;
 2. informes locales de jornadas y horas;
 3. copias y restauración locales seguras;
 4. bloqueo de acceso local;
@@ -559,6 +560,10 @@ su tarea cuando Joaquin lo indica. Una vez recibido el handoff, la auditoría,
 integración, validación, documentación y checkpoint local quedan a cargo de
 MAIN. Este orden no autoriza servicios externos, publicación ni decisiones
 funcionales todavía ausentes.
+
+Estado del 2026-08-29: el Widget quedó cerrado por MAIN. Informes locales de
+jornadas y horas es el siguiente bloque recomendado, pero requiere la indicación
+expresa de Joaquin antes de preparar su prompt o abrir su tarea.
 
 ## 21. Idea futura guardada: agenda profesional
 
