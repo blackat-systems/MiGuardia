@@ -175,7 +175,9 @@ Próximo evento y notificaciones — cerrado
         ↓
 Auditoría integral del núcleo y compatibilidad Android — parcial
         ↓
-Cerrar tres huecos, ejecutar matriz Android 36/26/33 y repetir auditoría
+Pruebas cruzadas del núcleo V2 — prompt habilitado, tarea no abierta
+        ↓
+Ejecutar matriz Android 36/26/33 y repetir auditoría
         ↓
 Widget, informes, copias, bloqueo y Ayuda 2.0
         ↓
@@ -195,7 +197,9 @@ y no reprodujo defectos P0/P1, pero devolvió `AUDITORÍA PARCIAL — NO CERRABL
 Faltan una fotografía transversal única, una carrera CAS real, una prueba
 explícita de consultas sin escrituras y la matriz actual en Samsung API 36,
 Android 8/API 26 y Android 13/API 33. La segunda capa permanece cerrada hasta
-corregir esos huecos y repetir esta puerta.
+corregir esos huecos y repetir esta puerta. Joaquin indicó preparar la
+dependencia `PRUEBAS_CRUZADAS_DEL_NUCLEO_V2.md`; su prompt está habilitado, pero
+la tarea todavía no fue abierta.
 
 MAIN integra un bloque por vez. Cada bloque debe compilar, pasar sus pruebas,
 preservar el alcance ajeno y quedar documentado antes del siguiente. El mapa

@@ -18,9 +18,9 @@
 - **Última dependencia ejecutada:** la auditoría integral del núcleo devolvió
   `AUDITORÍA PARCIAL — NO CERRABLE`; MAIN confirmó tres huecos de cobertura y
   la matriz Android actual permanece pendiente.
-- **Próxima acción:** preparar, sólo cuando Joaquin lo pida, una dependencia
-  correctiva acotada a pruebas cruzadas. No hay otro prompt habilitado y la
-  segunda capa continúa cerrada.
+- **Próxima acción:** `PRUEBAS_CRUZADAS_DEL_NUCLEO_V2.md` está habilitado, pero
+  la tarea todavía no fue abierta. Cierra únicamente los tres huecos de
+  cobertura; la segunda capa continúa cerrada.
 - **Commits locales:** MAIN los crea automáticamente como checkpoints de
   bloques comprobados.
 - **Push puntual anterior de la rama 2.0:** ejecutado y verificado hasta
@@ -93,6 +93,7 @@ prevalecen para el estado operativo.
 | `RESUMEN_PERSONALIZABLE_V2.md` | **CERRADO** | Resumen mensual derivado, detalles ordenables y explicación exacta de cada cifra sin guardar totales ni modificar Room |
 | `PROXIMO_EVENTO_Y_NOTIFICACIONES_V2.md` | **CERRADO** | Una sola verdad V2 para la tarjeta y los avisos de jornadas o disponibilidad, auditada y verificada por MAIN |
 | `AUDITORIA_INTEGRAL_DEL_NUCLEO_Y_COMPATIBILIDAD_ANDROID_V2.md` | **PAUSADO / AUDITORÍA PARCIAL** | No reejecutar hasta cerrar tres huecos de pruebas cruzadas y autorizar la matriz Android 36/26/33 |
+| `PRUEBAS_CRUZADAS_DEL_NUCLEO_V2.md` | **HABILITADO — TAREA NO ABIERTA** | Agrega exactamente tres pruebas: una fotografía transversal, una carrera CAS real y la demostración de que consultar no escribe |
 
 ## Contratos históricos de MiGuardia 1.0
 
@@ -159,8 +160,12 @@ Joaquin indicó que quiere preparar o abrir la siguiente:
     compatibilidad Android mediante
     `AUDITORIA_INTEGRAL_DEL_NUCLEO_Y_COMPATIBILIDAD_ANDROID_V2.md`; requiere
     cerrar tres huecos de cobertura y ejecutar la matriz Android 36/26/33;
-14. segunda capa: widget, informes, copias, bloqueo y Ayuda/recorrido inicial;
-15. auditoría de la aplicación completa y candidato local.
+14. **Habilitado, tarea no abierta:** incorporar exactamente tres barreras de
+    prueba mediante `PRUEBAS_CRUZADAS_DEL_NUCLEO_V2.md`;
+15. después de integrar las pruebas, ejecutar la matriz Android 36/26/33 y
+    repetir la auditoría integral;
+16. segunda capa: widget, informes, copias, bloqueo y Ayuda/recorrido inicial;
+17. auditoría de la aplicación completa y candidato local.
 
 Cuando Joaquin pide un prompt, MAIN lo habilita en este índice después de cerrar
 su contrato y dependencias, y crea automáticamente el checkpoint documental

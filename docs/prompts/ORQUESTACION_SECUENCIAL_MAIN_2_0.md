@@ -249,6 +249,11 @@ La secuencia conocida al redactar este prompt es:
     2026-08-27—.
 16. Auditar integralmente el núcleo y su compatibilidad Android —auditoría
     parcial recibida; correcciones de pruebas y matriz física pendientes—.
+    - 16.a. Agregar la fotografía transversal, la carrera CAS real y la prueba
+      de consultas sin escrituras mediante
+      `PRUEBAS_CRUZADAS_DEL_NUCLEO_V2.md` —prompt habilitado, tarea no abierta—.
+    - 16.b. Integrar esas pruebas, ejecutar la matriz Android 36/26/33 y repetir
+      la auditoría integral antes de abrir la segunda capa.
 
 Las ampliaciones futuras de situaciones especiales y cualquier consolidación
 adicional del motor de horas quedan fuera de esta cadena inmediata. Sólo se
@@ -578,7 +583,8 @@ reproducidos, pero sí tres huecos de cobertura obligatoria y falta la matriz
 actual en Samsung API 36, Android 8/API 26 y Android 13/API 33.
 
 El prompt auditor queda pausado y no debe reejecutarse antes de cerrar esos
-huecos. No existe otro prompt habilitado. MAIN debe conservar el checkout
+huecos. `PRUEBAS_CRUZADAS_DEL_NUCLEO_V2.md` es el único prompt implementador
+habilitado y su tarea todavía no fue abierta. MAIN debe conservar el checkout
 controlado y no abrir la segunda capa —widget, informes, copias, bloqueo y
 Ayuda 2.0— hasta completar la corrección, repetir la auditoría y recibir la
 indicación de Joaquin.

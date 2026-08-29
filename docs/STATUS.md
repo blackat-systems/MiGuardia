@@ -11,8 +11,8 @@ probado en Samsung API 36 y Android 8 API 26 e integrado por MAIN sin modificar
 Room V2 versión 5. La dependencia **Auditoría integral del núcleo y
 compatibilidad Android** ya fue ejecutada y devolvió `AUDITORÍA PARCIAL — NO
 CERRABLE`: no reprodujo defectos P0/P1, pero faltan tres pruebas cruzadas y la
-matriz Android actual. No existe otro prompt habilitado y la segunda capa sigue
-cerrada.
+matriz Android actual. El prompt **Pruebas cruzadas del núcleo V2** quedó
+habilitado, pero su tarea todavía no fue abierta. La segunda capa sigue cerrada.
 
 MAIN 2.0 está reactivada para recibir los handoffs que Joaquin entregue,
 auditarlos, integrarlos, probarlos y cerrarlos. Joaquin decide cuándo pedir el
@@ -967,6 +967,34 @@ La segunda capa —widget, informes, copias locales, bloqueo y Ayuda 2.0— sigu
 cerrada hasta integrar las pruebas correctivas, ejecutar Samsung API 36,
 Android 8/API 26 y Android 13/API 33, y repetir esta puerta.
 
+## Pruebas cruzadas del núcleo V2 — prompt habilitado
+
+Joaquin indicó el 2026-08-28 continuar con la dependencia correctiva recomendada.
+MAIN preparó `docs/prompts/PRUEBAS_CRUZADAS_DEL_NUCLEO_V2.md` sobre la base
+documental limpia `d16ca11`.
+
+La dependencia agrega exclusivamente tres barreras de prueba:
+
+1. una fotografía JVM única que reconcilia Calendario, Horas, Resumen, tarjeta,
+   próximo evento y avisos desde los mismos UUID, reloj, zona y fuentes;
+2. una carrera Room real entre dos escritores que parten de la misma fotografía
+   y debe terminar con un éxito, un conflicto y ningún dato parcial;
+3. una prueba instrumentada que demuestra que consultar Calendario, Resumen y
+   tarjeta no cambia ninguna de las 27 tablas de aplicación, sus timestamps ni
+   su huella lógica.
+
+El alcance queda limitado a `core/domain/src/test/**`,
+`core/database/src/androidTest/**` y `app/src/androidTest/**`, con exactamente
+tres métodos `@Test` nuevos. Si alguno reproduce un defecto productivo, la
+dependencia debe detenerse y devolver `MAIN BLOQUEADA`; no puede corregir
+`src/main` ni ampliar su misión.
+
+El prompt está **HABILITADO — TAREA NO ABIERTA**. Prepararlo no creó otro chat,
+rama ni worktree y no autorizó ADB, Samsung, emuladores, imágenes, instalaciones,
+una alarma exacta real, reinicio físico ni push. El prompt auditor integral
+permanece pausado hasta integrar estas pruebas y completar después la matriz
+Android obligatoria.
+
 ## Flujo vigente de MAIN
 
 - Joaquin entrega un handoff o pide preparar el prompt de una nueva tarea;
@@ -1021,18 +1049,17 @@ posteriores.
 
 ## Próximo paso
 
-La auditoría integral quedó parcial. El siguiente paso recomendado es preparar,
-cuando Joaquin lo pida, una sola dependencia correctiva de pruebas para la
-fotografía transversal, la carrera CAS y las consultas sin escrituras. No debe
-cambiar comportamiento productivo salvo que una prueba nueva reproduzca un
-defecto real.
+El prompt `docs/prompts/PRUEBAS_CRUZADAS_DEL_NUCLEO_V2.md` está listo y
+habilitado. El siguiente paso es que Joaquin lo envíe al nuevo chat cuando
+decida abrir la tarea. La dependencia no debe cambiar comportamiento productivo;
+si una prueba reproduce un defecto real, debe detenerse y devolverlo a MAIN.
 
 Después de integrar esa dependencia corresponde repetir la batería local y,
 con autorizaciones expresas y un serial por vez, ejecutar Samsung API 36,
 Android 8/API 26 y una imagen exacta Android 13/API 33. El disparo físico de una
 alarma exacta, un reinicio real del Samsung y API 37 conservan puertas separadas.
 
-No existe otro prompt habilitado. Los pushes autorizados para disponibilidad,
-Calendario final y Resumen fueron ejecutados y consumidos en `80fe8e5`,
-`fd6891e` y `ad777bb`. Cualquier push posterior, tag, Release y toda operación
-sobre `main` o producción continúan prohibidos.
+No existe otro prompt implementador habilitado. Los pushes autorizados para
+disponibilidad, Calendario final y Resumen fueron ejecutados y consumidos en
+`80fe8e5`, `fd6891e` y `ad777bb`. Cualquier push posterior, tag, Release y toda
+operación sobre `main` o producción continúan prohibidos.
