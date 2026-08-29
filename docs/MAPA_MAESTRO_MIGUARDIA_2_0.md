@@ -183,7 +183,7 @@ Repetición de auditoría integral — NÚCLEO APTO PARA SEGUNDA CAPA
         ↓
 Widget de próximo evento — cerrado; Samsung verde, API 26/33 pendientes
         ↓
-Informes — próximo bloque recomendado / todavía no habilitado
+Informes locales — prompt habilitado / implementación pendiente
         ↓
 Copias y restauración locales
         ↓
@@ -220,7 +220,15 @@ Actualización posterior del 2026-08-29: MAIN recibió, auditó, corrigió y cer
 `WIDGET_DE_PROXIMO_EVENTO_V2.md`. La batería local y Samsung API 36 quedaron
 verdes, sin Glance ni cambio de Room. Android 8/API 26 y Android 13/API 33 se
 conservan como compatibilidad pendiente. Informes es el próximo bloque
-recomendado, pero todavía no fue preparado ni abierto.
+recomendado.
+
+Actualización de Informes del 2026-08-29: Joaquin autorizó continuar. MAIN
+auditó las fuentes V2, fijó ADR 0034 y habilitó
+`INFORMES_LOCALES_DE_JORNADAS_Y_HORAS_V2.md`. El bloque debe reutilizar la
+misma fórmula de Horas y Resumen, generar PDF/XLSX local sin dependencia nueva
+y mantener notas, nombre, puesto y fotos apagados por defecto. La
+implementación permanece pendiente hasta que la única tarea especialista pase
+Puerta 0.
 
 MAIN integra un bloque por vez. Cada bloque debe compilar, pasar sus pruebas,
 preservar el alcance ajeno y quedar documentado antes del siguiente. El mapa

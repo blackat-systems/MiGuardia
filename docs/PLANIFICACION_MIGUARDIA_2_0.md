@@ -561,9 +561,12 @@ integración, validación, documentación y checkpoint local quedan a cargo de
 MAIN. Este orden no autoriza servicios externos, publicación ni decisiones
 funcionales todavía ausentes.
 
-Estado del 2026-08-29: el Widget quedó cerrado por MAIN. Informes locales de
-jornadas y horas es el siguiente bloque recomendado, pero requiere la indicación
-expresa de Joaquin antes de preparar su prompt o abrir su tarea.
+Estado del 2026-08-29: el Widget quedó cerrado por MAIN. Joaquin indicó
+continuar con Informes locales de jornadas y horas. ADR 0034 y
+`INFORMES_LOCALES_DE_JORNADAS_Y_HORAS_V2.md` fijan un PDF nativo y un XLSX
+tabular sobre la misma proyección de Horas/Resumen, sin guardar totales ni
+agregar una dependencia. El prompt está habilitado y su implementación queda
+pendiente de una única tarea especialista.
 
 ## 21. Idea futura guardada: agenda profesional
 

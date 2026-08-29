@@ -10,8 +10,9 @@ El núcleo laboral V2 quedó aprobado por MAIN. La segunda capa está
 desbloqueada y su primer bloque, **Widget de próximo evento**, quedó
 implementado, auditado, corregido y verificado por MAIN en Samsung API 36.
 Android 8/API 26 y Android 13/API 33 permanecen como compatibilidad pendiente.
-Informes es el próximo bloque recomendado, pero todavía no fue preparado ni
-abierto.
+Joaquin autorizó continuar y MAIN preparó el contrato de **Informes locales de
+jornadas y horas**. Su prompt está habilitado para una única dependencia; la
+implementación todavía no fue recibida ni integrada.
 
 MAIN 2.0 está reactivada para recibir los handoffs que Joaquin entregue,
 auditarlos, integrarlos, probarlos y cerrarlos. Joaquin decide cuándo pedir el
@@ -1150,8 +1151,9 @@ posteriores.
   separado la ampliación del catálogo actual de cuatro sectores;
 - monetización y distribución;
 - segunda capa ordenada: Widget —cerrado por MAIN; Samsung verde, API 26/API 33
-  pendientes de compatibilidad—, informes, copias y restauración locales,
-  bloqueo y Ayuda y recorrido inicial 2.0;
+  pendientes de compatibilidad—, Informes —prompt habilitado, implementación
+  pendiente—, copias y restauración locales, bloqueo y Ayuda y recorrido
+  inicial 2.0;
 - logo y tipografías definitivas.
 
 ## Todavía no implementado
@@ -1166,10 +1168,12 @@ posteriores.
 
 El núcleo quedó aprobado y la segunda capa está desbloqueada. **Widget de
 próximo evento** ya pasó auditoría, correcciones, batería local y Samsung API
-36. MAIN crea su checkpoint local automático. El siguiente bloque recomendado
-es **Informes locales de jornadas y horas**, pero su prompt o tarea sólo se
-prepara cuando Joaquin lo indique. API 26/API 33 permanecen pendientes para la
-matriz de compatibilidad posterior.
+36 y tiene checkpoint local. Joaquin autorizó el siguiente bloque y
+`INFORMES_LOCALES_DE_JORNADAS_Y_HORAS_V2.md` quedó habilitado. MAIN crea su
+checkpoint documental, verifica una única Puerta 0 y despacha la dependencia
+`18 - Informes locales`. Copias, bloqueo y Ayuda permanecen cerrados. API
+26/API 33 del Widget continúan pendientes para la matriz de compatibilidad
+posterior.
 
 El disparo físico de una alarma exacta, un reinicio real del Samsung y API 37
 conservan puertas separadas para el candidato final. Los pushes autorizados para
