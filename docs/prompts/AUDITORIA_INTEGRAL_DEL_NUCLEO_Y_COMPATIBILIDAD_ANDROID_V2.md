@@ -1,7 +1,7 @@
 # Auditoría integral del núcleo y compatibilidad Android V2
 
-- Estado: **PAUSADO — AUDITORÍA PARCIAL RECIBIDA / NO REEJECUTAR**
-- Fecha: 2026-08-28
+- Estado: **HABILITADO — REPETICIÓN INTEGRAL AUTORIZADA**
+- Fecha: 2026-08-29
 - Proyecto obligatorio:
   `C:\Users\Joaquin\Desktop\chatgptprojects\MiGuardia-2.0`
 - Rama obligatoria: `codex/miguardia-2.0`
@@ -642,7 +642,7 @@ Con autorización:
     -Pandroid.testInstrumentationRunnerArguments.notClass='com.blackatsystems.miguardia.NotificationAlarmEndToEndInstrumentedTest#realQaAlarmsDeliverReminderUpdateAtStartAndCancelAtEnd'
   ```
 
-  El conteo esperado según el inventario actual es 234/234; verificá el número
+  El conteo esperado según el inventario actual es 235/235; verificá el número
   real desde la salida y los XML en vez de copiar esa cifra;
 - recorrer con datos ficticios el flujo continuo configuración → jornada →
   repetición → horario real → extra → disponibilidad → Calendario → Resumen →

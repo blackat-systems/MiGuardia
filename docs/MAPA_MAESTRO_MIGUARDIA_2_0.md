@@ -173,11 +173,13 @@ Resumen personalizable — cerrado
         ↓
 Próximo evento y notificaciones — cerrado
         ↓
-Auditoría integral del núcleo y compatibilidad Android — parcial
+Auditoría integral del núcleo y compatibilidad Android — parcial histórica
         ↓
-Pruebas cruzadas del núcleo V2 — prompt habilitado, tarea no abierta
+Pruebas cruzadas del núcleo V2 — cerradas
         ↓
-Ejecutar matriz Android 36/26/33 y repetir auditoría
+Matriz Android 36/26/33 — en curso; API 26 y API 33 verificadas
+        ↓
+Repetición de auditoría integral — habilitada
         ↓
 Widget, informes, copias, bloqueo y Ayuda 2.0
         ↓
@@ -198,8 +200,12 @@ Faltan una fotografía transversal única, una carrera CAS real, una prueba
 explícita de consultas sin escrituras y la matriz actual en Samsung API 36,
 Android 8/API 26 y Android 13/API 33. La segunda capa permanece cerrada hasta
 corregir esos huecos y repetir esta puerta. Joaquin indicó preparar la
-dependencia `PRUEBAS_CRUZADAS_DEL_NUCLEO_V2.md`; su prompt está habilitado, pero
-la tarea todavía no fue abierta.
+dependencia `PRUEBAS_CRUZADAS_DEL_NUCLEO_V2.md`.
+
+Actualización del 2026-08-29: las tres pruebas cruzadas quedaron integradas y
+verificadas. La matriz actual pasó en Android 8/API 26 y Android 13/API 33;
+resta Samsung API 36. La repetición de la auditoría integral está habilitada y
+la segunda capa continúa cerrada hasta su veredicto.
 
 MAIN integra un bloque por vez. Cada bloque debe compilar, pasar sus pruebas,
 preservar el alcance ajeno y quedar documentado antes del siguiente. El mapa

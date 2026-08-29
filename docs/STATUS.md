@@ -11,9 +11,9 @@ probado en Samsung API 36 y Android 8 API 26 e integrado por MAIN sin modificar
 Room V2 versión 5. La dependencia **Auditoría integral del núcleo y
 compatibilidad Android** devolvió `AUDITORÍA PARCIAL — NO CERRABLE`. Sus tres
 huecos de cobertura ya fueron cerrados mediante **Pruebas cruzadas del núcleo
-V2**, verificadas localmente y en Samsung API 36. La matriz Android 36/26/33 y
-la repetición de esa auditoría continúan pendientes; la segunda capa sigue
-cerrada.
+V2**. La batería local y la matriz Android 8/API 26 y Android 13/API 33 están
+verificadas; resta Samsung API 36 y el veredicto integral. La repetición de la
+auditoría está habilitada y la segunda capa sigue cerrada hasta ese cierre.
 
 MAIN 2.0 está reactivada para recibir los handoffs que Joaquin entregue,
 auditarlos, integrarlos, probarlos y cerrarlos. Joaquin decide cuándo pedir el
@@ -1024,8 +1024,8 @@ Room V2 permanece en versión 5 con 27 tablas, `identityHash`
 `CERRADO` y la evidencia durable está en
 `docs/audits/2026-08-29-pruebas-cruzadas-del-nucleo-v2.md`.
 
-El prompt auditor integral permanece pausado hasta completar la matriz Android
-obligatoria. Este cierre no autoriza una alarma exacta real, reinicio físico,
+El prompt auditor integral quedó habilitado para completar la matriz Android
+obligatoria y emitir un nuevo veredicto. Este cierre no autoriza una alarma exacta real, reinicio físico,
 descarga de imágenes, push, tag, Release, `main` ni producción.
 
 ## Flujo vigente de MAIN
@@ -1082,17 +1082,15 @@ posteriores.
 
 ## Próximo paso
 
-Las pruebas cruzadas ya están auditadas y verificadas. El siguiente paso es
-ejecutar, con autorizaciones expresas y un serial por vez, la matriz actual:
+Las pruebas cruzadas ya están auditadas y verificadas. Android 8/API 26 y
+Android 13/API 33 ya pasaron la matriz actual. El siguiente paso es:
 
-1. suite QA permitida y Room en Samsung API 36;
-2. Room completa y recorrido esencial en Android 8/API 26;
-3. permisos y avisos en una imagen exacta Android 13/API 33;
-4. repetición de la auditoría integral sobre un único HEAD.
+1. suite QA permitida, Room y recorrido visual en Samsung API 36;
+2. repetición de la auditoría integral sobre un único HEAD.
 
 La evidencia Samsung de esta dependencia cierra sus regresiones afectadas, pero
 no reemplaza por sí sola la matriz completa. El disparo físico de una alarma
-exacta, un reinicio real del Samsung, la descarga de una imagen API 33 y API 37
+exacta, un reinicio real del Samsung y una imagen API 37
 conservan puertas separadas.
 
 No existe otro prompt implementador habilitado. Los pushes autorizados para
