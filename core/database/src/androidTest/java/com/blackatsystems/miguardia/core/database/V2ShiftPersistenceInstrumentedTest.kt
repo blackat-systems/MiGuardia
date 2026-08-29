@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.blackatsystems.miguardia.core.database.mapping.toEntity
+import com.blackatsystems.miguardia.core.database.repository.RoomV2ShiftRepository
 import com.blackatsystems.miguardia.core.domain.model.ShiftNote
 import com.blackatsystems.miguardia.core.domain.model.ShiftNotificationConfig
 import com.blackatsystems.miguardia.core.domain.model.ShiftOccupancyExpectation
@@ -13,13 +14,20 @@ import com.blackatsystems.miguardia.core.domain.model.V2ShiftWrite
 import com.blackatsystems.miguardia.core.domain.model.V2ShiftWriteExpectation
 import com.blackatsystems.miguardia.core.domain.repository.ConflictingLocalWriteException
 import com.blackatsystems.miguardia.core.domain.repository.InvalidLocalDataException
+import com.blackatsystems.miguardia.core.domain.repository.V2ShiftRepository
 import com.blackatsystems.miguardia.core.domain.shift.editV2ShiftPositionOnly
 import com.blackatsystems.miguardia.core.domain.work.AvailabilityLabel
 import com.blackatsystems.miguardia.core.domain.work.EffectiveRevision
 import com.blackatsystems.miguardia.core.domain.work.HoursReference
 import com.blackatsystems.miguardia.core.domain.work.WorkConfiguration
+import java.time.Clock
 import java.time.LocalDate
 import java.util.UUID
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -451,6 +459,149 @@ class V2ShiftPersistenceInstrumentedTest {
         )
     }
 
+    @Test
+    fun concurrentWritersFromOneSnapshotProduceOneWinnerOneConflictAndNoPartialRows() = runBlocking {
+        val fixture = store.seedV2Catalog()
+        val original = store.buildTestV2Write(
+            fixture = fixture,
+            id = V2TestIds.uuid(151),
+            date = V2TestIds.SHIFT_DATE,
+        )
+        store.v2Shifts.insert(original)
+        val expectedOccupancy = ShiftOccupancyExpectation.capture(
+            startDateInclusive = original.shift.localStartDate,
+            endDateInclusive = original.shift.localStartDate.plusDays(1),
+            shifts = listOf(original.shift),
+        )
+        val expectedUpdate = V2ShiftWriteExpectation.capture(listOf(original))
+        val firstBatch = RacingBatch(
+            name = "primer escritor",
+            updated = editV2ShiftPositionOnly(
+                original = original,
+                position = "Edición concurrente A",
+                updatedAt = original.shift.updatedAt.plusSeconds(1),
+            ),
+            companion = store.buildTestV2Write(
+                fixture = fixture,
+                id = V2TestIds.uuid(152),
+                date = original.shift.localStartDate.plusDays(1),
+                position = "Compañera A",
+            ),
+        )
+        val secondBatch = RacingBatch(
+            name = "segundo escritor",
+            updated = editV2ShiftPositionOnly(
+                original = original,
+                position = "Edición concurrente B",
+                updatedAt = original.shift.updatedAt.plusSeconds(2),
+            ),
+            companion = store.buildTestV2Write(
+                fixture = fixture,
+                id = V2TestIds.uuid(153),
+                date = original.shift.localStartDate.plusDays(1),
+                position = "Compañera B",
+            ),
+        )
+        val writers = listOf(
+            RoomV2ShiftRepository(database, Clock.systemUTC()),
+            RoomV2ShiftRepository(database, Clock.systemUTC()),
+        )
+        val batches = listOf(firstBatch, secondBatch)
+
+        val outcomes = coroutineScope {
+            val ready = Channel<Unit>(capacity = writers.size)
+            val release = CompletableDeferred<Unit>()
+            val competingWrites = writers.zip(batches).map { (writer, batch) ->
+                async(Dispatchers.IO) {
+                    ready.send(Unit)
+                    release.await()
+                    executeRacingBatch(
+                        writer = writer,
+                        batch = batch,
+                        expectedOccupancy = expectedOccupancy,
+                        expectedUpdate = expectedUpdate,
+                    )
+                }
+            }
+            repeat(writers.size) { ready.receive() }
+            release.complete(Unit)
+            competingWrites.map { it.await() }
+        }
+
+        assertEquals(1, outcomes.count { it.failure == null })
+        assertEquals(1, outcomes.count { it.failure is ConflictingLocalWriteException })
+        assertTrue(
+            outcomes.all { outcome ->
+                outcome.failure == null || outcome.failure is ConflictingLocalWriteException
+            },
+        )
+        val winner = outcomes.single { it.failure == null }.batch
+        val loser = outcomes.single { it.failure is ConflictingLocalWriteException }.batch
+        assertRacingBatchState(winner, loser)
+
+        store.close()
+        openStore()
+        assertRacingBatchState(winner, loser)
+    }
+
+    private suspend fun executeRacingBatch(
+        writer: V2ShiftRepository,
+        batch: RacingBatch,
+        expectedOccupancy: ShiftOccupancyExpectation,
+        expectedUpdate: V2ShiftWriteExpectation,
+    ): RacingOutcome = try {
+        writer.applyV2Batch(
+            mutation = V2ShiftBatchMutation(
+                shiftsToInsert = listOf(batch.companion),
+                shiftsToUpdate = listOf(batch.updated),
+            ),
+            expectedOccupancy = expectedOccupancy,
+            expectedUpdates = expectedUpdate,
+        )
+        RacingOutcome(batch, null)
+    } catch (error: Throwable) {
+        RacingOutcome(batch, error)
+    }
+
+    private suspend fun assertRacingBatchState(winner: RacingBatch, loser: RacingBatch) {
+        assertEquals(V2ShiftLookup.V2(winner.updated), store.v2Shifts.getShift(winner.updated.shift.id))
+        assertEquals(V2ShiftLookup.V2(winner.companion), store.v2Shifts.getShift(winner.companion.shift.id))
+        assertEquals(V2ShiftLookup.Missing, store.v2Shifts.getShift(loser.companion.shift.id))
+        assertNull(store.v2Shifts.getWorkSnapshot(loser.companion.shift.id))
+        assertEquals(2L, scalarLong("SELECT COUNT(*) FROM shifts"))
+        assertEquals(2L, scalarLong("SELECT COUNT(*) FROM shift_work_snapshots"))
+        assertEquals(
+            0L,
+            scalarLong(
+                "SELECT COUNT(*) FROM shifts AS s " +
+                    "LEFT JOIN shift_work_snapshots AS w ON w.shiftId = s.id " +
+                    "WHERE w.shiftId IS NULL",
+            ),
+        )
+        assertEquals(
+            0L,
+            scalarLong(
+                "SELECT COUNT(*) FROM shift_work_snapshots AS w " +
+                    "LEFT JOIN shifts AS s ON s.id = w.shiftId " +
+                    "WHERE s.id IS NULL",
+            ),
+        )
+        database.openHelper.writableDatabase.query("PRAGMA foreign_key_check").use { cursor ->
+            assertEquals(0, cursor.count)
+        }
+        database.openHelper.writableDatabase.query("PRAGMA integrity_check").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals("ok", cursor.getString(0))
+            assertEquals(1, cursor.count)
+        }
+    }
+
+    private fun scalarLong(sql: String): Long =
+        database.openHelper.writableDatabase.query(sql).use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            cursor.getLong(0)
+        }
+
     private suspend fun seedCommonShiftDependencies(
         shiftId: UUID,
         number: Int,
@@ -514,6 +665,17 @@ class V2ShiftPersistenceInstrumentedTest {
             if (error !is T) throw error
         }
     }
+
+    private data class RacingBatch(
+        val name: String,
+        val updated: V2ShiftWrite,
+        val companion: V2ShiftWrite,
+    )
+
+    private data class RacingOutcome(
+        val batch: RacingBatch,
+        val failure: Throwable?,
+    )
 
     private companion object {
         const val DB = "v2-shift-persistence-test.db"

@@ -1,7 +1,8 @@
 # Pruebas cruzadas del núcleo V2
 
-- Estado: **HABILITADO — TAREA NO ABIERTA**
+- Estado: **CERRADO**
 - Fecha: 2026-08-28
+- Cierre MAIN: 2026-08-29
 - Base documental previa: `d16ca11ee920d0d9be0f220eda60c3bd02d859d4`
 - Rama obligatoria: `codex/miguardia-2.0`
 - Resultado que corrige:
@@ -531,3 +532,30 @@ Detenete y devolvé el control a MAIN ante:
 - otra dependencia activa;
 - uso obligatorio de un dispositivo que no fue autorizado;
 - acción destructiva, descarga, push, tag, Release, `main` o producción.
+
+## CIERRE MAIN — 2026-08-29
+
+MAIN auditó el candidato completo y confirmó exactamente tres métodos `@Test`
+nuevos dentro de los árboles permitidos, sin cambios productivos. La batería
+local forzada quedó verde con 499/499 pruebas JVM y lint sin errores.
+
+Con autorización expresa de Joaquin se ejecutó en el Samsung `SM-S938B`, API
+36, serial `R5CY529W6PL`:
+
+- carrera CAS nueva: 1/1;
+- consulta sin escrituras nueva: 1/1;
+- suite Room completa: 108/108;
+- regresiones afectadas de Calendario, Resumen y tarjeta: 61/61.
+
+No se disparó una alarma exacta real, no se reinició el teléfono y no se
+consultaron ni modificaron ajustes visuales del sistema. Los paquetes QA y de
+prueba fueron desinstalados; ningún paquete `com.blackatsystems.miguardia*`
+quedó instalado en los usuarios 0 o 10.
+
+Room permanece en versión 5 con 27 tablas y los esquemas 1–5 intactos. La
+evidencia durable está en
+`docs/audits/2026-08-29-pruebas-cruzadas-del-nucleo-v2.md`.
+
+Este cierre habilita la matriz Android 36/26/33 y la repetición de la auditoría
+integral. No habilita todavía la segunda capa, un push, tag, Release, `main` ni
+producción.

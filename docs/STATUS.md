@@ -9,10 +9,11 @@ no significa que exista ya una implementación nueva.
 El bloque **Próximo evento y notificaciones** quedó auditado, corregido,
 probado en Samsung API 36 y Android 8 API 26 e integrado por MAIN sin modificar
 Room V2 versión 5. La dependencia **Auditoría integral del núcleo y
-compatibilidad Android** ya fue ejecutada y devolvió `AUDITORÍA PARCIAL — NO
-CERRABLE`: no reprodujo defectos P0/P1, pero faltan tres pruebas cruzadas y la
-matriz Android actual. El prompt **Pruebas cruzadas del núcleo V2** quedó
-habilitado, pero su tarea todavía no fue abierta. La segunda capa sigue cerrada.
+compatibilidad Android** devolvió `AUDITORÍA PARCIAL — NO CERRABLE`. Sus tres
+huecos de cobertura ya fueron cerrados mediante **Pruebas cruzadas del núcleo
+V2**, verificadas localmente y en Samsung API 36. La matriz Android 36/26/33 y
+la repetición de esa auditoría continúan pendientes; la segunda capa sigue
+cerrada.
 
 MAIN 2.0 está reactivada para recibir los handoffs que Joaquin entregue,
 auditarlos, integrarlos, probarlos y cerrarlos. Joaquin decide cuándo pedir el
@@ -964,10 +965,11 @@ reinicio físico ni push. El resultado durable está en
 `docs/audits/2026-08-28-auditoria-integral-del-nucleo-y-compatibilidad-android-v2-parcial.md`.
 
 La segunda capa —widget, informes, copias locales, bloqueo y Ayuda 2.0— sigue
-cerrada hasta integrar las pruebas correctivas, ejecutar Samsung API 36,
-Android 8/API 26 y Android 13/API 33, y repetir esta puerta.
+cerrada. Las pruebas correctivas ya están integradas; todavía falta ejecutar la
+matriz Samsung API 36, Android 8/API 26 y Android 13/API 33, y repetir esta
+puerta.
 
-## Pruebas cruzadas del núcleo V2 — prompt habilitado
+## Pruebas cruzadas del núcleo V2 — cerrado
 
 Joaquin indicó el 2026-08-28 continuar con la dependencia correctiva recomendada.
 MAIN preparó `docs/prompts/PRUEBAS_CRUZADAS_DEL_NUCLEO_V2.md` sobre la base
@@ -989,11 +991,42 @@ tres métodos `@Test` nuevos. Si alguno reproduce un defecto productivo, la
 dependencia debe detenerse y devolver `MAIN BLOQUEADA`; no puede corregir
 `src/main` ni ampliar su misión.
 
-El prompt está **HABILITADO — TAREA NO ABIERTA**. Prepararlo no creó otro chat,
-rama ni worktree y no autorizó ADB, Samsung, emuladores, imágenes, instalaciones,
-una alarma exacta real, reinicio físico ni push. El prompt auditor integral
-permanece pausado hasta integrar estas pruebas y completar después la matriz
-Android obligatoria.
+La dependencia entregó exactamente los tres métodos `@Test` exigidos en un
+archivo modificado y dos nuevos, con 1.102 líneas agregadas y cero cambios en
+producción, Room, DataStore, Gradle, manifiesto, permisos o esquemas.
+
+MAIN auditó todos los archivos y realizó tres revisiones independientes sin
+hallazgos. La batería local forzada ejecutó 351/351 tareas en 17 min 34 s:
+
+- dominio: 303/303;
+- database JVM: 12/12;
+- app JVM: 184/184;
+- total JVM: 499/499, sin fallos, errores ni omitidas;
+- lint: 0 errores y 6 avisos de versiones disponibles;
+- APK Debug, QA, Release y ambos AndroidTest compilados;
+- `git diff --check`: limpio.
+
+Con autorización expresa de Joaquin, MAIN usó únicamente el Samsung
+`SM-S938B`, API 36, serial `R5CY529W6PL`, con paquetes QA y datos ficticios:
+
+- carrera CAS nueva aislada: 1/1;
+- consulta sin escrituras nueva aislada: 1/1;
+- suite Room completa: 108/108;
+- regresiones afectadas de Calendario, Resumen y tarjeta: 61/61.
+
+No se disparó una alarma exacta real, no se reinició el Samsung y no se
+consultaron ni modificaron ajustes visuales del sistema. Los tres paquetes QA y
+de prueba fueron desinstalados; ningún paquete
+`com.blackatsystems.miguardia*` quedó instalado en los usuarios 0 o 10.
+
+Room V2 permanece en versión 5 con 27 tablas, `identityHash`
+`77adbc875d0f4ee466cdbd0dd74d5c5c` y esquemas 1–5 intactos. El prompt queda
+`CERRADO` y la evidencia durable está en
+`docs/audits/2026-08-29-pruebas-cruzadas-del-nucleo-v2.md`.
+
+El prompt auditor integral permanece pausado hasta completar la matriz Android
+obligatoria. Este cierre no autoriza una alarma exacta real, reinicio físico,
+descarga de imágenes, push, tag, Release, `main` ni producción.
 
 ## Flujo vigente de MAIN
 
@@ -1049,15 +1082,18 @@ posteriores.
 
 ## Próximo paso
 
-El prompt `docs/prompts/PRUEBAS_CRUZADAS_DEL_NUCLEO_V2.md` está listo y
-habilitado. El siguiente paso es que Joaquin lo envíe al nuevo chat cuando
-decida abrir la tarea. La dependencia no debe cambiar comportamiento productivo;
-si una prueba reproduce un defecto real, debe detenerse y devolverlo a MAIN.
+Las pruebas cruzadas ya están auditadas y verificadas. El siguiente paso es
+ejecutar, con autorizaciones expresas y un serial por vez, la matriz actual:
 
-Después de integrar esa dependencia corresponde repetir la batería local y,
-con autorizaciones expresas y un serial por vez, ejecutar Samsung API 36,
-Android 8/API 26 y una imagen exacta Android 13/API 33. El disparo físico de una
-alarma exacta, un reinicio real del Samsung y API 37 conservan puertas separadas.
+1. suite QA permitida y Room en Samsung API 36;
+2. Room completa y recorrido esencial en Android 8/API 26;
+3. permisos y avisos en una imagen exacta Android 13/API 33;
+4. repetición de la auditoría integral sobre un único HEAD.
+
+La evidencia Samsung de esta dependencia cierra sus regresiones afectadas, pero
+no reemplaza por sí sola la matriz completa. El disparo físico de una alarma
+exacta, un reinicio real del Samsung, la descarga de una imagen API 33 y API 37
+conservan puertas separadas.
 
 No existe otro prompt implementador habilitado. Los pushes autorizados para
 disponibilidad, Calendario final y Resumen fueron ejecutados y consumidos en
