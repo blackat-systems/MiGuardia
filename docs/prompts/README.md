@@ -18,9 +18,9 @@
 - **Última dependencia ejecutada:**
   `AUDITORIA_INTEGRAL_DEL_NUCLEO_Y_COMPATIBILIDAD_ANDROID_V2.md` quedó cerrada
   por MAIN con `NÚCLEO APTO PARA SEGUNDA CAPA` y sin findings abiertos.
-- **Próxima acción:** Widget es el primer bloque de la segunda capa. MAIN
-  prepara su contrato cuando Joaquin lo pida; este índice no crea ni habilita
-  por sí solo una tarea nueva.
+- **Próxima acción:** `WIDGET_DE_PROXIMO_EVENTO_V2.md` está `HABILITADO` y su
+  tarea todavía no fue abierta. No existe otra dependencia implementadora
+  activa.
 - **Commits locales:** MAIN los crea automáticamente como checkpoints de
   bloques comprobados.
 - **Push puntual anterior de la rama 2.0:** ejecutado y verificado hasta
@@ -94,6 +94,7 @@ prevalecen para el estado operativo.
 | `PROXIMO_EVENTO_Y_NOTIFICACIONES_V2.md` | **CERRADO** | Una sola verdad V2 para la tarjeta y los avisos de jornadas o disponibilidad, auditada y verificada por MAIN |
 | `AUDITORIA_INTEGRAL_DEL_NUCLEO_Y_COMPATIBILIDAD_ANDROID_V2.md` | **CERRADO** | El núcleo aprobó la batería, las tres barreras y la matriz Samsung API 36, Android 8/API 26 y Android 13/API 33 |
 | `PRUEBAS_CRUZADAS_DEL_NUCLEO_V2.md` | **CERRADO** | Las tres barreras quedaron auditadas: fotografía transversal, carrera CAS real y demostración de que consultar no escribe |
+| `WIDGET_DE_PROXIMO_EVENTO_V2.md` | **HABILITADO — TAREA NO ABIERTA** | Lleva la proyección única a la pantalla de inicio con tres modos, privacidad y configuración independientes por instancia |
 
 ## Contratos históricos de MiGuardia 1.0
 
@@ -164,9 +165,10 @@ Joaquin indicó que quiere preparar o abrir la siguiente:
     seguida por la repetición de
     `AUDITORIA_INTEGRAL_DEL_NUCLEO_Y_COMPATIBILIDAD_ANDROID_V2.md` con
     veredicto `NÚCLEO APTO PARA SEGUNDA CAPA`;
-16. **Próximo bloque:** Widget;
-17. después: informes, copias y restauración locales, bloqueo y Ayuda y
-    recorrido inicial 2.0;
+16. **Habilitado / tarea no abierta:** Widget de próximo evento mediante
+    `WIDGET_DE_PROXIMO_EVENTO_V2.md`;
+17. después de cerrarlo: informes, copias y restauración locales, bloqueo y
+    Ayuda y recorrido inicial 2.0;
 18. auditoría de la aplicación completa y candidato local.
 
 Cuando Joaquin pide un prompt, MAIN lo habilita en este índice después de cerrar

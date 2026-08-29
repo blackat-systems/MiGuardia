@@ -436,22 +436,48 @@ No recuerda automáticamente esas respuestas para la próxima ocasión.
 - La privacidad elegida continúa vigente en pantalla bloqueada.
 - No se agregan permisos, servicios o polling por inferencia.
 
+## 15.1 Widget de pantalla de inicio
+
+- Reutiliza `projectNextEvent`; no crea otra prioridad ni fórmula laboral.
+- Cada instancia elige **Próxima jornada**, **Próximo franco** o
+  **Automático**.
+- Próximo franco significa únicamente un `F` explícito; un día vacío o `?` no
+  se interpreta como descanso.
+- Automático puede mostrar una jornada o un tramo efectivo de disponibilidad y
+  conserva la etiqueta histórica de esta última.
+- Automático consume todos los `primaryEvents` del motor sin volver a
+  filtrarlos por inicio, tipo o prioridad; Próxima jornada agrupa sólo las
+  jornadas del primer inicio futuro.
+- Se permiten varios widgets simultáneos, cada uno con modo, privacidad y
+  Clima opcional propios.
+- Existen tamaños compacto y ampliado; tocar abre el día correspondiente o el
+  Calendario actual cuando no hay evento.
+- La privacidad por instancia puede ser completa, reducida u oculta. Nunca se
+  muestran dirección, notas, motivos médicos, fotos ni datos personales.
+- Clima puede aparecer sólo en el tamaño ampliado, con privacidad completa,
+  habilitación consciente y caché válida; nunca bloquea el evento laboral y su
+  atribución abre la superficie Clima que contiene el enlace al proveedor.
+- Se implementa con `AppWidgetProvider` y `RemoteViews`, sin dependencia nueva,
+  polling, servicio permanente, permiso adicional ni cambio de Room.
+- El contador usa el cronómetro nativo y una frontera inexacta reconstruible;
+  el Widget funciona aunque Notificaciones estén apagadas.
+- El tema sigue la preferencia global de MiGuardia; no existe una elección de
+  tema por instancia.
+- `Widget de inicio` aparece en `Avisos y contexto` únicamente cuando la
+  función existe y permite explicar, listar y reconfigurar instancias.
+- Mapas y `Cómo llegar` quedan fuera de este primer alcance.
+
 ## 16. Persistencia
 
 - Room guarda datos fuente e historia, nunca totales mensuales opacos.
 - Nombre/apodo y preferencias simples permanecen en sus DataStore dueños.
 - Preferencias de presentación del Resumen se guardan en DataStore.
-- La implementación actual heredó tablas, esquemas y migraciones de 1.0, pero
-  ya no son un requisito de compatibilidad del producto.
-- Antes de ampliar Room nuevamente se define una base exclusiva de V2 y se
-  retiran el origen `MIGRATED_V1`, la activación V1→V2 y las rutas de adopción
-  histórica que no tengan otro uso real.
-- Esa deuda no bloquea recorridos que reutilizan Room v7 sin modificar su
-  esquema, como la edición y eliminación individual de jornadas V2.
-- Esa limpieza puede reutilizar entidades o repositorios útiles; no exige
-  empezar el código desde cero.
-- Una vez fijada la primera base pública de V2, cada versión posterior sí debe
-  exportar esquema, migrar explícitamente y preservar todos los datos V2.
+- La base activa es `MiGuardiaV2Database`, archivo `miguardia-v2.db`, versión 5
+  y veintisiete tablas, con migraciones explícitas `1→2→3→4→5`.
+- No existe activación, adopción o migración de datos desde 1.0. El archivo
+  histórico `miguardia.db` no se abre, transforma ni borra.
+- Cada versión posterior debe exportar esquema, migrar desde la versión V2
+  inmediata anterior y preservar todos los datos V2.
 - No se permite una limpieza silenciosa de datos desde la aplicación.
 
 ## 17. Orden aprobado de implementación

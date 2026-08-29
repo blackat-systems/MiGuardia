@@ -247,13 +247,12 @@ La secuencia conocida al redactar este prompt es:
 15. Adaptar como un único bloque el motor de próximo evento y las
     notificaciones a todos los eventos compatibles —cerrado por MAIN el
     2026-08-27—.
-16. Auditar integralmente el núcleo y su compatibilidad Android —auditoría
-    parcial recibida; correcciones de pruebas y matriz física pendientes—.
-    - 16.a. Agregar la fotografía transversal, la carrera CAS real y la prueba
-      de consultas sin escrituras mediante
-      `PRUEBAS_CRUZADAS_DEL_NUCLEO_V2.md` —prompt habilitado, tarea no abierta—.
-    - 16.b. Integrar esas pruebas, ejecutar la matriz Android 36/26/33 y repetir
-      la auditoría integral antes de abrir la segunda capa.
+16. Auditar integralmente el núcleo y su compatibilidad Android —cerrado el
+    2026-08-29 con `NÚCLEO APTO PARA SEGUNDA CAPA` y sin findings abiertos—.
+    - 16.a. Fotografía transversal, carrera CAS real y consulta sin escrituras:
+      cerradas mediante `PRUEBAS_CRUZADAS_DEL_NUCLEO_V2.md`.
+    - 16.b. Matriz Samsung API 36, Android 8/API 26 y Android 13/API 33:
+      ejecutada y cerrada.
 
 Las ampliaciones futuras de situaciones especiales y cualquier consolidación
 adicional del motor de horas quedan fuera de esta cadena inmediata. Sólo se
@@ -262,9 +261,9 @@ demostrada durante una auditoría posterior.
 
 El motor de próximo evento y las notificaciones quedaron estabilizados como un
 único bloque para impedir reglas divergentes entre tarjeta y avisos.
-La edición individual reutiliza Room v7 y no amplía el esquema. El retiro del
-modo V1 debe cerrar la falsa compatibilidad de datos sin descartar componentes
-útiles antes de que un bloque posterior vuelva a ampliar la persistencia.
+La base activa es exclusivamente `MiGuardiaV2Database`, archivo
+`miguardia-v2.db`, Room V2 versión 5 y veintisiete tablas, con cadena explícita
+`1→2→3→4→5`. No existe activación ni migración de datos V1→V2.
 
 MAIN puede dividir uno de estos objetivos si su riesgo exige dos contratos
 ejecutables, pero no puede fusionar bloques de manera que se pierdan aislamiento
@@ -275,7 +274,8 @@ mayor autoridad cambia, se actualizan primero el grafo, el índice y el estado.
 
 Sólo después de cerrar y auditar el núcleo laboral:
 
-17. Adaptar el widget al motor final de próximo evento.
+17. Adaptar el widget al motor final de próximo evento
+    —`WIDGET_DE_PROXIMO_EVENTO_V2.md` habilitado; tarea no abierta—.
 18. Generar informes locales de jornadas y horas.
 19. Crear y restaurar copias locales seguras.
 20. Proteger el acceso local a MiGuardia.
@@ -576,15 +576,12 @@ corregidos, verificados y cerrados por MAIN. `MiGuardiaV2Database`,
 `miguardia-v2.db` y Room V2 versión 5 continúan como base activa, con cadena
 explícita `1→2→3→4→5`.
 
-La dependencia
-`AUDITORIA_INTEGRAL_DEL_NUCLEO_Y_COMPATIBILIDAD_ANDROID_V2.md` devolvió
-`AUDITORÍA PARCIAL — NO CERRABLE`. MAIN confirmó que no hay defectos P0/P1
-reproducidos, pero sí tres huecos de cobertura obligatoria y falta la matriz
-actual en Samsung API 36, Android 8/API 26 y Android 13/API 33.
+Las tres barreras cruzadas quedaron integradas y la matriz Samsung API 36,
+Android 8/API 26 y Android 13/API 33 fue ejecutada. La repetición de
+`AUDITORIA_INTEGRAL_DEL_NUCLEO_Y_COMPATIBILIDAD_ANDROID_V2.md` cerró con
+`NÚCLEO APTO PARA SEGUNDA CAPA` y sin findings abiertos.
 
-El prompt auditor queda pausado y no debe reejecutarse antes de cerrar esos
-huecos. `PRUEBAS_CRUZADAS_DEL_NUCLEO_V2.md` es el único prompt implementador
-habilitado y su tarea todavía no fue abierta. MAIN debe conservar el checkout
-controlado y no abrir la segunda capa —widget, informes, copias, bloqueo y
-Ayuda 2.0— hasta completar la corrección, repetir la auditoría y recibir la
-indicación de Joaquin.
+Por indicación de Joaquin, `WIDGET_DE_PROXIMO_EVENTO_V2.md` es el único prompt
+implementador habilitado. Su tarea todavía no fue abierta. MAIN debe conservar
+el checkout controlado, integrar este bloque antes de preparar Informes y no
+heredar ninguna autorización anterior de ADB, push, alarma exacta o reinicio.

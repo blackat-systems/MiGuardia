@@ -181,7 +181,7 @@ Matriz Android 36/26/33 — cerrada
         ↓
 Repetición de auditoría integral — NÚCLEO APTO PARA SEGUNDA CAPA
         ↓
-Widget — próximo bloque
+Widget de próximo evento — prompt habilitado / tarea no abierta
         ↓
 Informes
         ↓
@@ -214,8 +214,12 @@ Actualización del 2026-08-29: las tres pruebas cruzadas quedaron integradas y
 verificadas. La matriz actual pasó en Samsung API 36, Android 8/API 26 y
 Android 13/API 33. La repetición integral devolvió
 `NÚCLEO APTO PARA SEGUNDA CAPA` sin findings abiertos. La segunda capa queda
-desbloqueada y su primer bloque es Widget; preparar su prompt continúa siendo
-una acción separada que requiere la indicación de Joaquin.
+desbloqueada y su primer bloque es Widget.
+
+Actualización posterior del 2026-08-29: por indicación de Joaquin, MAIN cerró
+el contrato `WIDGET_DE_PROXIMO_EVENTO_V2.md`. El prompt queda habilitado sobre
+la proyección V2 única y la tarea todavía no fue abierta. La implementación
+será secuencial, sin Glance, sin cambio de Room y sin otra dependencia activa.
 
 MAIN integra un bloque por vez. Cada bloque debe compilar, pasar sus pruebas,
 preservar el alcance ajeno y quedar documentado antes del siguiente. El mapa
