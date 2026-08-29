@@ -8,9 +8,9 @@
 - Resultado que corrige:
   `AUDITORÍA PARCIAL — NO CERRABLE`
 
-Este prompt queda habilitado por indicación de Joaquin. Prepararlo no abre por
-sí solo otra tarea. La dependencia comienza únicamente cuando Joaquin envíe
-este contrato a un nuevo chat o autorice expresamente a MAIN a crearlo.
+Este contrato fue ejecutado, auditado y cerrado por MAIN. No debe reenviarse ni
+reejecutarse salvo una regresión autorizada; su evidencia durable se conserva
+en el cierre de este mismo documento.
 
 ## QUÉ HACE
 

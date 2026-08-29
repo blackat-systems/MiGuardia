@@ -177,11 +177,19 @@ Auditoría integral del núcleo y compatibilidad Android — parcial histórica
         ↓
 Pruebas cruzadas del núcleo V2 — cerradas
         ↓
-Matriz Android 36/26/33 — en curso; API 26 y API 33 verificadas
+Matriz Android 36/26/33 — cerrada
         ↓
-Repetición de auditoría integral — habilitada
+Repetición de auditoría integral — NÚCLEO APTO PARA SEGUNDA CAPA
         ↓
-Widget, informes, copias, bloqueo y Ayuda 2.0
+Widget — próximo bloque
+        ↓
+Informes
+        ↓
+Copias y restauración locales
+        ↓
+Bloqueo
+        ↓
+Ayuda y recorrido inicial 2.0
         ↓
 Auditoría de la aplicación completa y candidato local
 ```
@@ -198,14 +206,16 @@ Actualización del 2026-08-28: la dependencia auditora ejecutó la batería loca
 y no reprodujo defectos P0/P1, pero devolvió `AUDITORÍA PARCIAL — NO CERRABLE`.
 Faltan una fotografía transversal única, una carrera CAS real, una prueba
 explícita de consultas sin escrituras y la matriz actual en Samsung API 36,
-Android 8/API 26 y Android 13/API 33. La segunda capa permanece cerrada hasta
-corregir esos huecos y repetir esta puerta. Joaquin indicó preparar la
-dependencia `PRUEBAS_CRUZADAS_DEL_NUCLEO_V2.md`.
+Android 8/API 26 y Android 13/API 33. En ese momento la segunda capa permanecía
+cerrada hasta corregir esos huecos y repetir esta puerta. Joaquin indicó
+preparar la dependencia `PRUEBAS_CRUZADAS_DEL_NUCLEO_V2.md`.
 
 Actualización del 2026-08-29: las tres pruebas cruzadas quedaron integradas y
-verificadas. La matriz actual pasó en Android 8/API 26 y Android 13/API 33;
-resta Samsung API 36. La repetición de la auditoría integral está habilitada y
-la segunda capa continúa cerrada hasta su veredicto.
+verificadas. La matriz actual pasó en Samsung API 36, Android 8/API 26 y
+Android 13/API 33. La repetición integral devolvió
+`NÚCLEO APTO PARA SEGUNDA CAPA` sin findings abiertos. La segunda capa queda
+desbloqueada y su primer bloque es Widget; preparar su prompt continúa siendo
+una acción separada que requiere la indicación de Joaquin.
 
 MAIN integra un bloque por vez. Cada bloque debe compilar, pasar sus pruebas,
 preservar el alcance ajeno y quedar documentado antes del siguiente. El mapa

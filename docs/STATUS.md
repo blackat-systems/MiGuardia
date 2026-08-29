@@ -6,14 +6,12 @@ PLANIFICACIÓN quedó cerrada por autorización expresa de Joaquin. Las decision
 funcionales reunidas constituyen la base vigente para avanzar; cerrar esta etapa
 no significa que exista ya una implementación nueva.
 
-El bloque **Próximo evento y notificaciones** quedó auditado, corregido,
-probado en Samsung API 36 y Android 8 API 26 e integrado por MAIN sin modificar
-Room V2 versión 5. La dependencia **Auditoría integral del núcleo y
-compatibilidad Android** devolvió `AUDITORÍA PARCIAL — NO CERRABLE`. Sus tres
-huecos de cobertura ya fueron cerrados mediante **Pruebas cruzadas del núcleo
-V2**. La batería local y la matriz Android 8/API 26 y Android 13/API 33 están
-verificadas; resta Samsung API 36 y el veredicto integral. La repetición de la
-auditoría está habilitada y la segunda capa sigue cerrada hasta ese cierre.
+El núcleo laboral V2 quedó aprobado por MAIN. Sus tres pruebas cruzadas, la
+batería local y la matriz Samsung API 36, Android 8/API 26 y Android 13/API 33
+están verificadas. La repetición de **Auditoría integral del núcleo y
+compatibilidad Android** devolvió `NÚCLEO APTO PARA SEGUNDA CAPA` sin findings
+abiertos. La segunda capa queda desbloqueada y Widget es el próximo bloque;
+preparar su prompt continúa siendo una acción separada que Joaquin debe pedir.
 
 MAIN 2.0 está reactivada para recibir los handoffs que Joaquin entregue,
 auditarlos, integrarlos, probarlos y cerrarlos. Joaquin decide cuándo pedir el
@@ -192,6 +190,15 @@ y auditada en
     notificaciones V2.
   - `55dcd60aba2512597d3074f9978f228086ddf7ea`: Próximo evento y
     notificaciones V2 auditados, probados e integrados por MAIN.
+  - `7570d25421d532a4dd25a03dae3b3cb586a7d8f1`: contrato de auditoría integral
+    del núcleo y compatibilidad Android.
+  - `d16ca11ee920d0d9be0f220eda60c3bd02d859d4`: resultado parcial y tres huecos
+    de cobertura registrados.
+  - `1b697cd3c4db613dd1c3187a9ed0efb8cf4496bf`: contrato de pruebas cruzadas.
+  - `c35fffb2abe99eac73e164f99147bf95d11ad83d`: tres barreras cruzadas
+    auditadas, probadas e integradas por MAIN.
+  - `3385c15586ba9af706452f5df540dc3f305da99f`: repetición integral reactivada
+    después de cerrar API 26 y API 33.
 - Al iniciar la preparación documental, la rama todavía no poseía upstream. El
   push puntual posterior fue ejecutado y verificado: rama local y remoto privado
   coincidían en `836d908`; esa autorización no puede reutilizarse.
@@ -921,7 +928,7 @@ arquitectura en
 `docs/adr/0032-proyeccion-unica-de-eventos-y-avisos-locales-v2.md` y el cierre
 en `docs/audits/2026-08-27-proximo-evento-y-notificaciones-v2.md`.
 
-## Auditoría integral del núcleo y compatibilidad Android — resultado parcial
+## Auditoría integral del núcleo y compatibilidad Android — resultado parcial histórico resuelto
 
 Joaquin indicó el 2026-08-28 que esta puerta también se gestione como una
 dependencia especializada. MAIN preparó
@@ -942,32 +949,35 @@ QA, Release y ambos AndroidTest compilados. MAIN comprobó los XML, artefactos,
 Room, Git y contratos estructurales, y revalidó el conjunto Gradle sin cambios
 con `BUILD SUCCESSFUL`.
 
-No se reprodujeron defectos P0/P1. MAIN confirmó tres huecos reales:
+En esa ejecución no se reprodujeron defectos P0/P1. MAIN confirmó tres huecos
+reales:
 
-- falta una fotografía transversal única que reconcilie Calendario, Horas,
+- faltaba una fotografía transversal única que reconciliara Calendario, Horas,
   Resumen, tarjeta y avisos desde las mismas fuentes, UUID, reloj y zona;
-- falta una carrera CAS instrumentada entre dos escritores reales que parten
+- faltaba una carrera CAS instrumentada entre dos escritores reales que
+  partieran
   de la misma fotografía;
-- falta demostrar explícitamente que consultar Calendario, Resumen y tarjeta
+- faltaba demostrar explícitamente que consultar Calendario, Resumen y tarjeta
   no modifica filas, timestamps ni versiones de datos.
 
-La instrumentación actual no fue ejecutada. La evidencia física del 2026-08-27
-se conserva como heredada, no repetida. Los XML conectados presentes son
-anteriores: Room conserva 107/107, mientras el único XML de aplicación conserva
-84 casos con un fallo histórico previo al APK final; por eso no se usa como
-evidencia del HEAD actual. Android 13/API 33 no tiene imagen instalada. API 37
-también carece de imagen utilizable y puede seguir pendiente hasta el candidato
-final.
+La instrumentación de aquella auditoría no fue ejecutada. La evidencia física
+del 2026-08-27 se trató como heredada, no repetida. Los XML conectados presentes
+eran anteriores: Room conservaba 107/107, mientras el único XML de aplicación
+conservaba 84 casos con un fallo histórico previo al APK final; por eso no se
+usó como evidencia del HEAD auditado. Android 13/API 33 todavía no tenía imagen
+instalada. API 37 también carecía de imagen utilizable.
 
-El prompt auditor queda **PAUSADO / NO REEJECUTAR** hasta cerrar los tres huecos.
-No autoriza ADB, imágenes, instalaciones, limpiezas, una alarma exacta real,
-reinicio físico ni push. El resultado durable está en
+El prompt auditor quedó **PAUSADO / NO REEJECUTAR** en ese punto hasta cerrar
+los tres huecos. No autorizaba ADB, imágenes, instalaciones, limpiezas, una
+alarma exacta real, reinicio físico ni push. El resultado durable está en
 `docs/audits/2026-08-28-auditoria-integral-del-nucleo-y-compatibilidad-android-v2-parcial.md`.
 
-La segunda capa —widget, informes, copias locales, bloqueo y Ayuda 2.0— sigue
-cerrada. Las pruebas correctivas ya están integradas; todavía falta ejecutar la
-matriz Samsung API 36, Android 8/API 26 y Android 13/API 33, y repetir esta
-puerta.
+La segunda capa —Widget, informes, copias y restauración locales, bloqueo y
+Ayuda y recorrido inicial 2.0— quedó
+cerrada en ese momento. Las pruebas correctivas, la matriz y la repetición
+posterior resolvieron esos pendientes; el cierre vigente se registra más abajo
+y en
+`docs/audits/2026-08-29-auditoria-integral-del-nucleo-y-compatibilidad-android-v2.md`.
 
 ## Pruebas cruzadas del núcleo V2 — cerrado
 
@@ -1025,8 +1035,47 @@ Room V2 permanece en versión 5 con 27 tablas, `identityHash`
 `docs/audits/2026-08-29-pruebas-cruzadas-del-nucleo-v2.md`.
 
 El prompt auditor integral quedó habilitado para completar la matriz Android
-obligatoria y emitir un nuevo veredicto. Este cierre no autoriza una alarma exacta real, reinicio físico,
-descarga de imágenes, push, tag, Release, `main` ni producción.
+obligatoria y emitir un nuevo veredicto. Este cierre no autoriza una alarma
+exacta real, reinicio físico, descarga de imágenes, push, tag, Release, `main`
+ni producción.
+
+## Auditoría integral del núcleo y compatibilidad Android — cerrada
+
+MAIN repitió la puerta sobre el HEAD documental `3385c15`; `app`, `core`,
+Gradle y manifiestos son idénticos al candidato funcional `c35fffb`.
+
+Evidencia final:
+
+- batería local: 499/499 pruebas JVM, lint sin errores y cinco APK requeridos
+  compilados;
+- Samsung API 36: Room 108/108 y aplicación 235/235, sin ejecutar el único
+  caso de alarma exacta real;
+- Android 8/API 26: Room 108/108 y recorrido esencial 27/27;
+- Android 13/API 33: matriz 24/24, fallback inexacto y privacidad genérica
+  visible en pantalla bloqueada;
+- recorrido humano continuo Samsung: configuración, recurrencia, horario real,
+  extra independiente, Guardia pasiva, Calendario, Resumen y Notificaciones
+  sobre una sola historia;
+- reconciliación visible: 15 h 30 min = 7 h 30 min habituales + 8 h extra; 4 h
+  de disponibilidad separadas;
+- Room V5, 27 tablas y esquemas 1–5 intactos;
+- findings P0/P1/P2/P3 abiertos: ninguno.
+
+Los paquetes QA/test fueron retirados de Samsung, API 26 y API 33. Producción
+no fue instalada ni abierta. La orientación Samsung quedó restaurada y el PIN
+ficticio temporal de API 33 fue eliminado. API 37, una alarma exacta real y un
+reinicio físico del Samsung permanecen diferidos y no bloquean la segunda
+capa.
+
+Veredicto:
+
+```text
+NÚCLEO APTO PARA SEGUNDA CAPA
+FINDINGS: ninguno
+```
+
+El prompt auditor queda `CERRADO`. La evidencia durable está en
+`docs/audits/2026-08-29-auditoria-integral-del-nucleo-y-compatibilidad-android-v2.md`.
 
 ## Flujo vigente de MAIN
 
@@ -1062,14 +1111,15 @@ posteriores.
 - un eventual cambio de profesión después de la selección inicial de rubro;
   no forma parte de la secuencia actual y sólo se abre si aparece un caso real;
 - recomendación futura, todavía no habilitada: después de cerrar el núcleo
-  laboral, las copias locales seguras y el bloqueo de acceso, evaluar una
+  laboral, las copias y restauración locales seguras y el bloqueo de acceso,
+  evaluar una
   `Agenda profesional` opcional para Medicina y una posible Psicología. Su
   primer alcance sería pacientes y turnos, sin historias clínicas,
   diagnósticos, tratamientos ni evoluciones. Psicología requeriría aprobar por
   separado la ampliación del catálogo actual de cuatro sectores;
 - monetización y distribución;
-- orden fino de widgets, informes, copias/restauración y bloqueo después del
-  núcleo de configuración y horas;
+- segunda capa ordenada: Widget, informes, copias y restauración locales,
+  bloqueo y Ayuda y recorrido inicial 2.0;
 - logo y tipografías definitivas.
 
 ## Todavía no implementado
@@ -1082,18 +1132,12 @@ posteriores.
 
 ## Próximo paso
 
-Las pruebas cruzadas ya están auditadas y verificadas. Android 8/API 26 y
-Android 13/API 33 ya pasaron la matriz actual. El siguiente paso es:
+El núcleo quedó aprobado y la segunda capa está desbloqueada. El siguiente
+bloque es **Widget**. MAIN prepara su prompt cuando Joaquin lo pida; todavía no
+existe otro prompt implementador habilitado.
 
-1. suite QA permitida, Room y recorrido visual en Samsung API 36;
-2. repetición de la auditoría integral sobre un único HEAD.
-
-La evidencia Samsung de esta dependencia cierra sus regresiones afectadas, pero
-no reemplaza por sí sola la matriz completa. El disparo físico de una alarma
-exacta, un reinicio real del Samsung y una imagen API 37
-conservan puertas separadas.
-
-No existe otro prompt implementador habilitado. Los pushes autorizados para
+El disparo físico de una alarma exacta, un reinicio real del Samsung y API 37
+conservan puertas separadas para el candidato final. Los pushes autorizados para
 disponibilidad, Calendario final y Resumen fueron ejecutados y consumidos en
 `80fe8e5`, `fd6891e` y `ad777bb`. Cualquier push posterior, tag, Release y toda
 operación sobre `main` o producción continúan prohibidos.

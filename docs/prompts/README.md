@@ -1,7 +1,7 @@
 # Índice canónico de prompts — MiGuardia
 
 - Estado: activo
-- Última auditoría completa: 2026-08-27
+- Última auditoría completa: 2026-08-29
 - Regla: un prompt sólo se ejecuta si este índice lo marca `ACTIVO` o
   `HABILITADO` y Joaquin autoriza la tarea
 
@@ -15,13 +15,12 @@
   la tarea siguiente por su cuenta.
 - **Contrato humano:** toda dependencia nueva explica primero `QUÉ HACE` y
   `POR QUÉ EXISTE`, tanto en su prompt como en su handoff.
-- **Última dependencia ejecutada:** `PRUEBAS_CRUZADAS_DEL_NUCLEO_V2.md` quedó
-  cerrada por MAIN. Sus tres barreras pasaron la batería local, Room completa y
-  las regresiones afectadas en el Samsung API 36.
-- **Próxima acción:** completar en Samsung API 36 la matriz Android ya aprobada
-  en API 26 y API 33, y cerrar la repetición habilitada de
-  `AUDITORIA_INTEGRAL_DEL_NUCLEO_Y_COMPATIBILIDAD_ANDROID_V2.md`. La segunda
-  capa continúa cerrada hasta obtener ese veredicto.
+- **Última dependencia ejecutada:**
+  `AUDITORIA_INTEGRAL_DEL_NUCLEO_Y_COMPATIBILIDAD_ANDROID_V2.md` quedó cerrada
+  por MAIN con `NÚCLEO APTO PARA SEGUNDA CAPA` y sin findings abiertos.
+- **Próxima acción:** Widget es el primer bloque de la segunda capa. MAIN
+  prepara su contrato cuando Joaquin lo pida; este índice no crea ni habilita
+  por sí solo una tarea nueva.
 - **Commits locales:** MAIN los crea automáticamente como checkpoints de
   bloques comprobados.
 - **Push puntual anterior de la rama 2.0:** ejecutado y verificado hasta
@@ -93,7 +92,7 @@ prevalecen para el estado operativo.
 | `CALENDARIO_FINAL_Y_TARJETA_SUPERIOR_V2.md` | **CERRADO** | Única grilla mensual consolidada y tarjeta desplegable con todas las jornadas de hoy, auditadas por MAIN |
 | `RESUMEN_PERSONALIZABLE_V2.md` | **CERRADO** | Resumen mensual derivado, detalles ordenables y explicación exacta de cada cifra sin guardar totales ni modificar Room |
 | `PROXIMO_EVENTO_Y_NOTIFICACIONES_V2.md` | **CERRADO** | Una sola verdad V2 para la tarjeta y los avisos de jornadas o disponibilidad, auditada y verificada por MAIN |
-| `AUDITORIA_INTEGRAL_DEL_NUCLEO_Y_COMPATIBILIDAD_ANDROID_V2.md` | **HABILITADO / REPETICIÓN INTEGRAL** | Los tres huecos y API 26/33 están cerrados; resta Samsung API 36 y el veredicto integral |
+| `AUDITORIA_INTEGRAL_DEL_NUCLEO_Y_COMPATIBILIDAD_ANDROID_V2.md` | **CERRADO** | El núcleo aprobó la batería, las tres barreras y la matriz Samsung API 36, Android 8/API 26 y Android 13/API 33 |
 | `PRUEBAS_CRUZADAS_DEL_NUCLEO_V2.md` | **CERRADO** | Las tres barreras quedaron auditadas: fotografía transversal, carrera CAS real y demostración de que consultar no escribe |
 
 ## Contratos históricos de MiGuardia 1.0
@@ -157,16 +156,18 @@ Joaquin indicó que quiere preparar o abrir la siguiente:
     `RESUMEN_PERSONALIZABLE_V2.md`;
 12. **Cerrado:** adaptación de próximo evento y notificaciones mediante
     `PROXIMO_EVENTO_Y_NOTIFICACIONES_V2.md`;
-13. **Parcial histórica, repetición habilitada:** auditoría integral del núcleo y
-    compatibilidad Android mediante
-    `AUDITORIA_INTEGRAL_DEL_NUCLEO_Y_COMPATIBILIDAD_ANDROID_V2.md`; requiere
-    sus tres huecos de cobertura ya fueron cerrados;
+13. **Parcial histórica resuelta:** primera auditoría integral del núcleo y
+    compatibilidad Android;
 14. **Cerrado:** tres barreras de integración incorporadas mediante
     `PRUEBAS_CRUZADAS_DEL_NUCLEO_V2.md`;
-15. **En curso:** API 26 y API 33 están verificadas; resta Samsung API 36 y el
-    veredicto de la auditoría integral repetida;
-16. segunda capa: widget, informes, copias, bloqueo y Ayuda/recorrido inicial;
-17. auditoría de la aplicación completa y candidato local.
+15. **Cerrado:** matriz Samsung API 36, Android 8/API 26 y Android 13/API 33,
+    seguida por la repetición de
+    `AUDITORIA_INTEGRAL_DEL_NUCLEO_Y_COMPATIBILIDAD_ANDROID_V2.md` con
+    veredicto `NÚCLEO APTO PARA SEGUNDA CAPA`;
+16. **Próximo bloque:** Widget;
+17. después: informes, copias y restauración locales, bloqueo y Ayuda y
+    recorrido inicial 2.0;
+18. auditoría de la aplicación completa y candidato local.
 
 Cuando Joaquin pide un prompt, MAIN lo habilita en este índice después de cerrar
 su contrato y dependencias, y crea automáticamente el checkpoint documental

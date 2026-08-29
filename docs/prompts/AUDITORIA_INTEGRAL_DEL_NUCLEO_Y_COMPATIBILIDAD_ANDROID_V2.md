@@ -1,7 +1,9 @@
 # Auditoría integral del núcleo y compatibilidad Android V2
 
-- Estado: **HABILITADO — REPETICIÓN INTEGRAL AUTORIZADA**
+- Estado: **CERRADO — NÚCLEO APTO PARA SEGUNDA CAPA**
 - Fecha: 2026-08-29
+- Cierre MAIN: 2026-08-29
+- Veredicto: **NÚCLEO APTO PARA SEGUNDA CAPA**
 - Proyecto obligatorio:
   `C:\Users\Joaquin\Desktop\chatgptprojects\MiGuardia-2.0`
 - Rama obligatoria: `codex/miguardia-2.0`
@@ -34,7 +36,8 @@ historia laboral, los mismos límites temporales y las mismas reglas al
 combinarse.
 
 Esta dependencia es la puerta entre el núcleo laboral y la segunda capa
-—widget, informes, copias locales, bloqueo y Ayuda 2.0—. Existe para detectar
+—widget, informes, copias y restauración locales, bloqueo y Ayuda y recorrido
+inicial 2.0—. Existe para detectar
 contradicciones ahora, cuando todavía pueden corregirse en un bloque acotado,
 antes de apoyar más superficies sobre la columna vertebral.
 
@@ -123,7 +126,8 @@ La base funcional ya contiene:
 - clima local heredado que no debe bloquear las funciones sin red.
 
 No existe todavía un flujo V2 ampliado para crear ausencia o cancelación, ni
-widget, informes exportables, copias/restauración, bloqueo o Ayuda 2.0. Estas
+widget, informes exportables, copias y restauración locales, bloqueo o Ayuda y
+recorrido inicial 2.0. Estas
 ausencias están diferidas y no son defectos de esta auditoría salvo que el
 código o la documentación afirmen falsamente que ya existen.
 
@@ -855,3 +859,38 @@ Detenete y devolvé el control a MAIN ante:
 
 Conservá toda evidencia segura ya obtenida, describí el punto exacto y no
 intentes corregirlo dentro de esta dependencia.
+
+## CIERRE MAIN — 2026-08-29
+
+MAIN repitió la puerta sobre el candidato funcional común a
+`c35fffb2abe99eac73e164f99147bf95d11ad83d` y al HEAD documental
+`3385c15586ba9af706452f5df540dc3f305da99f`. El tramo entre ambos no modifica
+`app`, `core`, Gradle ni manifiestos.
+
+Resultado final:
+
+- batería local: 499/499 pruebas JVM y lint sin errores;
+- Samsung API 36: Room 108/108 y aplicación 235/235, excluyendo únicamente la
+  alarma exacta real;
+- Android 8/API 26: Room 108/108 y recorrido esencial 27/27;
+- Android 13/API 33: matriz 24/24 y privacidad genérica comprobada visualmente
+  con pantalla bloqueada;
+- tres barreras cruzadas ejecutadas;
+- Room V5, 27 tablas y esquemas 1–5 intactos;
+- recorrido humano continuo reconciliado desde configuración hasta
+  Notificaciones;
+- producción, dispositivos y paquetes controlados;
+- hallazgos P0/P1/P2/P3 abiertos: 0.
+
+Veredicto:
+
+```text
+NÚCLEO APTO PARA SEGUNDA CAPA
+FINDINGS: ninguno
+```
+
+La evidencia durable está en
+`docs/audits/2026-08-29-auditoria-integral-del-nucleo-y-compatibilidad-android-v2.md`.
+API 37, el disparo de una alarma exacta real y un reinicio físico del Samsung
+permanecen diferidos y no bloquean esta puerta. Este prompt no debe
+reejecutarse salvo regresión autorizada.
