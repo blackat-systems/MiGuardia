@@ -96,6 +96,17 @@ class SummaryComposeTest {
     }
 
     @Test
+    fun visibleSummaryOffersTheReportEntryAndCallsTheDedicatedAction() {
+        var openings = 0
+        val state = SummaryUiState(MONTH, SummaryLoadState.CONTENT, projection())
+        setSummary({ state }, SummaryActions(openReports = { openings++ }))
+
+        compose.onNodeWithTag("summary-generate-report").performScrollTo().performClick()
+
+        compose.runOnIdle { assertEquals(1, openings) }
+    }
+
+    @Test
     fun hiddenEmptyAndOrderedFamiliesFollowPreferences() {
         val ordered = listOf(
             SummaryOptionalFamily.HOLIDAYS,

@@ -6,6 +6,7 @@ import com.blackatsystems.miguardia.core.database.repository.RoomAvailabilityWin
 import com.blackatsystems.miguardia.core.database.repository.RoomHolidayRepository
 import com.blackatsystems.miguardia.core.database.repository.RoomIndependentExtraWorkRepository
 import com.blackatsystems.miguardia.core.database.repository.RoomMedicalLeaveRepository
+import com.blackatsystems.miguardia.core.database.repository.RoomMonthlyReportSnapshotRepository
 import com.blackatsystems.miguardia.core.database.repository.RoomObjectiveRepository
 import com.blackatsystems.miguardia.core.database.repository.RoomSchedulePhotoRepository
 import com.blackatsystems.miguardia.core.database.repository.RoomShiftRepository
@@ -21,6 +22,7 @@ import com.blackatsystems.miguardia.core.domain.repository.AvailabilityWindowRep
 import com.blackatsystems.miguardia.core.domain.repository.HolidayRepository
 import com.blackatsystems.miguardia.core.domain.repository.IndependentExtraWorkRepository
 import com.blackatsystems.miguardia.core.domain.repository.MedicalLeaveRepository
+import com.blackatsystems.miguardia.core.domain.report.MonthlyReportSnapshotRepository
 import com.blackatsystems.miguardia.core.domain.repository.ObjectiveRepository
 import com.blackatsystems.miguardia.core.domain.repository.RecurringPlanRepository
 import com.blackatsystems.miguardia.core.domain.repository.SchedulePhotoRepository
@@ -66,6 +68,8 @@ class LocalDataStore internal constructor(
     val availabilityWindows: AvailabilityWindowRepository = roomAvailability
     val recurringShiftWriter: V2RecurringShiftRepository = roomV2Shifts
     val recurringPlans: RecurringPlanRepository = roomV2Shifts
+    val monthlyReportSnapshots: MonthlyReportSnapshotRepository =
+        RoomMonthlyReportSnapshotRepository(database)
 
     /** Clears the isolated QA database between instrumentation scenarios. */
     fun clearAllDataForInstrumentation() {

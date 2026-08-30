@@ -13,6 +13,9 @@ internal interface SchedulePhotoDao {
     @Query("SELECT * FROM schedule_photos WHERE month = :month ORDER BY createdAtEpochMillis, id")
     fun observeForMonth(month: String): Flow<List<SchedulePhotoEntity>>
 
+    @Query("SELECT * FROM schedule_photos WHERE month = :month ORDER BY createdAtEpochMillis, id")
+    suspend fun getForMonth(month: String): List<SchedulePhotoEntity>
+
     @Query("SELECT * FROM schedule_photos WHERE id = :id LIMIT 1")
     suspend fun getById(id: String): SchedulePhotoEntity?
 

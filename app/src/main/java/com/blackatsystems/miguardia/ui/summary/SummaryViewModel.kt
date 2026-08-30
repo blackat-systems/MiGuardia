@@ -157,6 +157,7 @@ data class SummaryActions(
     val dismissPreferenceError: () -> Unit = {},
     val updateOverviewScrollPosition: (Int) -> Unit = {},
     val back: () -> Unit = {},
+    val openReports: () -> Unit = {},
 ) {
     companion object {
         fun from(viewModel: SummaryViewModel): SummaryActions = SummaryActions(

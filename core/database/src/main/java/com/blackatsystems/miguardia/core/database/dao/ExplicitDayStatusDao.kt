@@ -9,6 +9,9 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 internal interface ExplicitDayStatusDao {
+    @Query("SELECT * FROM explicit_day_statuses ORDER BY localDate")
+    suspend fun getAll(): List<ExplicitDayStatusEntity>
+
     @Query(
         """SELECT * FROM explicit_day_statuses
             WHERE localDate BETWEEN :startDateInclusive AND :endDateInclusive

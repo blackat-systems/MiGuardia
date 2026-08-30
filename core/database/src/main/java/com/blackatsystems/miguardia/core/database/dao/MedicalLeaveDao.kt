@@ -10,6 +10,9 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 internal interface MedicalLeaveDao {
+    @Query("SELECT * FROM medical_leaves ORDER BY startDate, endDateInclusive, id")
+    suspend fun getAll(): List<MedicalLeaveEntity>
+
     @Query(
         """SELECT * FROM medical_leaves
             WHERE startDate <= :endDateInclusive AND endDateInclusive >= :startDateInclusive

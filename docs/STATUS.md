@@ -7,12 +7,11 @@ funcionales reunidas constituyen la base vigente para avanzar; cerrar esta etapa
 no significa que exista ya una implementación nueva.
 
 El núcleo laboral V2 quedó aprobado por MAIN. La segunda capa está
-desbloqueada y su primer bloque, **Widget de próximo evento**, quedó
-implementado, auditado, corregido y verificado por MAIN en Samsung API 36.
-Android 8/API 26 y Android 13/API 33 permanecen como compatibilidad pendiente.
-Joaquin autorizó continuar y MAIN preparó el contrato de **Informes locales de
-jornadas y horas**. Su prompt está habilitado para una única dependencia; la
-implementación todavía no fue recibida ni integrada.
+desbloqueada. **Widget de próximo evento** e **Informes locales de jornadas y
+horas** quedaron cerrados. Informes pasó la batería local definitiva y la matriz
+Samsung API 36 de 33/33 casos. Copias y restauración locales seguras permanece
+sin prompt ni tarea habilitados. MAIN se detiene después del checkpoint local
+de Informes.
 
 MAIN 2.0 está reactivada para recibir los handoffs que Joaquin entregue,
 auditarlos, integrarlos, probarlos y cerrarlos. Joaquin decide cuándo pedir el
@@ -200,6 +199,14 @@ y auditada en
     auditadas, probadas e integradas por MAIN.
   - `3385c15586ba9af706452f5df540dc3f305da99f`: repetición integral reactivada
     después de cerrar API 26 y API 33.
+  - `7dadd6299a864df939b5de6d6d6f67d9df737c53`: auditoría integral repetida y
+    núcleo declarado apto para la segunda capa.
+  - `0c2b7dc5737cf66497fda2714a5bdf82c45d8c63`: contrato del Widget de próximo
+    evento.
+  - `d22c5a19ab4722b36116230678511e2cfcd886fa`: Widget auditado, probado e
+    integrado por MAIN.
+  - `f2d05b96b8ff11c1c14dfadb2788c6d514d04176`: contrato de Informes locales de
+    jornadas y horas.
 - Al iniciar la preparación documental, la rama todavía no poseía upstream. El
   push puntual posterior fue ejecutado y verificado: rama local y remoto privado
   coincidían en `836d908`; esa autorización no puede reutilizarse.
@@ -1109,6 +1116,65 @@ La evidencia MAIN está en
 cerrado con API 26/API 33 registradas como compatibilidad pendiente, no como
 evidencia simulada.
 
+## Informes locales de jornadas y horas — cerrado por MAIN
+
+MAIN recibió el candidato directamente en el checkout compartido, auditó sus
+37 rutas finales de código y pruebas, corrigió defectos de coherencia, privacidad,
+almacenamiento y presentación, sin cambiar la versión, las
+entidades, las migraciones ni los esquemas de Room, y sin agregar dependencias.
+
+Resultado funcional:
+
+- acceso `Generar informe` desde el mes visible de Resumen;
+- una fotografía mensual de sólo lectura que reutiliza la fórmula de Horas y
+  Resumen, sin persistir totales derivados;
+- PDF nativo multipágina y XLSX OOXML tabular;
+- guardado consciente mediante SAF y compartir mediante `FileProvider`
+  limitado a artefactos privados;
+- destinos de guardado limitados a documentos `content://`; una respuesta
+  tardía intenta retirar únicamente un documento de tamaño conocido igual a
+  cero y nunca acepta rutas directas;
+- nombre, puesto, notas, nota médica y fotos apagados en cada sesión nueva;
+- segunda confirmación para notas médicas privadas y fotos limitadas al PDF;
+- estados parcial, cerrado, sin actividad, desconocido e incompleto sin ceros
+  inventados;
+- consultas Room transaccionales y sin escrituras; disponibilidad siempre
+  separada del trabajo.
+
+Correcciones de MAIN incluyeron truncado real del destino SAF, fecha y sector
+históricos del horario real, exclusión de notas privadas vecinas, trabajo activo
+que cruza de mes, restauración segura, paginado PDF, congelado temporal de fotos
+y un encabezado propio de Informes que conserva palabras completas al zoom
+interno 200 %.
+
+Validación final:
+
+- batería local: 351/351 tareas ejecutadas, `BUILD SUCCESSFUL`;
+- JVM: 548/548, sin fallos, errores ni omitidas —dominio 329, base 12 y app
+  207—;
+- lint: 0 errores/fatales; 6 avisos de versiones en Gradle no modificado;
+- Debug, QA, Release sin firma y ambos AndroidTest compilados;
+- inventario AndroidTest: app 283 y base 113;
+- evidencia Samsung anterior, conservada sólo como histórica: matriz dirigida
+  28/28 —app 23 y Room 5—, más 4/4 del encabezado al 200 %;
+- repetición Samsung definitiva sobre el código final: 33/33 —app 28 y Room
+  5—, sin fallos, errores ni omitidas;
+- recorrido real con datos ficticios: instalación limpia, Medicina, lugar y
+  jornada, Resumen, privacidad apagada, PDF, XLSX, cancelación/reintento de
+  guardado, ShareSheet, retrato/paisaje, claro/oscuro y zoom interno
+  100/150/200;
+- el PDF guardado por SAF se volvió a abrir y renderizar en dos páginas A4 sin
+  cortes ni superposiciones;
+- Room continúa en V5, 27 tablas, `identityHash`
+  `77adbc875d0f4ee466cdbd0dd74d5c5c` y esquemas 1–5 intactos;
+- producción permaneció ausente; los paquetes de prueba fueron retirados y sólo
+  quedó QA instalada y abierta por el pedido expreso de iniciar una sesión en
+  vivo; la matriz final no modificó ajustes visuales ni otros valores del
+  sistema.
+
+La evidencia durable está en
+`docs/audits/2026-08-29-informes-locales-de-jornadas-y-horas-v2-main.md`.
+
 ## Flujo vigente de MAIN
 
 - Joaquin entrega un handoff o pide preparar el prompt de una nueva tarea;
@@ -1151,8 +1217,8 @@ posteriores.
   separado la ampliación del catálogo actual de cuatro sectores;
 - monetización y distribución;
 - segunda capa ordenada: Widget —cerrado por MAIN; Samsung verde, API 26/API 33
-  pendientes de compatibilidad—, Informes —prompt habilitado, implementación
-  pendiente—, copias y restauración locales, bloqueo y Ayuda y recorrido
+  pendientes de compatibilidad—, Informes —cerrado por MAIN; local y Samsung
+  API 36 verdes—, copias y restauración locales, bloqueo y Ayuda y recorrido
   inicial 2.0;
 - logo y tipografías definitivas.
 
@@ -1167,13 +1233,11 @@ posteriores.
 ## Próximo paso
 
 El núcleo quedó aprobado y la segunda capa está desbloqueada. **Widget de
-próximo evento** ya pasó auditoría, correcciones, batería local y Samsung API
-36 y tiene checkpoint local. Joaquin autorizó el siguiente bloque y
-`INFORMES_LOCALES_DE_JORNADAS_Y_HORAS_V2.md` quedó habilitado. MAIN crea su
-checkpoint documental, verifica una única Puerta 0 y despacha la dependencia
-`18 - Informes locales`. Copias, bloqueo y Ayuda permanecen cerrados. API
-26/API 33 del Widget continúan pendientes para la matriz de compatibilidad
-posterior.
+próximo evento** e **Informes locales** están cerrados. Este cierre documental y
+el código verificado forman el checkpoint local de Informes. Por indicación
+expresa de Joaquin, MAIN se detiene aquí: no prepara ni abre otra dependencia.
+Copias y restauración permanece sin prompt ni tarea habilitados. API 26/API 33
+del Widget continúan pendientes para la matriz de compatibilidad posterior.
 
 El disparo físico de una alarma exacta, un reinicio real del Samsung y API 37
 conservan puertas separadas para el candidato final. Los pushes autorizados para

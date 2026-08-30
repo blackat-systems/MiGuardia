@@ -37,6 +37,8 @@ import com.blackatsystems.miguardia.ui.nextevent.NextEventViewModel
 import com.blackatsystems.miguardia.ui.notifications.NotificationViewModel
 import com.blackatsystems.miguardia.ui.photos.PhotosViewModel
 import com.blackatsystems.miguardia.ui.photos.SchedulePhotoFileStore
+import com.blackatsystems.miguardia.reports.ReportDestinationWriter
+import com.blackatsystems.miguardia.reports.ReportsViewModel
 import com.blackatsystems.miguardia.ui.summary.SummaryObserver
 import com.blackatsystems.miguardia.ui.summary.SummaryViewModel
 import com.blackatsystems.miguardia.ui.theme.AppThemeMode
@@ -228,6 +230,18 @@ class MainActivity : ComponentActivity() {
         )
     }
 
+    private val reportsViewModel: ReportsViewModel by viewModels {
+        val application = application as MiGuardiaApplication
+        ReportsViewModel.Factory(
+            generator = application.reportGenerator,
+            destinationWriter = ReportDestinationWriter(application.contentResolver),
+            photoRepository = application.localDataStore.schedulePhotos,
+            profileStore = application.guardProfile,
+            clock = Clock.systemUTC(),
+            zoneId = AppDefaults.zoneId(),
+        )
+    }
+
     private val exceptionsViewModel: ExceptionsViewModel by viewModels {
         val dataStore = (application as MiGuardiaApplication).localDataStore
         ExceptionsViewModel.Factory(
@@ -290,6 +304,7 @@ class MainActivity : ComponentActivity() {
                     hoursAndExtrasViewModel = hoursAndExtrasViewModel,
                     availabilityViewModel = availabilityViewModel,
                     summaryViewModel = summaryViewModel,
+                    reportsViewModel = reportsViewModel,
                     calendarNavigationRequest = calendarNavigationRequest,
                     appZoom = appZoom,
                     onAppZoomChange = { selected ->

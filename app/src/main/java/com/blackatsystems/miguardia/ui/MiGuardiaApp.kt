@@ -162,6 +162,10 @@ import com.blackatsystems.miguardia.ui.photos.PhotosUiState
 import com.blackatsystems.miguardia.ui.photos.PhotosViewModel
 import com.blackatsystems.miguardia.ui.summary.SummaryActions
 import com.blackatsystems.miguardia.ui.summary.SummaryScreen
+import com.blackatsystems.miguardia.reports.ReportsActions
+import com.blackatsystems.miguardia.reports.ReportsSurfaceHost
+import com.blackatsystems.miguardia.reports.ReportsUiState
+import com.blackatsystems.miguardia.reports.ReportsViewModel
 import com.blackatsystems.miguardia.ui.summary.SummaryUiState
 import com.blackatsystems.miguardia.ui.summary.SummaryViewModel
 import com.blackatsystems.miguardia.ui.exceptions.ExceptionsActions
@@ -406,6 +410,7 @@ fun MiGuardiaApp(
     hoursAndExtrasViewModel: HoursAndExtrasViewModel,
     availabilityViewModel: AvailabilityViewModel,
     summaryViewModel: SummaryViewModel,
+    reportsViewModel: ReportsViewModel,
     modifier: Modifier = Modifier,
     calendarNavigationRequest: Int = 0,
     appZoom: AppZoom = AppZoom.STANDARD,
@@ -430,6 +435,7 @@ fun MiGuardiaApp(
     val hoursAndExtrasState by hoursAndExtrasViewModel.uiState.collectAsStateWithLifecycle()
     val availabilityState by availabilityViewModel.uiState.collectAsStateWithLifecycle()
     val summaryState by summaryViewModel.uiState.collectAsStateWithLifecycle()
+    val reportsState by reportsViewModel.uiState.collectAsStateWithLifecycle()
     MiGuardiaApp(
         calendarState = calendarState,
         nextEventState = nextEventState,
@@ -473,7 +479,11 @@ fun MiGuardiaApp(
         availabilityState = availabilityState,
         availabilityActions = AvailabilityActions.from(availabilityViewModel),
         summaryState = summaryState,
-        summaryActions = SummaryActions.from(summaryViewModel),
+        summaryActions = SummaryActions.from(summaryViewModel).copy(
+            openReports = { reportsViewModel.open(summaryState.visibleMonth) },
+        ),
+        reportsState = reportsState,
+        reportsActions = ReportsActions.from(reportsViewModel),
         calendarNavigationRequest = calendarNavigationRequest,
         appZoom = appZoom,
         onAppZoomChange = onAppZoomChange,
@@ -530,6 +540,8 @@ fun MiGuardiaApp(
     availabilityActions: AvailabilityActions = AvailabilityActions(),
     summaryState: SummaryUiState = SummaryUiState(visibleMonth = calendarState.visibleMonth),
     summaryActions: SummaryActions = SummaryActions(),
+    reportsState: ReportsUiState = ReportsUiState(month = calendarState.visibleMonth),
+    reportsActions: ReportsActions = ReportsActions(),
     calendarNavigationRequest: Int = 0,
     appZoom: AppZoom = AppZoom.STANDARD,
     onAppZoomChange: (AppZoom) -> Unit = {},
@@ -583,7 +595,8 @@ fun MiGuardiaApp(
         v2RecurringActive ||
         v2ShiftActualActive ||
         hoursAndExtrasActive ||
-        availabilityActive
+        availabilityActive ||
+        reportsState.isOpen
     var destination by rememberSaveable { androidx.compose.runtime.mutableStateOf(MainDestination.CALENDAR) }
     val currentSetSummaryActive by rememberUpdatedState(summaryActions.setActive)
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -1058,6 +1071,9 @@ fun MiGuardiaApp(
     }
     if (availabilityActive) {
         AvailabilitySurfaceHost(availabilityState, availabilityActions)
+    }
+    if (reportsState.isOpen) {
+        ReportsSurfaceHost(reportsState, reportsActions)
     }
     if (v2ShiftEditActive) {
         V2ShiftEditSurfaceHost(

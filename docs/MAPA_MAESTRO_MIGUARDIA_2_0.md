@@ -183,9 +183,9 @@ Repetición de auditoría integral — NÚCLEO APTO PARA SEGUNDA CAPA
         ↓
 Widget de próximo evento — cerrado; Samsung verde, API 26/33 pendientes
         ↓
-Informes locales — prompt habilitado / implementación pendiente
+Informes locales — cerrado; local y Samsung API 36 (33/33) verdes
         ↓
-Copias y restauración locales
+Copias y restauración locales — siguiente recomendado / no habilitado
         ↓
 Bloqueo
         ↓
@@ -227,8 +227,18 @@ auditó las fuentes V2, fijó ADR 0034 y habilitó
 `INFORMES_LOCALES_DE_JORNADAS_Y_HORAS_V2.md`. El bloque debe reutilizar la
 misma fórmula de Horas y Resumen, generar PDF/XLSX local sin dependencia nueva
 y mantener notas, nombre, puesto y fotos apagados por defecto. La
-implementación permanece pendiente hasta que la única tarea especialista pase
-Puerta 0.
+implementación quedaba pendiente en ese momento hasta que la única tarea
+especialista pasara Puerta 0.
+
+Actualización de cierre del 2026-08-29: MAIN recibió el handoff de Informes,
+auditó y corrigió el candidato y repitió la batería contractual. PDF y XLSX se
+generan localmente desde la misma verdad de Horas/Resumen, las inclusiones
+privadas comienzan apagadas y la versión, las entidades, las migraciones y los
+esquemas de Room V5 permanecen intactos. La matriz definitiva pasó en Samsung
+API 36 con 33/33 casos —app 28 y Room 5—. Informes queda cerrado; Copias y
+restauración continúa como siguiente bloque recomendado, pero no tiene prompt ni
+tarea habilitados. Por indicación expresa de Joaquin, MAIN se detiene después
+del checkpoint local de Informes.
 
 MAIN integra un bloque por vez. Cada bloque debe compilar, pasar sus pruebas,
 preservar el alcance ajeno y quedar documentado antes del siguiente. El mapa

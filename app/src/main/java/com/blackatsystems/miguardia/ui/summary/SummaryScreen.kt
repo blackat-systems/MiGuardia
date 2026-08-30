@@ -117,6 +117,12 @@ private fun SummaryOverview(
             )
         }
         SummaryMonthControls(state.visibleMonth, actions)
+        Button(
+            onClick = actions.openReports,
+            modifier = Modifier.fillMaxWidth().testTag("summary-generate-report"),
+        ) {
+            Text("Generar informe")
+        }
         if (state.introVisible) {
             SectionCard(
                 title = "Tu resumen, a tu manera",
@@ -185,6 +191,14 @@ private fun SummaryMenu(
             Text("⋮", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            DropdownMenuItem(
+                text = { Text("Generar informe") },
+                onClick = {
+                    expanded = false
+                    actions.openReports()
+                },
+                modifier = Modifier.testTag("summary-menu-generate-report"),
+            )
             DropdownMenuItem(
                 text = { Text("Personalizar resumen") },
                 onClick = {

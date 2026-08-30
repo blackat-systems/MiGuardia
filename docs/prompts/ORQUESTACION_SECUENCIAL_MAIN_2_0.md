@@ -584,11 +584,10 @@ Android 8/API 26 y Android 13/API 33 fue ejecutada. La repetición de
 
 `WIDGET_DE_PROXIMO_EVENTO_V2.md` quedó cerrado por MAIN después de corregir los
 findings de dominio, runtime y UI y verificar la batería local y Samsung API 36.
-Android 8/API 26 y Android 13/API 33 siguen pendientes de compatibilidad. MAIN
-recibió la indicación de Joaquin y habilitó
-`INFORMES_LOCALES_DE_JORNADAS_Y_HORAS_V2.md`. Debe crear el checkpoint
-documental, verificar la Puerta 0 de una sola tarea `18 - Informes locales` y
-transferirle el checkout como único escritor. La tarea no hereda ninguna
-autorización anterior de ADB, push, alarma exacta o reinicio. Copias, bloqueo y
-Ayuda permanecen cerrados hasta que MAIN integre Informes y Joaquin indique el
-siguiente paso.
+Android 8/API 26 y Android 13/API 33 siguen pendientes de compatibilidad.
+`INFORMES_LOCALES_DE_JORNADAS_Y_HORAS_V2.md` quedó cerrado por MAIN después de
+auditar y corregir el candidato, repetir la batería local y verificar en Samsung
+API 36 la matriz definitiva de 33/33 casos. Copias y restauración locales
+seguras no tiene prompt ni tarea habilitados. MAIN se detiene después de este
+checkpoint por indicación expresa de Joaquin. Ninguna autorización anterior de
+ADB, push, alarma exacta o reinicio se hereda.

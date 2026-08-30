@@ -548,7 +548,8 @@ continúa con:
 
 1. widget basado en el motor final de próximo evento —cerrado por MAIN; Samsung
    verde, API 26/API 33 pendientes de compatibilidad—;
-2. informes locales de jornadas y horas;
+2. informes locales de jornadas y horas —cerrado por MAIN; batería local y
+   Samsung API 36 verdes—;
 3. copias y restauración locales seguras;
 4. bloqueo de acceso local;
 5. Ayuda y recorrido inicial reescritos para la interfaz 2.0 definitiva;
@@ -561,12 +562,12 @@ integración, validación, documentación y checkpoint local quedan a cargo de
 MAIN. Este orden no autoriza servicios externos, publicación ni decisiones
 funcionales todavía ausentes.
 
-Estado del 2026-08-29: el Widget quedó cerrado por MAIN. Joaquin indicó
-continuar con Informes locales de jornadas y horas. ADR 0034 y
-`INFORMES_LOCALES_DE_JORNADAS_Y_HORAS_V2.md` fijan un PDF nativo y un XLSX
-tabular sobre la misma proyección de Horas/Resumen, sin guardar totales ni
-agregar una dependencia. El prompt está habilitado y su implementación queda
-pendiente de una única tarea especialista.
+Estado del 2026-08-29: Widget e Informes quedaron cerrados por MAIN. Informes
+entrega un PDF nativo y un XLSX tabular sobre la misma proyección de
+Horas/Resumen, sin guardar totales ni agregar una dependencia. Su batería local
+y la matriz definitiva Samsung API 36 de 33/33 casos quedaron verdes. Copias y
+restauración locales seguras continúa sin prompt ni tarea habilitados y MAIN se
+detiene después del checkpoint local de Informes.
 
 ## 21. Idea futura guardada: agenda profesional
 

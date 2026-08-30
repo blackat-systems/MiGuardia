@@ -15,12 +15,12 @@
   la tarea siguiente por su cuenta.
 - **Contrato humano:** toda dependencia nueva explica primero `QUÉ HACE` y
   `POR QUÉ EXISTE`, tanto en su prompt como en su handoff.
-- **Última dependencia cerrada:** `WIDGET_DE_PROXIMO_EVENTO_V2.md` quedó
-  implementada, auditada y verificada por MAIN en Samsung API 36. Android
-  8/API 26 y Android 13/API 33 permanecen como compatibilidad pendiente.
-- **Dependencia habilitada:** `INFORMES_LOCALES_DE_JORNADAS_Y_HORAS_V2.md`.
-  Joaquin autorizó preparar y despachar una única tarea `18 - Informes
-  locales`; todavía no existe un candidato integrado.
+- **Última dependencia cerrada:**
+  `INFORMES_LOCALES_DE_JORNADAS_Y_HORAS_V2.md`; batería local y matriz Samsung
+  API 36 de 33/33 casos verdes.
+- **Bloque activo:** ninguno; MAIN se detiene después del checkpoint local de
+  Informes.
+- **Próxima dependencia:** ninguna habilitada.
 - **Commits locales:** MAIN los crea automáticamente como checkpoints de
   bloques comprobados.
 - **Push puntual anterior de la rama 2.0:** ejecutado y verificado hasta
@@ -95,7 +95,7 @@ prevalecen para el estado operativo.
 | `AUDITORIA_INTEGRAL_DEL_NUCLEO_Y_COMPATIBILIDAD_ANDROID_V2.md` | **CERRADO** | El núcleo aprobó la batería, las tres barreras y la matriz Samsung API 36, Android 8/API 26 y Android 13/API 33 |
 | `PRUEBAS_CRUZADAS_DEL_NUCLEO_V2.md` | **CERRADO** | Las tres barreras quedaron auditadas: fotografía transversal, carrera CAS real y demostración de que consultar no escribe |
 | `WIDGET_DE_PROXIMO_EVENTO_V2.md` | **CERRADO** | Widget nativo auditado y verificado por MAIN en Samsung API 36; API 26/API 33 quedan como compatibilidad pendiente |
-| `INFORMES_LOCALES_DE_JORNADAS_Y_HORAS_V2.md` | **HABILITADO** | PDF y XLSX locales derivados de Horas/Resumen, con guardado consciente, compartir seguro y privacidad apagada por defecto |
+| `INFORMES_LOCALES_DE_JORNADAS_Y_HORAS_V2.md` | **CERRADO** | PDF y XLSX locales derivados de Horas/Resumen, auditados y verificados por MAIN en Samsung API 36 |
 
 ## Contratos históricos de MiGuardia 1.0
 
@@ -169,11 +169,10 @@ Joaquin indicó que quiere preparar o abrir la siguiente:
 16. **Cerrado:** Widget de próximo evento mediante
     `WIDGET_DE_PROXIMO_EVENTO_V2.md`; Samsung API 36 verde, API 26/API 33
     pendientes de compatibilidad;
-17. **Habilitado:** Informes locales de jornadas y horas mediante
-    `INFORMES_LOCALES_DE_JORNADAS_Y_HORAS_V2.md`; implementación pendiente de
-    una única tarea especialista;
-18. después de cerrar Informes: copias y restauración locales, bloqueo y Ayuda
-    y recorrido inicial 2.0;
+17. **Cerrado:** Informes locales de jornadas y horas mediante
+    `INFORMES_LOCALES_DE_JORNADAS_Y_HORAS_V2.md`; local y Samsung API 36 verdes;
+18. **No habilitado:** copias y restauración locales seguras; después siguen
+    bloqueo y Ayuda y recorrido inicial 2.0;
 19. auditoría de la aplicación completa y candidato local.
 
 Cuando Joaquin pide un prompt, MAIN lo habilita en este índice después de cerrar

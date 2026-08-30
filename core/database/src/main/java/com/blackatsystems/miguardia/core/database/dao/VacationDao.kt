@@ -10,6 +10,9 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 internal interface VacationDao {
+    @Query("SELECT * FROM vacations ORDER BY startDate, endDateInclusive, id")
+    suspend fun getAll(): List<VacationEntity>
+
     @Query(
         """SELECT * FROM vacations
             WHERE startDate <= :endDateInclusive AND endDateInclusive >= :startDateInclusive

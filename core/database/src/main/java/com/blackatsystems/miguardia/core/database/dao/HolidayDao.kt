@@ -14,6 +14,9 @@ internal interface HolidayDao {
     @Query("SELECT * FROM holidays WHERE localDate BETWEEN :start AND :endInclusive ORDER BY localDate, id")
     fun observeBetween(start: String, endInclusive: String): Flow<List<HolidayEntity>>
 
+    @Query("SELECT * FROM holidays ORDER BY localDate, id")
+    suspend fun getAll(): List<HolidayEntity>
+
     @Query("SELECT * FROM holidays WHERE id = :id")
     suspend fun getById(id: String): HolidayEntity?
 

@@ -1,7 +1,8 @@
 # Informes locales de jornadas y horas V2
 
-- Estado: **HABILITADO — IMPLEMENTACIÓN PENDIENTE**
+- Estado: **CERRADO — INTEGRADO Y VERIFICADO POR MAIN**
 - Fecha: 2026-08-29
+- Cierre MAIN: 2026-08-29
 - Proyecto obligatorio:
   `C:\Users\Joaquin\Desktop\chatgptprojects\MiGuardia-2.0`
 - Rama obligatoria: `codex/miguardia-2.0`
@@ -10,6 +11,11 @@
 - HEAD de entrada: el checkpoint documental exacto que MAIN informe al abrir
   la tarea
 - Nombre humano: **Informes locales**
+
+> Nota de cierre: el cuerpo conserva el contrato y las puertas vigentes al
+> abrir la dependencia. La evidencia ejecutada y los límites finales están
+> registrados en
+> `docs/audits/2026-08-29-informes-locales-de-jornadas-y-horas-v2-main.md`.
 
 ## QUÉ HACE
 
