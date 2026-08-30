@@ -185,7 +185,7 @@ Widget de próximo evento — cerrado; Samsung verde, API 26/33 pendientes
         ↓
 Informes locales — cerrado; local y Samsung API 36 (33/33) verdes
         ↓
-Copias y restauración locales — siguiente recomendado / no habilitado
+Copias y restauración locales — prompt habilitado / implementación pendiente
         ↓
 Bloqueo
         ↓
@@ -235,10 +235,15 @@ auditó y corrigió el candidato y repitió la batería contractual. PDF y XLSX 
 generan localmente desde la misma verdad de Horas/Resumen, las inclusiones
 privadas comienzan apagadas y la versión, las entidades, las migraciones y los
 esquemas de Room V5 permanecen intactos. La matriz definitiva pasó en Samsung
-API 36 con 33/33 casos —app 28 y Room 5—. Informes queda cerrado; Copias y
-restauración continúa como siguiente bloque recomendado, pero no tiene prompt ni
-tarea habilitados. Por indicación expresa de Joaquin, MAIN se detiene después
-del checkpoint local de Informes.
+API 36 con 33/33 casos —app 28 y Room 5—. Informes queda cerrado.
+
+Actualización de Copias del 2026-08-29: Joaquin pidió preparar la dependencia y
+decidió que toda recuperación debe preguntar antes de escribir. El usuario podrá
+elegir `Combinar con mis datos` —sin sobreescritura silenciosa y con resolución
+de conflictos— o `Reemplazar todo` —con vista previa y segunda confirmación—.
+MAIN fijó el contrato técnico en ADR 0035 y habilitó
+`COPIAS_Y_RESTAURACION_LOCALES_SEGURAS_V2.md`. La implementación todavía no
+comenzó y Joaquin abrirá la única tarea especialista.
 
 MAIN integra un bloque por vez. Cada bloque debe compilar, pasar sus pruebas,
 preservar el alcance ajeno y quedar documentado antes del siguiente. El mapa

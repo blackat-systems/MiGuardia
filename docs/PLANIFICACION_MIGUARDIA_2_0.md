@@ -479,6 +479,20 @@ No recuerda automáticamente esas respuestas para la próxima ocasión.
 - Cada versión posterior debe exportar esquema, migrar desde la versión V2
   inmediata anterior y preservar todos los datos V2.
 - No se permite una limpieza silenciosa de datos desde la aplicación.
+- La primera copia V2 es manual, completa, lógica y versionada; no copia SQLite
+  ni DataStore en bruto y no hereda el recorte mensual de V1.
+- La copia puede incluir fotos conscientemente y recomienda contraseña. El modo
+  cifrado usa APIs JCA disponibles desde API 26; no agrega servicio, cuenta,
+  nube ni sincronización.
+- Antes de restaurar se valida una vista previa sin escrituras. El usuario elige
+  `Combinar con mis datos` o `Reemplazar todo`.
+- Combinar conserva lo actual por defecto, omite duplicados exactos y exige
+  resolver conflictos. Sólo combina un destino vacío o la misma `timelineId`;
+  dos configuraciones laborales independientes no se mezclan.
+- Reemplazar todo muestra qué desaparecerá y exige una segunda confirmación.
+- La restauración coordina Room, preferencias y fotos con candidato, rollback y
+  journal durable; un fallo o muerte de proceso deja íntegramente el estado
+  anterior o el nuevo.
 
 ## 17. Orden aprobado de implementación
 
@@ -565,9 +579,10 @@ funcionales todavía ausentes.
 Estado del 2026-08-29: Widget e Informes quedaron cerrados por MAIN. Informes
 entrega un PDF nativo y un XLSX tabular sobre la misma proyección de
 Horas/Resumen, sin guardar totales ni agregar una dependencia. Su batería local
-y la matriz definitiva Samsung API 36 de 33/33 casos quedaron verdes. Copias y
-restauración locales seguras continúa sin prompt ni tarea habilitados y MAIN se
-detiene después del checkpoint local de Informes.
+y la matriz definitiva Samsung API 36 de 33/33 casos quedaron verdes. Joaquin
+pidió preparar Copias y restauración locales seguras: ADR 0035 y el prompt
+`COPIAS_Y_RESTAURACION_LOCALES_SEGURAS_V2.md` fijan el contrato y quedan
+habilitados. La implementación no comenzó; Joaquin abrirá la única dependencia.
 
 ## 21. Idea futura guardada: agenda profesional
 

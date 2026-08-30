@@ -587,7 +587,12 @@ findings de dominio, runtime y UI y verificar la batería local y Samsung API 36
 Android 8/API 26 y Android 13/API 33 siguen pendientes de compatibilidad.
 `INFORMES_LOCALES_DE_JORNADAS_Y_HORAS_V2.md` quedó cerrado por MAIN después de
 auditar y corregir el candidato, repetir la batería local y verificar en Samsung
-API 36 la matriz definitiva de 33/33 casos. Copias y restauración locales
-seguras no tiene prompt ni tarea habilitados. MAIN se detiene después de este
-checkpoint por indicación expresa de Joaquin. Ninguna autorización anterior de
-ADB, push, alarma exacta o reinicio se hereda.
+API 36 la matriz definitiva de 33/33 casos.
+
+Joaquin pidió preparar Copias y restauración y decidió ofrecer dos opciones
+conscientes: combinar sin sobreescritura silenciosa o reemplazar todo con vista
+previa y segunda confirmación. ADR 0035 y
+`COPIAS_Y_RESTAURACION_LOCALES_SEGURAS_V2.md` fijan el contrato. El prompt queda
+habilitado y la implementación pendiente hasta que Joaquin cree la única tarea
+especialista. Ninguna autorización anterior de ADB, push, alarma exacta o
+reinicio se hereda.

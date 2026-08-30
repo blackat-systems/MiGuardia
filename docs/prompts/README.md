@@ -18,9 +18,10 @@
 - **Última dependencia cerrada:**
   `INFORMES_LOCALES_DE_JORNADAS_Y_HORAS_V2.md`; batería local y matriz Samsung
   API 36 de 33/33 casos verdes.
-- **Bloque activo:** ninguno; MAIN se detiene después del checkpoint local de
-  Informes.
-- **Próxima dependencia:** ninguna habilitada.
+- **Bloque habilitado:**
+  `COPIAS_Y_RESTAURACION_LOCALES_SEGURAS_V2.md`; implementación pendiente.
+- **Tarea especialista:** todavía no abierta; Joaquin la creará después del
+  checkpoint documental.
 - **Commits locales:** MAIN los crea automáticamente como checkpoints de
   bloques comprobados.
 - **Push puntual anterior de la rama 2.0:** ejecutado y verificado hasta
@@ -96,6 +97,7 @@ prevalecen para el estado operativo.
 | `PRUEBAS_CRUZADAS_DEL_NUCLEO_V2.md` | **CERRADO** | Las tres barreras quedaron auditadas: fotografía transversal, carrera CAS real y demostración de que consultar no escribe |
 | `WIDGET_DE_PROXIMO_EVENTO_V2.md` | **CERRADO** | Widget nativo auditado y verificado por MAIN en Samsung API 36; API 26/API 33 quedan como compatibilidad pendiente |
 | `INFORMES_LOCALES_DE_JORNADAS_Y_HORAS_V2.md` | **CERRADO** | PDF y XLSX locales derivados de Horas/Resumen, auditados y verificados por MAIN en Samsung API 36 |
+| `COPIAS_Y_RESTAURACION_LOCALES_SEGURAS_V2.md` | **HABILITADO — IMPLEMENTACIÓN PENDIENTE** | Copia completa local y restauración consciente: combinar sin sobreescritura silenciosa o reemplazar todo con segunda confirmación |
 
 ## Contratos históricos de MiGuardia 1.0
 
@@ -171,9 +173,12 @@ Joaquin indicó que quiere preparar o abrir la siguiente:
     pendientes de compatibilidad;
 17. **Cerrado:** Informes locales de jornadas y horas mediante
     `INFORMES_LOCALES_DE_JORNADAS_Y_HORAS_V2.md`; local y Samsung API 36 verdes;
-18. **No habilitado:** copias y restauración locales seguras; después siguen
-    bloqueo y Ayuda y recorrido inicial 2.0;
-19. auditoría de la aplicación completa y candidato local.
+18. **Habilitado:** copias y restauración locales seguras mediante
+    `COPIAS_Y_RESTAURACION_LOCALES_SEGURAS_V2.md`; Joaquin abrirá la única tarea
+    especialista;
+19. **Pendiente:** bloqueo de acceso local;
+20. **Pendiente:** Ayuda y recorrido inicial 2.0;
+21. auditoría de la aplicación completa y candidato local.
 
 Cuando Joaquin pide un prompt, MAIN lo habilita en este índice después de cerrar
 su contrato y dependencias, y crea automáticamente el checkpoint documental

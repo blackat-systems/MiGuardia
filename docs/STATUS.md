@@ -9,9 +9,9 @@ no significa que exista ya una implementación nueva.
 El núcleo laboral V2 quedó aprobado por MAIN. La segunda capa está
 desbloqueada. **Widget de próximo evento** e **Informes locales de jornadas y
 horas** quedaron cerrados. Informes pasó la batería local definitiva y la matriz
-Samsung API 36 de 33/33 casos. Copias y restauración locales seguras permanece
-sin prompt ni tarea habilitados. MAIN se detiene después del checkpoint local
-de Informes.
+Samsung API 36 de 33/33 casos. **Copias y restauración locales seguras** es el
+bloque habilitado actual: su contrato quedó definido y la implementación todavía
+no comenzó. Joaquin creará la única tarea especialista.
 
 MAIN 2.0 está reactivada para recibir los handoffs que Joaquin entregue,
 auditarlos, integrarlos, probarlos y cerrarlos. Joaquin decide cuándo pedir el
@@ -207,6 +207,8 @@ y auditada en
     integrado por MAIN.
   - `f2d05b96b8ff11c1c14dfadb2788c6d514d04176`: contrato de Informes locales de
     jornadas y horas.
+  - `ff2f9b6699606f7ef3c7e599e2a6b4da25b40c67`: Informes locales auditados,
+    probados e integrados por MAIN; matriz final Samsung 33/33.
 - Al iniciar la preparación documental, la rama todavía no poseía upstream. El
   push puntual posterior fue ejecutado y verificado: rama local y remoto privado
   coincidían en `836d908`; esa autorización no puede reutilizarse.
@@ -1175,6 +1177,38 @@ Validación final:
 La evidencia durable está en
 `docs/audits/2026-08-29-informes-locales-de-jornadas-y-horas-v2-main.md`.
 
+## Copias y restauración locales seguras — prompt habilitado
+
+Joaquin pidió preparar la siguiente dependencia y decidió el comportamiento
+visible de la recuperación:
+
+- `Combinar con mis datos` es la opción recomendada; conserva lo actual por
+  defecto, omite duplicados exactos y pregunta antes de resolver conflictos;
+- `Reemplazar todo` muestra qué desaparecerá y exige una segunda confirmación;
+- no existe sobreescritura silenciosa ni escritura mientras haya conflictos;
+- una instalación vacía puede recibir una copia; dos estados no vacíos sólo se
+  combinan si comparten la misma `timelineId`;
+- dos configuraciones laborales independientes no se convierten en perfiles:
+  la alternativa consciente es conservar el estado actual o reemplazarlo.
+
+El contrato técnico está fijado por
+`docs/adr/0035-copias-locales-versionadas-y-restauracion-atomica.md`:
+
+- copia completa, lógica y versionada de las 27 tablas y preferencias portables;
+- fotos opcionales como unidad fila+bytes;
+- contraseña opcional y recomendada con PBKDF2-HMAC-SHA256 y AES-256-GCM;
+- vista previa de sólo lectura antes de cualquier mutación;
+- aplicación atómica coordinada entre Room, preferencias y fotos;
+- journal y rollback que dejan estado viejo o nuevo ante fallos o muerte de
+  proceso;
+- SAF, sin permiso general de almacenamiento, dependencia nueva, nube o
+  sincronización;
+- Room V5 y esquemas 1–5 protegidos.
+
+`docs/prompts/COPIAS_Y_RESTAURACION_LOCALES_SEGURAS_V2.md` queda
+**HABILITADO — IMPLEMENTACIÓN PENDIENTE**. Preparar el prompt no abrió la tarea,
+no usó dispositivos y no autorizó push. Joaquin creará la única dependencia.
+
 ## Flujo vigente de MAIN
 
 - Joaquin entrega un handoff o pide preparar el prompt de una nueva tarea;
@@ -1218,8 +1252,8 @@ posteriores.
 - monetización y distribución;
 - segunda capa ordenada: Widget —cerrado por MAIN; Samsung verde, API 26/API 33
   pendientes de compatibilidad—, Informes —cerrado por MAIN; local y Samsung
-  API 36 verdes—, copias y restauración locales, bloqueo y Ayuda y recorrido
-  inicial 2.0;
+  API 36 verdes—, Copias y restauración —prompt habilitado, implementación
+  pendiente—, bloqueo y Ayuda y recorrido inicial 2.0;
 - logo y tipografías definitivas.
 
 ## Todavía no implementado
@@ -1233,11 +1267,11 @@ posteriores.
 ## Próximo paso
 
 El núcleo quedó aprobado y la segunda capa está desbloqueada. **Widget de
-próximo evento** e **Informes locales** están cerrados. Este cierre documental y
-el código verificado forman el checkpoint local de Informes. Por indicación
-expresa de Joaquin, MAIN se detiene aquí: no prepara ni abre otra dependencia.
-Copias y restauración permanece sin prompt ni tarea habilitados. API 26/API 33
-del Widget continúan pendientes para la matriz de compatibilidad posterior.
+próximo evento** e **Informes locales** están cerrados. **Copias y restauración
+locales seguras** tiene ADR y prompt habilitados; la implementación permanece
+pendiente hasta que Joaquin cree la tarea con el checkpoint documental exacto.
+API 26/API 33 del Widget continúan pendientes para la matriz de compatibilidad
+posterior.
 
 El disparo físico de una alarma exacta, un reinicio real del Samsung y API 37
 conservan puertas separadas para el candidato final. Los pushes autorizados para
