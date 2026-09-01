@@ -18,9 +18,10 @@
 - **Última dependencia cerrada:**
   `COPIAS_Y_RESTAURACION_LOCALES_SEGURAS_V2.md`; batería local, Room y matriz
   segura de aplicación verdes en Samsung API 36, más recorrido SAF cifrado real.
-- **Bloque habilitado:** ninguno. Bloqueo de acceso local es el próximo bloque
-  recomendado, pero no está habilitado ni posee una tarea abierta.
-- **Tarea especialista:** ninguna activa.
+- **Bloque habilitado:** `BLOQUEO_DE_ACCESO_LOCAL_V2.md`; implementación
+  pendiente desde el checkpoint documental que MAIN informará.
+- **Tarea especialista:** todavía no abierta; Joaquin creará la única tarea con
+  el prompt completo.
 - **Commits locales:** MAIN los crea automáticamente como checkpoints de
   bloques comprobados.
 - **Push puntual anterior de la rama 2.0:** ejecutado y verificado hasta
@@ -97,6 +98,7 @@ prevalecen para el estado operativo.
 | `WIDGET_DE_PROXIMO_EVENTO_V2.md` | **CERRADO** | Widget nativo auditado y verificado por MAIN en Samsung API 36; API 26/API 33 quedan como compatibilidad pendiente |
 | `INFORMES_LOCALES_DE_JORNADAS_Y_HORAS_V2.md` | **CERRADO** | PDF y XLSX locales derivados de Horas/Resumen, auditados y verificados por MAIN en Samsung API 36 |
 | `COPIAS_Y_RESTAURACION_LOCALES_SEGURAS_V2.md` | **CERRADO** | Copia lógica completa, cifrado opcional, vista previa y restauración consciente auditadas por MAIN; Samsung API 36 verde dentro de la matriz autorizada |
+| `BLOQUEO_DE_ACCESO_LOCAL_V2.md` | **HABILITADO — IMPLEMENTACIÓN PENDIENTE** | Puerta opcional con biometría fuerte o credencial segura del teléfono, tiempos conscientes y privacidad de Recientes sin PIN propio |
 
 ## Contratos históricos de MiGuardia 1.0
 
@@ -175,7 +177,8 @@ Joaquin indicó que quiere preparar o abrir la siguiente:
 18. **Cerrado:** copias y restauración locales seguras mediante
     `COPIAS_Y_RESTAURACION_LOCALES_SEGURAS_V2.md`; batería local y matriz Samsung
     API 36 autorizada verdes, con recorrido SAF cifrado real;
-19. **Pendiente:** bloqueo de acceso local;
+19. **Habilitado:** bloqueo de acceso local mediante
+    `BLOQUEO_DE_ACCESO_LOCAL_V2.md`; Joaquin abrirá la única tarea especialista;
 20. **Pendiente:** Ayuda y recorrido inicial 2.0;
 21. auditoría de la aplicación completa y candidato local.
 

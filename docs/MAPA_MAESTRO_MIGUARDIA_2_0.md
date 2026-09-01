@@ -187,7 +187,7 @@ Informes locales — cerrado; local y Samsung API 36 (33/33) verdes
         ↓
 Copias y restauración locales — cerradas; local y Samsung API 36 verdes
         ↓
-Bloqueo
+Bloqueo de acceso local — prompt habilitado / implementación pendiente
         ↓
 Ayuda y recorrido inicial 2.0
         ↓
@@ -253,7 +253,15 @@ batería local pasó 603/603 pruebas JVM y 351/351 tareas. En Samsung API 36
 pasaron 121 pruebas Room y una matriz segura de aplicación de 98 pruebas, además
 de un recorrido real con SAF para crear, abrir, previsualizar y combinar una
 copia cifrada ficticia. Room V5 y sus esquemas permanecen intactos. Bloqueo de
-acceso local es el siguiente bloque recomendado, todavía no habilitado.
+acceso local quedó como siguiente bloque recomendado.
+
+Actualización de Bloqueo del 2026-09-01: Joaquin pidió preparar la dependencia.
+MAIN fijó ADR 0036 y habilitó `BLOQUEO_DE_ACCESO_LOCAL_V2.md`. La función será
+opcional y apagada por defecto; usará biometría fuerte o la credencial segura
+del teléfono, nunca un PIN propio. Protegerá arranque, retornos, destinos desde
+avisos/Widget y la vista de Recientes. Sus preferencias serán locales al
+dispositivo y quedarán fuera de las copias. La implementación todavía no
+comenzó y Joaquin abrirá la única tarea especialista.
 
 MAIN integra un bloque por vez. Cada bloque debe compilar, pasar sus pruebas,
 preservar el alcance ajeno y quedar documentado antes del siguiente. El mapa

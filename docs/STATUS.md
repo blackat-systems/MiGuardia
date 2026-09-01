@@ -10,9 +10,9 @@ El núcleo laboral V2 quedó aprobado por MAIN. La segunda capa está
 desbloqueada. **Widget de próximo evento**, **Informes locales de jornadas y
 horas** y **Copias y restauración locales seguras** quedaron cerrados. Copias
 pasó la batería local definitiva, una matriz Samsung API 36 de 219 pruebas
-únicas y un recorrido SAF cifrado real. No existe otro prompt implementador
-habilitado. **Bloqueo de acceso local** es el próximo bloque recomendado y sólo
-se preparará cuando Joaquin lo indique.
+únicas y un recorrido SAF cifrado real. Joaquin pidió preparar **Bloqueo de
+acceso local**: ADR 0036 y su prompt quedaron habilitados; la implementación
+todavía no comenzó y no existe una tarea especialista activa.
 
 MAIN 2.0 está reactivada para recibir los handoffs que Joaquin entregue,
 auditarlos, integrarlos, probarlos y cerrarlos. Joaquin decide cuándo pedir el
@@ -1260,6 +1260,37 @@ Samsung. La evidencia durable está en
 El prompt queda **CERRADO — INTEGRADO Y VERIFICADO POR MAIN**. No existe una
 autorización vigente de push.
 
+## Bloqueo de acceso local — prompt habilitado
+
+Joaquin pidió preparar la siguiente dependencia. MAIN auditó la base actual,
+el arranque, las actividades, el ciclo de vida, los destinos desde avisos y
+Widget, los stores y el contrato de Copias. ADR 0036 fija estas decisiones:
+
+- la función es opcional y está apagada por defecto;
+- MiGuardia usa biometría fuerte o PIN, patrón o contraseña del teléfono;
+- no crea, pide ni guarda un PIN propio;
+- activar, desactivar y cambiar el plazo exige autenticación nueva;
+- los plazos exactos son inmediato, 1 minuto, 5 minutos y 15 minutos;
+- proceso nuevo, muerte de proceso o bloqueo del teléfono cierran el acceso;
+- la puerta no compone ni expone Calendario u otra información laboral;
+- destinos desde avisos, Widget, SAF y la actividad de configuración esperan la
+  autenticación y después se revalidan una sola vez;
+- Recientes no conserva una fotografía laboral cuando el bloqueo está activo;
+- Widget y Notificaciones mantienen sus privacidades independientes;
+- el bloqueo es una preferencia del dispositivo y queda fuera de las diecisiete
+  preferencias portables de `.miguardia-backup`;
+- Room V5, sus 27 tablas y esquemas 1–5 permanecen intactos.
+
+Se autoriza dentro del contrato una única dependencia oficial y estable:
+`androidx.biometric:biometric:1.1.0`. Su necesidad, transitivas e impacto de APK
+deben medirse y declararse. No se autoriza otra biblioteca, permiso peligroso,
+servicio, cuenta, red o cifrado de Room.
+
+`docs/prompts/BLOQUEO_DE_ACCESO_LOCAL_V2.md` queda
+**HABILITADO — IMPLEMENTACIÓN PENDIENTE**. Preparar el prompt no abrió la tarea,
+no usó dispositivos y no autoriza push. Joaquin creará la única dependencia
+desde el checkpoint documental exacto que MAIN informe.
+
 ## Flujo vigente de MAIN
 
 - Joaquin entrega un handoff o pide preparar el prompt de una nueva tarea;
@@ -1304,8 +1335,8 @@ posteriores.
 - segunda capa ordenada: Widget —cerrado por MAIN; Samsung verde, API 26/API 33
   pendientes de compatibilidad—, Informes —cerrado por MAIN; local y Samsung
   API 36 verdes—, Copias y restauración —cerrado por MAIN; local y Samsung API
-  36 verdes dentro de la matriz autorizada—, bloqueo y Ayuda y recorrido
-  inicial 2.0;
+  36 verdes dentro de la matriz autorizada—, Bloqueo —prompt habilitado,
+  implementación pendiente— y Ayuda y recorrido inicial 2.0;
 - logo y tipografías definitivas.
 
 ## Todavía no implementado
@@ -1320,9 +1351,9 @@ posteriores.
 
 El núcleo quedó aprobado y la segunda capa está desbloqueada. **Widget de
 próximo evento**, **Informes locales** y **Copias y restauración locales
-seguras** están cerrados. No existe un prompt implementador habilitado.
-**Bloqueo de acceso local** es el próximo bloque recomendado; MAIN espera que
-Joaquin indique cuándo preparar su contrato. API 26/API 33 del Widget y de
+seguras** están cerrados. **Bloqueo de acceso local** tiene ADR y prompt
+habilitados; la implementación permanece pendiente hasta que Joaquin cree la
+única tarea con el checkpoint documental exacto. API 26/API 33 del Widget y de
 Copias continúan pendientes para la matriz de compatibilidad posterior.
 
 El disparo físico de una alarma exacta, un reinicio real del Samsung y API 37

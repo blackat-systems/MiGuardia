@@ -282,7 +282,8 @@ Sólo después de cerrar y auditar el núcleo laboral:
 19. Crear y restaurar copias locales seguras
     —cerrado por MAIN el 2026-09-01; local y Samsung API 36 verdes dentro de la
     matriz autorizada—.
-20. Proteger el acceso local a MiGuardia.
+20. Proteger el acceso local a MiGuardia
+    —ADR 0036 y prompt habilitados; implementación pendiente—.
 21. Completar la Ayuda y el recorrido inicial sobre la interfaz definitiva.
 22. Auditar la aplicación completa y emitir el candidato local MiGuardia 2.0.
 
@@ -598,7 +599,9 @@ previa y segunda confirmación. ADR 0035 y
 `COPIAS_Y_RESTAURACION_LOCALES_SEGURAS_V2.md` fijaron el contrato. MAIN recibió,
 auditó, corrigió y verificó el candidato: batería local verde, Room 121/121 y
 matriz segura de aplicación 98/98 en Samsung API 36, más recorrido SAF cifrado
-real. El bloque queda cerrado. No existe otro prompt implementador habilitado ni
-tarea especialista activa; Bloqueo es la próxima recomendación y sólo se
-preparará cuando Joaquin lo indique. Ninguna autorización anterior de push,
-alarma exacta o reinicio se hereda.
+real. El bloque queda cerrado. Joaquin pidió después preparar Bloqueo de acceso
+local. ADR 0036 y `BLOQUEO_DE_ACCESO_LOCAL_V2.md` fijan una puerta opcional con
+biometría fuerte o credencial del dispositivo, sin PIN propio y con ajuste no
+portable. El prompt está habilitado; la tarea especialista todavía no fue
+abierta. Ninguna autorización anterior de dispositivo, push, alarma exacta o
+reinicio se hereda.

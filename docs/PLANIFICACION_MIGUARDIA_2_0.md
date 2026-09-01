@@ -566,7 +566,7 @@ continúa con:
    Samsung API 36 verdes—;
 3. copias y restauración locales seguras —cerradas por MAIN; batería local y
    Samsung API 36 verdes dentro de la matriz autorizada—;
-4. bloqueo de acceso local;
+4. bloqueo de acceso local —prompt habilitado; implementación pendiente—;
 5. Ayuda y recorrido inicial reescritos para la interfaz 2.0 definitiva;
 6. auditoría de la aplicación completa y emisión de un candidato local.
 
@@ -581,8 +581,11 @@ Estado del 2026-09-01: Widget, Informes y Copias y restauración locales seguras
 quedaron cerrados por MAIN. Copias exporta una unidad lógica completa y ofrece
 combinar sin sobreescritura silenciosa o reemplazar todo con vista previa y
 segunda confirmación. La batería local y la matriz autorizada Samsung API 36
-quedaron verdes; Room V5 y sus esquemas permanecen intactos. Bloqueo de acceso
-local es el próximo bloque recomendado, pero no está habilitado ni abierto.
+quedaron verdes; Room V5 y sus esquemas permanecen intactos. Joaquin pidió
+preparar Bloqueo de acceso local: ADR 0036 y
+`BLOQUEO_DE_ACCESO_LOCAL_V2.md` fijan una puerta opcional con autenticación del
+teléfono, sin PIN propio y sin transportar el ajuste dentro de las copias. El
+prompt queda habilitado; la implementación todavía no comenzó.
 
 ## 21. Idea futura guardada: agenda profesional
 
