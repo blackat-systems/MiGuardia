@@ -45,6 +45,8 @@ class WidgetConfigurationActivityTest {
 
     @Before
     fun setUp() {
+        application.startupRecoveryGate.ready()
+        context.getSharedPreferences("widget_deferred_actions", Context.MODE_PRIVATE).edit().clear().commit()
         host = AppWidgetHost(context, TEST_HOST_ID)
         appWidgetId = host.allocateAppWidgetId()
         val automation = InstrumentationRegistry.getInstrumentation().uiAutomation
@@ -65,10 +67,65 @@ class WidgetConfigurationActivityTest {
     @After
     fun tearDown() {
         scenario?.close()
+        application.startupRecoveryGate.ready()
+        context.getSharedPreferences("widget_deferred_actions", Context.MODE_PRIVATE).edit().clear().commit()
         runBlocking { application.widgetPreferences.delete(listOf(appWidgetId)) }
         if (appWidgetId != AppWidgetManager.INVALID_APPWIDGET_ID) {
             host.deleteAppWidgetId(appWidgetId)
         }
+    }
+
+    @Test
+    fun pendingStartupRecoveryBlocksWidgetPreferencesAndConfiguration() {
+        val previous = WidgetInstancePreferences(
+            mode = WidgetMode.NEXT_DAY_OFF,
+            privacy = WidgetPrivacy.HIDDEN,
+            includeWeather = false,
+            configured = true,
+        )
+        runBlocking { application.widgetPreferences.save(appWidgetId, previous) }
+        application.startupRecoveryGate.recovering()
+
+        scenario = launchConfiguration()
+
+        compose.onNodeWithTag("widget-recovery-gate").assertIsDisplayed()
+        compose.onNodeWithTag("widget-configuration-screen").assertDoesNotExist()
+        assertEquals(previous, runBlocking { application.widgetPreferences.current(appWidgetId) })
+
+        application.startupRecoveryGate.ready()
+        compose.onNodeWithTag("widget-configuration-screen").assertIsDisplayed()
+        assertEquals(previous, runBlocking { application.widgetPreferences.current(appWidgetId) })
+    }
+
+    @Test
+    fun restoredWidgetIdsWaitDurablyUntilStartupRecoveryIsReady() = runBlocking {
+        val oldId = appWidgetId + 100_000
+        val previous = WidgetInstancePreferences(
+            mode = WidgetMode.NEXT_SHIFT,
+            privacy = WidgetPrivacy.COMPLETE,
+            includeWeather = true,
+            configured = true,
+        )
+        application.widgetPreferences.save(oldId, previous)
+        application.startupRecoveryGate.recovering()
+
+        NextEventAppWidgetProvider().onReceive(
+            context,
+            Intent(AppWidgetManager.ACTION_APPWIDGET_RESTORED)
+                .putExtra(AppWidgetManager.EXTRA_APPWIDGET_OLD_IDS, intArrayOf(oldId))
+                .putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, intArrayOf(appWidgetId)),
+        )
+
+        assertTrue(application.widgetDeferredActions.hasPendingActions())
+        assertEquals(previous, application.widgetPreferences.current(oldId))
+        assertEquals(WidgetInstancePreferences(), application.widgetPreferences.current(appWidgetId))
+
+        application.startupRecoveryGate.ready()
+        application.widgetDeferredActions.replay(application.widgetRuntime)
+
+        assertEquals(previous, application.widgetPreferences.current(appWidgetId))
+        assertTrue(!application.widgetDeferredActions.hasPendingActions())
+        application.widgetPreferences.delete(listOf(oldId))
     }
 
     @Test

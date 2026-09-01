@@ -21,6 +21,11 @@ import androidx.core.content.edit
 import androidx.core.net.toUri
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.blackatsystems.miguardia.backup.BackupViewModel
+import com.blackatsystems.miguardia.backup.BackupActions
+import com.blackatsystems.miguardia.backup.BackupStage
+import com.blackatsystems.miguardia.backup.BackupSurfaceHost
 import com.blackatsystems.miguardia.core.domain.AppDefaults
 import com.blackatsystems.miguardia.core.domain.model.V2ShiftLookup
 import com.blackatsystems.miguardia.notifications.NotificationSystemAccess
@@ -56,6 +61,8 @@ import java.util.UUID
 
 class MainActivity : ComponentActivity() {
     private var calendarNavigationRequest by mutableIntStateOf(0)
+    private var pendingIntentRequest by mutableIntStateOf(1)
+    private var handledIntentRequest = 0
 
     private val notificationViewModel: NotificationViewModel by viewModels {
         val application = application as MiGuardiaApplication
@@ -64,6 +71,14 @@ class MainActivity : ComponentActivity() {
             configs = application.localDataStore.shiftNotificationConfigs,
             systemAccess = NotificationSystemAccess(application),
             runtime = application.notificationRuntime,
+        )
+    }
+    private val backupViewModel: BackupViewModel by viewModels {
+        val application = application as MiGuardiaApplication
+        BackupViewModel.Factory(
+            application.backupCoordinator,
+            application.startupRecoveryGate,
+            application.backupCoordinator::discardIncompleteDocument,
         )
     }
     private val weatherViewModel: WeatherViewModel by viewModels {
@@ -96,8 +111,14 @@ class MainActivity : ComponentActivity() {
         )
     }
     private val photosViewModel: PhotosViewModel by viewModels {
-        val dataStore = (application as MiGuardiaApplication).localDataStore
-        PhotosViewModel.Factory(dataStore.schedulePhotos, dataStore.objectives, SchedulePhotoFileStore(applicationContext))
+        val miGuardiaApplication = application as MiGuardiaApplication
+        val dataStore = miGuardiaApplication.localDataStore
+        PhotosViewModel.Factory(
+            dataStore.schedulePhotos,
+            dataStore.objectives,
+            SchedulePhotoFileStore(applicationContext),
+            miGuardiaApplication.localDataMutationGate,
+        )
     }
     private val calendarViewModel: CalendarViewModel by viewModels {
         val dataStore = (application as MiGuardiaApplication).localDataStore
@@ -254,6 +275,7 @@ class MainActivity : ComponentActivity() {
     @Suppress("DEPRECATION")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val miGuardiaApplication = application as MiGuardiaApplication
         setContent {
             val preferences = remember {
                 getSharedPreferences(DISPLAY_PREFERENCES, MODE_PRIVATE)
@@ -270,9 +292,40 @@ class MainActivity : ComponentActivity() {
                     AppThemeMode.fromStorage(preferences.getString(APP_THEME_MODE, null)),
                 )
             }
+            val recoveryState by miGuardiaApplication.startupRecoveryGate.state.collectAsStateWithLifecycle()
+            val backupState by backupViewModel.uiState.collectAsStateWithLifecycle()
+            val dataAccessReady = recoveryState == StartupRecoveryState.Ready
+            LaunchedEffect(backupState.successSequence, dataAccessReady) {
+                if (dataAccessReady && backupState.successSequence > 0) {
+                    backupState.restoredZoom?.let { appZoom = it }
+                    backupState.restoredTheme?.let { appThemeMode = it }
+                    workSetupViewModel.refreshReferenceDate()
+                    hoursAndExtrasViewModel.refresh()
+                    availabilityViewModel.refresh()
+                    notificationViewModel.refreshSystemAccess()
+                    widgetViewModel.refresh()
+                }
+            }
+            LaunchedEffect(recoveryState, pendingIntentRequest) {
+                if (dataAccessReady && handledIntentRequest < pendingIntentRequest) {
+                    handledIntentRequest = pendingIntentRequest
+                    handleNotificationIntent(intent)
+                }
+            }
+            LaunchedEffect(recoveryState) {
+                if (dataAccessReady) {
+                    appZoom = AppZoom.fromPercent(
+                        preferences.getInt(APP_ZOOM_PERCENT, AppZoom.STANDARD.percent),
+                    )
+                    appThemeMode = AppThemeMode.fromStorage(
+                        preferences.getString(APP_THEME_MODE, null),
+                    )
+                    refreshActiveSurfaces()
+                }
+            }
             val useDarkTheme = appThemeMode.resolve(isSystemInDarkTheme())
-            LaunchedEffect(useDarkTheme) {
-                (application as MiGuardiaApplication).widgetRuntime.refreshAll()
+            LaunchedEffect(useDarkTheme, dataAccessReady) {
+                if (dataAccessReady) miGuardiaApplication.widgetRuntime.refreshAll()
             }
             val systemBarStyle = vigiliaSystemBarStyle(useDarkTheme)
             SideEffect {
@@ -287,7 +340,27 @@ class MainActivity : ComponentActivity() {
                 darkTheme = useDarkTheme,
                 appZoom = appZoom,
             ) {
-                MiGuardiaApp(
+                if (!dataAccessReady) {
+                    val protectedState = when (val recovery = recoveryState) {
+                        StartupRecoveryState.Recovering -> backupState.copy(
+                            isOpen = true,
+                            stage = BackupStage.RECOVERING,
+                            errorMessage = null,
+                            recoveryRequired = true,
+                        )
+                        is StartupRecoveryState.Failed -> backupState.copy(
+                            isOpen = true,
+                            stage = BackupStage.ERROR,
+                            errorMessage = recovery.message,
+                            recoveryRequired = true,
+                        )
+                        StartupRecoveryState.Ready -> backupState
+                    }
+                    BackupSurfaceHost(
+                        state = protectedState,
+                        actions = BackupActions.from(backupViewModel),
+                    )
+                } else MiGuardiaApp(
                     calendarViewModel = calendarViewModel,
                     nextEventViewModel = nextEventViewModel,
                     v2ManualShiftLoadViewModel = v2ManualShiftLoadViewModel,
@@ -305,6 +378,7 @@ class MainActivity : ComponentActivity() {
                     availabilityViewModel = availabilityViewModel,
                     summaryViewModel = summaryViewModel,
                     reportsViewModel = reportsViewModel,
+                    backupViewModel = backupViewModel,
                     calendarNavigationRequest = calendarNavigationRequest,
                     appZoom = appZoom,
                     onAppZoomChange = { selected ->
@@ -320,17 +394,21 @@ class MainActivity : ComponentActivity() {
                 )
             }
         }
-        handleNotificationIntent(intent)
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        handleNotificationIntent(intent)
+        pendingIntentRequest++
     }
 
     override fun onResume() {
         super.onResume()
+        if (!(application as MiGuardiaApplication).startupRecoveryGate.isReady) return
+        refreshActiveSurfaces()
+    }
+
+    private fun refreshActiveSurfaces() {
         workSetupViewModel.refreshReferenceDate()
         hoursAndExtrasViewModel.refresh()
         availabilityViewModel.refresh()
@@ -340,6 +418,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun handleNotificationIntent(source: Intent?) {
+        if (!(application as MiGuardiaApplication).startupRecoveryGate.isReady) return
         val action = source?.action ?: return
         if (action !in NotificationActions) return
         if (action == ACTION_OPEN_CALENDAR) {
@@ -403,7 +482,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun openWidgetConfiguration(appWidgetId: Int) {
-        if (appWidgetId <= 0) return
+        if (appWidgetId <= 0 || !(application as MiGuardiaApplication).startupRecoveryGate.isReady) return
         startActivity(
             Intent(this, WidgetConfigurationActivity::class.java)
                 .setAction(AppWidgetManager.ACTION_APPWIDGET_CONFIGURE)

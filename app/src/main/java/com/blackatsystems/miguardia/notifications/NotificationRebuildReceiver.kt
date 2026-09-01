@@ -11,6 +11,8 @@ class NotificationRebuildReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action !in AllowedActions) return
         val application = context.applicationContext as? MiGuardiaApplication ?: return
+        if (!application.startupRecoveryGate.isReady) return
+        if (application.notificationRuntime.isPausedForRestore) return
         if (
             intent.action == ACTION_EXACT_ALARM_ACCESS_CHANGED &&
             !NotificationSystemAccess(application).read().exactAlarmAccessGranted

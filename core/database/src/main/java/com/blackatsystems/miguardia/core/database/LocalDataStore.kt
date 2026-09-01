@@ -17,6 +17,7 @@ import com.blackatsystems.miguardia.core.database.repository.RoomVacationReposit
 import com.blackatsystems.miguardia.core.database.repository.RoomV2ShiftRepository
 import com.blackatsystems.miguardia.core.database.repository.RoomWorkCatalogRepository
 import com.blackatsystems.miguardia.core.database.repository.RoomWorkConfigurationRepository
+import com.blackatsystems.miguardia.core.database.backup.BackupDatabaseGateway
 import com.blackatsystems.miguardia.core.domain.repository.ExplicitDayStatusRepository
 import com.blackatsystems.miguardia.core.domain.repository.AvailabilityWindowRepository
 import com.blackatsystems.miguardia.core.domain.repository.HolidayRepository
@@ -42,7 +43,15 @@ class LocalDataStore internal constructor(
     private val database: MiGuardiaV2Database,
     private val instrumentationResetAllowed: Boolean = false,
     recurringClock: Clock = Clock.systemUTC(),
+    context: Context? = null,
+    databaseName: String = MiGuardiaV2Database.DATABASE_NAME,
 ) : Closeable {
+    val backups: BackupDatabaseGateway by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
+        val applicationContext = checkNotNull(context) {
+            "El gateway de copias requiere el contexto privado de la aplicación."
+        }.applicationContext
+        BackupDatabaseGateway(applicationContext, database, databaseName)
+    }
     private val roomV2Shifts = RoomV2ShiftRepository(database, recurringClock)
     private val roomShiftActual = RoomShiftActualRepository(database)
     private val roomIndependentExtras = RoomIndependentExtraWorkRepository(database, recurringClock)
@@ -87,6 +96,8 @@ class LocalDataStore internal constructor(
             databaseName: String = MiGuardiaV2Database.DATABASE_NAME,
         ): LocalDataStore = LocalDataStore(
             database = MiGuardiaV2Database.build(context, databaseName),
+            context = context,
+            databaseName = databaseName,
             instrumentationResetAllowed =
                 context.packageName == QA_APPLICATION_ID && databaseName == MiGuardiaV2Database.DATABASE_NAME,
         )

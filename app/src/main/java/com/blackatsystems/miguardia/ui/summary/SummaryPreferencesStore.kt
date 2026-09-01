@@ -90,6 +90,17 @@ class SummaryPreferencesStore internal constructor(
 
     suspend fun current(): SummaryPreferences = preferences.first()
 
+    /** Backup and recovery must abort instead of silently exporting defaults on I/O failure. */
+    internal suspend fun currentForBackup(): SummaryPreferences = toPreferences(dataStore.data.first())
+
+    suspend fun replacePortable(preferences: SummaryPreferences) {
+        dataStore.edit { values ->
+            values[OrderedFamilies] = preferences.orderedFamilies.toStorage()
+            values[HiddenFamilies] = preferences.hiddenFamilies.mapTo(linkedSetOf()) { it.name }
+            values[IntroSeen] = preferences.introSeen
+        }
+    }
+
     suspend fun setVisible(family: SummaryOptionalFamily, visible: Boolean) {
         dataStore.edit { values ->
             val current = toPreferences(values)

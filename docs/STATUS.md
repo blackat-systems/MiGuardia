@@ -7,11 +7,12 @@ funcionales reunidas constituyen la base vigente para avanzar; cerrar esta etapa
 no significa que exista ya una implementación nueva.
 
 El núcleo laboral V2 quedó aprobado por MAIN. La segunda capa está
-desbloqueada. **Widget de próximo evento** e **Informes locales de jornadas y
-horas** quedaron cerrados. Informes pasó la batería local definitiva y la matriz
-Samsung API 36 de 33/33 casos. **Copias y restauración locales seguras** es el
-bloque habilitado actual: su contrato quedó definido y la implementación todavía
-no comenzó. Joaquin creará la única tarea especialista.
+desbloqueada. **Widget de próximo evento**, **Informes locales de jornadas y
+horas** y **Copias y restauración locales seguras** quedaron cerrados. Copias
+pasó la batería local definitiva, una matriz Samsung API 36 de 219 pruebas
+únicas y un recorrido SAF cifrado real. No existe otro prompt implementador
+habilitado. **Bloqueo de acceso local** es el próximo bloque recomendado y sólo
+se preparará cuando Joaquin lo indique.
 
 MAIN 2.0 está reactivada para recibir los handoffs que Joaquin entregue,
 auditarlos, integrarlos, probarlos y cerrarlos. Joaquin decide cuándo pedir el
@@ -209,6 +210,8 @@ y auditada en
     jornadas y horas.
   - `ff2f9b6699606f7ef3c7e599e2a6b4da25b40c67`: Informes locales auditados,
     probados e integrados por MAIN; matriz final Samsung 33/33.
+  - `d0b5469e38e5404011d192d4a2200574abbfccd6`: contrato de Copias y
+    restauración locales seguras.
 - Al iniciar la preparación documental, la rama todavía no poseía upstream. El
   push puntual posterior fue ejecutado y verificado: rama local y remoto privado
   coincidían en `836d908`; esa autorización no puede reutilizarse.
@@ -1177,7 +1180,7 @@ Validación final:
 La evidencia durable está en
 `docs/audits/2026-08-29-informes-locales-de-jornadas-y-horas-v2-main.md`.
 
-## Copias y restauración locales seguras — prompt habilitado
+## Copias y restauración locales seguras — cerrado por MAIN
 
 Joaquin pidió preparar la siguiente dependencia y decidió el comportamiento
 visible de la recuperación:
@@ -1205,9 +1208,57 @@ El contrato técnico está fijado por
   sincronización;
 - Room V5 y esquemas 1–5 protegidos.
 
-`docs/prompts/COPIAS_Y_RESTAURACION_LOCALES_SEGURAS_V2.md` queda
-**HABILITADO — IMPLEMENTACIÓN PENDIENTE**. Preparar el prompt no abrió la tarea,
-no usó dispositivos y no autorizó push. Joaquin creará la única dependencia.
+MAIN recibió el candidato sin commit en el checkout compartido, auditó el diff
+completo y corrigió defectos de seguridad, atomicidad, límites de memoria,
+validación semántica, publicación SAF y recuperación temprana. También aseguró
+que Notificaciones, Widget, Clima, preferencias, fotografías y staging privado
+de Informes se pausen o reconcilien sin dejar una versión cruzada visible. La
+captura de preferencias usada por copias y journal ahora falla de forma segura
+ante errores de lectura, en vez de exportar valores vacíos silenciosos.
+
+Resultado integrado:
+
+- formato lógico completo de las 27 tablas Room V5 y 17 preferencias
+  semánticas, con fotografías opcionales;
+- contenedor `.miguardia-backup` versionado; AES-256-GCM con
+  PBKDF2-HMAC-SHA256 cuando el usuario elige contraseña y control de integridad
+  explícito en la modalidad sin contraseña;
+- `Combinar con mis datos` conserva el estado actual por defecto y exige
+  resolver todos los conflictos antes de escribir;
+- `Reemplazar todo` muestra qué desaparecerá y exige escribir exactamente
+  `Reemplazar todo` como segunda confirmación;
+- aplicación coordinada mediante journal recuperable y barrera de mutación;
+- creación y apertura mediante SAF, sin permiso general de almacenamiento,
+  cuenta, nube, sincronización ni dependencia nueva;
+- Room conserva versión 5, 27 entidades, `identityHash`
+  `77adbc875d0f4ee466cdbd0dd74d5c5c` y esquemas 1–5 intactos.
+
+Validación final de MAIN:
+
+- batería contractual repetida con `--rerun-tasks`: 351/351 tareas;
+- JVM: dominio 377/377, base 12/12 y aplicación 214/214; total 603/603,
+  sin fallos, errores ni omitidas;
+- lint: 0 errores y 6 avisos heredados de versiones en archivos Gradle no
+  modificados;
+- Debug, QA, Release sin firma, AndroidTest QA y AndroidTest de base compilados;
+- Samsung `SM-S938B`, API 36: Room 121/121 y matriz segura de aplicación 98/98;
+  219 pruebas instrumentadas únicas, sin fallos ni omitidas;
+- recorrido manual ficticio: creación cifrada con selector real de Android,
+  reapertura, contraseña, vista previa, combinación consciente, verificación,
+  muerte fría del proceso y reapertura; retrato/paisaje, tema claro/oscuro y
+  zoom interno 100/150/200 comprobados;
+- la copia ficticia externa fue eliminada, la orientación quedó restaurada,
+  MiGuardia volvió a seguir el tema del sistema y al zoom 100 %; producción
+  permaneció ausente y sólo quedó instalado el paquete QA.
+
+Permanecen pendientes, sin convertirlos en fallos de este cierre: API 26/API 33,
+TalkBack humano, falta real de espacio y matar el proceso exactamente dentro de
+cada fase del journal. No se disparó una alarma exacta ni se reinició el
+Samsung. La evidencia durable está en
+`docs/audits/2026-09-01-copias-y-restauracion-locales-seguras-v2-main.md`.
+
+El prompt queda **CERRADO — INTEGRADO Y VERIFICADO POR MAIN**. No existe una
+autorización vigente de push.
 
 ## Flujo vigente de MAIN
 
@@ -1243,8 +1294,8 @@ posteriores.
 - un eventual cambio de profesión después de la selección inicial de rubro;
   no forma parte de la secuencia actual y sólo se abre si aparece un caso real;
 - recomendación futura, todavía no habilitada: después de cerrar el núcleo
-  laboral, las copias y restauración locales seguras y el bloqueo de acceso,
-  evaluar una
+  laboral y el bloqueo de acceso —las copias y restauración locales seguras ya
+  están cerradas—, evaluar una
   `Agenda profesional` opcional para Medicina y una posible Psicología. Su
   primer alcance sería pacientes y turnos, sin historias clínicas,
   diagnósticos, tratamientos ni evoluciones. Psicología requeriría aprobar por
@@ -1252,8 +1303,9 @@ posteriores.
 - monetización y distribución;
 - segunda capa ordenada: Widget —cerrado por MAIN; Samsung verde, API 26/API 33
   pendientes de compatibilidad—, Informes —cerrado por MAIN; local y Samsung
-  API 36 verdes—, Copias y restauración —prompt habilitado, implementación
-  pendiente—, bloqueo y Ayuda y recorrido inicial 2.0;
+  API 36 verdes—, Copias y restauración —cerrado por MAIN; local y Samsung API
+  36 verdes dentro de la matriz autorizada—, bloqueo y Ayuda y recorrido
+  inicial 2.0;
 - logo y tipografías definitivas.
 
 ## Todavía no implementado
@@ -1267,11 +1319,11 @@ posteriores.
 ## Próximo paso
 
 El núcleo quedó aprobado y la segunda capa está desbloqueada. **Widget de
-próximo evento** e **Informes locales** están cerrados. **Copias y restauración
-locales seguras** tiene ADR y prompt habilitados; la implementación permanece
-pendiente hasta que Joaquin cree la tarea con el checkpoint documental exacto.
-API 26/API 33 del Widget continúan pendientes para la matriz de compatibilidad
-posterior.
+próximo evento**, **Informes locales** y **Copias y restauración locales
+seguras** están cerrados. No existe un prompt implementador habilitado.
+**Bloqueo de acceso local** es el próximo bloque recomendado; MAIN espera que
+Joaquin indique cuándo preparar su contrato. API 26/API 33 del Widget y de
+Copias continúan pendientes para la matriz de compatibilidad posterior.
 
 El disparo físico de una alarma exacta, un reinicio real del Samsung y API 37
 conservan puertas separadas para el candidato final. Los pushes autorizados para

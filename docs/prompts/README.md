@@ -1,7 +1,7 @@
 # Índice canónico de prompts — MiGuardia
 
 - Estado: activo
-- Última auditoría completa: 2026-08-29
+- Última auditoría completa: 2026-09-01
 - Regla: un prompt sólo se ejecuta si este índice lo marca `ACTIVO` o
   `HABILITADO` y Joaquin autoriza la tarea
 
@@ -16,12 +16,11 @@
 - **Contrato humano:** toda dependencia nueva explica primero `QUÉ HACE` y
   `POR QUÉ EXISTE`, tanto en su prompt como en su handoff.
 - **Última dependencia cerrada:**
-  `INFORMES_LOCALES_DE_JORNADAS_Y_HORAS_V2.md`; batería local y matriz Samsung
-  API 36 de 33/33 casos verdes.
-- **Bloque habilitado:**
-  `COPIAS_Y_RESTAURACION_LOCALES_SEGURAS_V2.md`; implementación pendiente.
-- **Tarea especialista:** todavía no abierta; Joaquin la creará después del
-  checkpoint documental.
+  `COPIAS_Y_RESTAURACION_LOCALES_SEGURAS_V2.md`; batería local, Room y matriz
+  segura de aplicación verdes en Samsung API 36, más recorrido SAF cifrado real.
+- **Bloque habilitado:** ninguno. Bloqueo de acceso local es el próximo bloque
+  recomendado, pero no está habilitado ni posee una tarea abierta.
+- **Tarea especialista:** ninguna activa.
 - **Commits locales:** MAIN los crea automáticamente como checkpoints de
   bloques comprobados.
 - **Push puntual anterior de la rama 2.0:** ejecutado y verificado hasta
@@ -97,7 +96,7 @@ prevalecen para el estado operativo.
 | `PRUEBAS_CRUZADAS_DEL_NUCLEO_V2.md` | **CERRADO** | Las tres barreras quedaron auditadas: fotografía transversal, carrera CAS real y demostración de que consultar no escribe |
 | `WIDGET_DE_PROXIMO_EVENTO_V2.md` | **CERRADO** | Widget nativo auditado y verificado por MAIN en Samsung API 36; API 26/API 33 quedan como compatibilidad pendiente |
 | `INFORMES_LOCALES_DE_JORNADAS_Y_HORAS_V2.md` | **CERRADO** | PDF y XLSX locales derivados de Horas/Resumen, auditados y verificados por MAIN en Samsung API 36 |
-| `COPIAS_Y_RESTAURACION_LOCALES_SEGURAS_V2.md` | **HABILITADO — IMPLEMENTACIÓN PENDIENTE** | Copia completa local y restauración consciente: combinar sin sobreescritura silenciosa o reemplazar todo con segunda confirmación |
+| `COPIAS_Y_RESTAURACION_LOCALES_SEGURAS_V2.md` | **CERRADO** | Copia lógica completa, cifrado opcional, vista previa y restauración consciente auditadas por MAIN; Samsung API 36 verde dentro de la matriz autorizada |
 
 ## Contratos históricos de MiGuardia 1.0
 
@@ -173,9 +172,9 @@ Joaquin indicó que quiere preparar o abrir la siguiente:
     pendientes de compatibilidad;
 17. **Cerrado:** Informes locales de jornadas y horas mediante
     `INFORMES_LOCALES_DE_JORNADAS_Y_HORAS_V2.md`; local y Samsung API 36 verdes;
-18. **Habilitado:** copias y restauración locales seguras mediante
-    `COPIAS_Y_RESTAURACION_LOCALES_SEGURAS_V2.md`; Joaquin abrirá la única tarea
-    especialista;
+18. **Cerrado:** copias y restauración locales seguras mediante
+    `COPIAS_Y_RESTAURACION_LOCALES_SEGURAS_V2.md`; batería local y matriz Samsung
+    API 36 autorizada verdes, con recorrido SAF cifrado real;
 19. **Pendiente:** bloqueo de acceso local;
 20. **Pendiente:** Ayuda y recorrido inicial 2.0;
 21. auditoría de la aplicación completa y candidato local.

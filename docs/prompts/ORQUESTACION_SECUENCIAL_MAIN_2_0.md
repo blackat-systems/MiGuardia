@@ -277,8 +277,11 @@ Sólo después de cerrar y auditar el núcleo laboral:
 17. Adaptar el widget al motor final de próximo evento
     —cerrado por MAIN el 2026-08-29; Samsung API 36 verde, Android 8/API 26 y
     Android 13/API 33 pendientes de compatibilidad—.
-18. Generar informes locales de jornadas y horas.
-19. Crear y restaurar copias locales seguras.
+18. Generar informes locales de jornadas y horas
+    —cerrado por MAIN el 2026-08-29; local y Samsung API 36 verdes—.
+19. Crear y restaurar copias locales seguras
+    —cerrado por MAIN el 2026-09-01; local y Samsung API 36 verdes dentro de la
+    matriz autorizada—.
 20. Proteger el acceso local a MiGuardia.
 21. Completar la Ayuda y el recorrido inicial sobre la interfaz definitiva.
 22. Auditar la aplicación completa y emitir el candidato local MiGuardia 2.0.
@@ -592,7 +595,10 @@ API 36 la matriz definitiva de 33/33 casos.
 Joaquin pidió preparar Copias y restauración y decidió ofrecer dos opciones
 conscientes: combinar sin sobreescritura silenciosa o reemplazar todo con vista
 previa y segunda confirmación. ADR 0035 y
-`COPIAS_Y_RESTAURACION_LOCALES_SEGURAS_V2.md` fijan el contrato. El prompt queda
-habilitado y la implementación pendiente hasta que Joaquin cree la única tarea
-especialista. Ninguna autorización anterior de ADB, push, alarma exacta o
-reinicio se hereda.
+`COPIAS_Y_RESTAURACION_LOCALES_SEGURAS_V2.md` fijaron el contrato. MAIN recibió,
+auditó, corrigió y verificó el candidato: batería local verde, Room 121/121 y
+matriz segura de aplicación 98/98 en Samsung API 36, más recorrido SAF cifrado
+real. El bloque queda cerrado. No existe otro prompt implementador habilitado ni
+tarea especialista activa; Bloqueo es la próxima recomendación y sólo se
+preparará cuando Joaquin lo indique. Ninguna autorización anterior de push,
+alarma exacta o reinicio se hereda.

@@ -119,6 +119,7 @@ fun WorkSetupStartupScreen(
     state: WorkSetupUiState,
     actions: WorkSetupActions,
     modifier: Modifier = Modifier,
+    onRestoreBackup: () -> Unit = {},
 ) {
     Surface(
         modifier = modifier.fillMaxSize(),
@@ -127,7 +128,7 @@ fun WorkSetupStartupScreen(
         when (state.rootState) {
             WorkSetupState.Loading -> WorkSetupLoading()
             WorkSetupState.LoadError -> WorkSetupLoadError(state, actions)
-            WorkSetupState.FreshInstall -> WorkSectorSelection(state, actions)
+            WorkSetupState.FreshInstall -> WorkSectorSelection(state, actions, onRestoreBackup)
             else -> Unit
         }
     }
@@ -215,7 +216,11 @@ private fun WorkSetupLoadError(state: WorkSetupUiState, actions: WorkSetupAction
 }
 
 @Composable
-private fun WorkSectorSelection(state: WorkSetupUiState, actions: WorkSetupActions) {
+private fun WorkSectorSelection(
+    state: WorkSetupUiState,
+    actions: WorkSetupActions,
+    onRestoreBackup: () -> Unit,
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -247,6 +252,13 @@ private fun WorkSectorSelection(state: WorkSetupUiState, actions: WorkSetupActio
             working = state.isSavingSector,
             modifier = Modifier.testTag("work-sector-continue"),
         )
+        OutlinedButton(
+            onClick = onRestoreBackup,
+            enabled = !state.isSavingSector,
+            modifier = Modifier.fillMaxWidth().testTag("work-setup-restore-backup"),
+        ) {
+            Text("Restaurar una copia existente")
+        }
         Text(
             "MiGuardia no define horas, nocturnidad ni disponibilidad por pertenecer a un rubro.",
             style = MaterialTheme.typography.bodySmall,

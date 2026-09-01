@@ -12,6 +12,16 @@ class ShiftAlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val application = context.applicationContext as? MiGuardiaApplication ?: return
         val dismissedEventKey = readDismissedEventKey(intent)
+        if (dismissedEventKey != null) {
+            if (runCatching {
+                    application.notificationDeferredActions.enqueueDismissal(dismissedEventKey)
+                }.isFailure
+            ) {
+                return
+            }
+        }
+        if (!application.startupRecoveryGate.isReady) return
+        if (application.notificationRuntime.isPausedForRestore) return
         val identity = if (dismissedEventKey == null) {
             AndroidShiftAlarmScheduler.readIdentity(intent) ?: return
         } else {
@@ -21,15 +31,15 @@ class ShiftAlarmReceiver : BroadcastReceiver() {
         application.notificationRuntime.scope.launch {
             try {
                 withTimeoutOrNull(RECEIVER_WORK_TIMEOUT_MILLIS) {
-                    runNotificationOperation {
-                        if (dismissedEventKey != null) {
-                            application.notificationRuntime.dismissNow(dismissedEventKey)
-                        } else {
+                    if (dismissedEventKey != null) {
+                        processQueuedDismissalsUnderMutationGate(application)
+                    } else {
+                        runNotificationOperation {
                             application.notificationRuntime.deliverNow(checkNotNull(identity))
                         }
-                    }
-                    runNotificationOperation {
-                        application.notificationRuntime.reconcileNow()
+                        runNotificationOperation {
+                            application.notificationRuntime.reconcileNow()
+                        }
                     }
                 }
             } finally {
@@ -43,6 +53,22 @@ class ShiftAlarmReceiver : BroadcastReceiver() {
         const val ACTION_NOTIFICATION_DISMISSED =
             "com.blackatsystems.miguardia.action.SHIFT_NOTIFICATION_DISMISSED"
         private const val RECEIVER_WORK_TIMEOUT_MILLIS = 8_000L
+    }
+}
+
+internal suspend fun processQueuedDismissalsUnderMutationGate(application: MiGuardiaApplication) {
+    application.localDataMutationGate.withExclusiveMutation {
+        if (!application.startupRecoveryGate.isReady ||
+            application.notificationRuntime.isPausedForRestore
+        ) {
+            return@withExclusiveMutation
+        }
+        runNotificationOperation {
+            application.notificationDeferredActions.replay(application.notificationPreferences)
+        }
+        runNotificationOperation {
+            application.notificationRuntime.reconcileNow()
+        }
     }
 }
 

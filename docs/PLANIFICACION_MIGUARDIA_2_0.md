@@ -564,7 +564,8 @@ continúa con:
    verde, API 26/API 33 pendientes de compatibilidad—;
 2. informes locales de jornadas y horas —cerrado por MAIN; batería local y
    Samsung API 36 verdes—;
-3. copias y restauración locales seguras;
+3. copias y restauración locales seguras —cerradas por MAIN; batería local y
+   Samsung API 36 verdes dentro de la matriz autorizada—;
 4. bloqueo de acceso local;
 5. Ayuda y recorrido inicial reescritos para la interfaz 2.0 definitiva;
 6. auditoría de la aplicación completa y emisión de un candidato local.
@@ -576,13 +577,12 @@ integración, validación, documentación y checkpoint local quedan a cargo de
 MAIN. Este orden no autoriza servicios externos, publicación ni decisiones
 funcionales todavía ausentes.
 
-Estado del 2026-08-29: Widget e Informes quedaron cerrados por MAIN. Informes
-entrega un PDF nativo y un XLSX tabular sobre la misma proyección de
-Horas/Resumen, sin guardar totales ni agregar una dependencia. Su batería local
-y la matriz definitiva Samsung API 36 de 33/33 casos quedaron verdes. Joaquin
-pidió preparar Copias y restauración locales seguras: ADR 0035 y el prompt
-`COPIAS_Y_RESTAURACION_LOCALES_SEGURAS_V2.md` fijan el contrato y quedan
-habilitados. La implementación no comenzó; Joaquin abrirá la única dependencia.
+Estado del 2026-09-01: Widget, Informes y Copias y restauración locales seguras
+quedaron cerrados por MAIN. Copias exporta una unidad lógica completa y ofrece
+combinar sin sobreescritura silenciosa o reemplazar todo con vista previa y
+segunda confirmación. La batería local y la matriz autorizada Samsung API 36
+quedaron verdes; Room V5 y sus esquemas permanecen intactos. Bloqueo de acceso
+local es el próximo bloque recomendado, pero no está habilitado ni abierto.
 
 ## 21. Idea futura guardada: agenda profesional
 
@@ -591,9 +591,9 @@ apartado opcional de **Agenda profesional** para Medicina y para una eventual
 incorporación de Psicología.
 
 La recomendación de orden es terminar primero el núcleo laboral vigente y,
-antes de almacenar datos de pacientes, cerrar las copias locales seguras y el
-bloqueo de acceso de MiGuardia. Recién después conviene diseñar e implementar
-esta ampliación.
+antes de almacenar datos de pacientes, cerrar el bloqueo de acceso de
+MiGuardia; las copias locales seguras ya están cerradas. Recién después conviene
+diseñar e implementar esta ampliación.
 
 Si se aprueba, su primer alcance debería limitarse a pacientes y turnos. No
 incluiría historias clínicas, diagnósticos, tratamientos, evoluciones,

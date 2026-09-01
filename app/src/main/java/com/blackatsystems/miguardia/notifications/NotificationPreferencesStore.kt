@@ -79,7 +79,7 @@ data class NotificationPreferences(
     }
 }
 
-class NotificationPreferencesStore private constructor(
+class NotificationPreferencesStore internal constructor(
     private val dataStore: DataStore<Preferences>,
 ) {
     constructor(
@@ -110,6 +110,19 @@ class NotificationPreferencesStore private constructor(
         .distinctUntilChanged()
 
     suspend fun current(): NotificationPreferences = preferences.first()
+
+    /** Backup and recovery must abort instead of silently exporting defaults on I/O failure. */
+    internal suspend fun currentForBackup(): NotificationPreferences = toPreferences(dataStore.data.first())
+
+    /** Replaces only portable user choices and preserves device/runtime bookkeeping. */
+    suspend fun replacePortable(preferences: NotificationPreferences) = update { values ->
+        values[Enabled] = preferences.enabled
+        values[PreciseTiming] = preferences.preciseTiming
+        values[Persistent] = preferences.persistentWhileActive
+        values[Privacy] = preferences.privacy.name
+        values[AttentionMode] = preferences.attentionMode.name
+        values[ReminderMinutes] = preferences.globalReminderLeadMinutes.map(Long::toString).toSet()
+    }
 
     suspend fun setEnabled(value: Boolean) = update { it[Enabled] = value }
     suspend fun setPreciseTiming(value: Boolean) = update { it[PreciseTiming] = value }

@@ -25,7 +25,7 @@ class ReportPhotoStager(
     private val sourceStore: SchedulePhotoFileStore = SchedulePhotoFileStore(context),
     private val clock: Clock = Clock.systemUTC(),
 ) {
-    private val root = File(context.filesDir, "reports/staging")
+    private val root = File(context.filesDir, STAGING_DIRECTORY)
 
     suspend fun freeze(
         photos: List<SchedulePhoto>,
@@ -175,10 +175,11 @@ class ReportPhotoStager(
         directory.canonicalPath in ACTIVE_SESSIONS
     }
 
-    private companion object {
-        val STAGING_TTL: Duration = Duration.ofHours(24)
-        val SESSION_NAME: Regex = Regex("[0-9a-f]{32}")
-        val ACTIVE_SESSIONS: MutableSet<String> = mutableSetOf()
+    companion object {
+        const val STAGING_DIRECTORY: String = "reports/staging"
+        private val STAGING_TTL: Duration = Duration.ofHours(24)
+        private val SESSION_NAME: Regex = Regex("[0-9a-f]{32}")
+        private val ACTIVE_SESSIONS: MutableSet<String> = mutableSetOf()
     }
 }
 

@@ -30,6 +30,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -73,6 +74,11 @@ internal class NotificationReconciler(
                 }
             }
         }
+    }
+
+    suspend fun stop() {
+        observation?.cancelAndJoin()
+        observation = null
     }
 
     suspend fun reconcileOnce() = reconcileCurrent()

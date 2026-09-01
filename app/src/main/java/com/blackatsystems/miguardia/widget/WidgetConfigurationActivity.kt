@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import com.blackatsystems.miguardia.MainActivity
 import com.blackatsystems.miguardia.MiGuardiaApplication
+import com.blackatsystems.miguardia.StartupRecoveryState
 import com.blackatsystems.miguardia.core.domain.widget.WidgetMode
 import com.blackatsystems.miguardia.core.domain.widget.WidgetPrivacy
 import com.blackatsystems.miguardia.ui.components.ScreenHeading
@@ -49,6 +50,7 @@ import com.blackatsystems.miguardia.ui.components.SectionCard
 import com.blackatsystems.miguardia.ui.theme.AppThemeMode
 import com.blackatsystems.miguardia.ui.theme.AppZoom
 import com.blackatsystems.miguardia.ui.theme.MiGuardiaTheme
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
 
 data class WidgetConfigurationDraft(
@@ -74,19 +76,33 @@ class WidgetConfigurationActivity : ComponentActivity() {
         }
         val application = application as MiGuardiaApplication
         setContent {
-            val displayPreferences = remember {
-                getSharedPreferences(MainActivity.DISPLAY_PREFERENCES, MODE_PRIVATE)
+            val recoveryState by application.startupRecoveryGate.state.collectAsStateWithLifecycle()
+            when (val recovery = recoveryState) {
+                StartupRecoveryState.Ready -> ReadyWidgetConfiguration(application)
+                StartupRecoveryState.Recovering -> MiGuardiaTheme {
+                    WidgetRecoveryGateScreen(errorMessage = null, onCancel = ::finish)
+                }
+                is StartupRecoveryState.Failed -> MiGuardiaTheme {
+                    WidgetRecoveryGateScreen(errorMessage = recovery.message, onCancel = ::finish)
+                }
             }
-            val zoom = AppZoom.fromPercent(
-                displayPreferences.getInt(MainActivity.APP_ZOOM_PERCENT, AppZoom.STANDARD.percent),
-            )
-            val theme = AppThemeMode.fromStorage(
-                displayPreferences.getString(MainActivity.APP_THEME_MODE, null),
-            )
-            val systemDark = androidx.compose.foundation.isSystemInDarkTheme()
-            MiGuardiaTheme(darkTheme = theme.resolve(systemDark), appZoom = zoom) {
-                WidgetConfigurationContent(application)
-            }
+        }
+    }
+
+    @Composable
+    private fun ReadyWidgetConfiguration(application: MiGuardiaApplication) {
+        val displayPreferences = remember {
+            getSharedPreferences(MainActivity.DISPLAY_PREFERENCES, MODE_PRIVATE)
+        }
+        val zoom = AppZoom.fromPercent(
+            displayPreferences.getInt(MainActivity.APP_ZOOM_PERCENT, AppZoom.STANDARD.percent),
+        )
+        val theme = AppThemeMode.fromStorage(
+            displayPreferences.getString(MainActivity.APP_THEME_MODE, null),
+        )
+        val systemDark = androidx.compose.foundation.isSystemInDarkTheme()
+        MiGuardiaTheme(darkTheme = theme.resolve(systemDark), appZoom = zoom) {
+            WidgetConfigurationContent(application)
         }
     }
 
@@ -177,6 +193,29 @@ class WidgetConfigurationActivity : ComponentActivity() {
         val manager = AppWidgetManager.getInstance(this)
         val provider = ComponentName(this, NextEventAppWidgetProvider::class.java)
         return belongsToWidgetProvider(id, manager.getAppWidgetIds(provider))
+    }
+}
+
+@Composable
+private fun WidgetRecoveryGateScreen(errorMessage: String?, onCancel: () -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(24.dp).testTag("widget-recovery-gate"),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        if (errorMessage == null) {
+            CircularProgressIndicator()
+            Text("Protegiendo tus datos antes de configurar el Widget…", modifier = Modifier.padding(top = 12.dp))
+        } else {
+            Text(errorMessage, color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.SemiBold)
+            Text(
+                "Abrí MiGuardia para terminar la recuperación antes de configurar el Widget.",
+                modifier = Modifier.padding(top = 12.dp),
+            )
+        }
+        OutlinedButton(onClick = onCancel, modifier = Modifier.fillMaxWidth().padding(top = 16.dp)) {
+            Text("Cancelar")
+        }
     }
 }
 

@@ -28,6 +28,7 @@ import com.blackatsystems.miguardia.core.domain.work.WorkCatalog
 import com.blackatsystems.miguardia.core.domain.work.WorkConfiguration
 import com.blackatsystems.miguardia.core.domain.work.WorkSector
 import com.blackatsystems.miguardia.core.domain.work.WorkSetupState
+import com.blackatsystems.miguardia.backup.BackupActions
 import com.blackatsystems.miguardia.ui.MiGuardiaApp
 import com.blackatsystems.miguardia.ui.calendar.CalendarLoadState
 import com.blackatsystems.miguardia.ui.calendar.CalendarUiState
@@ -106,12 +107,14 @@ class WorkSetupComposeTest {
     @Test
     fun freshInstallShowsExactlyFourIndependentSectorsAndRequiresSelection() {
         var state by mutableStateOf(WorkSetupUiState(rootState = WorkSetupState.FreshInstall))
+        var restoreOpened = false
         setApp(
             stateProvider = { state },
             actions = WorkSetupActions(
                 selectSector = { selected -> state = state.copy(selectedSector = selected) },
                 saveInitialSector = { state = state.copy(isSavingSector = true) },
             ),
+            backupActions = BackupActions(open = { restoreOpened = true }),
         )
 
         compose.onNodeWithText("¿En qué rubro trabajás?").assertIsDisplayed()
@@ -121,6 +124,8 @@ class WorkSetupComposeTest {
         compose.onNodeWithText("Salud").assertDoesNotExist()
         compose.onNodeWithText("Otro").assertDoesNotExist()
         compose.onNodeWithTag("work-sector-continue").assertIsNotEnabled()
+        compose.onNodeWithTag("work-setup-restore-backup").performClick()
+        compose.runOnIdle { assertEquals(true, restoreOpened) }
 
         compose.onNodeWithText("Enfermería").performClick()
         compose.onNodeWithTag("work-sector-nursing").assertIsSelected()
@@ -363,6 +368,7 @@ class WorkSetupComposeTest {
         stateProvider: () -> WorkSetupUiState,
         actions: WorkSetupActions = WorkSetupActions(),
         recurringActions: V2RecurringActions = V2RecurringActions(),
+        backupActions: BackupActions = BackupActions(),
         calendar: CalendarUiState = calendarState(),
     ) {
         compose.setContent {
@@ -378,6 +384,7 @@ class WorkSetupComposeTest {
                     workSetupState = stateProvider(),
                     workSetupActions = actions,
                     v2RecurringActions = recurringActions,
+                    backupActions = backupActions,
                 )
             }
         }

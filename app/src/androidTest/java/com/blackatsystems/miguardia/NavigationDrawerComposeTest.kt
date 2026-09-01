@@ -27,6 +27,7 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.unit.dp
 import com.blackatsystems.miguardia.core.domain.calendar.projectCalendarMonth
+import com.blackatsystems.miguardia.backup.BackupActions
 import com.blackatsystems.miguardia.ui.MiGuardiaApp
 import com.blackatsystems.miguardia.ui.calendar.CalendarLoadState
 import com.blackatsystems.miguardia.ui.calendar.CalendarUiState
@@ -87,6 +88,7 @@ class NavigationDrawerComposeTest {
             "Notificaciones",
             "Clima",
             "Widget de inicio",
+            "Copias y restauración",
             "Apariencia",
         ).forEach { label ->
             compose.onAllNodes(
@@ -150,6 +152,7 @@ class NavigationDrawerComposeTest {
                     notificationActions = NotificationActions(openGlobal = { opened += "notifications" }),
                     weatherActions = WeatherActions(openGlobal = { opened += "weather" }),
                     widgetActions = WidgetActions(open = { opened += "widget" }),
+                    backupActions = BackupActions(open = { opened += "backups" }),
                 )
             }
         }
@@ -161,6 +164,7 @@ class NavigationDrawerComposeTest {
             "drawer-action-notifications",
             "drawer-action-weather",
             "drawer-action-widget",
+            "drawer-action-backups",
         ).forEach(::openAction)
 
         compose.runOnIdle {
@@ -172,6 +176,7 @@ class NavigationDrawerComposeTest {
                     "notifications",
                     "weather",
                     "widget",
+                    "backups",
                 ),
                 opened,
             )

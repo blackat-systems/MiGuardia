@@ -14,6 +14,7 @@ class NextEventAppWidgetProvider : AppWidgetProvider() {
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray,
     ) {
+        if (!canUseData(context)) return
         runtime(context).let { widgetRuntime ->
             widgetRuntime.showLoading(appWidgetIds)
             launchReceiverWork(widgetRuntime, appWidgetIds) {
@@ -28,6 +29,7 @@ class NextEventAppWidgetProvider : AppWidgetProvider() {
         appWidgetId: Int,
         newOptions: Bundle,
     ) {
+        if (!canUseData(context)) return
         val widgetRuntime = runtime(context)
         launchReceiverWork(widgetRuntime, intArrayOf(appWidgetId)) {
             widgetRuntime.refreshNow(intArrayOf(appWidgetId))
@@ -35,17 +37,23 @@ class NextEventAppWidgetProvider : AppWidgetProvider() {
     }
 
     override fun onDeleted(context: Context, appWidgetIds: IntArray) {
-        val widgetRuntime = runtime(context)
+        val application = application(context) ?: return
+        if (runCatching { application.widgetDeferredActions.enqueueDeletion(appWidgetIds) }.isFailure) return
+        if (!application.startupRecoveryGate.isReady) return
+        val widgetRuntime = application.widgetRuntime
+        if (widgetRuntime.isPausedForRestore) return
         launchReceiverWork(widgetRuntime, appWidgetIds) {
-            widgetRuntime.deleteNow(appWidgetIds)
+            application.widgetDeferredActions.replay(widgetRuntime)
         }
     }
 
     override fun onEnabled(context: Context) {
+        if (!canUseData(context)) return
         runtime(context).start()
     }
 
     override fun onDisabled(context: Context) {
+        if (!canUseData(context)) return
         runtime(context).disabled()
     }
 
@@ -53,13 +61,24 @@ class NextEventAppWidgetProvider : AppWidgetProvider() {
         if (intent.action == AppWidgetManager.ACTION_APPWIDGET_RESTORED) {
             val oldIds = intent.getIntArrayExtra(AppWidgetManager.EXTRA_APPWIDGET_OLD_IDS) ?: intArrayOf()
             val newIds = intent.getIntArrayExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS) ?: intArrayOf()
-            val widgetRuntime = runtime(context)
-            widgetRuntime.registerRestoration(newIds)
+            val application = application(context) ?: return
+            if (runCatching {
+                    application.widgetDeferredActions.enqueueRestoration(oldIds, newIds)
+                }.isFailure
+            ) return
+            if (!application.startupRecoveryGate.isReady) return
+            val widgetRuntime = application.widgetRuntime
+            if (widgetRuntime.isPausedForRestore) return
             launchReceiverWork(widgetRuntime, newIds) {
-                widgetRuntime.restoreNow(oldIds, newIds)
+                application.widgetDeferredActions.replay(widgetRuntime)
             }
             return
         }
+        if (intent.action == AppWidgetManager.ACTION_APPWIDGET_DELETED) {
+            super.onReceive(context, intent)
+            return
+        }
+        if (!canUseData(context)) return
         if (intent.action in RefreshActions) {
             val widgetRuntime = runtime(context)
             launchReceiverWork(widgetRuntime, widgetRuntimeIds(context)) {
@@ -87,6 +106,12 @@ class NextEventAppWidgetProvider : AppWidgetProvider() {
 
     private fun runtime(context: Context): WidgetRuntime =
         (context.applicationContext as MiGuardiaApplication).widgetRuntime
+
+    private fun application(context: Context): MiGuardiaApplication? =
+        context.applicationContext as? MiGuardiaApplication
+
+    private fun canUseData(context: Context): Boolean =
+        (context.applicationContext as? MiGuardiaApplication)?.startupRecoveryGate?.isReady == true
 
     private fun widgetRuntimeIds(context: Context): IntArray =
         AppWidgetManager.getInstance(context).getAppWidgetIds(

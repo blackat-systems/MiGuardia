@@ -9,8 +9,10 @@ import com.blackatsystems.miguardia.weather.WeatherRuntime
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 
 class NotificationRuntime(
@@ -40,37 +42,79 @@ class NotificationRuntime(
         weatherRuntime = weatherRuntime,
     )
     private val presenter = ShiftNotificationPresenter(context.applicationContext)
+    @Volatile
+    private var pausedForRestore = false
 
-    fun start() = reconciler.start()
+    fun start() {
+        if (!pausedForRestore) reconciler.start()
+    }
+
+    suspend fun pauseForRestore() {
+        pausedForRestore = true
+        reconciler.stop()
+        while (true) {
+            val children = scope.coroutineContext[Job]?.children?.toList().orEmpty()
+            if (children.isEmpty()) break
+            children.forEach(Job::cancel)
+            children.joinAll()
+        }
+    }
+
+    suspend fun resumeAfterRestore() {
+        pausedForRestore = false
+        try {
+            reconciler.start()
+            check(runNotificationOperation { reconciler.reconcileOnce() }) {
+                "No se pudieron reconciliar los avisos después de restaurar."
+            }
+        } catch (error: Exception) {
+            pausedForRestore = true
+            reconciler.stop()
+            throw error
+        }
+    }
+
+    internal val isPausedForRestore: Boolean get() = pausedForRestore
 
     val restorableEvents: Flow<List<NextEventItem>> = reconciler.observeRestorableEvents()
 
     fun reconcile() {
+        if (pausedForRestore) return
         scope.launch {
             runNotificationOperation { reconciler.reconcileOnce() }
         }
     }
 
     fun rebuild() {
+        if (pausedForRestore) return
         scope.launch {
             runNotificationOperation { reconciler.rebuildOnce() }
         }
     }
 
     fun showTestNotification(preferences: NotificationPreferences) {
+        if (pausedForRestore) return
         presenter.showTestNotification(preferences)
     }
 
-    internal suspend fun reconcileNow() = reconciler.reconcileOnce()
+    internal suspend fun reconcileNow() {
+        if (!pausedForRestore) reconciler.reconcileOnce()
+    }
 
-    internal suspend fun rebuildNow() = reconciler.rebuildOnce()
+    internal suspend fun rebuildNow() {
+        if (!pausedForRestore) reconciler.rebuildOnce()
+    }
 
-    internal suspend fun dismissNow(eventKey: String) = reconciler.dismissEvent(eventKey)
+    internal suspend fun dismissNow(eventKey: String) {
+        if (!pausedForRestore) reconciler.dismissEvent(eventKey)
+    }
 
-    internal suspend fun restoreNow(eventKey: String): Boolean = reconciler.restoreEvent(eventKey)
+    internal suspend fun restoreNow(eventKey: String): Boolean =
+        !pausedForRestore && reconciler.restoreEvent(eventKey)
 
-    internal suspend fun deliverNow(identity: NotificationBoundaryIdentity) =
-        reconciler.deliverBoundary(identity)
+    internal suspend fun deliverNow(identity: NotificationBoundaryIdentity) {
+        if (!pausedForRestore) reconciler.deliverBoundary(identity)
+    }
 }
 
 internal suspend fun runNotificationOperation(block: suspend () -> Unit): Boolean = try {

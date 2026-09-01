@@ -28,7 +28,7 @@ internal fun normalizeGuardProfile(displayName: String): GuardProfile {
     )
 }
 
-class GuardProfileStore private constructor(
+class GuardProfileStore internal constructor(
     private val dataStore: DataStore<Preferences>,
 ) {
     constructor(
@@ -52,6 +52,9 @@ class GuardProfileStore private constructor(
         .map(::toProfile)
 
     suspend fun current(): GuardProfile = profile.first()
+
+    /** Backup and recovery must abort instead of silently exporting defaults on I/O failure. */
+    internal suspend fun currentForBackup(): GuardProfile = toProfile(dataStore.data.first())
 
     suspend fun save(displayName: String): GuardProfile {
         val normalized = normalizeGuardProfile(displayName)

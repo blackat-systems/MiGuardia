@@ -87,7 +87,15 @@ class WidgetPreferencesStore private constructor(
         val pairs = oldIds.zip(newIds).filter { (oldId, newId) -> oldId > 0 && newId > 0 }
         if (pairs.isEmpty()) return
         dataStore.edit { values ->
-            val originals = pairs.associate { (oldId, _) -> oldId to decodeWidgetPreferences(values, oldId) }
+            val knownBefore = values[KnownIds].orEmpty()
+            val originals = pairs.associate { (oldId, newId) ->
+                val selected = when {
+                    oldId.toString() in knownBefore -> decodeWidgetPreferences(values, oldId)
+                    newId.toString() in knownBefore -> decodeWidgetPreferences(values, newId)
+                    else -> SafeDefault
+                }
+                oldId to selected
+            }
             pairs.map { it.first }.toSet().forEach { id -> values.removeInstance(id) }
             val known = values[KnownIds].orEmpty().toMutableSet().apply {
                 removeAll(pairs.map { it.first.toString() }.toSet())

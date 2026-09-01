@@ -43,6 +43,7 @@ import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeout
@@ -82,8 +83,12 @@ class WidgetRuntime(
     private var observationDate: LocalDate? = null
     private var observationJob: Job? = null
     private var weatherRefreshJob: Job? = null
+    @Volatile
+    private var pausedForRestore = false
+    val isPausedForRestore: Boolean get() = pausedForRestore
 
     fun start() {
+        if (pausedForRestore) return
         val installed = renderer.installedIds().validIds()
         if (installed.isEmpty()) {
             stopBackgroundWork()
@@ -94,11 +99,35 @@ class WidgetRuntime(
         ensureObservation()
     }
 
+    suspend fun pauseForRestore() {
+        pausedForRestore = true
+        while (true) {
+            val children = scope.coroutineContext[Job]?.children?.toList().orEmpty()
+            if (children.isEmpty()) break
+            children.forEach(Job::cancel)
+            children.joinAll()
+        }
+        stopBackgroundWork()
+    }
+
+    suspend fun resumeAfterRestore() {
+        pausedForRestore = false
+        try {
+            start()
+            refreshNow(allowWeatherRefresh = false)
+        } catch (error: Exception) {
+            pausedForRestore = true
+            stopBackgroundWork()
+            throw error
+        }
+    }
+
     internal fun showLoading(appWidgetIds: IntArray) {
         renderer.renderLoading(appWidgetIds.validIds())
     }
 
     fun refreshAll() {
+        if (pausedForRestore) return
         scope.launch {
             try {
                 refreshNow()
@@ -112,7 +141,7 @@ class WidgetRuntime(
     }
 
     fun refresh(appWidgetId: Int) {
-        if (appWidgetId <= 0) return
+        if (appWidgetId <= 0 || pausedForRestore) return
         scope.launch {
             try {
                 refreshNow(intArrayOf(appWidgetId))
@@ -129,6 +158,7 @@ class WidgetRuntime(
         requestedIds: IntArray? = null,
         allowWeatherRefresh: Boolean = true,
     ) {
+        if (pausedForRestore) return
         awaitRestorations(requestedIds ?: renderer.installedIds())
         val installed = renderer.installedIds().validIds()
         val installedSet = installed.toSet()
@@ -192,6 +222,7 @@ class WidgetRuntime(
     }
 
     private fun ensureObservation() {
+        if (pausedForRestore) return
         val installed = renderer.installedIds().validIds()
         if (installed.isEmpty()) {
             stopBackgroundWork()

@@ -95,6 +95,10 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.blackatsystems.miguardia.R
+import com.blackatsystems.miguardia.backup.BackupActions
+import com.blackatsystems.miguardia.backup.BackupSurfaceHost
+import com.blackatsystems.miguardia.backup.BackupUiState
+import com.blackatsystems.miguardia.backup.BackupViewModel
 import com.blackatsystems.miguardia.core.domain.AppDefaults
 import com.blackatsystems.miguardia.core.domain.calendar.CalendarDay
 import com.blackatsystems.miguardia.core.domain.calendar.CalendarShift
@@ -236,6 +240,7 @@ private enum class DrawerAction(
     NOTIFICATIONS(R.string.notifications, R.string.drawer_notifications_description, "◌", "drawer-action-notifications"),
     WEATHER(R.string.weather, R.string.drawer_weather_description, "☁", "drawer-action-weather"),
     WIDGET(R.string.widget_home, R.string.drawer_widget_description, "▣", "drawer-action-widget"),
+    BACKUPS(R.string.backups, R.string.drawer_backups_description, "⇄", "drawer-action-backups"),
 }
 
 private val WorkDrawerActions = listOf(
@@ -248,6 +253,7 @@ private val ContextDrawerActions = listOf(
     DrawerAction.WEATHER,
     DrawerAction.WIDGET,
 )
+private val ApplicationDrawerActions = listOf(DrawerAction.BACKUPS)
 
 @Composable
 private fun DrawerHeader() {
@@ -411,6 +417,7 @@ fun MiGuardiaApp(
     availabilityViewModel: AvailabilityViewModel,
     summaryViewModel: SummaryViewModel,
     reportsViewModel: ReportsViewModel,
+    backupViewModel: BackupViewModel,
     modifier: Modifier = Modifier,
     calendarNavigationRequest: Int = 0,
     appZoom: AppZoom = AppZoom.STANDARD,
@@ -436,6 +443,7 @@ fun MiGuardiaApp(
     val availabilityState by availabilityViewModel.uiState.collectAsStateWithLifecycle()
     val summaryState by summaryViewModel.uiState.collectAsStateWithLifecycle()
     val reportsState by reportsViewModel.uiState.collectAsStateWithLifecycle()
+    val backupState by backupViewModel.uiState.collectAsStateWithLifecycle()
     MiGuardiaApp(
         calendarState = calendarState,
         nextEventState = nextEventState,
@@ -484,6 +492,8 @@ fun MiGuardiaApp(
         ),
         reportsState = reportsState,
         reportsActions = ReportsActions.from(reportsViewModel),
+        backupState = backupState,
+        backupActions = BackupActions.from(backupViewModel),
         calendarNavigationRequest = calendarNavigationRequest,
         appZoom = appZoom,
         onAppZoomChange = onAppZoomChange,
@@ -542,6 +552,8 @@ fun MiGuardiaApp(
     summaryActions: SummaryActions = SummaryActions(),
     reportsState: ReportsUiState = ReportsUiState(month = calendarState.visibleMonth),
     reportsActions: ReportsActions = ReportsActions(),
+    backupState: BackupUiState = BackupUiState(),
+    backupActions: BackupActions = BackupActions(),
     calendarNavigationRequest: Int = 0,
     appZoom: AppZoom = AppZoom.STANDARD,
     onAppZoomChange: (AppZoom) -> Unit = {},
@@ -562,7 +574,16 @@ fun MiGuardiaApp(
                 workSetupState.rootState == WorkSetupState.FreshInstall
             )
     ) {
-        WorkSetupStartupScreen(workSetupState, workSetupActions, modifier)
+        if (backupState.isOpen) {
+            BackupSurfaceHost(backupState, backupActions)
+        } else {
+            WorkSetupStartupScreen(
+                workSetupState,
+                workSetupActions,
+                modifier,
+                onRestoreBackup = backupActions.open,
+            )
+        }
         return
     }
     val needsFirstWorkSet = workSetupState.rootState is WorkSetupState.V2NeedsFirstSet
@@ -596,7 +617,8 @@ fun MiGuardiaApp(
         v2ShiftActualActive ||
         hoursAndExtrasActive ||
         availabilityActive ||
-        reportsState.isOpen
+        reportsState.isOpen ||
+        backupState.isOpen
     var destination by rememberSaveable { androidx.compose.runtime.mutableStateOf(MainDestination.CALENDAR) }
     val currentSetSummaryActive by rememberUpdatedState(summaryActions.setActive)
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -716,6 +738,12 @@ fun MiGuardiaApp(
             destination = MainDestination.CALENDAR
         }
     }
+    LaunchedEffect(backupState.successSequence) {
+        if (backupState.successSequence > 0) {
+            onDismissDate()
+            destination = MainDestination.CALENDAR
+        }
+    }
     LaunchedEffect(v2ReadyState?.timelineId, selectedDay?.date, v2ShiftEditActive) {
         val ready = v2ReadyState
         val date = selectedDay?.date
@@ -766,6 +794,7 @@ fun MiGuardiaApp(
                 DrawerAction.NOTIFICATIONS -> notificationActions.openGlobal()
                 DrawerAction.WEATHER -> weatherActions.openGlobal()
                 DrawerAction.WIDGET -> widgetActions.open()
+                DrawerAction.BACKUPS -> backupActions.open()
             }
         }
     }
@@ -805,6 +834,9 @@ fun MiGuardiaApp(
                         DrawerActionItem(action = action, onClick = { openDrawerAction(action) })
                     }
                     DrawerSectionTitle(R.string.drawer_section_application)
+                    ApplicationDrawerActions.forEach { action ->
+                        DrawerActionItem(action = action, onClick = { openDrawerAction(action) })
+                    }
                     DrawerDestinationItem(
                         item = MainDestination.APPEARANCE,
                         selected = destination == MainDestination.APPEARANCE,
@@ -1074,6 +1106,9 @@ fun MiGuardiaApp(
     }
     if (reportsState.isOpen) {
         ReportsSurfaceHost(reportsState, reportsActions)
+    }
+    if (backupState.isOpen) {
+        BackupSurfaceHost(backupState, backupActions)
     }
     if (v2ShiftEditActive) {
         V2ShiftEditSurfaceHost(

@@ -11,6 +11,7 @@ import com.blackatsystems.miguardia.core.domain.AppDefaults
 import com.blackatsystems.miguardia.core.domain.model.SchedulePhoto
 import com.blackatsystems.miguardia.core.domain.repository.ObjectiveRepository
 import com.blackatsystems.miguardia.core.domain.repository.SchedulePhotoRepository
+import com.blackatsystems.miguardia.backup.LocalDataMutationGate
 import java.time.Clock
 import java.time.YearMonth
 import java.util.UUID
@@ -30,6 +31,7 @@ class PhotosViewModel(
     private val objectives: ObjectiveRepository,
     val fileStore: SchedulePhotoFileStore,
     private val savedState: SavedStateHandle,
+    private val mutationGate: LocalDataMutationGate = LocalDataMutationGate(),
     private val clock: Clock = Clock.system(AppDefaults.zoneId()),
 ) : ViewModel() {
     private val initialMonth = savedState.get<String>(MONTH)?.let(YearMonth::parse) ?: YearMonth.now(clock)
@@ -42,7 +44,11 @@ class PhotosViewModel(
 
     init {
         viewModelScope.launch {
-            try { fileStore.reconcile { repository.getById(it)?.storageKey } }
+            try {
+                mutationGate.withExclusiveMutation {
+                    fileStore.reconcile { repository.getById(it)?.storageKey }
+                }
+            }
             catch (error: CancellationException) { throw error }
             catch (_: Exception) { _uiState.update { it.copy(errorMessage = "No pudimos verificar el almacenamiento de fotos.") } }
         }
@@ -62,55 +68,76 @@ class PhotosViewModel(
     fun dismissDelete() = _uiState.update { it.copy(pendingDeleteId = null) }
 
     fun import(uris: List<Uri>, objectiveId: UUID? = null) = write {
-        if (uris.isEmpty()) return@write
-        val objective = objectiveId?.let { id -> _uiState.value.objectives.firstOrNull { it.id == id } }
-        var imported = 0; var failed = 0
-        uris.forEach { uri ->
-            val id = UUID.randomUUID()
-            try {
-                val stored = fileStore.import(uri, id)
-                val now = clock.instant()
+        mutationGate.withExclusiveMutation {
+            if (uris.isEmpty()) return@withExclusiveMutation
+            val objective = objectiveId?.let { id -> _uiState.value.objectives.firstOrNull { it.id == id } }
+            var imported = 0; var failed = 0
+            uris.forEach { uri ->
+                val id = UUID.randomUUID()
                 try {
-                    repository.insert(SchedulePhoto(id, _uiState.value.month, objective?.id, objective?.fullName,
-                        objective?.abbreviation, stored.storageKey, stored.mimeType, stored.byteSize,
-                        stored.width, stored.height, now, now))
-                    imported++
-                } catch (error: Exception) { fileStore.file(stored.storageKey).delete(); throw error }
-            } catch (error: CancellationException) { throw error }
-            catch (_: Exception) { failed++ }
+                    val stored = fileStore.import(uri, id)
+                    val now = clock.instant()
+                    try {
+                        repository.insert(SchedulePhoto(id, _uiState.value.month, objective?.id, objective?.fullName,
+                            objective?.abbreviation, stored.storageKey, stored.mimeType, stored.byteSize,
+                            stored.width, stored.height, now, now))
+                        imported++
+                    } catch (error: Exception) { fileStore.file(stored.storageKey).delete(); throw error }
+                } catch (error: CancellationException) { throw error }
+                catch (_: Exception) { failed++ }
+            }
+            _uiState.update { it.copy(infoMessage = "$imported foto(s) agregada(s)." + if (failed > 0) " $failed no pudieron importarse." else "") }
         }
-        _uiState.update { it.copy(infoMessage = "$imported foto(s) agregada(s)." + if (failed > 0) " $failed no pudieron importarse." else "") }
     }
 
     fun associate(id: UUID, objectiveId: UUID?) = write {
-        val photo = repository.getById(id) ?: return@write
-        val objective = objectiveId?.let { value -> _uiState.value.objectives.firstOrNull { it.id == value } }
-        repository.update(photo.copy(objectiveId = objective?.id, objectiveNameSnapshot = objective?.fullName,
-            objectiveAbbreviationSnapshot = objective?.abbreviation, updatedAt = clock.instant()))
-        _uiState.update { it.copy(infoMessage = "Objetivo de la foto actualizado.") }
+        mutationGate.withExclusiveMutation {
+            val photo = repository.getById(id) ?: return@withExclusiveMutation
+            val objective = objectiveId?.let { value ->
+                _uiState.value.objectives.firstOrNull { it.id == value }
+            }
+            repository.update(
+                photo.copy(
+                    objectiveId = objective?.id,
+                    objectiveNameSnapshot = objective?.fullName,
+                    objectiveAbbreviationSnapshot = objective?.abbreviation,
+                    updatedAt = clock.instant(),
+                ),
+            )
+            _uiState.update { it.copy(infoMessage = "Objetivo de la foto actualizado.") }
+        }
     }
 
     fun replace(id: UUID, uri: Uri) = write {
-        val previous = repository.getById(id) ?: return@write
-        val stored = fileStore.import(uri, previous.id, versioned = true)
-        try {
-            repository.update(previous.copy(storageKey = stored.storageKey, mimeType = stored.mimeType,
-                byteSize = stored.byteSize, pixelWidth = stored.width, pixelHeight = stored.height,
-                updatedAt = clock.instant()))
-            fileStore.file(previous.storageKey).delete()
-            _uiState.update { it.copy(infoMessage = "Foto reemplazada.") }
-        } catch (error: Exception) {
-            fileStore.file(stored.storageKey).delete(); throw error
+        mutationGate.withExclusiveMutation {
+            val previous = repository.getById(id) ?: return@withExclusiveMutation
+            val stored = fileStore.import(
+                uri,
+                previous.id,
+                versioned = true,
+                replacingStorageKey = previous.storageKey,
+            )
+            try {
+                repository.update(previous.copy(storageKey = stored.storageKey, mimeType = stored.mimeType,
+                    byteSize = stored.byteSize, pixelWidth = stored.width, pixelHeight = stored.height,
+                    updatedAt = clock.instant()))
+                fileStore.file(previous.storageKey).delete()
+                _uiState.update { it.copy(infoMessage = "Foto reemplazada.") }
+            } catch (error: Exception) {
+                fileStore.file(stored.storageKey).delete(); throw error
+            }
         }
     }
 
     fun confirmDelete() = write {
-        val id = _uiState.value.pendingDeleteId ?: return@write
-        val photo = repository.getById(id) ?: return@write
-        fileStore.removeRecoverably(photo.storageKey) { repository.delete(id) }
-        clearSelectedPhoto()
-        _uiState.update { it.copy(pendingDeleteId = null, infoMessage = "Foto eliminada.") }
-        if (_uiState.value.surface == PhotosSurface.VIEWER) setSurface(PhotosSurface.LIST)
+        mutationGate.withExclusiveMutation {
+            val id = _uiState.value.pendingDeleteId ?: return@withExclusiveMutation
+            val photo = repository.getById(id) ?: return@withExclusiveMutation
+            fileStore.removeRecoverably(photo.storageKey) { repository.delete(id) }
+            clearSelectedPhoto()
+            _uiState.update { it.copy(pendingDeleteId = null, infoMessage = "Foto eliminada.") }
+            if (_uiState.value.surface == PhotosSurface.VIEWER) setSurface(PhotosSurface.LIST)
+        }
     }
 
     private fun setMonth(month: YearMonth) {
@@ -140,9 +167,16 @@ class PhotosViewModel(
     } }
 
     class Factory(private val repository: SchedulePhotoRepository, private val objectives: ObjectiveRepository,
-        private val fileStore: SchedulePhotoFileStore) : ViewModelProvider.Factory {
+        private val fileStore: SchedulePhotoFileStore,
+        private val mutationGate: LocalDataMutationGate = LocalDataMutationGate()) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
-            @Suppress("UNCHECKED_CAST") return PhotosViewModel(repository, objectives, fileStore, extras.createSavedStateHandle()) as T
+            @Suppress("UNCHECKED_CAST") return PhotosViewModel(
+                repository,
+                objectives,
+                fileStore,
+                extras.createSavedStateHandle(),
+                mutationGate,
+            ) as T
         }
     }
     private companion object { const val MONTH="photos.month"; const val SURFACE="photos.surface"; const val SELECTED="photos.selected" }

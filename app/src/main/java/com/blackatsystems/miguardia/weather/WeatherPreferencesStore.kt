@@ -30,7 +30,7 @@ data class WeatherPreferences(
     val retryAfterUntilEpochMillis: Long? = null,
 )
 
-class WeatherPreferencesStore private constructor(
+class WeatherPreferencesStore internal constructor(
     private val dataStore: DataStore<Preferences>,
 ) {
     constructor(context: Context, fileName: String = DEFAULT_FILE_NAME) : this(
@@ -49,6 +49,19 @@ class WeatherPreferencesStore private constructor(
         .map(::toPreferences)
 
     suspend fun current(): WeatherPreferences = preferences.first()
+
+    /** Backup and recovery must abort instead of silently exporting defaults on I/O failure. */
+    internal suspend fun currentForBackup(): WeatherPreferences = toPreferences(dataStore.data.first())
+
+    /** Restores portable choices and deliberately drops retry/session timestamps. */
+    suspend fun replacePortable(preferences: WeatherPreferences) = dataStore.edit { values ->
+        values[Enabled] = preferences.enabled
+        values[Unit] = preferences.unitSystem.name
+        values[IncludeNotifications] = preferences.includeInNotifications
+        values[ExplanationAccepted] = preferences.providerExplanationAccepted
+        values.remove(LastRefreshAttempt)
+        values.remove(RetryAfterUntil)
+    }
 
     suspend fun enableAfterExplanation() = dataStore.edit {
         it[Enabled] = true

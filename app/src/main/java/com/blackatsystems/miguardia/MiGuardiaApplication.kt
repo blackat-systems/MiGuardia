@@ -3,6 +3,7 @@ package com.blackatsystems.miguardia
 import android.app.Application
 import com.blackatsystems.miguardia.core.database.LocalDataStore
 import com.blackatsystems.miguardia.notifications.NotificationPreferencesStore
+import com.blackatsystems.miguardia.notifications.NotificationDeferredActions
 import com.blackatsystems.miguardia.notifications.NotificationRuntime
 import com.blackatsystems.miguardia.profile.GuardProfileStore
 import com.blackatsystems.miguardia.reports.LocalReportGenerator
@@ -13,15 +14,60 @@ import com.blackatsystems.miguardia.ui.summary.SummaryPreferencesStore
 import com.blackatsystems.miguardia.weather.WeatherPreferencesStore
 import com.blackatsystems.miguardia.weather.WeatherRuntime
 import com.blackatsystems.miguardia.widget.WidgetPreferencesStore
+import com.blackatsystems.miguardia.widget.WidgetDeferredActions
 import com.blackatsystems.miguardia.widget.WidgetRuntime
+import com.blackatsystems.miguardia.backup.LocalDataMutationGate
+import com.blackatsystems.miguardia.backup.LocalBackupCoordinator
+import com.blackatsystems.miguardia.backup.PortablePreferencesGateway
 import java.time.Clock
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+sealed interface StartupRecoveryState {
+    data object Recovering : StartupRecoveryState
+    data object Ready : StartupRecoveryState
+    data class Failed(val message: String) : StartupRecoveryState
+}
+
+class StartupRecoveryGate(
+    initialState: StartupRecoveryState = StartupRecoveryState.Recovering,
+) {
+    private val mutableState = MutableStateFlow(initialState)
+    val state: StateFlow<StartupRecoveryState> = mutableState.asStateFlow()
+    val isReady: Boolean get() = mutableState.value == StartupRecoveryState.Ready
+
+    fun recovering() {
+        mutableState.value = StartupRecoveryState.Recovering
+    }
+
+    fun ready() {
+        mutableState.value = StartupRecoveryState.Ready
+    }
+
+    fun failed(message: String) {
+        require(message.isNotBlank())
+        mutableState.value = StartupRecoveryState.Failed(message)
+    }
+}
 
 class MiGuardiaApplication : Application() {
+    val startupRecoveryGate = StartupRecoveryGate()
+    val localDataMutationGate = LocalDataMutationGate()
+    private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     val localDataStore: LocalDataStore by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         LocalDataStore.create(this)
     }
     val notificationPreferences: NotificationPreferencesStore by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         NotificationPreferencesStore(this)
+    }
+    val notificationDeferredActions: NotificationDeferredActions by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
+        NotificationDeferredActions(this)
     }
     val weatherPreferences: WeatherPreferencesStore by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         WeatherPreferencesStore(this)
@@ -48,6 +94,18 @@ class MiGuardiaApplication : Application() {
     val widgetPreferences: WidgetPreferencesStore by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         WidgetPreferencesStore(this)
     }
+    val widgetDeferredActions: WidgetDeferredActions by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
+        WidgetDeferredActions(this)
+    }
+    val portablePreferences: PortablePreferencesGateway by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
+        PortablePreferencesGateway(
+            context = this,
+            guardProfile = guardProfile,
+            summaryStore = summaryPreferences,
+            notificationStore = notificationPreferences,
+            weatherStore = weatherPreferences,
+        )
+    }
     val weatherRuntime: WeatherRuntime by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         WeatherRuntime(this, weatherPreferences)
     }
@@ -62,10 +120,68 @@ class MiGuardiaApplication : Application() {
             weatherRuntime = weatherRuntime,
         )
     }
+    val backupCoordinator: LocalBackupCoordinator by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
+        LocalBackupCoordinator(
+            context = this,
+            localDataStore = localDataStore,
+            preferences = portablePreferences,
+            pauseRuntimes = {
+                weatherRuntime.cancelRefresh()
+                notificationRuntime.pauseForRestore()
+                widgetRuntime.pauseForRestore()
+            },
+            resumeRuntimes = {
+                portablePreferences.ensureAccessibleSoundOrFallback()
+                notificationDeferredActions.replay(notificationPreferences)
+                notificationRuntime.resumeAfterRestore()
+                notificationDeferredActions.replay(notificationPreferences)
+                notificationRuntime.reconcileNow()
+                widgetDeferredActions.replay(widgetRuntime)
+                widgetRuntime.resumeAfterRestore()
+                widgetDeferredActions.replay(widgetRuntime)
+                if (!startupRecoveryGate.isReady) {
+                    startupRecoveryGate.ready()
+                    notificationDeferredActions.replay(notificationPreferences)
+                    notificationRuntime.reconcileNow()
+                    widgetDeferredActions.replay(widgetRuntime)
+                }
+            },
+            mutationGate = localDataMutationGate,
+        )
+    }
 
     override fun onCreate() {
         super.onCreate()
-        notificationRuntime.start()
-        widgetRuntime.start()
+        startupRecoveryGate.recovering()
+        applicationScope.launch(Dispatchers.IO) {
+            val recovery = runCatching { backupCoordinator.recoverAtStartup() }
+            if (recovery.isSuccess) {
+                val runtimes = runCatching {
+                    notificationDeferredActions.replay(notificationPreferences)
+                    withContext(Dispatchers.Main.immediate) {
+                        notificationRuntime.start()
+                    }
+                    widgetDeferredActions.replay(widgetRuntime)
+                    withContext(Dispatchers.Main.immediate) { widgetRuntime.start() }
+                    startupRecoveryGate.ready()
+                    notificationDeferredActions.replay(notificationPreferences)
+                    notificationRuntime.reconcileNow()
+                    widgetDeferredActions.replay(widgetRuntime)
+                }
+                if (runtimes.isFailure) {
+                    weatherRuntime.cancelRefresh()
+                    runCatching { notificationRuntime.pauseForRestore() }
+                    runCatching { widgetRuntime.pauseForRestore() }
+                    startupRecoveryGate.failed(STARTUP_RECOVERY_ERROR)
+                }
+            } else {
+                startupRecoveryGate.failed(STARTUP_RECOVERY_ERROR)
+            }
+        }
+    }
+
+    private companion object {
+        const val STARTUP_RECOVERY_ERROR =
+            "MiGuardia no pudo terminar una recuperación pendiente. Los avisos y Widgets quedaron pausados para proteger tus datos."
     }
 }

@@ -106,6 +106,18 @@ class WidgetPreferencesStoreTest {
     }
 
     @Test
+    fun `replaying the same restoration keeps the already transferred configuration`() = runBlocking {
+        val original = configured(WidgetMode.NEXT_SHIFT, WidgetPrivacy.COMPLETE)
+        store.save(10, original)
+
+        store.remap(intArrayOf(10), intArrayOf(101))
+        store.remap(intArrayOf(10), intArrayOf(101))
+
+        assertEquals(original, store.current(101))
+        assertEquals(setOf(101), store.all().keys)
+    }
+
+    @Test
     fun `restoration without an old preference creates only a hidden incomplete target`() = runBlocking {
         store.save(44, configured(WidgetMode.AUTOMATIC))
 

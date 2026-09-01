@@ -185,7 +185,7 @@ Widget de próximo evento — cerrado; Samsung verde, API 26/33 pendientes
         ↓
 Informes locales — cerrado; local y Samsung API 36 (33/33) verdes
         ↓
-Copias y restauración locales — prompt habilitado / implementación pendiente
+Copias y restauración locales — cerradas; local y Samsung API 36 verdes
         ↓
 Bloqueo
         ↓
@@ -244,6 +244,16 @@ de conflictos— o `Reemplazar todo` —con vista previa y segunda confirmación
 MAIN fijó el contrato técnico en ADR 0035 y habilitó
 `COPIAS_Y_RESTAURACION_LOCALES_SEGURAS_V2.md`. La implementación todavía no
 comenzó y Joaquin abrirá la única tarea especialista.
+
+Actualización de cierre del 2026-09-01: MAIN recibió, auditó, corrigió y cerró
+Copias y restauración locales seguras. El formato lógico cubre las 27 tablas de
+Room V5, preferencias portables y fotografías opcionales; la recuperación
+ofrece combinación consciente o reemplazo total con segunda confirmación. La
+batería local pasó 603/603 pruebas JVM y 351/351 tareas. En Samsung API 36
+pasaron 121 pruebas Room y una matriz segura de aplicación de 98 pruebas, además
+de un recorrido real con SAF para crear, abrir, previsualizar y combinar una
+copia cifrada ficticia. Room V5 y sus esquemas permanecen intactos. Bloqueo de
+acceso local es el siguiente bloque recomendado, todavía no habilitado.
 
 MAIN integra un bloque por vez. Cada bloque debe compilar, pasar sus pruebas,
 preservar el alcance ajeno y quedar documentado antes del siguiente. El mapa
