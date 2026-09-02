@@ -1,7 +1,8 @@
 # Bloqueo de acceso local V2
 
-- Estado: **HABILITADO — IMPLEMENTACIÓN PENDIENTE**
+- Estado: **CERRADO — INTEGRADO Y VERIFICADO POR MAIN**
 - Fecha: 2026-09-01
+- Cierre MAIN: 2026-09-01
 - Proyecto obligatorio:
   `C:\Users\Joaquin\Desktop\chatgptprojects\MiGuardia-2.0`
 - Rama obligatoria: `codex/miguardia-2.0`
@@ -10,6 +11,11 @@
 - HEAD de entrada: el checkpoint documental exacto que MAIN informe al abrir
   la tarea
 - Nombre humano: **Bloqueo de acceso local**
+
+El cuerpo siguiente se conserva como contrato histórico del bloque ya cerrado.
+La implementación aceptada, las correcciones de integración y la evidencia
+final están registradas en
+`docs/audits/2026-09-01-bloqueo-de-acceso-local-v2-main.md`.
 
 ## QUÉ HACE
 

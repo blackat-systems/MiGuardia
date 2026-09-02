@@ -187,7 +187,7 @@ Informes locales — cerrado; local y Samsung API 36 (33/33) verdes
         ↓
 Copias y restauración locales — cerradas; local y Samsung API 36 verdes
         ↓
-Bloqueo de acceso local — prompt habilitado / implementación pendiente
+Bloqueo de acceso local — cerrado; local y Samsung API 36 (31/31) verdes
         ↓
 Ayuda y recorrido inicial 2.0
         ↓
@@ -255,13 +255,15 @@ de un recorrido real con SAF para crear, abrir, previsualizar y combinar una
 copia cifrada ficticia. Room V5 y sus esquemas permanecen intactos. Bloqueo de
 acceso local quedó como siguiente bloque recomendado.
 
-Actualización de Bloqueo del 2026-09-01: Joaquin pidió preparar la dependencia.
-MAIN fijó ADR 0036 y habilitó `BLOQUEO_DE_ACCESO_LOCAL_V2.md`. La función será
-opcional y apagada por defecto; usará biometría fuerte o la credencial segura
-del teléfono, nunca un PIN propio. Protegerá arranque, retornos, destinos desde
-avisos/Widget y la vista de Recientes. Sus preferencias serán locales al
-dispositivo y quedarán fuera de las copias. La implementación todavía no
-comenzó y Joaquin abrirá la única tarea especialista.
+Actualización de cierre de Bloqueo del 2026-09-01: MAIN recibió, auditó y
+corrigió el candidato. La puerta opcional usa biometría fuerte o la credencial
+segura del teléfono, nunca un PIN propio, y sus preferencias continúan fuera de
+las copias. La batería global pasó 653/653 pruebas JVM y 351/351 tareas; la
+matriz final pasó 31/31 en Samsung API 36. Room V5, sus 27 tablas y los esquemas
+1–5 permanecen intactos; AndroidX Biometric 1.1.0 es la única dependencia
+directa nueva. API 26/API 33 y la inspección visual OEM de Recientes continúan
+pendientes. Ayuda y recorrido inicial 2.0 queda como siguiente bloque
+recomendado, todavía sin prompt habilitado ni tarea abierta.
 
 MAIN integra un bloque por vez. Cada bloque debe compilar, pasar sus pruebas,
 preservar el alcance ajeno y quedar documentado antes del siguiente. El mapa

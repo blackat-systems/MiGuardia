@@ -22,6 +22,8 @@ import com.blackatsystems.miguardia.core.domain.widget.WidgetPrivacy
 import com.blackatsystems.miguardia.widget.NextEventAppWidgetProvider
 import com.blackatsystems.miguardia.widget.WidgetConfigurationActivity
 import com.blackatsystems.miguardia.widget.WidgetInstancePreferences
+import com.blackatsystems.miguardia.security.AccessLockConfiguration
+import com.blackatsystems.miguardia.security.AccessLockTimeout
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -45,6 +47,10 @@ class WidgetConfigurationActivityTest {
 
     @Before
     fun setUp() {
+        runBlocking {
+            application.accessLockPreferences.repair()
+            application.accessLockCoordinator.initializeAfterRecovery()
+        }
         application.startupRecoveryGate.ready()
         context.getSharedPreferences("widget_deferred_actions", Context.MODE_PRIVATE).edit().clear().commit()
         host = AppWidgetHost(context, TEST_HOST_ID)
@@ -67,6 +73,10 @@ class WidgetConfigurationActivityTest {
     @After
     fun tearDown() {
         scenario?.close()
+        runBlocking {
+            application.accessLockPreferences.repair()
+            application.accessLockCoordinator.initializeAfterRecovery()
+        }
         application.startupRecoveryGate.ready()
         context.getSharedPreferences("widget_deferred_actions", Context.MODE_PRIVATE).edit().clear().commit()
         runBlocking { application.widgetPreferences.delete(listOf(appWidgetId)) }
@@ -94,6 +104,28 @@ class WidgetConfigurationActivityTest {
 
         application.startupRecoveryGate.ready()
         compose.onNodeWithTag("widget-configuration-screen").assertIsDisplayed()
+        assertEquals(previous, runBlocking { application.widgetPreferences.current(appWidgetId) })
+    }
+
+    @Test
+    fun enabledAccessLockBlocksExportedWidgetConfigurationBeforeReadingOrWritingItsInstance() {
+        val previous = WidgetInstancePreferences(
+            mode = WidgetMode.NEXT_DAY_OFF,
+            privacy = WidgetPrivacy.REDUCED,
+            configured = true,
+        )
+        runBlocking {
+            application.widgetPreferences.save(appWidgetId, previous)
+            application.accessLockPreferences.replace(
+                AccessLockConfiguration(true, AccessLockTimeout.IMMEDIATE),
+            )
+            application.accessLockCoordinator.initializeAfterRecovery()
+        }
+
+        scenario = launchConfiguration()
+
+        compose.onNodeWithTag("access-lock-gate").assertIsDisplayed()
+        compose.onNodeWithTag("widget-configuration-screen").assertDoesNotExist()
         assertEquals(previous, runBlocking { application.widgetPreferences.current(appWidgetId) })
     }
 

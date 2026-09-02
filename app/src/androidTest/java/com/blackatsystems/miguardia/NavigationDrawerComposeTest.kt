@@ -75,6 +75,7 @@ class NavigationDrawerComposeTest {
 
         compose.onNodeWithContentDescription("Abrir menú").assertIsDisplayed()
         compose.onNodeWithTag("main-destination-summary").assertIsNotDisplayed()
+        compose.onNodeWithTag("main-destination-access_lock").assertIsNotDisplayed()
         compose.onNodeWithTag("main-destination-appearance").assertIsNotDisplayed()
 
         compose.onNodeWithContentDescription("Abrir menú").performClick()
@@ -89,6 +90,7 @@ class NavigationDrawerComposeTest {
             "Clima",
             "Widget de inicio",
             "Copias y restauración",
+            "Bloqueo de acceso",
             "Apariencia",
         ).forEach { label ->
             compose.onAllNodes(
@@ -104,6 +106,7 @@ class NavigationDrawerComposeTest {
         compose.onNodeWithText("Configuración").assertDoesNotExist()
         compose.onNodeWithTag("main-destination-calendar").assertIsSelected()
         compose.onNodeWithTag("main-destination-summary").assertIsNotSelected()
+        compose.onNodeWithTag("main-destination-access_lock").assertIsNotSelected()
         compose.onNodeWithTag("main-destination-appearance").assertIsNotSelected()
     }
 
@@ -113,6 +116,10 @@ class NavigationDrawerComposeTest {
 
         openDestination("main-destination-summary", "Resumen")
         compose.onNodeWithTag("summary-overview").assertIsDisplayed()
+        compose.onNodeWithTag("main-navigation-drawer").assertIsNotDisplayed()
+
+        openDestination("main-destination-access_lock", "Bloqueo de acceso")
+        compose.onNodeWithTag("access-lock-settings").assertIsDisplayed()
         compose.onNodeWithTag("main-navigation-drawer").assertIsNotDisplayed()
 
         openDestination("main-destination-appearance", "Tema de MiGuardia")

@@ -99,6 +99,11 @@ import com.blackatsystems.miguardia.backup.BackupActions
 import com.blackatsystems.miguardia.backup.BackupSurfaceHost
 import com.blackatsystems.miguardia.backup.BackupUiState
 import com.blackatsystems.miguardia.backup.BackupViewModel
+import com.blackatsystems.miguardia.security.AccessLockConfiguration
+import com.blackatsystems.miguardia.security.AccessLockSettingsScreen
+import com.blackatsystems.miguardia.security.AccessLockState
+import com.blackatsystems.miguardia.security.AccessLockTimeout
+import com.blackatsystems.miguardia.security.DeviceAuthenticationCapability
 import com.blackatsystems.miguardia.core.domain.AppDefaults
 import com.blackatsystems.miguardia.core.domain.calendar.CalendarDay
 import com.blackatsystems.miguardia.core.domain.calendar.CalendarShift
@@ -225,6 +230,7 @@ private enum class MainDestination(
 ) {
     CALENDAR(R.string.calendar, R.string.drawer_calendar_description, "▦"),
     SUMMARY(R.string.summary, R.string.drawer_summary_description, "≡"),
+    ACCESS_LOCK(R.string.access_lock, R.string.drawer_access_lock_description, "▣"),
     APPEARANCE(R.string.appearance, R.string.drawer_appearance_description, "◐"),
 }
 
@@ -425,6 +431,19 @@ fun MiGuardiaApp(
     appThemeMode: AppThemeMode = AppThemeMode.SYSTEM,
     onAppThemeModeChange: (AppThemeMode) -> Unit = {},
     onWidgetReconfigure: (Int) -> Unit = {},
+    accessLockState: AccessLockState = AccessLockState(
+        phase = com.blackatsystems.miguardia.security.AccessLockPhase.READY,
+        configuration = AccessLockConfiguration(),
+        locked = false,
+        privacyCoverVisible = false,
+    ),
+    deviceAuthenticationCapability: DeviceAuthenticationCapability = DeviceAuthenticationCapability.AVAILABLE,
+    onAccessLockActivate: (AccessLockTimeout) -> Unit = {},
+    onAccessLockTimeoutChange: (AccessLockTimeout) -> Unit = {},
+    onAccessLockDisable: () -> Unit = {},
+    onAccessLockNow: () -> Unit = {},
+    onRetryDeviceSecurity: () -> Unit = {},
+    onOpenDeviceSecurity: () -> Unit = {},
 ) {
     val calendarState by calendarViewModel.uiState.collectAsStateWithLifecycle()
     val nextEventState by nextEventViewModel.uiState.collectAsStateWithLifecycle()
@@ -499,6 +518,14 @@ fun MiGuardiaApp(
         onAppZoomChange = onAppZoomChange,
         appThemeMode = appThemeMode,
         onAppThemeModeChange = onAppThemeModeChange,
+        accessLockState = accessLockState,
+        deviceAuthenticationCapability = deviceAuthenticationCapability,
+        onAccessLockActivate = onAccessLockActivate,
+        onAccessLockTimeoutChange = onAccessLockTimeoutChange,
+        onAccessLockDisable = onAccessLockDisable,
+        onAccessLockNow = onAccessLockNow,
+        onRetryDeviceSecurity = onRetryDeviceSecurity,
+        onOpenDeviceSecurity = onOpenDeviceSecurity,
         modifier = modifier,
     )
 }
@@ -559,6 +586,19 @@ fun MiGuardiaApp(
     onAppZoomChange: (AppZoom) -> Unit = {},
     appThemeMode: AppThemeMode = AppThemeMode.SYSTEM,
     onAppThemeModeChange: (AppThemeMode) -> Unit = {},
+    accessLockState: AccessLockState = AccessLockState(
+        phase = com.blackatsystems.miguardia.security.AccessLockPhase.READY,
+        configuration = AccessLockConfiguration(),
+        locked = false,
+        privacyCoverVisible = false,
+    ),
+    deviceAuthenticationCapability: DeviceAuthenticationCapability = DeviceAuthenticationCapability.AVAILABLE,
+    onAccessLockActivate: (AccessLockTimeout) -> Unit = {},
+    onAccessLockTimeoutChange: (AccessLockTimeout) -> Unit = {},
+    onAccessLockDisable: () -> Unit = {},
+    onAccessLockNow: () -> Unit = {},
+    onRetryDeviceSecurity: () -> Unit = {},
+    onOpenDeviceSecurity: () -> Unit = {},
 ) {
     val preserveV2WriteSurface =
         (v2ShiftEditState.isBlocking && v2ShiftEditState.isSaving) ||
@@ -838,6 +878,11 @@ fun MiGuardiaApp(
                         DrawerActionItem(action = action, onClick = { openDrawerAction(action) })
                     }
                     DrawerDestinationItem(
+                        item = MainDestination.ACCESS_LOCK,
+                        selected = destination == MainDestination.ACCESS_LOCK,
+                        onClick = { selectDestination(MainDestination.ACCESS_LOCK) },
+                    )
+                    DrawerDestinationItem(
                         item = MainDestination.APPEARANCE,
                         selected = destination == MainDestination.APPEARANCE,
                         onClick = { selectDestination(MainDestination.APPEARANCE) },
@@ -927,6 +972,18 @@ fun MiGuardiaApp(
                     state = summaryState,
                     actions = summaryActions,
                     contentPadding = innerPadding,
+                )
+
+                MainDestination.ACCESS_LOCK -> AccessLockSettingsScreen(
+                    state = accessLockState,
+                    capability = deviceAuthenticationCapability,
+                    contentPadding = innerPadding,
+                    onActivate = onAccessLockActivate,
+                    onChangeTimeout = onAccessLockTimeoutChange,
+                    onDisable = onAccessLockDisable,
+                    onLockNow = onAccessLockNow,
+                    onRetryDeviceSecurity = onRetryDeviceSecurity,
+                    onOpenDeviceSecurity = onOpenDeviceSecurity,
                 )
 
                 MainDestination.APPEARANCE -> AppearanceScreen(

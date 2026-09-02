@@ -6,6 +6,7 @@ import android.content.SharedPreferences
 import android.net.Uri
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -24,6 +25,11 @@ import com.blackatsystems.miguardia.core.domain.weather.WeatherUnitSystem
 import com.blackatsystems.miguardia.notifications.NotificationAttentionMode
 import com.blackatsystems.miguardia.notifications.NotificationPreferencesStore
 import com.blackatsystems.miguardia.notifications.NotificationPrivacy
+import com.blackatsystems.miguardia.security.AccessLockConfiguration
+import com.blackatsystems.miguardia.security.AccessLockCoordinator
+import com.blackatsystems.miguardia.security.AccessLockPreferencesStore
+import com.blackatsystems.miguardia.security.AccessLockStoreRead
+import com.blackatsystems.miguardia.security.AccessLockTimeout
 import com.blackatsystems.miguardia.profile.GuardProfileStore
 import com.blackatsystems.miguardia.ui.summary.SummaryPreferences
 import com.blackatsystems.miguardia.ui.summary.SummaryPreferencesStore
@@ -73,13 +79,17 @@ class PortablePreferencesGatewayInstrumentedTest {
         val base = ApplicationProvider.getApplicationContext<Context>()
         val root = File(base.cacheDir, "portable-preferences-${UUID.randomUUID()}").also { check(it.mkdirs()) }
         val prefix = "backup-test-${UUID.randomUUID()}"
-        val context = IsolatedPreferencesContext(base, prefix)
+        val context = IsolatedPreferencesContext(base, prefix, root)
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         try {
             val profile = GuardProfileStore(File(root, "profile.preferences_pb"), scope)
             val summary = SummaryPreferencesStore(File(root, "summary.preferences_pb"), scope)
             val notifications = NotificationPreferencesStore(File(root, "notifications.preferences_pb"), scope)
             val weather = WeatherPreferencesStore(File(root, "weather.preferences_pb"), scope)
+            val accessLock = AccessLockPreferencesStore(
+                context.preferencesDataStoreFile(AccessLockPreferencesStore.DEFAULT_FILE_NAME),
+                scope,
+            )
             val gateway = PortablePreferencesGateway(context, profile, summary, notifications, weather)
             val display = context.getSharedPreferences(MainActivity.DISPLAY_PREFERENCES, Context.MODE_PRIVATE)
 
@@ -105,6 +115,8 @@ class PortablePreferencesGatewayInstrumentedTest {
             weather.setIncludeInNotifications(true)
             weather.recordRefreshAttempt(1_788_131_400_000L)
             weather.setRetryAfterUntil(1_788_131_460_000L)
+            val localAccessLock = AccessLockConfiguration(true, AccessLockTimeout.FIVE_MINUTES)
+            accessLock.replace(localAccessLock)
             assertTrue(
                 display.edit()
                     .putInt(MainActivity.APP_ZOOM_PERCENT, AppZoom.LARGE.percent)
@@ -115,6 +127,7 @@ class PortablePreferencesGatewayInstrumentedTest {
             val database = snapshotWithShift(EVENT_SHIFT_ID)
             val portable = gateway.capture(database)
             assertEquals(17, portable.size)
+            assertFalse(portable.any { it.key.contains("lock", ignoreCase = true) })
             assertFalse(portable.any { it.key.contains("sound") || it.key.contains("retry") })
             assertEquals(
                 listOf(EVENT_KEY),
@@ -154,6 +167,15 @@ class PortablePreferencesGatewayInstrumentedTest {
             assertEquals(setOf(EVENT_KEY), notifications.dismissedEventKeys())
             assertNull(weather.current().lastRefreshAttemptAtEpochMillis)
             assertNull(weather.current().retryAfterUntilEpochMillis)
+            assertEquals(
+                AccessLockStoreRead.Ready(localAccessLock),
+                accessLock.read(),
+            )
+            val restartedLock = AccessLockCoordinator(accessLock, scope)
+            restartedLock.initializeAfterRecovery()
+            restartedLock.activityStarted(Any(), deviceLocked = false)
+            assertTrue(restartedLock.state.value.locked)
+            assertFalse(restartedLock.state.value.allowsSensitiveContent)
         } finally {
             scope.cancel()
             context.clearIsolatedPreferences()
@@ -210,8 +232,10 @@ class PortablePreferencesGatewayInstrumentedTest {
     private class IsolatedPreferencesContext(
         base: Context,
         private val prefix: String,
+        private val root: File,
     ) : ContextWrapper(base) {
         override fun getApplicationContext(): Context = this
+        override fun getFilesDir(): File = File(root, "files").also(File::mkdirs)
 
         override fun getSharedPreferences(name: String, mode: Int): SharedPreferences =
             baseContext.getSharedPreferences("$prefix-$name", mode)

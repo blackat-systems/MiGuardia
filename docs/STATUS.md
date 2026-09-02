@@ -8,11 +8,11 @@ no significa que exista ya una implementación nueva.
 
 El núcleo laboral V2 quedó aprobado por MAIN. La segunda capa está
 desbloqueada. **Widget de próximo evento**, **Informes locales de jornadas y
-horas** y **Copias y restauración locales seguras** quedaron cerrados. Copias
-pasó la batería local definitiva, una matriz Samsung API 36 de 219 pruebas
-únicas y un recorrido SAF cifrado real. Joaquin pidió preparar **Bloqueo de
-acceso local**: ADR 0036 y su prompt quedaron habilitados; la implementación
-todavía no comenzó y no existe una tarea especialista activa.
+horas**, **Copias y restauración locales seguras** y **Bloqueo de acceso local**
+quedaron cerrados. Bloqueo pasó la batería global definitiva y una matriz final
+Samsung API 36 de 31/31 pruebas después de las correcciones de MAIN. No existe
+otro prompt de implementación habilitado. **Ayuda y recorrido inicial 2.0** es
+el próximo bloque recomendado, pero todavía no fue preparado ni abierto.
 
 MAIN 2.0 está reactivada para recibir los handoffs que Joaquin entregue,
 auditarlos, integrarlos, probarlos y cerrarlos. Joaquin decide cuándo pedir el
@@ -212,6 +212,10 @@ y auditada en
     probados e integrados por MAIN; matriz final Samsung 33/33.
   - `d0b5469e38e5404011d192d4a2200574abbfccd6`: contrato de Copias y
     restauración locales seguras.
+  - `7977913579cb92b9d3fefeb945274f312db9bd59`: Copias y restauración locales
+    seguras auditadas, probadas e integradas por MAIN.
+  - `2d6534da7a8b26774605c1c75339b0453da4fa2c`: contrato de Bloqueo de acceso
+    local.
 - Al iniciar la preparación documental, la rama todavía no poseía upstream. El
   push puntual posterior fue ejecutado y verificado: rama local y remoto privado
   coincidían en `836d908`; esa autorización no puede reutilizarse.
@@ -1260,36 +1264,66 @@ Samsung. La evidencia durable está en
 El prompt queda **CERRADO — INTEGRADO Y VERIFICADO POR MAIN**. No existe una
 autorización vigente de push.
 
-## Bloqueo de acceso local — prompt habilitado
+## Bloqueo de acceso local — cerrado por MAIN
 
-Joaquin pidió preparar la siguiente dependencia. MAIN auditó la base actual,
-el arranque, las actividades, el ciclo de vida, los destinos desde avisos y
-Widget, los stores y el contrato de Copias. ADR 0036 fija estas decisiones:
+El prompt `docs/prompts/BLOQUEO_DE_ACCESO_LOCAL_V2.md` quedó **CERRADO —
+INTEGRADO Y VERIFICADO POR MAIN**. El bloque agrega una puerta opcional,
+apagada por defecto, que usa biometría fuerte o PIN, patrón o contraseña del
+teléfono. No crea ni conserva credenciales propias. Permite bloqueo inmediato o
+después de 1, 5 o 15 minutos, además de `Bloquear ahora`, y protege tanto
+`MainActivity` como la configuración exportada del Widget.
 
-- la función es opcional y está apagada por defecto;
-- MiGuardia usa biometría fuerte o PIN, patrón o contraseña del teléfono;
-- no crea, pide ni guarda un PIN propio;
-- activar, desactivar y cambiar el plazo exige autenticación nueva;
-- los plazos exactos son inmediato, 1 minuto, 5 minutos y 15 minutos;
-- proceso nuevo, muerte de proceso o bloqueo del teléfono cierran el acceso;
-- la puerta no compone ni expone Calendario u otra información laboral;
-- destinos desde avisos, Widget, SAF y la actividad de configuración esperan la
-  autenticación y después se revalidan una sola vez;
-- Recientes no conserva una fotografía laboral cuando el bloqueo está activo;
-- Widget y Notificaciones mantienen sus privacidades independientes;
-- el bloqueo es una preferencia del dispositivo y queda fuera de las diecisiete
-  preferencias portables de `.miguardia-backup`;
-- Room V5, sus 27 tablas y esquemas 1–5 permanecen intactos.
+El candidato ejecutable abarcó 28 archivos —12 modificados y 16 nuevos—. MAIN
+auditó cada hunk y corrigió seis grupos de condiciones de carrera y ciclo de
+vida:
 
-Se autoriza dentro del contrato una única dependencia oficial y estable:
-`androidx.biometric:biometric:1.1.0`. Su necesidad, transitivas e impacto de APK
-deben medirse y declararse. No se autoriza otra biblioteca, permiso peligroso,
-servicio, cuenta, red o cifrado de Room.
+- callbacks de autenticación tardíos quedan invalidados ante `Bloquear ahora`,
+  bloqueo físico o pérdida de la credencial segura;
+- las mutaciones protegidas vuelven a comprobar la autorización dentro del
+  transform atómico de DataStore; antes de ese punto se abortan y, una vez
+  iniciado, el cambio termina de forma determinista;
+- los plazos conservan correctamente el tiempo transcurrido fuera de primer
+  plano y una activación en segundo plano comienza su plazo al confirmarse;
+- el destino pendiente queda en memoria de aplicación, sobrevive al cierre de
+  la puerta y se revalida y consume una sola vez;
+- el respaldo a credencial del dispositivo en API 26–29 se restaura después de
+  recrear la actividad;
+- la protección de fondo y Recientes no se retira mientras la actividad está
+  pausada, y un bloqueo físico no crea una puerta falsa cuando la función está
+  desactivada.
 
-`docs/prompts/BLOQUEO_DE_ACCESO_LOCAL_V2.md` queda
-**HABILITADO — IMPLEMENTACIÓN PENDIENTE**. Preparar el prompt no abrió la tarea,
-no usó dispositivos y no autoriza push. Joaquin creará la única dependencia
-desde el checkpoint documental exacto que MAIN informe.
+También quedó corregido el puente de resultados de permisos entre Compose y la
+versión de `FragmentActivity` aportada transitivamente por AndroidX Biometric.
+La única dependencia directa nueva es
+`androidx.biometric:biometric:1.1.0`; no se agregaron servicios, red,
+telemetría, cuentas ni permisos peligrosos.
+
+Validación final de MAIN:
+
+- batería global: 351/351 tareas ejecutadas;
+- JVM: dominio 377/377, base 12/12 y app 264/264; total 653/653, sin fallos,
+  errores ni omitidas;
+- pruebas JVM específicas del bloqueo y destinos: 50/50;
+- lint: 0 errores y 6 avisos de versiones sobre archivos de herramientas;
+- APK Debug, QA, Release sin firma y ambos AndroidTest: compilados;
+- dos auditorías independientes aprobaron el diff corregido;
+- Samsung `SM-S938B`, Android 16/API 36: matriz final 31/31;
+- Room permanece en V5, con 27 tablas, `identityHash`
+  `77adbc875d0f4ee466cdbd0dd74d5c5c` y esquemas 1–5 intactos;
+- el bloqueo continúa fuera de las diecisiete preferencias portables de
+  `.miguardia-backup`.
+
+En el Samsung queda `com.blackatsystems.miguardia.qa` instalado, detenido y con
+sus datos ficticios preservados; `com.blackatsystems.miguardia.qa.test` fue
+retirado. La orientación quedó en sus valores originales `0/0`. Producción no
+fue abierta ni modificada.
+
+Permanecen como evidencia física posterior, sin bloquear este cierre: API 26 y
+API 33, inspección visual OEM de la tarjeta de Recientes, un aviso real hacia su
+destino exacto, el retorno real desde SAF y un reinicio físico. Este último
+continúa siendo una puerta separada. La evidencia durable está en
+`docs/audits/2026-09-01-bloqueo-de-acceso-local-v2-main.md`. No existe una
+autorización vigente de push.
 
 ## Flujo vigente de MAIN
 
@@ -1324,9 +1358,9 @@ posteriores.
 - cualquier cálculo monetario o liquidación permanece fuera del producto;
 - un eventual cambio de profesión después de la selección inicial de rubro;
   no forma parte de la secuencia actual y sólo se abre si aparece un caso real;
-- recomendación futura, todavía no habilitada: después de cerrar el núcleo
-  laboral y el bloqueo de acceso —las copias y restauración locales seguras ya
-  están cerradas—, evaluar una
+- recomendación futura, todavía no habilitada: después de completar Ayuda,
+  recorrido inicial y la auditoría final —el núcleo laboral, Copias y Bloqueo de
+  acceso ya están cerrados—, evaluar una
   `Agenda profesional` opcional para Medicina y una posible Psicología. Su
   primer alcance sería pacientes y turnos, sin historias clínicas,
   diagnósticos, tratamientos ni evoluciones. Psicología requeriría aprobar por
@@ -1335,8 +1369,8 @@ posteriores.
 - segunda capa ordenada: Widget —cerrado por MAIN; Samsung verde, API 26/API 33
   pendientes de compatibilidad—, Informes —cerrado por MAIN; local y Samsung
   API 36 verdes—, Copias y restauración —cerrado por MAIN; local y Samsung API
-  36 verdes dentro de la matriz autorizada—, Bloqueo —prompt habilitado,
-  implementación pendiente— y Ayuda y recorrido inicial 2.0;
+  36 verdes dentro de la matriz autorizada—, Bloqueo —cerrado por MAIN; local y
+  Samsung API 36 verdes— y Ayuda y recorrido inicial 2.0 —pendiente—;
 - logo y tipografías definitivas.
 
 ## Todavía no implementado
@@ -1350,11 +1384,12 @@ posteriores.
 ## Próximo paso
 
 El núcleo quedó aprobado y la segunda capa está desbloqueada. **Widget de
-próximo evento**, **Informes locales** y **Copias y restauración locales
-seguras** están cerrados. **Bloqueo de acceso local** tiene ADR y prompt
-habilitados; la implementación permanece pendiente hasta que Joaquin cree la
-única tarea con el checkpoint documental exacto. API 26/API 33 del Widget y de
-Copias continúan pendientes para la matriz de compatibilidad posterior.
+próximo evento**, **Informes locales**, **Copias y restauración locales
+seguras** y **Bloqueo de acceso local** están cerrados. El próximo bloque
+recomendado es **Ayuda y recorrido inicial 2.0**, todavía sin prompt habilitado
+ni tarea abierta. Después corresponde la auditoría completa y la emisión del
+candidato local. API 26/API 33 de Widget, Copias y Bloqueo continúan pendientes
+para la matriz de compatibilidad posterior.
 
 El disparo físico de una alarma exacta, un reinicio real del Samsung y API 37
 conservan puertas separadas para el candidato final. Los pushes autorizados para

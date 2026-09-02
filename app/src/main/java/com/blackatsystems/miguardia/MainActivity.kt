@@ -6,8 +6,9 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
-import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.SideEffect
@@ -20,8 +21,8 @@ import androidx.compose.runtime.setValue
 import androidx.core.content.edit
 import androidx.core.net.toUri
 import androidx.core.view.WindowCompat
-import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.fragment.app.FragmentActivity
 import com.blackatsystems.miguardia.backup.BackupViewModel
 import com.blackatsystems.miguardia.backup.BackupActions
 import com.blackatsystems.miguardia.backup.BackupStage
@@ -55,14 +56,30 @@ import com.blackatsystems.miguardia.ui.weather.WeatherViewModel
 import com.blackatsystems.miguardia.ui.worksetup.WorkSetupViewModel
 import com.blackatsystems.miguardia.ui.widget.WidgetViewModel
 import com.blackatsystems.miguardia.widget.WidgetConfigurationActivity
-import kotlinx.coroutines.launch
+import com.blackatsystems.miguardia.security.AccessLockContentGate
+import com.blackatsystems.miguardia.security.AccessLockOperation
+import com.blackatsystems.miguardia.security.AccessLockWindowProtection
+import com.blackatsystems.miguardia.security.DeviceAuthenticator
+import com.blackatsystems.miguardia.security.DeviceAuthenticationCapability
+import com.blackatsystems.miguardia.security.SystemDeviceAuthenticator
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.time.Clock
 import java.util.UUID
 
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
     private var calendarNavigationRequest by mutableIntStateOf(0)
-    private var pendingIntentRequest by mutableIntStateOf(1)
-    private var handledIntentRequest = 0
+    private val accessLockActivityToken = Any()
+    private lateinit var accessLockAuthenticationHostId: String
+    private var accessLockActivityResumed = false
+    private lateinit var deviceAuthenticator: DeviceAuthenticator
+    private var deviceAuthenticationCapability by mutableStateOf(
+        DeviceAuthenticationCapability.NO_SECURE_CREDENTIAL,
+    )
 
     private val notificationViewModel: NotificationViewModel by viewModels {
         val application = application as MiGuardiaApplication
@@ -276,6 +293,19 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val miGuardiaApplication = application as MiGuardiaApplication
+        accessLockAuthenticationHostId = savedInstanceState
+            ?.getString(ACCESS_LOCK_AUTHENTICATION_HOST_ID)
+            ?: UUID.randomUUID().toString()
+        deviceAuthenticator = SystemDeviceAuthenticator(this) { token, result ->
+            miGuardiaApplication.accessLockCoordinator.completeAuthentication(token, result)
+        }
+        deviceAuthenticator.attachToInFlightAuthentication(
+            miGuardiaApplication.accessLockCoordinator.activeAuthenticationToken(
+                accessLockAuthenticationHostId,
+            ),
+        )
+        deviceAuthenticationCapability = deviceAuthenticator.capability()
+        captureIncomingDestination(intent)
         setContent {
             val preferences = remember {
                 getSharedPreferences(DISPLAY_PREFERENCES, MODE_PRIVATE)
@@ -293,10 +323,14 @@ class MainActivity : ComponentActivity() {
                 )
             }
             val recoveryState by miGuardiaApplication.startupRecoveryGate.state.collectAsStateWithLifecycle()
+            val accessLockState by miGuardiaApplication.accessLockCoordinator.state.collectAsStateWithLifecycle()
+            val pendingDestinationRequest by
+                miGuardiaApplication.pendingMainDestinations.state.collectAsStateWithLifecycle()
             val backupState by backupViewModel.uiState.collectAsStateWithLifecycle()
             val dataAccessReady = recoveryState == StartupRecoveryState.Ready
-            LaunchedEffect(backupState.successSequence, dataAccessReady) {
-                if (dataAccessReady && backupState.successSequence > 0) {
+            val sensitiveContentReady = dataAccessReady && accessLockState.allowsSensitiveContent
+            LaunchedEffect(backupState.successSequence, sensitiveContentReady) {
+                if (sensitiveContentReady && backupState.successSequence > 0) {
                     backupState.restoredZoom?.let { appZoom = it }
                     backupState.restoredTheme?.let { appThemeMode = it }
                     workSetupViewModel.refreshReferenceDate()
@@ -306,14 +340,23 @@ class MainActivity : ComponentActivity() {
                     widgetViewModel.refresh()
                 }
             }
-            LaunchedEffect(recoveryState, pendingIntentRequest) {
-                if (dataAccessReady && handledIntentRequest < pendingIntentRequest) {
-                    handledIntentRequest = pendingIntentRequest
-                    handleNotificationIntent(intent)
+            LaunchedEffect(
+                recoveryState,
+                accessLockState.allowsSensitiveContent,
+                pendingDestinationRequest?.generation,
+            ) {
+                val request = pendingDestinationRequest
+                if (sensitiveContentReady && request != null) {
+                    val consumed = miGuardiaApplication.pendingMainDestinations.consume(request) {
+                        handlePendingDestination(it)
+                    }
+                    if (consumed) {
+                        setIntent(Intent(this@MainActivity, MainActivity::class.java))
+                    }
                 }
             }
-            LaunchedEffect(recoveryState) {
-                if (dataAccessReady) {
+            LaunchedEffect(recoveryState, accessLockState.allowsSensitiveContent) {
+                if (sensitiveContentReady) {
                     appZoom = AppZoom.fromPercent(
                         preferences.getInt(APP_ZOOM_PERCENT, AppZoom.STANDARD.percent),
                     )
@@ -324,8 +367,8 @@ class MainActivity : ComponentActivity() {
                 }
             }
             val useDarkTheme = appThemeMode.resolve(isSystemInDarkTheme())
-            LaunchedEffect(useDarkTheme, dataAccessReady) {
-                if (dataAccessReady) miGuardiaApplication.widgetRuntime.refreshAll()
+            LaunchedEffect(useDarkTheme, sensitiveContentReady) {
+                if (sensitiveContentReady) miGuardiaApplication.widgetRuntime.refreshAll()
             }
             val systemBarStyle = vigiliaSystemBarStyle(useDarkTheme)
             SideEffect {
@@ -334,6 +377,11 @@ class MainActivity : ComponentActivity() {
                 WindowCompat.getInsetsController(window, window.decorView).apply {
                     isAppearanceLightStatusBars = systemBarStyle.useDarkIcons
                     isAppearanceLightNavigationBars = systemBarStyle.useDarkIcons
+                }
+                if (accessLockActivityResumed) {
+                    AccessLockWindowProtection.applyForeground(this@MainActivity, accessLockState)
+                } else {
+                    AccessLockWindowProtection.protectForBackground(this@MainActivity, accessLockState)
                 }
             }
             MiGuardiaTheme(
@@ -360,7 +408,16 @@ class MainActivity : ComponentActivity() {
                         state = protectedState,
                         actions = BackupActions.from(backupViewModel),
                     )
-                } else MiGuardiaApp(
+                } else AccessLockContentGate(
+                        state = accessLockState,
+                        capability = deviceAuthenticationCapability,
+                        onUnlock = { authenticate(AccessLockOperation.Unlock) },
+                        onRetryStore = miGuardiaApplication.accessLockCoordinator::retryStoreRead,
+                        onRepairStore = { authenticate(AccessLockOperation.RepairStore) },
+                        onRetryDeviceSecurity = ::refreshDeviceAuthenticationCapability,
+                        onOpenDeviceSecurity = ::openDeviceSecurity,
+                    ) {
+                    MiGuardiaApp(
                     calendarViewModel = calendarViewModel,
                     nextEventViewModel = nextEventViewModel,
                     v2ManualShiftLoadViewModel = v2ManualShiftLoadViewModel,
@@ -391,21 +448,115 @@ class MainActivity : ComponentActivity() {
                         preferences.edit { putString(APP_THEME_MODE, selected.name) }
                     },
                     onWidgetReconfigure = ::openWidgetConfiguration,
-                )
+                    accessLockState = accessLockState,
+                    deviceAuthenticationCapability = deviceAuthenticationCapability,
+                    onAccessLockActivate = { authenticate(AccessLockOperation.Activate(it)) },
+                    onAccessLockTimeoutChange = { authenticate(AccessLockOperation.ChangeTimeout(it)) },
+                    onAccessLockDisable = { authenticate(AccessLockOperation.Disable) },
+                    onAccessLockNow = miGuardiaApplication.accessLockCoordinator::lockNow,
+                    onRetryDeviceSecurity = ::refreshDeviceAuthenticationCapability,
+                    onOpenDeviceSecurity = ::openDeviceSecurity,
+                    )
+                }
+            }
+            BackHandler(enabled = dataAccessReady && !accessLockState.allowsSensitiveContent) {
+                finishAndRemoveTask()
             }
         }
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        setIntent(intent)
-        pendingIntentRequest++
+        captureIncomingDestination(intent)
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putString(ACCESS_LOCK_AUTHENTICATION_HOST_ID, accessLockAuthenticationHostId)
+        super.onSaveInstanceState(outState)
+    }
+
+    @Suppress("DEPRECATION")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if (!deviceAuthenticator.handleActivityResult(requestCode, resultCode)) {
+            super.onActivityResult(requestCode, resultCode, data)
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray,
+    ) {
+        // Biometric 1.1.0 brings FragmentActivity 1.2.5, which otherwise consumes
+        // modern Activity Result permission callbacks before ComponentActivity sees them.
+        val handled = activityResultRegistry.dispatchResult(
+            requestCode,
+            RESULT_OK,
+            permissionResultIntent(permissions, grantResults),
+        )
+        if (!handled) {
+            super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        }
+    }
+
+    override fun onStart() {
+        val application = application as MiGuardiaApplication
+        refreshDeviceAuthenticationCapability()
+        application.accessLockCoordinator.activityStarted(
+            accessLockActivityToken,
+            deviceAuthenticator.deviceIsLocked(),
+        )
+        super.onStart()
     }
 
     override fun onResume() {
         super.onResume()
-        if (!(application as MiGuardiaApplication).startupRecoveryGate.isReady) return
+        accessLockActivityResumed = true
+        val application = application as MiGuardiaApplication
+        refreshDeviceAuthenticationCapability()
+        application.accessLockCoordinator.activityResumed(deviceAuthenticator.deviceIsLocked())
+        AccessLockWindowProtection.applyForeground(this, application.accessLockCoordinator.state.value)
+        if (!application.startupRecoveryGate.isReady ||
+            !application.accessLockCoordinator.state.value.allowsSensitiveContent
+        ) return
         refreshActiveSurfaces()
+    }
+
+    override fun onPause() {
+        accessLockActivityResumed = false
+        val application = application as MiGuardiaApplication
+        application.accessLockCoordinator.activityPausedForPrivacy()
+        AccessLockWindowProtection.protectForBackground(this, application.accessLockCoordinator.state.value)
+        super.onPause()
+    }
+
+    override fun onStop() {
+        (application as MiGuardiaApplication).accessLockCoordinator.activityStopped(
+            accessLockActivityToken,
+            isChangingConfigurations,
+        )
+        super.onStop()
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (!hasFocus && ::deviceAuthenticator.isInitialized && deviceAuthenticator.deviceIsLocked()) {
+            (application as MiGuardiaApplication).accessLockCoordinator.deviceLocked()
+        }
+    }
+
+    override fun onDestroy() {
+        if (isFinishing && ::deviceAuthenticator.isInitialized) {
+            val token = deviceAuthenticator.attachedAuthenticationToken()
+            if (token != null) {
+                deviceAuthenticator.cancelAuthentication()
+                (application as MiGuardiaApplication).accessLockCoordinator.abandonAuthentication(
+                    token,
+                    accessLockAuthenticationHostId,
+                )
+            }
+        }
+        super.onDestroy()
     }
 
     private fun refreshActiveSurfaces() {
@@ -417,9 +568,12 @@ class MainActivity : ComponentActivity() {
         widgetViewModel.refresh()
     }
 
-    private fun handleNotificationIntent(source: Intent?) {
-        if (!(application as MiGuardiaApplication).startupRecoveryGate.isReady) return
-        val action = source?.action ?: return
+    private suspend fun handlePendingDestination(source: PendingMainDestination) {
+        val application = application as MiGuardiaApplication
+        if (!application.startupRecoveryGate.isReady ||
+            !application.accessLockCoordinator.state.value.allowsSensitiveContent
+        ) throw CancellationException("Access lock closed before resolving a destination")
+        val action = source.action
         if (action !in NotificationActions) return
         if (action == ACTION_OPEN_CALENDAR) {
             calendarViewModel.clearSelectedDate()
@@ -431,53 +585,123 @@ class MainActivity : ComponentActivity() {
             return
         }
         if (action == ACTION_VIEW_DATE) {
-            val ownerDate = source.getStringExtra(EXTRA_OWNER_LOCAL_DATE)
+            val ownerDate = source.ownerLocalDate
                 ?.let { runCatching { java.time.LocalDate.parse(it) }.getOrNull() }
                 ?: return
             calendarViewModel.openDate(ownerDate)
             calendarNavigationRequest++
             return
         }
-        val shiftId = source.getStringExtra(EXTRA_SHIFT_ID)
+        val shiftId = source.shiftId
             ?.let { runCatching { UUID.fromString(it) }.getOrNull() }
             ?: return
-        lifecycleScope.launch {
-            val shift = when (
-                val lookup = (application as MiGuardiaApplication).localDataStore.v2Shifts.getShift(shiftId)
+        val shift = try {
+            when (
+                val lookup = application.localDataStore.v2Shifts.getShift(shiftId)
             ) {
                 is V2ShiftLookup.V2 -> lookup.write.shift
                 V2ShiftLookup.Missing -> null
             }
-            if (shift == null) {
-                Toast.makeText(this@MainActivity, "La jornada ya no está disponible.", Toast.LENGTH_LONG).show()
-                return@launch
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            calendarViewModel.clearSelectedDate()
+            calendarNavigationRequest++
+            Toast.makeText(this, "No pudimos abrir ese destino.", Toast.LENGTH_LONG).show()
+            return
+        }
+        if (shift == null) {
+            calendarViewModel.clearSelectedDate()
+            calendarNavigationRequest++
+            Toast.makeText(this, "La jornada ya no está disponible.", Toast.LENGTH_LONG).show()
+            return
+        }
+        if (!application.accessLockCoordinator.state.value.allowsSensitiveContent) {
+            throw CancellationException("Access lock closed while resolving a destination")
+        }
+        when (action) {
+            ACTION_VIEW_SHIFT -> {
+                calendarViewModel.openDate(shift.localStartDate)
+                calendarNavigationRequest++
             }
-            when (action) {
-                ACTION_VIEW_SHIFT -> {
+            ACTION_DIRECTIONS -> {
+                val address = shift.objectiveAddressSnapshot?.takeIf(String::isNotBlank)
+                val opened = address?.let {
+                    try {
+                        startActivity(Intent(Intent.ACTION_VIEW, "geo:0,0?q=${Uri.encode(it)}".toUri()))
+                        true
+                    } catch (_: ActivityNotFoundException) {
+                        false
+                    }
+                } == true
+                if (!opened) {
                     calendarViewModel.openDate(shift.localStartDate)
                     calendarNavigationRequest++
-                }
-                ACTION_DIRECTIONS -> {
-                    val address = shift.objectiveAddressSnapshot?.takeIf(String::isNotBlank)
-                    val opened = address?.let {
-                        try {
-                            startActivity(Intent(Intent.ACTION_VIEW, "geo:0,0?q=${Uri.encode(it)}".toUri()))
-                            true
-                        } catch (_: ActivityNotFoundException) {
-                            false
-                        }
-                    } == true
-                    if (!opened) {
-                        calendarViewModel.openDate(shift.localStartDate)
-                        calendarNavigationRequest++
-                        Toast.makeText(
-                            this@MainActivity,
-                            if (address == null) "Esta jornada no tiene una dirección guardada." else "No hay una aplicación compatible para abrir la dirección.",
-                            Toast.LENGTH_LONG,
-                        ).show()
-                    }
+                    Toast.makeText(
+                        this,
+                        if (address == null) "Esta jornada no tiene una dirección guardada." else "No hay una aplicación compatible para abrir la dirección.",
+                        Toast.LENGTH_LONG,
+                    ).show()
                 }
             }
+        }
+    }
+
+    private fun captureIncomingDestination(source: Intent?) {
+        val captured = PendingMainDestination.from(source) ?: run {
+            setIntent(
+                Intent(this, MainActivity::class.java).apply {
+                    action = source?.action
+                    flags = source?.flags ?: 0
+                    source?.categories?.forEach(::addCategory)
+                },
+            )
+            return
+        }
+        (application as MiGuardiaApplication).pendingMainDestinations.capture(captured)
+        setIntent(captured.toSanitizedIntent(this))
+    }
+
+    private fun authenticate(operation: AccessLockOperation) {
+        val application = application as MiGuardiaApplication
+        deviceAuthenticator.attachToInFlightAuthentication(
+            application.accessLockCoordinator.activeAuthenticationToken(
+                accessLockAuthenticationHostId,
+            ),
+        )
+        val capability = deviceAuthenticator.capability()
+        deviceAuthenticationCapability = capability
+        if (capability != DeviceAuthenticationCapability.AVAILABLE) {
+            application.accessLockCoordinator.reportUnavailable(capability)
+            return
+        }
+        val token = application.accessLockCoordinator.beginAuthentication(
+            operation,
+            accessLockAuthenticationHostId,
+        ) ?: return
+        deviceAuthenticator.authenticate(token)
+    }
+
+    private fun openDeviceSecurity() {
+        if (!deviceAuthenticator.openDeviceSecuritySettings()) {
+            deviceAuthenticationCapability = DeviceAuthenticationCapability.TEMPORARILY_UNAVAILABLE
+            (application as MiGuardiaApplication).accessLockCoordinator.reportUnavailable(
+                DeviceAuthenticationCapability.TEMPORARILY_UNAVAILABLE,
+            )
+        }
+    }
+
+    private fun refreshDeviceAuthenticationCapability() {
+        val application = application as MiGuardiaApplication
+        deviceAuthenticationCapability = deviceAuthenticator.capability()
+        if (deviceAuthenticationCapability == DeviceAuthenticationCapability.AVAILABLE) {
+            if (application.accessLockCoordinator.state.value.message ==
+                com.blackatsystems.miguardia.security.AccessLockMessage.NO_SECURE_CREDENTIAL
+            ) {
+                application.accessLockCoordinator.clearMessage()
+            }
+        } else {
+            application.accessLockCoordinator.secureCredentialUnavailable()
         }
     }
 
@@ -508,5 +732,95 @@ class MainActivity : ComponentActivity() {
             ACTION_OPEN_CALENDAR,
             ACTION_OPEN_WEATHER,
         )
+        internal val NotificationActionsForCapture: Set<String> = NotificationActions
+        private const val ACCESS_LOCK_AUTHENTICATION_HOST_ID =
+            "access_lock_authentication_host_id"
+    }
+}
+
+internal fun permissionResultIntent(
+    permissions: Array<out String>,
+    grantResults: IntArray,
+): Intent = Intent()
+    .putExtra(ActivityResultContracts.RequestMultiplePermissions.EXTRA_PERMISSIONS, permissions)
+    .putExtra(
+        ActivityResultContracts.RequestMultiplePermissions.EXTRA_PERMISSION_GRANT_RESULTS,
+        grantResults,
+    )
+
+internal data class PendingMainDestination(
+    val action: String,
+    val shiftId: String? = null,
+    val ownerLocalDate: String? = null,
+) {
+    fun toSanitizedIntent(activity: MainActivity): Intent =
+        Intent(activity, MainActivity::class.java).setAction(action).apply {
+            shiftId?.let { putExtra(MainActivity.EXTRA_SHIFT_ID, it) }
+            ownerLocalDate?.let { putExtra(MainActivity.EXTRA_OWNER_LOCAL_DATE, it) }
+        }
+
+    companion object {
+        fun from(source: Intent?): PendingMainDestination? {
+            return from(
+                action = source?.action,
+                shiftId = source?.getStringExtra(MainActivity.EXTRA_SHIFT_ID),
+                ownerLocalDate = source?.getStringExtra(MainActivity.EXTRA_OWNER_LOCAL_DATE),
+            )
+        }
+
+        fun from(
+            action: String?,
+            shiftId: String? = null,
+            ownerLocalDate: String? = null,
+        ): PendingMainDestination? {
+            val acceptedAction = action?.takeIf { it in MainActivity.NotificationActionsForCapture }
+                ?: return null
+            return when (acceptedAction) {
+                MainActivity.ACTION_VIEW_SHIFT,
+                MainActivity.ACTION_DIRECTIONS,
+                -> PendingMainDestination(
+                    action = acceptedAction,
+                    shiftId = shiftId,
+                )
+                MainActivity.ACTION_VIEW_DATE -> PendingMainDestination(
+                    action = acceptedAction,
+                    ownerLocalDate = ownerLocalDate,
+                )
+                else -> PendingMainDestination(action = acceptedAction)
+            }
+        }
+    }
+}
+
+internal data class PendingMainDestinationRequest(
+    val generation: Long,
+    val destination: PendingMainDestination,
+)
+
+internal class PendingMainDestinationCoordinator {
+    private val consumptionMutex = Mutex()
+    private val mutableState = MutableStateFlow<PendingMainDestinationRequest?>(null)
+    val state: StateFlow<PendingMainDestinationRequest?> = mutableState.asStateFlow()
+    private var nextGeneration = 1L
+
+    @Synchronized
+    fun capture(destination: PendingMainDestination): PendingMainDestinationRequest {
+        val request = PendingMainDestinationRequest(nextGeneration++, destination)
+        mutableState.value = request
+        return request
+    }
+
+    suspend fun consume(
+        request: PendingMainDestinationRequest,
+        handler: suspend (PendingMainDestination) -> Unit,
+    ): Boolean = consumptionMutex.withLock {
+        if (mutableState.value != request) return@withLock false
+        handler(request.destination)
+        if (mutableState.value == request) {
+            mutableState.value = null
+            true
+        } else {
+            false
+        }
     }
 }

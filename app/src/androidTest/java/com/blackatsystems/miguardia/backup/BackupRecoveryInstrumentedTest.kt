@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.content.SharedPreferences
 import androidx.test.core.app.ApplicationProvider
+import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.blackatsystems.miguardia.MainActivity
 import com.blackatsystems.miguardia.core.database.LocalDataStore
@@ -23,6 +24,11 @@ import com.blackatsystems.miguardia.core.domain.backup.MiGuardiaBackupContract
 import com.blackatsystems.miguardia.core.domain.backup.ResolvedBackupConflict
 import com.blackatsystems.miguardia.notifications.NotificationPreferencesStore
 import com.blackatsystems.miguardia.profile.GuardProfileStore
+import com.blackatsystems.miguardia.security.AccessLockConfiguration
+import com.blackatsystems.miguardia.security.AccessLockCoordinator
+import com.blackatsystems.miguardia.security.AccessLockPreferencesStore
+import com.blackatsystems.miguardia.security.AccessLockStoreRead
+import com.blackatsystems.miguardia.security.AccessLockTimeout
 import com.blackatsystems.miguardia.ui.summary.SummaryPreferencesStore
 import com.blackatsystems.miguardia.weather.WeatherPreferencesStore
 import java.io.File
@@ -137,6 +143,12 @@ class BackupRecoveryInstrumentedTest {
         var secondSession: BackupImportSession? = null
         try {
             val preferences = preferencesGateway(context, root, scope)
+            val accessLock = AccessLockPreferencesStore(
+                context.preferencesDataStoreFile(AccessLockPreferencesStore.DEFAULT_FILE_NAME),
+                scope,
+            )
+            val localAccessLock = AccessLockConfiguration(true, AccessLockTimeout.FIFTEEN_MINUTES)
+            accessLock.replace(localAccessLock)
             store.backups.replace(store.backups.capture().withObjectiveAndPhoto("Actual"))
             val currentDatabase = store.backups.capture()
             val currentPhotoBytes = Base64.getDecoder().decode(CURRENT_PNG)
@@ -178,6 +190,8 @@ class BackupRecoveryInstrumentedTest {
             assertEquals(incomingPreferences, preferences.capture(incomingDatabase))
             assertTrue(livePhoto.readBytes().contentEquals(incomingPhotoBytes))
             assertFalse(File(context.noBackupFilesDir, "miguardia_backup_restore").exists())
+            assertEquals(AccessLockStoreRead.Ready(localAccessLock), accessLock.read())
+            assertNewAccessLockSessionIsClosed(accessLock, scope)
 
             openedFirstSession.close()
             firstSession = null
@@ -195,6 +209,8 @@ class BackupRecoveryInstrumentedTest {
             assertEquals(incomingPreferences, preferences.capture(incomingDatabase))
             assertTrue(livePhoto.readBytes().contentEquals(incomingPhotoBytes))
             assertFalse(File(context.noBackupFilesDir, "miguardia_backup_restore").exists())
+            assertEquals(AccessLockStoreRead.Ready(localAccessLock), accessLock.read())
+            assertNewAccessLockSessionIsClosed(accessLock, scope)
         } finally {
             firstSession?.close()
             secondSession?.close()
@@ -218,6 +234,12 @@ class BackupRecoveryInstrumentedTest {
         var session: BackupImportSession? = null
         try {
             val preferences = preferencesGateway(context, root, scope)
+            val accessLock = AccessLockPreferencesStore(
+                context.preferencesDataStoreFile(AccessLockPreferencesStore.DEFAULT_FILE_NAME),
+                scope,
+            )
+            val localAccessLock = AccessLockConfiguration(true, AccessLockTimeout.ONE_MINUTE)
+            accessLock.replace(localAccessLock)
             store.backups.replace(store.backups.capture().withObjectiveAndPhoto("Actual"))
             val currentDatabase = store.backups.capture()
             val currentPreferences = preferences.capture(currentDatabase)
@@ -267,6 +289,8 @@ class BackupRecoveryInstrumentedTest {
             assertEquals(0, pauseCalls)
             assertEquals(0, resumeCalls)
             assertFalse(File(context.noBackupFilesDir, "miguardia_backup_restore").exists())
+            assertEquals(AccessLockStoreRead.Ready(localAccessLock), accessLock.read())
+            assertNewAccessLockSessionIsClosed(accessLock, scope)
         } finally {
             session?.close()
             store.close()
@@ -289,6 +313,12 @@ class BackupRecoveryInstrumentedTest {
         var session: BackupImportSession? = null
         try {
             val preferences = preferencesGateway(context, root, scope)
+            val accessLock = AccessLockPreferencesStore(
+                context.preferencesDataStoreFile(AccessLockPreferencesStore.DEFAULT_FILE_NAME),
+                scope,
+            )
+            val localAccessLock = AccessLockConfiguration(true, AccessLockTimeout.ONE_MINUTE)
+            accessLock.replace(localAccessLock)
             store.backups.replace(store.backups.capture().withObjectiveAndPhoto("Actual"))
             val currentDatabase = store.backups.capture()
             val currentPhotoBytes = Base64.getDecoder().decode(CURRENT_PNG)
@@ -340,6 +370,8 @@ class BackupRecoveryInstrumentedTest {
                 context.noBackupFilesDir.listFiles().orEmpty()
                     .any { it.name.startsWith("miguardia_backup_restore.cleanup-") },
             )
+            assertEquals(AccessLockStoreRead.Ready(localAccessLock), accessLock.read())
+            assertNewAccessLockSessionIsClosed(accessLock, scope)
 
             var recoveryPauseCalls = 0
             var recoveryResumeCalls = 0
@@ -871,6 +903,17 @@ class BackupRecoveryInstrumentedTest {
         throw error
     } catch (error: Throwable) {
         error
+    }
+
+    private suspend fun assertNewAccessLockSessionIsClosed(
+        store: AccessLockPreferencesStore,
+        scope: CoroutineScope,
+    ) {
+        val coordinator = AccessLockCoordinator(store, scope)
+        coordinator.initializeAfterRecovery()
+        coordinator.activityStarted(Any(), deviceLocked = false)
+        assertTrue(coordinator.state.value.locked)
+        assertFalse(coordinator.state.value.allowsSensitiveContent)
     }
 
     private class IsolatedBackupContext(

@@ -19,6 +19,9 @@ import com.blackatsystems.miguardia.widget.WidgetRuntime
 import com.blackatsystems.miguardia.backup.LocalDataMutationGate
 import com.blackatsystems.miguardia.backup.LocalBackupCoordinator
 import com.blackatsystems.miguardia.backup.PortablePreferencesGateway
+import com.blackatsystems.miguardia.security.AccessLockCoordinator
+import com.blackatsystems.miguardia.security.AccessLockPreferencesStore
+import com.blackatsystems.miguardia.security.DeviceLockMonitor
 import java.time.Clock
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -59,7 +62,17 @@ class StartupRecoveryGate(
 class MiGuardiaApplication : Application() {
     val startupRecoveryGate = StartupRecoveryGate()
     val localDataMutationGate = LocalDataMutationGate()
+    internal val pendingMainDestinations = PendingMainDestinationCoordinator()
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    internal val accessLockPreferences: AccessLockPreferencesStore by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
+        AccessLockPreferencesStore(this)
+    }
+    internal val accessLockCoordinator: AccessLockCoordinator by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
+        AccessLockCoordinator(accessLockPreferences, applicationScope)
+    }
+    private val deviceLockMonitor: DeviceLockMonitor by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
+        DeviceLockMonitor(this, accessLockCoordinator::deviceLocked)
+    }
     val localDataStore: LocalDataStore by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         LocalDataStore.create(this)
     }
@@ -140,6 +153,7 @@ class MiGuardiaApplication : Application() {
                 widgetRuntime.resumeAfterRestore()
                 widgetDeferredActions.replay(widgetRuntime)
                 if (!startupRecoveryGate.isReady) {
+                    accessLockCoordinator.initializeAfterRecovery()
                     startupRecoveryGate.ready()
                     notificationDeferredActions.replay(notificationPreferences)
                     notificationRuntime.reconcileNow()
@@ -152,6 +166,7 @@ class MiGuardiaApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        deviceLockMonitor.start()
         startupRecoveryGate.recovering()
         applicationScope.launch(Dispatchers.IO) {
             val recovery = runCatching { backupCoordinator.recoverAtStartup() }
@@ -163,6 +178,7 @@ class MiGuardiaApplication : Application() {
                     }
                     widgetDeferredActions.replay(widgetRuntime)
                     withContext(Dispatchers.Main.immediate) { widgetRuntime.start() }
+                    accessLockCoordinator.initializeAfterRecovery()
                     startupRecoveryGate.ready()
                     notificationDeferredActions.replay(notificationPreferences)
                     notificationRuntime.reconcileNow()

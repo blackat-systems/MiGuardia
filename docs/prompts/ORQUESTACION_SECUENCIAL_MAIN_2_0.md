@@ -283,8 +283,9 @@ Sólo después de cerrar y auditar el núcleo laboral:
     —cerrado por MAIN el 2026-09-01; local y Samsung API 36 verdes dentro de la
     matriz autorizada—.
 20. Proteger el acceso local a MiGuardia
-    —ADR 0036 y prompt habilitados; implementación pendiente—.
-21. Completar la Ayuda y el recorrido inicial sobre la interfaz definitiva.
+    —cerrado por MAIN el 2026-09-01; local y Samsung API 36 verdes—.
+21. Completar la Ayuda y el recorrido inicial sobre la interfaz definitiva
+    —pendiente, sin prompt habilitado—.
 22. Auditar la aplicación completa y emitir el candidato local MiGuardia 2.0.
 
 Estas cinco superficies locales permanecen en la hoja de ruta después del
@@ -599,9 +600,14 @@ previa y segunda confirmación. ADR 0035 y
 `COPIAS_Y_RESTAURACION_LOCALES_SEGURAS_V2.md` fijaron el contrato. MAIN recibió,
 auditó, corrigió y verificó el candidato: batería local verde, Room 121/121 y
 matriz segura de aplicación 98/98 en Samsung API 36, más recorrido SAF cifrado
-real. El bloque queda cerrado. Joaquin pidió después preparar Bloqueo de acceso
-local. ADR 0036 y `BLOQUEO_DE_ACCESO_LOCAL_V2.md` fijan una puerta opcional con
-biometría fuerte o credencial del dispositivo, sin PIN propio y con ajuste no
-portable. El prompt está habilitado; la tarea especialista todavía no fue
-abierta. Ninguna autorización anterior de dispositivo, push, alarma exacta o
-reinicio se hereda.
+real. El bloque queda cerrado.
+
+Joaquin pidió después Bloqueo de acceso local. ADR 0036 y
+`BLOQUEO_DE_ACCESO_LOCAL_V2.md` fijaron una puerta opcional con biometría fuerte
+o credencial del dispositivo, sin PIN propio y con ajuste no portable. MAIN
+auditó y corrigió las carreras de autenticación y ciclo de vida, repitió la
+batería global —653/653 JVM y 351/351 tareas— y obtuvo 31/31 en la matriz final
+Samsung API 36. El bloque queda cerrado. Ayuda y recorrido inicial 2.0 es el
+siguiente bloque recomendado, pero no está habilitado ni tiene tarea abierta.
+Ninguna autorización anterior de dispositivo, push, alarma exacta o reinicio se
+hereda.

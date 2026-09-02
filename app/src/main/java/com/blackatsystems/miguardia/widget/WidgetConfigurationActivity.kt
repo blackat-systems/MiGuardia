@@ -5,7 +5,7 @@ import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Intent
 import android.os.Bundle
-import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.layout.Arrangement
@@ -33,6 +33,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -40,6 +41,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
+import androidx.fragment.app.FragmentActivity
 import com.blackatsystems.miguardia.MainActivity
 import com.blackatsystems.miguardia.MiGuardiaApplication
 import com.blackatsystems.miguardia.StartupRecoveryState
@@ -52,6 +54,13 @@ import com.blackatsystems.miguardia.ui.theme.AppZoom
 import com.blackatsystems.miguardia.ui.theme.MiGuardiaTheme
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
+import com.blackatsystems.miguardia.security.AccessLockContentGate
+import com.blackatsystems.miguardia.security.AccessLockOperation
+import com.blackatsystems.miguardia.security.AccessLockWindowProtection
+import com.blackatsystems.miguardia.security.DeviceAuthenticator
+import com.blackatsystems.miguardia.security.DeviceAuthenticationCapability
+import com.blackatsystems.miguardia.security.SystemDeviceAuthenticator
+import java.util.UUID
 
 data class WidgetConfigurationDraft(
     val mode: WidgetMode,
@@ -59,7 +68,14 @@ data class WidgetConfigurationDraft(
     val includeWeather: Boolean,
 )
 
-class WidgetConfigurationActivity : ComponentActivity() {
+class WidgetConfigurationActivity : FragmentActivity() {
+    private val accessLockActivityToken = Any()
+    private lateinit var accessLockAuthenticationHostId: String
+    private var accessLockActivityResumed = false
+    private lateinit var deviceAuthenticator: DeviceAuthenticator
+    private var deviceAuthenticationCapability by mutableStateOf(
+        DeviceAuthenticationCapability.NO_SECURE_CREDENTIAL,
+    )
     private val widgetId: Int by lazy {
         intent?.getIntExtra(
             AppWidgetManager.EXTRA_APPWIDGET_ID,
@@ -69,16 +85,54 @@ class WidgetConfigurationActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val application = application as MiGuardiaApplication
+        accessLockAuthenticationHostId = savedInstanceState
+            ?.getString(ACCESS_LOCK_AUTHENTICATION_HOST_ID)
+            ?: UUID.randomUUID().toString()
+        deviceAuthenticator = SystemDeviceAuthenticator(this) { token, result ->
+            application.accessLockCoordinator.completeAuthentication(token, result)
+        }
+        deviceAuthenticator.attachToInFlightAuthentication(
+            application.accessLockCoordinator.activeAuthenticationToken(
+                accessLockAuthenticationHostId,
+            ),
+        )
+        deviceAuthenticationCapability = deviceAuthenticator.capability()
         setResult(Activity.RESULT_CANCELED)
         if (!isInstalledWidget(widgetId)) {
             finish()
             return
         }
-        val application = application as MiGuardiaApplication
         setContent {
             val recoveryState by application.startupRecoveryGate.state.collectAsStateWithLifecycle()
+            val accessLockState by application.accessLockCoordinator.state.collectAsStateWithLifecycle()
+            SideEffect {
+                if (accessLockActivityResumed) {
+                    AccessLockWindowProtection.applyForeground(
+                        this@WidgetConfigurationActivity,
+                        accessLockState,
+                    )
+                } else {
+                    AccessLockWindowProtection.protectForBackground(
+                        this@WidgetConfigurationActivity,
+                        accessLockState,
+                    )
+                }
+            }
             when (val recovery = recoveryState) {
-                StartupRecoveryState.Ready -> ReadyWidgetConfiguration(application)
+                StartupRecoveryState.Ready -> MiGuardiaTheme {
+                    AccessLockContentGate(
+                            state = accessLockState,
+                            capability = deviceAuthenticationCapability,
+                            onUnlock = { authenticate(AccessLockOperation.Unlock) },
+                            onRetryStore = application.accessLockCoordinator::retryStoreRead,
+                            onRepairStore = { authenticate(AccessLockOperation.RepairStore) },
+                            onRetryDeviceSecurity = ::refreshDeviceAuthenticationCapability,
+                            onOpenDeviceSecurity = ::openDeviceSecurity,
+                        ) {
+                        ReadyWidgetConfiguration(application)
+                    }
+                }
                 StartupRecoveryState.Recovering -> MiGuardiaTheme {
                     WidgetRecoveryGateScreen(errorMessage = null, onCancel = ::finish)
                 }
@@ -86,6 +140,122 @@ class WidgetConfigurationActivity : ComponentActivity() {
                     WidgetRecoveryGateScreen(errorMessage = recovery.message, onCancel = ::finish)
                 }
             }
+            BackHandler(
+                enabled = recoveryState == StartupRecoveryState.Ready &&
+                    !accessLockState.allowsSensitiveContent,
+                onBack = ::finish,
+            )
+        }
+    }
+
+    override fun onStart() {
+        val application = application as MiGuardiaApplication
+        refreshDeviceAuthenticationCapability()
+        application.accessLockCoordinator.activityStarted(
+            accessLockActivityToken,
+            deviceAuthenticator.deviceIsLocked(),
+        )
+        super.onStart()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putString(ACCESS_LOCK_AUTHENTICATION_HOST_ID, accessLockAuthenticationHostId)
+        super.onSaveInstanceState(outState)
+    }
+
+    @Suppress("DEPRECATION")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if (!deviceAuthenticator.handleActivityResult(requestCode, resultCode)) {
+            super.onActivityResult(requestCode, resultCode, data)
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        accessLockActivityResumed = true
+        val application = application as MiGuardiaApplication
+        refreshDeviceAuthenticationCapability()
+        application.accessLockCoordinator.activityResumed(deviceAuthenticator.deviceIsLocked())
+        AccessLockWindowProtection.applyForeground(this, application.accessLockCoordinator.state.value)
+    }
+
+    override fun onPause() {
+        accessLockActivityResumed = false
+        val application = application as MiGuardiaApplication
+        application.accessLockCoordinator.activityPausedForPrivacy()
+        AccessLockWindowProtection.protectForBackground(this, application.accessLockCoordinator.state.value)
+        super.onPause()
+    }
+
+    override fun onStop() {
+        (application as MiGuardiaApplication).accessLockCoordinator.activityStopped(
+            accessLockActivityToken,
+            isChangingConfigurations,
+        )
+        super.onStop()
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (!hasFocus && ::deviceAuthenticator.isInitialized && deviceAuthenticator.deviceIsLocked()) {
+            (application as MiGuardiaApplication).accessLockCoordinator.deviceLocked()
+        }
+    }
+
+    override fun onDestroy() {
+        if (isFinishing && ::deviceAuthenticator.isInitialized) {
+            val token = deviceAuthenticator.attachedAuthenticationToken()
+            if (token != null) {
+                deviceAuthenticator.cancelAuthentication()
+                (application as MiGuardiaApplication).accessLockCoordinator.abandonAuthentication(
+                    token,
+                    accessLockAuthenticationHostId,
+                )
+            }
+        }
+        super.onDestroy()
+    }
+
+    private fun authenticate(operation: AccessLockOperation) {
+        val application = application as MiGuardiaApplication
+        deviceAuthenticator.attachToInFlightAuthentication(
+            application.accessLockCoordinator.activeAuthenticationToken(
+                accessLockAuthenticationHostId,
+            ),
+        )
+        val capability = deviceAuthenticator.capability()
+        deviceAuthenticationCapability = capability
+        if (capability != DeviceAuthenticationCapability.AVAILABLE) {
+            application.accessLockCoordinator.reportUnavailable(capability)
+            return
+        }
+        val token = application.accessLockCoordinator.beginAuthentication(
+            operation,
+            accessLockAuthenticationHostId,
+        ) ?: return
+        deviceAuthenticator.authenticate(token)
+    }
+
+    private fun openDeviceSecurity() {
+        if (!deviceAuthenticator.openDeviceSecuritySettings()) {
+            deviceAuthenticationCapability = DeviceAuthenticationCapability.TEMPORARILY_UNAVAILABLE
+            (application as MiGuardiaApplication).accessLockCoordinator.reportUnavailable(
+                DeviceAuthenticationCapability.TEMPORARILY_UNAVAILABLE,
+            )
+        }
+    }
+
+    private fun refreshDeviceAuthenticationCapability() {
+        val application = application as MiGuardiaApplication
+        deviceAuthenticationCapability = deviceAuthenticator.capability()
+        if (deviceAuthenticationCapability == DeviceAuthenticationCapability.AVAILABLE) {
+            if (application.accessLockCoordinator.state.value.message ==
+                com.blackatsystems.miguardia.security.AccessLockMessage.NO_SECURE_CREDENTIAL
+            ) {
+                application.accessLockCoordinator.clearMessage()
+            }
+        } else {
+            application.accessLockCoordinator.secureCredentialUnavailable()
         }
     }
 
@@ -193,6 +363,10 @@ class WidgetConfigurationActivity : ComponentActivity() {
         val manager = AppWidgetManager.getInstance(this)
         val provider = ComponentName(this, NextEventAppWidgetProvider::class.java)
         return belongsToWidgetProvider(id, manager.getAppWidgetIds(provider))
+    }
+
+    private companion object {
+        const val ACCESS_LOCK_AUTHENTICATION_HOST_ID = "access_lock_authentication_host_id"
     }
 }
 
