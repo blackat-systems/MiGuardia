@@ -569,7 +569,7 @@ continúa con:
 4. bloqueo de acceso local —cerrado por MAIN; batería local y Samsung API 36
    verdes—;
 5. Ayuda y recorrido inicial reescritos para la interfaz 2.0 definitiva
-   —pendiente, sin prompt habilitado—;
+   —prompt habilitado; tarea todavía no abierta—;
 6. auditoría de la aplicación completa y emisión de un candidato local.
 
 La decisión de Joaquin del 2026-08-23 reemplaza la apertura automática de esa
@@ -585,7 +585,8 @@ del teléfono sin PIN propio y no transporta su ajuste dentro de las copias.
 MAIN corrigió las carreras de autenticación y ciclo de vida detectadas durante
 la auditoría; la batería global pasó 653/653 pruebas JVM y la matriz final pasó
 31/31 en Samsung API 36. Room V5 y sus esquemas permanecen intactos. Ayuda y
-recorrido inicial 2.0 es el siguiente bloque recomendado, todavía no habilitado.
+recorrido inicial 2.0 quedó preparado y habilitado mediante su prompt V2. La
+tarea especialista todavía no fue abierta.
 
 ## 21. Idea futura guardada: agenda profesional
 

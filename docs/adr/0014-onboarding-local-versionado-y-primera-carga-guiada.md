@@ -1,7 +1,12 @@
 # ADR 0014: Onboarding local versionado y primera carga guiada
 
-- Estado: aceptada como diseño, diferida a MiGuardia 2.0
+- Estado: antecedente histórico; reemplazada operativamente por ADR 0037
 - Fecha: 2026-08-18
+
+> Actualización 2026-09-02: ADR 0037 reemplaza la aplicación operativa de este
+> diseño en MiGuardia 2.0. Este archivo se conserva como antecedente de la
+> persistencia versionada, pero sus recorridos y fuentes V1 no deben
+> implementarse.
 
 ## Contexto
 

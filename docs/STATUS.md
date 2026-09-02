@@ -11,8 +11,10 @@ desbloqueada. **Widget de próximo evento**, **Informes locales de jornadas y
 horas**, **Copias y restauración locales seguras** y **Bloqueo de acceso local**
 quedaron cerrados. Bloqueo pasó la batería global definitiva y una matriz final
 Samsung API 36 de 31/31 pruebas después de las correcciones de MAIN. No existe
-otro prompt de implementación habilitado. **Ayuda y recorrido inicial 2.0** es
-el próximo bloque recomendado, pero todavía no fue preparado ni abierto.
+otro candidato ejecutable sin integrar. **Ayuda y recorrido inicial 2.0** quedó
+preparado y `HABILITADO` mediante
+`docs/prompts/AYUDA_Y_RECORRIDO_INICIAL_V2.md`; la tarea especialista todavía
+no fue abierta.
 
 MAIN 2.0 está reactivada para recibir los handoffs que Joaquin entregue,
 auditarlos, integrarlos, probarlos y cerrarlos. Joaquin decide cuándo pedir el
@@ -991,7 +993,7 @@ alarma exacta real, reinicio físico ni push. El resultado durable está en
 
 La segunda capa —Widget, informes, copias y restauración locales, bloqueo y
 Ayuda y recorrido inicial 2.0— quedó
-cerrada en ese momento. Las pruebas correctivas, la matriz y la repetición
+bloqueada en ese momento. Las pruebas correctivas, la matriz y la repetición
 posterior resolvieron esos pendientes; el cierre vigente se registra más abajo
 y en
 `docs/audits/2026-08-29-auditoria-integral-del-nucleo-y-compatibilidad-android-v2.md`.
@@ -1325,6 +1327,40 @@ continúa siendo una puerta separada. La evidencia durable está en
 `docs/audits/2026-09-01-bloqueo-de-acceso-local-v2-main.md`. No existe una
 autorización vigente de push.
 
+## Ayuda y recorrido inicial 2.0 — prompt habilitado
+
+Joaquin pidió preparar la dependencia siguiente. MAIN auditó la documentación
+histórica y la interfaz V2 actual y resolvió la adaptación mediante ADR 0037 y
+`docs/prompts/AYUDA_Y_RECORRIDO_INICIAL_V2.md`.
+
+El contrato conserva este orden:
+
+1. recuperación pendiente de Copias;
+2. Bloqueo de acceso, si está habilitado;
+3. selector de uno de los cuatro rubros;
+4. Calendario vacío y configuración real del primer lugar, tipo y horario;
+5. pantalla real de finalización y cualquier lugar u horario adicional que la
+   persona elija;
+6. después de `Volver al Calendario`, recorrido inicial sólo con `V2Ready`,
+   `WorkSetupSurface.NONE` y versión pendiente;
+7. Calendario normal.
+
+La guía explica organización, horas/eventos y privacidad local, recorre
+controles reales sin mutar datos y puede omitirse. `Ayuda` aparece una sola vez
+en el grupo `Aplicación` y permite repetir el recorrido sin reactivar la marca
+de primera apertura.
+
+La única persistencia nueva autorizada es el DataStore local y versionado
+`onboarding.preferences_pb`, con `completed_version=1`. Esa marca no se agrega
+a las 17 preferencias portables de Copias. Room V5, sus 27 tablas y esquemas,
+Gradle, manifiesto, permisos, dependencias, paquete, versión y SDK permanecen
+protegidos.
+
+Base funcional del contrato:
+`b64f07a6a92ad16f789eceb395c469239ee46eb4`. La dependencia debe comenzar
+desde el checkpoint documental que MAIN informe al abrirla. Pedir el prompt no
+creó una tarea, no autorizó dispositivo y no habilitó push.
+
 ## Flujo vigente de MAIN
 
 - Joaquin entrega un handoff o pide preparar el prompt de una nueva tarea;
@@ -1370,7 +1406,8 @@ posteriores.
   pendientes de compatibilidad—, Informes —cerrado por MAIN; local y Samsung
   API 36 verdes—, Copias y restauración —cerrado por MAIN; local y Samsung API
   36 verdes dentro de la matriz autorizada—, Bloqueo —cerrado por MAIN; local y
-  Samsung API 36 verdes— y Ayuda y recorrido inicial 2.0 —pendiente—;
+  Samsung API 36 verdes— y Ayuda y recorrido inicial 2.0 —prompt habilitado,
+  tarea todavía no abierta—;
 - logo y tipografías definitivas.
 
 ## Todavía no implementado
@@ -1386,10 +1423,11 @@ posteriores.
 El núcleo quedó aprobado y la segunda capa está desbloqueada. **Widget de
 próximo evento**, **Informes locales**, **Copias y restauración locales
 seguras** y **Bloqueo de acceso local** están cerrados. El próximo bloque
-recomendado es **Ayuda y recorrido inicial 2.0**, todavía sin prompt habilitado
-ni tarea abierta. Después corresponde la auditoría completa y la emisión del
-candidato local. API 26/API 33 de Widget, Copias y Bloqueo continúan pendientes
-para la matriz de compatibilidad posterior.
+habilitado es **Ayuda y recorrido inicial 2.0**; su prompt está listo y la tarea
+especialista todavía no fue abierta. Después de cerrarlo corresponde la
+auditoría completa y la emisión del candidato local. API 26/API 33 de Widget,
+Copias y Bloqueo continúan pendientes para la matriz de compatibilidad
+posterior.
 
 El disparo físico de una alarma exacta, un reinicio real del Samsung y API 37
 conservan puertas separadas para el candidato final. Los pushes autorizados para

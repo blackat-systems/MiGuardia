@@ -189,7 +189,7 @@ Copias y restauración locales — cerradas; local y Samsung API 36 verdes
         ↓
 Bloqueo de acceso local — cerrado; local y Samsung API 36 (31/31) verdes
         ↓
-Ayuda y recorrido inicial 2.0
+Ayuda y recorrido inicial 2.0 — prompt habilitado; tarea no abierta
         ↓
 Auditoría de la aplicación completa y candidato local
 ```
@@ -263,7 +263,16 @@ matriz final pasó 31/31 en Samsung API 36. Room V5, sus 27 tablas y los esquema
 1–5 permanecen intactos; AndroidX Biometric 1.1.0 es la única dependencia
 directa nueva. API 26/API 33 y la inspección visual OEM de Recientes continúan
 pendientes. Ayuda y recorrido inicial 2.0 queda como siguiente bloque
-recomendado, todavía sin prompt habilitado ni tarea abierta.
+recomendado.
+
+Actualización de preparación de Ayuda del 2026-09-02: Joaquin pidió el prompt y
+MAIN habilitó `docs/prompts/AYUDA_Y_RECORRIDO_INICIAL_V2.md` sobre la base
+funcional `b64f07a`. El selector de rubro y el primer conjunto laboral conservan
+su flujo real; la guía espera la salida consciente de la pantalla de
+finalización y comienza sólo con `V2Ready` y `WorkSetupSurface.NONE`. No crea
+datos y puede repetirse desde una entrada permanente `Ayuda`. ADR 0037 fija el
+DataStore versionado no portable y protege Copias, Bloqueo y Room V5. La tarea
+especialista todavía no fue abierta.
 
 MAIN integra un bloque por vez. Cada bloque debe compilar, pasar sus pruebas,
 preservar el alcance ajeno y quedar documentado antes del siguiente. El mapa

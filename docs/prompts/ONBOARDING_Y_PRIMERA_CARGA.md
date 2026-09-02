@@ -1,9 +1,12 @@
 # MiGuardia — bienvenida, onboarding, primera carga y Ayuda
 
-> **BORRADOR HISTÓRICO V1 — NO EJECUTAR; REESCRIBIR PARA 2.0.** Fue diferido y
-> no contempla la elección de los cuatro sectores. Ver `docs/prompts/README.md`.
+> **BORRADOR HISTÓRICO V1 — NO EJECUTAR; REEMPLAZADO PARA 2.0.** Fue diferido,
+> no contempla la elección de los cuatro sectores y quedó reemplazado por
+> `docs/prompts/AYUDA_Y_RECORRIDO_INICIAL_V2.md`. Ver
+> `docs/prompts/README.md`.
 
-> Estado histórico: no implementado en 1.0; debe reescribirse para 2.0
+> Estado histórico: no implementado en 1.0; reemplazado para 2.0 por
+> `docs/prompts/AYUDA_Y_RECORRIDO_INICIAL_V2.md`.
 >
 > Fecha: 2026-08-18
 >

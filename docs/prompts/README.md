@@ -18,9 +18,11 @@
 - **Última dependencia cerrada:** `BLOQUEO_DE_ACCESO_LOCAL_V2.md`; batería
   global, auditorías independientes y matriz final 31/31 verdes en Samsung API
   36.
-- **Bloque habilitado:** ninguno.
-- **Próximo bloque recomendado:** Ayuda y recorrido inicial 2.0, todavía sin
-  prompt habilitado ni tarea especialista abierta.
+- **Bloque habilitado:** `AYUDA_Y_RECORRIDO_INICIAL_V2.md`.
+- **Tarea especialista:** todavía no abierta; Joaquin pidió preparar el prompt,
+  no crear otra tarea.
+- **Próximo bloque después de cerrar Ayuda:** auditoría de la aplicación
+  completa y emisión de un candidato local.
 - **Commits locales:** MAIN los crea automáticamente como checkpoints de
   bloques comprobados.
 - **Push puntual anterior de la rama 2.0:** ejecutado y verificado hasta
@@ -98,6 +100,7 @@ prevalecen para el estado operativo.
 | `INFORMES_LOCALES_DE_JORNADAS_Y_HORAS_V2.md` | **CERRADO** | PDF y XLSX locales derivados de Horas/Resumen, auditados y verificados por MAIN en Samsung API 36 |
 | `COPIAS_Y_RESTAURACION_LOCALES_SEGURAS_V2.md` | **CERRADO** | Copia lógica completa, cifrado opcional, vista previa y restauración consciente auditadas por MAIN; Samsung API 36 verde dentro de la matriz autorizada |
 | `BLOQUEO_DE_ACCESO_LOCAL_V2.md` | **CERRADO** | Puerta opcional con biometría fuerte o credencial segura del teléfono, plazos conscientes y privacidad de Recientes sin PIN propio; auditada y verificada por MAIN en Samsung API 36, con API 26/API 33 y revisión visual OEM de Recientes pendientes |
+| `AYUDA_Y_RECORRIDO_INICIAL_V2.md` | **HABILITADO** | Conserva el rubro y la primera configuración reales, agrega una guía versionada y una Ayuda permanente sobre la interfaz V2 definitiva |
 
 ## Contratos históricos de MiGuardia 1.0
 
@@ -127,7 +130,7 @@ probado, no para sostener compatibilidad de datos o un modo V1 en el producto.
 | `CALENDARIO_SELECCION_DIRECTA.md` | Una sola grilla para elegir días | Integrado en la base 1.0 |
 | `SIMPLIFICACION_FLUJO_DE_CARGA.md` | Carga progresiva | Integrado en la base 1.0 |
 | `COORDINACION_EXPERIENCIA_INICIAL_Y_PERFIL_MAIN.md` | Secuencia MAIN de V1 | Fotografía histórica de coordinación |
-| `ONBOARDING_Y_PRIMERA_CARGA.md` | Diseño de onboarding V1 | **REESCRIBIR PARA V2** después de configurar los cuatro sectores |
+| `ONBOARDING_Y_PRIMERA_CARGA.md` | Diseño de onboarding V1 | **HISTÓRICO V1 / REEMPLAZADO** por `AYUDA_Y_RECORRIDO_INICIAL_V2.md` |
 
 ## Secuencia de contratos
 
@@ -178,7 +181,8 @@ Joaquin indicó que quiere preparar o abrir la siguiente:
     API 36 autorizada verdes, con recorrido SAF cifrado real;
 19. **Cerrado:** bloqueo de acceso local mediante
     `BLOQUEO_DE_ACCESO_LOCAL_V2.md`; batería global y Samsung API 36 verdes;
-20. **Pendiente, sin prompt habilitado:** Ayuda y recorrido inicial 2.0;
+20. **Habilitado, tarea todavía no abierta:** Ayuda y recorrido inicial 2.0
+    mediante `AYUDA_Y_RECORRIDO_INICIAL_V2.md`;
 21. auditoría de la aplicación completa y candidato local.
 
 Cuando Joaquin pide un prompt, MAIN lo habilita en este índice después de cerrar
