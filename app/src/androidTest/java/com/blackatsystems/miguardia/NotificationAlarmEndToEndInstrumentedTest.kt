@@ -69,6 +69,12 @@ class NotificationAlarmEndToEndInstrumentedTest {
             check(arguments.getString("class") == PACKAGE_REPLACEMENT_TEST_TARGET) {
                 "La fase de reemplazo QA exige filtrar únicamente su prueba dedicada."
             }
+        } else {
+            runBlocking {
+                application.notificationPreferences.setEnabled(false)
+                application.notificationPreferences.setPreciseTiming(false)
+                application.notificationRuntime.rebuildNow()
+            }
         }
         if (packageReplacementPhase != PACKAGE_REPLACEMENT_VERIFY) {
             application.localDataStore.clearAllDataForInstrumentation()
@@ -357,7 +363,10 @@ class NotificationAlarmEndToEndInstrumentedTest {
 
             application.localDataStore.vacations.insert(vacation)
             waitUntil(5_000L) { installedFor(application, original.id).isEmpty() }
-            application.localDataStore.vacations.delete(vacation)
+            val persistedVacation = requireNotNull(
+                application.localDataStore.vacations.getById(vacation.id),
+            )
+            application.localDataStore.vacations.delete(persistedVacation)
             waitUntil(5_000L) { installedFor(application, original.id).size == 3 }
 
             application.localDataStore.v2Shifts.deleteShift(persistedEditedWrite)
@@ -366,7 +375,9 @@ class NotificationAlarmEndToEndInstrumentedTest {
         } finally {
             application.notificationPreferences.setEnabled(false)
             application.localDataStore.shiftNotificationConfigs.clear(original.id)
-            application.localDataStore.vacations.delete(vacation)
+            application.localDataStore.vacations.getById(vacation.id)?.let { persistedVacation ->
+                application.localDataStore.vacations.delete(persistedVacation)
+            }
             currentWrite?.let { deleteIfPresent(application, it.shift.id) }
             application.notificationRuntime.reconcile()
         }

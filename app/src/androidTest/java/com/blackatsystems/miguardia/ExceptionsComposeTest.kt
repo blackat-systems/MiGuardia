@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
@@ -173,8 +174,8 @@ class ExceptionsComposeTest {
         compose.onNodeWithTag("day-$first").performScrollTo().performClick()
         compose.onNodeWithTag("day-$second").performScrollTo().performClick()
         compose.onNodeWithText("2 fechas seleccionadas.").assertExists()
-        compose.onNodeWithContentDescription("seleccionado como feriado", substring = true)
-            .assertExists()
+        compose.onAllNodesWithContentDescription("seleccionado como feriado", substring = true)
+            .assertCountEquals(2)
         compose.onNodeWithTag("holiday-confirm-calendar-selection").performScrollTo().performClick()
 
         compose.onNodeWithTag("holiday-date-selector").assertDoesNotExist()
