@@ -1,6 +1,7 @@
 # Prompt coordinador — handoffs secuenciales de MAIN 2.0
 
 - Estado: **ACTIVO / COORDINADOR**
+- Estado técnico actualizado: 2026-09-03
 - Fecha de autorización original: 2026-08-22
 - Flujo actualizado por Joaquin: 2026-08-23
 - Contrato humano de dependencias actualizado: 2026-08-25
@@ -275,8 +276,8 @@ mayor autoridad cambia, se actualizan primero el grafo, el índice y el estado.
 Sólo después de cerrar y auditar el núcleo laboral:
 
 17. Adaptar el widget al motor final de próximo evento
-    —cerrado por MAIN el 2026-08-29; Samsung API 36 verde, Android 8/API 26 y
-    Android 13/API 33 pendientes de compatibilidad—.
+    —cerrado por MAIN el 2026-08-29; Samsung API 36, Android 8/API 26 y
+    Android 13/API 33 verdes—.
 18. Generar informes locales de jornadas y horas
     —cerrado por MAIN el 2026-08-29; local y Samsung API 36 verdes—.
 19. Crear y restaurar copias locales seguras
@@ -293,7 +294,8 @@ Sólo después de cerrar y auditar el núcleo laboral:
 23. Auditar la aplicación completa y emitir el candidato local MiGuardia 2.0
     —cerrado por MAIN; 712/712 JVM, 351/351 tareas, revisión independiente sin
     findings P0–P3 y Samsung API 36 verde 42/42; checkpoints técnicos
-    `381c342`, `f25d097` y `d9c927e`; API 26/API 33 pendientes—.
+    `381c342`, `f25d097`, `d9c927e` y `3e0b0bc`; API 26 verde 126/126 Room más
+    28/28 app y API 33 verde 126/126 Room más 55/55 app—.
 
 Estas cinco superficies locales permanecen en la hoja de ruta después del
 checkpoint del núcleo. Cada una se prepara sólo cuando Joaquin pida su prompt o
@@ -596,7 +598,8 @@ Android 8/API 26 y Android 13/API 33 fue ejecutada. La repetición de
 
 `WIDGET_DE_PROXIMO_EVENTO_V2.md` quedó cerrado por MAIN después de corregir los
 findings de dominio, runtime y UI y verificar la batería local y Samsung API 36.
-Android 8/API 26 y Android 13/API 33 siguen pendientes de compatibilidad.
+Android 8/API 26 y Android 13/API 33 también quedaron verdes en la matriz de
+compatibilidad final.
 `INFORMES_LOCALES_DE_JORNADAS_Y_HORAS_V2.md` quedó cerrado por MAIN después de
 auditar y corregir el candidato, repetir la batería local y verificar en Samsung
 API 36 la matriz definitiva de 33/33 casos.
@@ -628,5 +631,7 @@ Room V6 pasó 123/123 y la matriz dirigida posterior 30/30. El bloque queda
 cerrado e integrado en `95ebf531`. La auditoría final posterior pasó 712/712
 JVM y 351/351 tareas, integró el ícono adaptativo y cerró los últimos defectos
 sin findings P0–P3 abiertos. El estado resultante es candidato local auditado.
-Samsung API 36 quedó cerrado 42/42. API 26/API 33, push, alarma exacta y
-reinicio continúan como puertas separadas.
+Samsung API 36 quedó cerrado 42/42. Android 8/API 26 quedó verde con Room
+126/126 y app 28/28; Android 13/API 33 quedó verde con Room 126/126 y app 55/55.
+El checkpoint técnico de compatibilidad es `3e0b0bc`. API 37, push, alarma
+exacta y reinicio continúan como puertas separadas.

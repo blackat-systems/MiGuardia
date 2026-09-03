@@ -1,7 +1,7 @@
 # Mapa maestro de MiGuardia 2.0
 
 - Estado: fuente activa de producto
-- Fecha: 2026-08-23
+- Fecha: 2026-09-03
 - Propietario del producto: Joaquin
 - Alcance: explicar el producto aprobado y el orden de construcción
 
@@ -181,7 +181,7 @@ Matriz Android 36/26/33 del núcleo — cerrada
         ↓
 Repetición de auditoría integral — NÚCLEO APTO PARA SEGUNDA CAPA
         ↓
-Widget de próximo evento — cerrado; Samsung verde, API 26/33 pendientes
+Widget de próximo evento — cerrado; Samsung API 36, API 26 y API 33 verdes
         ↓
 Informes locales — cerrado; local y Samsung API 36 (33/33) verdes
         ↓
@@ -195,7 +195,11 @@ Integración y depuración de cambios de último momento — cerrada en 95ebf531
         ↓
 Auditoría completa — CANDIDATO LOCAL AUDITADO; 712/712 JVM y 351/351 tareas
         ↓
-Samsung API 36 — cerrado 42/42; API 26 / API 33 — pendientes
+Compatibilidad final — Samsung API 36 (42/42), Android 8/API 26
+(Room 126/126; app 28/28) y Android 13/API 33
+(Room 126/126; app 55/55) — cerrada
+        ↓
+Android API 37 — puerta separada pendiente
 ```
 
 Corrección de secuencia del 2026-08-27: Joaquin indicó que el bloque siguiente
@@ -291,8 +295,15 @@ completa, cerró defectos de concurrencia, arranque, Calendario, accesibilidad,
 timeout y vocabulario, e integró un ícono adaptativo. La batería fresca pasó
 712/712 JVM y 351/351 tareas; la revisión independiente no dejó findings P0–P3.
 El resultado es un candidato local auditado. Samsung API 36 pasó la matriz final
-afectada 42/42 y la revisión del ícono/Calendario; API 26 y API 33 permanecen
-pendientes como compatibilidad final.
+afectada 42/42 y la revisión del ícono/Calendario.
+
+Actualización de compatibilidad del 2026-09-03: Android 8/API 26 pasó Room
+126/126 y aplicación 28/28; Android 13/API 33 pasó Room 126/126 y aplicación
+55/55. El checkpoint técnico es
+`3e0b0bcdcd7a8dfe856f4dd786ec5e936cc4cb37` y la evidencia durable quedó en
+`docs/audits/2026-09-03-compatibilidad-api26-api33-candidato-local-v2.md`.
+Android API 37, la alarma exacta real y el reinicio físico continúan como
+puertas separadas.
 
 MAIN integra un bloque por vez. Cada bloque debe compilar, pasar sus pruebas,
 preservar el alcance ajeno y quedar documentado antes del siguiente. El mapa
