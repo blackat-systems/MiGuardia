@@ -8,7 +8,6 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.SideEffect
@@ -35,6 +34,8 @@ import com.blackatsystems.miguardia.ui.calendar.CalendarViewModel
 import com.blackatsystems.miguardia.ui.availability.AvailabilityViewModel
 import com.blackatsystems.miguardia.ui.exceptions.ExceptionsViewModel
 import com.blackatsystems.miguardia.ui.hours.HoursAndExtrasViewModel
+import com.blackatsystems.miguardia.ui.help.HelpViewModel
+import com.blackatsystems.miguardia.ui.help.HelpUiState
 import com.blackatsystems.miguardia.ui.management.V2ManualShiftLoadViewModel
 import com.blackatsystems.miguardia.ui.management.V2RecurringPlanViewModel
 import com.blackatsystems.miguardia.ui.management.V2ShiftEditViewModel
@@ -89,6 +90,10 @@ class MainActivity : FragmentActivity() {
             systemAccess = NotificationSystemAccess(application),
             runtime = application.notificationRuntime,
         )
+    }
+    private val helpViewModel: HelpViewModel by viewModels {
+        val application = application as MiGuardiaApplication
+        HelpViewModel.Factory(application.onboardingPreferences)
     }
     private val backupViewModel: BackupViewModel by viewModels {
         val application = application as MiGuardiaApplication
@@ -202,12 +207,16 @@ class MainActivity : FragmentActivity() {
     }
 
     private val workSetupViewModel: WorkSetupViewModel by viewModels {
-        val dataStore = (application as MiGuardiaApplication).localDataStore
+        val miGuardiaApplication = application as MiGuardiaApplication
+        val dataStore = miGuardiaApplication.localDataStore
         WorkSetupViewModel.Factory(
             configurationRepository = dataStore.workConfiguration,
             catalogRepository = dataStore.workCatalog,
             objectiveRepository = dataStore.objectives,
             clock = Clock.system(AppDefaults.zoneId()),
+            clearWeatherCacheForObjective = { objectiveId ->
+                miGuardiaApplication.weatherRuntime.clearCacheForObjective(objectiveId)
+            },
         )
     }
 
@@ -328,6 +337,11 @@ class MainActivity : FragmentActivity() {
                 miGuardiaApplication.pendingMainDestinations.state.collectAsStateWithLifecycle()
             val backupState by backupViewModel.uiState.collectAsStateWithLifecycle()
             val dataAccessReady = recoveryState == StartupRecoveryState.Ready
+            val helpState = if (dataAccessReady) {
+                helpViewModel.uiState.collectAsStateWithLifecycle().value
+            } else {
+                HelpUiState()
+            }
             val sensitiveContentReady = dataAccessReady && accessLockState.allowsSensitiveContent
             LaunchedEffect(backupState.successSequence, sensitiveContentReady) {
                 if (sensitiveContentReady && backupState.successSequence > 0) {
@@ -343,10 +357,11 @@ class MainActivity : FragmentActivity() {
             LaunchedEffect(
                 recoveryState,
                 accessLockState.allowsSensitiveContent,
+                helpState.canConsumePendingDestination,
                 pendingDestinationRequest?.generation,
             ) {
                 val request = pendingDestinationRequest
-                if (sensitiveContentReady && request != null) {
+                if (sensitiveContentReady && helpState.canConsumePendingDestination && request != null) {
                     val consumed = miGuardiaApplication.pendingMainDestinations.consume(request) {
                         handlePendingDestination(it)
                     }
@@ -436,6 +451,7 @@ class MainActivity : FragmentActivity() {
                     summaryViewModel = summaryViewModel,
                     reportsViewModel = reportsViewModel,
                     backupViewModel = backupViewModel,
+                    helpViewModel = helpViewModel,
                     calendarNavigationRequest = calendarNavigationRequest,
                     appZoom = appZoom,
                     onAppZoomChange = { selected ->
@@ -479,23 +495,6 @@ class MainActivity : FragmentActivity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         if (!deviceAuthenticator.handleActivityResult(requestCode, resultCode)) {
             super.onActivityResult(requestCode, resultCode, data)
-        }
-    }
-
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray,
-    ) {
-        // Biometric 1.1.0 brings FragmentActivity 1.2.5, which otherwise consumes
-        // modern Activity Result permission callbacks before ComponentActivity sees them.
-        val handled = activityResultRegistry.dispatchResult(
-            requestCode,
-            RESULT_OK,
-            permissionResultIntent(permissions, grantResults),
-        )
-        if (!handled) {
-            super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         }
     }
 
@@ -737,16 +736,6 @@ class MainActivity : FragmentActivity() {
             "access_lock_authentication_host_id"
     }
 }
-
-internal fun permissionResultIntent(
-    permissions: Array<out String>,
-    grantResults: IntArray,
-): Intent = Intent()
-    .putExtra(ActivityResultContracts.RequestMultiplePermissions.EXTRA_PERMISSIONS, permissions)
-    .putExtra(
-        ActivityResultContracts.RequestMultiplePermissions.EXTRA_PERMISSION_GRANT_RESULTS,
-        grantResults,
-    )
 
 internal data class PendingMainDestination(
     val action: String,

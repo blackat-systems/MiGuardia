@@ -198,7 +198,12 @@ No incorporar en la primera versión salvo nueva decisión explícita:
 - iOS;
 - cuentas, servidor, nube o sincronización entre dispositivos;
 - OCR, recorte de imágenes o importación directa de Excel;
-- ubicación automática del teléfono;
+- seguimiento automático o en segundo plano de la ubicación del teléfono; por
+  decisión explícita de Joaquin del 2026-09-02 sólo se permiten una captura
+  aproximada, puntual e iniciada por la persona —usada como ciudad actual cuando
+  no hay dirección— o la conversión consciente de la dirección del objetivo
+  mediante el servicio `Geocoder` de Android; ninguna de las dos acciones ocurre
+  automáticamente;
 - mapa embebido;
 - feriados automáticos;
 - búsqueda global;

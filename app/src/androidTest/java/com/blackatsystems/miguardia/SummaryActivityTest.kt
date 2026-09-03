@@ -39,6 +39,7 @@ class SummaryActivityTest {
         check(context.packageName == QA_APPLICATION_ID) {
             "El Resumen integral sólo puede probarse contra el paquete QA."
         }
+        markOnboardingCompletedForTest()
         val zoneId = AppDefaults.zoneId()
         val now = Instant.now().truncatedTo(ChronoUnit.MINUTES)
         val start = YearMonth.from(now.atZone(zoneId)).atDay(1).atStartOfDay(zoneId)

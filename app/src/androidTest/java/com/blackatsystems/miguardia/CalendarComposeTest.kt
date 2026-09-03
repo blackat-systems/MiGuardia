@@ -4,6 +4,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
@@ -113,7 +115,7 @@ class CalendarComposeTest {
     }
 
     @Test
-    fun v2ReadyOffersManualLoadRecurrenceAndWorkSetup() {
+    fun v2ReadyKeepsManualLoadPrimaryAndSecondaryActionsAdvanced() {
         var starts = 0
         var repeats = 0
         var entersEdit = 0
@@ -126,9 +128,12 @@ class CalendarComposeTest {
             onEnterEdit = { entersEdit++ },
         )
 
-        compose.onNodeWithTag("calendar-v2-load-shifts").performScrollTo().performClick()
+        compose.onNodeWithTag("calendar-v2-repeat-shifts").assertDoesNotExist()
+        compose.onNodeWithTag("calendar-work-setup-action").assertDoesNotExist()
+        compose.onNodeWithTag("advanced-options-toggle").performScrollTo().performClick()
         compose.onNodeWithTag("calendar-v2-repeat-shifts").performScrollTo().performClick()
         compose.onNodeWithTag("calendar-work-setup-action").performScrollTo().performClick()
+        compose.onNodeWithTag("calendar-v2-load-shifts").performScrollTo().performClick()
         compose.runOnIdle {
             assertEquals(1, starts)
             assertEquals(1, repeats)
@@ -243,7 +248,9 @@ class CalendarComposeTest {
                     enabled = true,
                     providerExplanationAccepted = true,
                 ),
-                shiftBriefs = mapOf(shift.id to ShiftWeatherBrief(summary, WeatherFreshness.FRESH)),
+                shiftBriefs = mapOf(
+                    shift.id to ShiftWeatherBrief(summary, WeatherFreshness.FRESH, shift.sourceObjectiveId),
+                ),
                 isLoading = false,
             ),
         )
@@ -276,18 +283,11 @@ class CalendarComposeTest {
             }
         }
 
-        compose.onNodeWithText("Clima durante la jornada").performScrollTo().performClick()
-
-        val weatherTitle = compose.onNodeWithText("Clima de la guardia")
-        compose.waitUntil(5_000L) {
-            runCatching { weatherTitle.fetchSemanticsNode() }.isSuccess
-        }
-        weatherTitle.performScrollTo()
-        compose.waitUntil(5_000L) {
-            runCatching { weatherTitle.assertIsDisplayed() }.isSuccess
-        }
-        weatherTitle.assertIsDisplayed()
+        compose.onNode(
+            hasText("Clima durante la jornada") and hasClickAction(),
+        ).performScrollTo().performClick()
         compose.runOnIdle { assertEquals(listOf("dismiss", "weather"), events) }
+        compose.onNodeWithTag("v2-edit-day-action").assertDoesNotExist()
     }
 
     private fun setApp(

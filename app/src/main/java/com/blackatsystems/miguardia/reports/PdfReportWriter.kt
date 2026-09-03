@@ -96,19 +96,19 @@ class PdfReportWriter internal constructor(
     }
 
     private fun drawReferences(layout: ReportPdfLayout, projection: MonthlyWorkReportProjection) {
-        layout.section("Referencias de horas")
+        layout.section("Metas de horas")
         if (projection.references.isEmpty()) {
-            layout.paragraph("No hay una referencia aplicable para este mes.")
+            layout.paragraph("No hay una meta aplicable para este mes.")
             return
         }
-        layout.beginTable("Período · estado · meta · cumplimiento")
+        layout.beginTable("Período · estado · meta · avance")
         projection.references.forEach { reference ->
             layout.tableRow(
                 listOf(
                     "${reference.startInclusive.displayDate()} al ${reference.endExclusive.minusDays(1).displayDate()}",
                     reference.state.displayLabel(),
                     "Meta: ${reference.targetMinutes?.let(::readableMinutes) ?: "no corresponde"}",
-                    "Cumplimiento: ${reference.contributingMinutes?.let(::readableMinutes) ?: "no calculable"}",
+                    "Avance: ${reference.contributingMinutes?.let(::readableMinutes) ?: "no calculable"}",
                     "Faltante: ${reference.missingMinutes?.let(::readableMinutes) ?: "no calculable"}",
                     "Superación: ${reference.excessMinutes?.let(::readableMinutes) ?: "no calculable"}",
                 ),
@@ -130,7 +130,7 @@ class PdfReportWriter internal constructor(
 
     private fun drawAvailability(layout: ReportPdfLayout, projection: MonthlyWorkReportProjection) {
         layout.section("Disponibilidad")
-        layout.paragraph("La disponibilidad no se suma al trabajo ni al cumplimiento de horas.")
+        layout.paragraph("La disponibilidad no se suma al trabajo ni al avance de la meta de horas.")
         if (projection.availabilityRows.isEmpty()) {
             layout.paragraph("Sin disponibilidad registrada.")
             return
@@ -518,7 +518,7 @@ private fun ReportWorkRow.pdfLines(): List<String> {
         add("${sector.displayName} · $workPlace · $workType")
         addAll(intervals)
         add("Minutos contabilizados: $accountedMinutes (${readableMinutes(accountedMinutes)})")
-        add("Habituales: ${readableMinutes(regularMinutes)} · Extras: $extras")
+        add("$REGULAR_WORK_LABEL: ${readableMinutes(regularMinutes)} · Extras: $extras")
         if (pendingMinutes > 0L) add("Trabajo pendiente programado: ${readableMinutes(pendingMinutes)}")
         add("Nocturnidad: ${readableMinutes(nightMinutes)} · Feriado: ${readableMinutes(holidayMinutes)} · Fin de semana: ${readableMinutes(weekendMinutes)}")
         position?.let { add("Puesto o función: $it") }

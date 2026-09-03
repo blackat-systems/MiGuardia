@@ -131,12 +131,26 @@ import com.blackatsystems.miguardia.ui.components.PersistentMessage
 import com.blackatsystems.miguardia.ui.components.ScreenHeading
 import com.blackatsystems.miguardia.ui.components.SectionCard
 import com.blackatsystems.miguardia.ui.components.TransientConfirmation
+import com.blackatsystems.miguardia.ui.components.AdvancedOptionsSection
+import com.blackatsystems.miguardia.ui.components.ContextHelp
 import com.blackatsystems.miguardia.ui.hours.HoursAndExtrasActions
 import com.blackatsystems.miguardia.ui.hours.HoursAndExtrasLoadState
 import com.blackatsystems.miguardia.ui.hours.HoursAndExtrasSurfaceHost
 import com.blackatsystems.miguardia.ui.hours.HoursAndExtrasUiState
 import com.blackatsystems.miguardia.ui.hours.HoursAndExtrasViewModel
 import com.blackatsystems.miguardia.ui.hours.IndependentExtraDetailCard
+import com.blackatsystems.miguardia.ui.help.HelpActions
+import com.blackatsystems.miguardia.ui.help.HelpAnchor
+import com.blackatsystems.miguardia.ui.help.HelpAnchorRegistry
+import com.blackatsystems.miguardia.ui.help.HelpDecisionScreen
+import com.blackatsystems.miguardia.ui.help.HelpNavigationTarget
+import com.blackatsystems.miguardia.ui.help.HelpScreen
+import com.blackatsystems.miguardia.ui.help.HelpSessionStage
+import com.blackatsystems.miguardia.ui.help.HelpTourOverlay
+import com.blackatsystems.miguardia.ui.help.HelpTourStep
+import com.blackatsystems.miguardia.ui.help.HelpUiState
+import com.blackatsystems.miguardia.ui.help.HelpViewModel
+import com.blackatsystems.miguardia.ui.help.helpAnchor
 import com.blackatsystems.miguardia.ui.management.V2ManualShiftLoadActions
 import com.blackatsystems.miguardia.ui.management.V2ManualShiftLoadContent
 import com.blackatsystems.miguardia.ui.management.V2ManualShiftLoadStage
@@ -232,6 +246,7 @@ private enum class MainDestination(
     SUMMARY(R.string.summary, R.string.drawer_summary_description, "≡"),
     ACCESS_LOCK(R.string.access_lock, R.string.drawer_access_lock_description, "▣"),
     APPEARANCE(R.string.appearance, R.string.drawer_appearance_description, "◐"),
+    HELP(R.string.help, R.string.drawer_help_description, "?"),
 }
 
 private enum class DrawerAction(
@@ -328,13 +343,14 @@ private fun DrawerDestinationItem(
     item: MainDestination,
     selected: Boolean,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     NavigationDrawerItem(
         label = { DrawerItemLabel(item.labelRes, item.descriptionRes, selected) },
         selected = selected,
         onClick = onClick,
         icon = { DrawerGlyph(item.glyph) },
-        modifier = Modifier
+        modifier = modifier
             .padding(horizontal = 12.dp)
             .testTag("main-destination-${item.name.lowercase()}")
             .semantics { this.selected = selected },
@@ -424,6 +440,7 @@ fun MiGuardiaApp(
     summaryViewModel: SummaryViewModel,
     reportsViewModel: ReportsViewModel,
     backupViewModel: BackupViewModel,
+    helpViewModel: HelpViewModel,
     modifier: Modifier = Modifier,
     calendarNavigationRequest: Int = 0,
     appZoom: AppZoom = AppZoom.STANDARD,
@@ -463,6 +480,7 @@ fun MiGuardiaApp(
     val summaryState by summaryViewModel.uiState.collectAsStateWithLifecycle()
     val reportsState by reportsViewModel.uiState.collectAsStateWithLifecycle()
     val backupState by backupViewModel.uiState.collectAsStateWithLifecycle()
+    val helpState by helpViewModel.uiState.collectAsStateWithLifecycle()
     MiGuardiaApp(
         calendarState = calendarState,
         nextEventState = nextEventState,
@@ -513,6 +531,8 @@ fun MiGuardiaApp(
         reportsActions = ReportsActions.from(reportsViewModel),
         backupState = backupState,
         backupActions = BackupActions.from(backupViewModel),
+        helpState = helpState,
+        helpActions = HelpActions.from(helpViewModel),
         calendarNavigationRequest = calendarNavigationRequest,
         appZoom = appZoom,
         onAppZoomChange = onAppZoomChange,
@@ -581,6 +601,8 @@ fun MiGuardiaApp(
     reportsActions: ReportsActions = ReportsActions(),
     backupState: BackupUiState = BackupUiState(),
     backupActions: BackupActions = BackupActions(),
+    helpState: HelpUiState = HelpUiState.completedForPreview(),
+    helpActions: HelpActions = HelpActions(),
     calendarNavigationRequest: Int = 0,
     appZoom: AppZoom = AppZoom.STANDARD,
     onAppZoomChange: (AppZoom) -> Unit = {},
@@ -600,6 +622,9 @@ fun MiGuardiaApp(
     onRetryDeviceSecurity: () -> Unit = {},
     onOpenDeviceSecurity: () -> Unit = {},
 ) {
+    LaunchedEffect(workSetupState.rootState, workSetupState.surface) {
+        helpActions.synchronizeWorkSetup(workSetupState.rootState, workSetupState.surface)
+    }
     val preserveV2WriteSurface =
         (v2ShiftEditState.isBlocking && v2ShiftEditState.isSaving) ||
             (v2RecurringState.isBlocking && v2RecurringState.isSaving) ||
@@ -624,6 +649,17 @@ fun MiGuardiaApp(
                 onRestoreBackup = backupActions.open,
             )
         }
+        return
+    }
+    val blocksReadyContentForHelp =
+        workSetupState.rootState is WorkSetupState.V2Ready &&
+            workSetupState.surface == WorkSetupSurface.NONE &&
+            (
+                helpState.session?.stage == HelpSessionStage.INTRODUCTION ||
+                    (helpState.session == null && !helpState.currentVersionCompleted)
+                )
+    if (blocksReadyContentForHelp) {
+        HelpDecisionScreen(helpState, helpActions, modifier)
         return
     }
     val needsFirstWorkSet = workSetupState.rootState is WorkSetupState.V2NeedsFirstSet
@@ -660,6 +696,7 @@ fun MiGuardiaApp(
         reportsState.isOpen ||
         backupState.isOpen
     var destination by rememberSaveable { androidx.compose.runtime.mutableStateOf(MainDestination.CALENDAR) }
+    val helpAnchors = remember { HelpAnchorRegistry() }
     val currentSetSummaryActive by rememberUpdatedState(summaryActions.setActive)
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(destination, lifecycleOwner, hasExternalBlockingSurface) {
@@ -704,6 +741,39 @@ fun MiGuardiaApp(
     val hasBlockingSurface = hasExternalBlockingSurface ||
         (destination == MainDestination.SUMMARY && summaryState.hasSubsurface)
     val canOpenDrawer = !hasBlockingSurface && selectedDay == null
+    val activeTourStep = helpState.session
+        ?.takeIf { it.stage == HelpSessionStage.TOUR }
+        ?.tourStep
+    LaunchedEffect(helpState.session?.token, activeTourStep) {
+        when (activeTourStep) {
+            HelpTourStep.MENU -> {
+                destination = MainDestination.CALENDAR
+                drawerState.open()
+            }
+            HelpTourStep.SUMMARY -> {
+                drawerState.close()
+                destination = MainDestination.SUMMARY
+            }
+            HelpTourStep.HELP -> {
+                destination = MainDestination.HELP
+                drawerState.open()
+            }
+            null -> Unit
+            else -> {
+                drawerState.close()
+                destination = MainDestination.CALENDAR
+            }
+        }
+    }
+    LaunchedEffect(helpState.navigationEvent?.sequence) {
+        val event = helpState.navigationEvent ?: return@LaunchedEffect
+        drawerState.close()
+        destination = when (event.target) {
+            HelpNavigationTarget.CALENDAR -> MainDestination.CALENDAR
+            HelpNavigationTarget.HELP -> MainDestination.HELP
+        }
+        helpActions.consumeNavigation(event.sequence)
+    }
     LaunchedEffect(calendarNavigationRequest) {
         if (calendarNavigationRequest > 0) {
             drawerState.snapTo(DrawerValue.Closed)
@@ -840,6 +910,11 @@ fun MiGuardiaApp(
     }
 
     ModalNavigationDrawer(
+        modifier = if (activeTourStep != null) {
+            Modifier.clearAndSetSemantics { }
+        } else {
+            Modifier
+        },
         drawerState = drawerState,
         gesturesEnabled = false,
         drawerContent = {
@@ -878,6 +953,12 @@ fun MiGuardiaApp(
                         DrawerActionItem(action = action, onClick = { openDrawerAction(action) })
                     }
                     DrawerDestinationItem(
+                        item = MainDestination.HELP,
+                        selected = destination == MainDestination.HELP,
+                        onClick = { selectDestination(MainDestination.HELP) },
+                        modifier = Modifier.helpAnchor(helpAnchors, HelpAnchor.HELP),
+                    )
+                    DrawerDestinationItem(
                         item = MainDestination.ACCESS_LOCK,
                         selected = destination == MainDestination.ACCESS_LOCK,
                         onClick = { selectDestination(MainDestination.ACCESS_LOCK) },
@@ -907,6 +988,7 @@ fun MiGuardiaApp(
                             onClick = { coroutineScope.launch { drawerState.open() } },
                             modifier = Modifier
                                 .testTag("main-menu-button")
+                                .helpAnchor(helpAnchors, HelpAnchor.MENU)
                                 .semantics { contentDescription = openMenuDescription },
                         ) {
                             Text(
@@ -966,13 +1048,21 @@ fun MiGuardiaApp(
                     onStartV2Recurring = {
                         v2RecurringActions.openCreate(workSetupState.rootState)
                     },
+                    helpAnchors = helpAnchors,
+                    helpTourStep = activeTourStep,
                 )
 
-                MainDestination.SUMMARY -> SummaryScreen(
-                    state = summaryState,
-                    actions = summaryActions,
-                    contentPadding = innerPadding,
-                )
+                MainDestination.SUMMARY -> Box(
+                    Modifier
+                        .fillMaxSize()
+                        .helpAnchor(helpAnchors, HelpAnchor.SUMMARY),
+                ) {
+                    SummaryScreen(
+                        state = summaryState,
+                        actions = summaryActions,
+                        contentPadding = innerPadding,
+                    )
+                }
 
                 MainDestination.ACCESS_LOCK -> AccessLockSettingsScreen(
                     state = accessLockState,
@@ -992,6 +1082,12 @@ fun MiGuardiaApp(
                     onAppZoomChange = onAppZoomChange,
                     appThemeMode = appThemeMode,
                     onAppThemeModeChange = onAppThemeModeChange,
+                )
+
+                MainDestination.HELP -> HelpScreen(
+                    contentPadding = innerPadding,
+                    canRepeat = v2ReadyState != null && helpState.canRepeat,
+                    actions = helpActions,
                 )
             }
         }
@@ -1209,6 +1305,11 @@ fun MiGuardiaApp(
     if (v2ShiftActualActive) {
         V2ShiftActualSurfaceHost(v2ShiftActualState, v2ShiftActualActions)
     }
+    HelpTourOverlay(
+        state = helpState,
+        actions = helpActions,
+        anchors = helpAnchors,
+    )
 }
 
 internal data class VerticalScrollbarMetrics(
@@ -1347,10 +1448,28 @@ private fun CalendarScreen(
     onCreateFirstWorkSet: () -> Unit,
     onStartV2ManualLoad: () -> Unit,
     onStartV2Recurring: () -> Unit,
+    helpAnchors: HelpAnchorRegistry? = null,
+    helpTourStep: HelpTourStep? = null,
 ) {
     val today = state.referenceInstant.atZone(AppDefaults.zoneId()).toLocalDate()
     val verticalScrollState = rememberScrollState()
+    LaunchedEffect(helpTourStep, verticalScrollState.maxValue) {
+        when (helpTourStep) {
+            HelpTourStep.LOAD_AND_REPEAT -> verticalScrollState.scrollTo(verticalScrollState.maxValue)
+            HelpTourStep.MENU,
+            HelpTourStep.TODAY_CARD,
+            HelpTourStep.MONTH_AND_GRID,
+            HelpTourStep.DAY_DETAIL,
+            HelpTourStep.PHOTOS,
+            -> verticalScrollState.scrollTo(0)
+            HelpTourStep.SUMMARY,
+            HelpTourStep.HELP,
+            null,
+            -> Unit
+        }
+    }
     var pendingMonthChange by rememberSaveable { mutableStateOf<String?>(null) }
+    var showManualLoadDiscardConfirmation by rememberSaveable { mutableStateOf(false) }
     val v2ManualLoadOpen = v2ManualShiftLoadState.isActive
     val v2DateSelectionOpen = v2ManualLoadOpen &&
         v2ManualShiftLoadState.stage == V2ManualShiftLoadStage.SELECT_DATES
@@ -1414,7 +1533,9 @@ private fun CalendarScreen(
                 scrollState = verticalScrollState,
                 verticalSpacing = verticalSpacing,
             ) {
-                NextEventCard(state = nextEventState, onRetry = onNextEventRetry)
+                Box(Modifier.helpAnchor(helpAnchors, HelpAnchor.TODAY_CARD)) {
+                    NextEventCard(state = nextEventState, onRetry = onNextEventRetry)
+                }
                 if (state.interactionMode == CalendarInteractionMode.EDIT) {
                     Text(
                         text = if (v2ManualLoadOpen) "Cargando jornadas" else "Editando calendario",
@@ -1439,6 +1560,7 @@ private fun CalendarScreen(
                     showPhotos = state.interactionMode == CalendarInteractionMode.VIEW,
                     appZoom = appZoom,
                     navigationEnabled = !v2ManualLoadOpen || v2DateSelectionInteractive,
+                    helpAnchors = helpAnchors,
                 )
 
                 when (state.loadState) {
@@ -1479,29 +1601,31 @@ private fun CalendarScreen(
                         .mapValues { (_, records) ->
                             records.size to records.map { it.labelSnapshot }.distinct().joinToString(" / ")
                         }
-                    CalendarGridViewport(
-                        month = state.visibleMonth,
-                        days = state.days,
-                        independentExtraCounts = independentExtraCounts,
-                        availabilityIndicators = availabilityIndicators,
-                        today = today,
-                        onPreviousMonth = previousMonth,
-                        onNextMonth = nextMonth,
-                        onSelectDate = onSelectDate,
-                        interactionMode = state.interactionMode,
-                        selectedDates = state.editSelectedDates,
-                        onEditSelectionChange = onEditSelectionChange,
-                        selectionEnabled = !v2ManualLoadOpen || v2DateSelectionInteractive,
-                        selectionConfirmed = state.editSelectionConfirmed,
-                        monthSwipeEnabled = !v2ManualLoadOpen || v2DateSelectionInteractive,
-                        selectedDateDescription = if (v2ManualLoadOpen) {
-                            "seleccionado para cargar jornadas"
-                        } else {
-                            "seleccionado para editar"
-                        },
-                        shiftDescription = "jornada",
-                        appZoom = appZoom,
-                    )
+                    Box(Modifier.helpAnchor(helpAnchors, HelpAnchor.DAY_DETAIL)) {
+                        CalendarGridViewport(
+                            month = state.visibleMonth,
+                            days = state.days,
+                            independentExtraCounts = independentExtraCounts,
+                            availabilityIndicators = availabilityIndicators,
+                            today = today,
+                            onPreviousMonth = previousMonth,
+                            onNextMonth = nextMonth,
+                            onSelectDate = onSelectDate,
+                            interactionMode = state.interactionMode,
+                            selectedDates = state.editSelectedDates,
+                            onEditSelectionChange = onEditSelectionChange,
+                            selectionEnabled = !v2ManualLoadOpen || v2DateSelectionInteractive,
+                            selectionConfirmed = state.editSelectionConfirmed,
+                            monthSwipeEnabled = !v2ManualLoadOpen || v2DateSelectionInteractive,
+                            selectedDateDescription = if (v2ManualLoadOpen) {
+                                "seleccionado para cargar jornadas"
+                            } else {
+                                "seleccionado para editar"
+                            },
+                            shiftDescription = "jornada",
+                            appZoom = appZoom,
+                        )
+                    }
                 }
 
                 if (needsFirstWorkSet && state.interactionMode == CalendarInteractionMode.VIEW) {
@@ -1533,48 +1657,66 @@ private fun CalendarScreen(
                 if (state.interactionMode == CalendarInteractionMode.EDIT) {
                         OutlinedButton(
                             onClick = {
-                                if (v2ManualLoadOpen) v2ManualShiftLoadActions.cancel()
-                                onFinishEditMode()
+                                if (v2ManualLoadOpen) {
+                                    showManualLoadDiscardConfirmation = true
+                                } else {
+                                    onFinishEditMode()
+                                }
                             },
                             enabled = !v2ManualShiftLoadState.isLoading && !v2ManualShiftLoadState.isSaving,
                             modifier = Modifier.fillMaxWidth(),
                         ) {
                             Text(
                                 when {
-                                    v2ManualLoadOpen -> "Salir de la carga"
+                                    v2ManualLoadOpen -> "Cancelar carga"
                                     else -> "Salir de edición"
                                 },
                             )
                         }
                     } else {
                         if (!needsFirstWorkSet) {
-                            Button(
-                                onClick = onStartV2ManualLoad,
-                                enabled = state.loadState == CalendarLoadState.CONTENT,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .heightIn(min = 56.dp)
-                                    .testTag("calendar-v2-load-shifts"),
+                            Column(
+                                modifier = Modifier.helpAnchor(helpAnchors, HelpAnchor.LOAD_AND_REPEAT),
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
                             ) {
-                                Text("Cargar jornadas")
-                            }
-                            OutlinedButton(
-                                onClick = onStartV2Recurring,
-                                enabled = state.loadState == CalendarLoadState.CONTENT,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .heightIn(min = 56.dp)
-                                    .testTag("calendar-v2-repeat-shifts"),
-                            ) {
-                                Text("Repetir jornadas")
-                            }
-                            OutlinedButton(
-                                onClick = onOpenWorkSetup,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .testTag("calendar-work-setup-action"),
-                            ) {
-                                Text("Mi forma de trabajar")
+                                Button(
+                                    onClick = onStartV2ManualLoad,
+                                    enabled = state.loadState == CalendarLoadState.CONTENT,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .heightIn(min = 56.dp)
+                                        .testTag("calendar-v2-load-shifts"),
+                                ) {
+                                    Text("Cargar jornadas")
+                                }
+                                AdvancedOptionsSection(
+                                    initiallyExpanded = helpTourStep == HelpTourStep.LOAD_AND_REPEAT,
+                                    help = ContextHelp(
+                                        title = "Otras formas de organizarte",
+                                        whatItDoes = "Permite repetir automáticamente un horario y cambiar la configuración de tus objetivos.",
+                                        howToUseIt = "Abrí estas opciones sólo si necesitás crear muchas jornadas iguales o modificar tu forma de trabajar.",
+                                        example = "Si trabajás todos los lunes y miércoles, elegí Repetir jornadas.",
+                                    ),
+                                ) {
+                                    OutlinedButton(
+                                        onClick = onStartV2Recurring,
+                                        enabled = state.loadState == CalendarLoadState.CONTENT,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .heightIn(min = 56.dp)
+                                            .testTag("calendar-v2-repeat-shifts"),
+                                    ) {
+                                        Text("Repetir jornadas")
+                                    }
+                                    OutlinedButton(
+                                        onClick = onOpenWorkSetup,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .testTag("calendar-work-setup-action"),
+                                    ) {
+                                        Text("Mi forma de trabajar")
+                                    }
+                                }
                             }
                         }
                 }
@@ -1598,6 +1740,27 @@ private fun CalendarScreen(
                 }) { Text("Cambiar de mes") }
             },
             dismissButton = { TextButton(onClick = { pendingMonthChange = null }) { Text("Conservar selección") } },
+        )
+    }
+    if (showManualLoadDiscardConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showManualLoadDiscardConfirmation = false },
+            title = { Text("¿Descartar esta carga?") },
+            text = { Text("Todavía no se guardó ninguna jornada. Si salís, vas a perder lo que elegiste.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showManualLoadDiscardConfirmation = false
+                        v2ManualShiftLoadActions.cancel()
+                        onFinishEditMode()
+                    },
+                ) { Text("Descartar carga") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showManualLoadDiscardConfirmation = false }) {
+                    Text("Seguir cargando")
+                }
+            },
         )
     }
 }
@@ -1693,12 +1856,15 @@ private fun MonthControls(
     showPhotos: Boolean,
     appZoom: AppZoom,
     navigationEnabled: Boolean,
+    helpAnchors: HelpAnchorRegistry? = null,
 ) {
     val previousDescription = stringResource(R.string.previous_month)
     val nextDescription = stringResource(R.string.next_month)
     val todayInline = appZoom == AppZoom.STANDARD && !showPhotos
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .helpAnchor(helpAnchors, HelpAnchor.MONTH_AND_GRID),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
     ) {
         Column(
@@ -1765,6 +1931,7 @@ private fun MonthControls(
                                 enabled = navigationEnabled,
                                 modifier = Modifier
                                     .weight(1f)
+                                    .helpAnchor(helpAnchors, HelpAnchor.PHOTOS)
                                     .semantics { contentDescription = "Fotos del cronograma del mes" },
                             ) { Text("Fotos del mes") }
                         }
@@ -1784,6 +1951,7 @@ private fun MonthControls(
                                 enabled = navigationEnabled,
                                 modifier = Modifier
                                     .fillMaxWidth()
+                                    .helpAnchor(helpAnchors, HelpAnchor.PHOTOS)
                                     .semantics { contentDescription = "Fotos del cronograma del mes" },
                             ) { Text("Fotos del mes") }
                         }
@@ -2392,7 +2560,7 @@ private fun ShiftWeatherBriefCard(
                         )
                     }
                 }
-                loading -> Text("Consultando el pronóstico de Córdoba…")
+                loading -> Text("Consultando el clima del objetivo…")
                 else -> Text("No hay cobertura meteorológica para todo o parte de este horario.")
             }
         }

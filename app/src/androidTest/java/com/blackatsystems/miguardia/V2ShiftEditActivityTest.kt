@@ -63,6 +63,7 @@ class V2ShiftEditActivityTest {
         check(context.packageName == QA_APPLICATION_ID) {
             "La prueba integral de edición sólo puede ejecutarse contra el paquete QA."
         }
+        markOnboardingCompletedForTest()
         UiDevice.getInstance(instrumentation).wakeUp()
         instrumentation.uiAutomation.executeShellCommand("wm dismiss-keyguard").close()
 

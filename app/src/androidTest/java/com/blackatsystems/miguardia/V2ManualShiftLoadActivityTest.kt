@@ -61,6 +61,7 @@ class V2ManualShiftLoadActivityTest {
         check(context.packageName == QA_APPLICATION_ID) {
             "La prueba integral V2 sólo puede ejecutarse contra el paquete QA."
         }
+        markOnboardingCompletedForTest()
         UiDevice.getInstance(instrumentation).wakeUp()
         instrumentation.uiAutomation.executeShellCommand("wm dismiss-keyguard").close()
 
@@ -116,6 +117,7 @@ class V2ManualShiftLoadActivityTest {
             compose.onAllNodesWithTag("v2-template-$TEMPLATE_ID").fetchSemanticsNodes().isNotEmpty()
         }
         compose.onNodeWithTag("v2-template-$TEMPLATE_ID").performScrollTo().performClick()
+        compose.onNodeWithTag("advanced-options-toggle").performScrollTo().performClick()
         compose.onNodeWithTag("v2-manual-position").performScrollTo().performTextInput(POSITION)
 
         requireNotNull(scenario).recreate()
@@ -134,12 +136,7 @@ class V2ManualShiftLoadActivityTest {
             requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT,
             expectedConfigurationOrientation = Configuration.ORIENTATION_PORTRAIT,
         )
-        compose.onNodeWithTag("v2-manual-review").performScrollTo().performClick()
-        compose.waitUntil(WAIT_MILLIS) {
-            compose.onAllNodesWithTag("v2-manual-save", useUnmergedTree = true)
-                .fetchSemanticsNodes().isNotEmpty()
-        }
-        compose.onNodeWithTag("v2-manual-save", useUnmergedTree = true).performClick()
+        compose.onNodeWithTag("v2-manual-save-direct").performScrollTo().performClick()
 
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val store = (context.applicationContext as MiGuardiaApplication).localDataStore

@@ -210,7 +210,36 @@ class V2DatabaseMigrationInstrumentedTest {
     }
 
     @Test
-    fun migrationChainOneToTwoToThreeToFourToFivePreservesVersionOneData() {
+    fun migrationFiveToSixPreservesObjectivesAndStartsTheirWeatherLocationEmpty() {
+        helper.createDatabase(DB_FIVE_TO_SIX, 5).apply {
+            execSQL(
+                "INSERT INTO objectives VALUES " +
+                    "('objective-location', 'Objetivo existente', 'OBJ', NULL, NULL, 1, 1, 1)",
+            )
+            close()
+        }
+
+        val migrated = helper.runMigrationsAndValidate(
+            DB_FIVE_TO_SIX,
+            6,
+            true,
+            MiGuardiaV2Database.MIGRATION_5_6,
+        )
+
+        assertEquals(1, migrated.scalar("SELECT COUNT(*) FROM objectives WHERE id = 'objective-location'"))
+        migrated.query(
+            "SELECT weatherLatitude, weatherLongitude FROM objectives WHERE id = 'objective-location'",
+        ).use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertTrue(cursor.isNull(0))
+            assertTrue(cursor.isNull(1))
+        }
+        assertHealthy(migrated)
+        migrated.close()
+    }
+
+    @Test
+    fun migrationChainOneToTwoToThreeToFourToFiveToSixPreservesVersionOneData() {
         helper.createDatabase(DB_CHAIN, 1).apply {
             seedEveryVersionOneTable()
             close()
@@ -218,12 +247,13 @@ class V2DatabaseMigrationInstrumentedTest {
 
         val migrated = helper.runMigrationsAndValidate(
             DB_CHAIN,
-            5,
+            6,
             true,
             MiGuardiaV2Database.MIGRATION_1_2,
             MiGuardiaV2Database.MIGRATION_2_3,
             MiGuardiaV2Database.MIGRATION_3_4,
             MiGuardiaV2Database.MIGRATION_4_5,
+            MiGuardiaV2Database.MIGRATION_5_6,
         )
 
         VERSION_ONE_TABLES.forEach { table ->
@@ -498,6 +528,7 @@ class V2DatabaseMigrationInstrumentedTest {
         const val DB_CHAIN = "v2-migration-1-3-test.db"
         const val DB_THREE_TO_FOUR = "v2-migration-3-4-test.db"
         const val DB_FOUR_TO_FIVE = "v2-migration-4-5-test.db"
+        const val DB_FIVE_TO_SIX = "v2-migration-5-6-test.db"
         val VERSION_ONE_TABLES = listOf(
             "objectives",
             "shifts",

@@ -89,6 +89,7 @@ data class V2ManualShiftLoadUiState(
     val warnings: List<String> = emptyList(),
     val acknowledgedWarnings: List<String> = emptyList(),
     val reviewFingerprint: String? = null,
+    val saveAfterPreparation: Boolean = false,
     val backfillFrom: LocalDate? = null,
     val configuredFrom: LocalDate? = null,
     val isLoading: Boolean = false,
@@ -115,6 +116,7 @@ internal data class V2ManualShiftLoadPersistedState(
     val occupiedDates: Set<LocalDate> = emptySet(),
     val acknowledgedWarnings: List<String> = emptyList(),
     val reviewFingerprint: String? = null,
+    val saveAfterPreparation: Boolean = false,
 )
 
 class V2ManualShiftLoadViewModel(
@@ -153,6 +155,7 @@ class V2ManualShiftLoadViewModel(
     fun chooseTemplate(id: UUID) = coordinator.chooseTemplate(id)
     fun updatePosition(value: String) = coordinator.updatePosition(value)
     fun requestReview() = coordinator.requestReview()
+    fun requestSave() = coordinator.requestSave()
     fun confirmBackfill() = coordinator.confirmBackfill()
     fun cancelBackfill() = coordinator.cancelBackfill()
     fun chooseOccupiedPolicy(policy: OccupiedDatePolicy) = coordinator.chooseOccupiedPolicy(policy)
@@ -256,6 +259,7 @@ internal class V2ManualShiftLoadCoordinator(
                 warnings = emptyList(),
                 acknowledgedWarnings = emptyList(),
                 reviewFingerprint = null,
+                saveAfterPreparation = false,
                 errorMessage = null,
             )
         }
@@ -274,6 +278,7 @@ internal class V2ManualShiftLoadCoordinator(
                 warnings = emptyList(),
                 acknowledgedWarnings = emptyList(),
                 reviewFingerprint = null,
+                saveAfterPreparation = false,
                 errorMessage = null,
             )
         }
@@ -291,6 +296,18 @@ internal class V2ManualShiftLoadCoordinator(
             return
         }
         if (state.isLoading || state.isSaving) return
+        updateAndPersist { it.copy(saveAfterPreparation = false) }
+        scope.launch { prepareReview() }
+    }
+
+    fun requestSave() {
+        val state = _uiState.value
+        if (state.selectedTemplateId == null) {
+            showError("Elegí un lugar, tipo y horario.")
+            return
+        }
+        if (state.isLoading || state.isSaving) return
+        updateAndPersist { it.copy(saveAfterPreparation = true) }
         scope.launch { prepareReview() }
     }
 
@@ -380,6 +397,7 @@ internal class V2ManualShiftLoadCoordinator(
                 backfillFrom = null,
                 configuredFrom = null,
                 reviewFingerprint = null,
+                saveAfterPreparation = false,
                 errorMessage = null,
             )
         }
@@ -395,6 +413,7 @@ internal class V2ManualShiftLoadCoordinator(
                     occupiedPolicy = null,
                     occupiedDates = emptySet(),
                     reviewFingerprint = null,
+                    saveAfterPreparation = false,
                     errorMessage = null,
                 )
             }
@@ -439,6 +458,7 @@ internal class V2ManualShiftLoadCoordinator(
                 warnings = emptyList(),
                 acknowledgedWarnings = emptyList(),
                 reviewFingerprint = null,
+                saveAfterPreparation = false,
                 errorMessage = null,
             )
         }
@@ -463,8 +483,9 @@ internal class V2ManualShiftLoadCoordinator(
                             warnings = emptyList(),
                             acknowledgedWarnings = emptyList(),
                             reviewFingerprint = null,
+                            saveAfterPreparation = false,
                             isSaving = false,
-                            errorMessage = "Las jornadas o advertencias cambiaron. Revisá nuevamente antes de guardar.",
+                            errorMessage = "Las jornadas o advertencias cambiaron. Volvé a guardar para usar los datos actuales.",
                         )
                     }
                     return@launch
@@ -516,6 +537,7 @@ internal class V2ManualShiftLoadCoordinator(
                 warnings = emptyList(),
                 acknowledgedWarnings = emptyList(),
                 reviewFingerprint = null,
+                saveAfterPreparation = false,
                 backfillFrom = null,
                 configuredFrom = null,
                 errorMessage = null,
@@ -743,6 +765,7 @@ internal class V2ManualShiftLoadCoordinator(
                 }
                 return
             }
+            val shouldSaveImmediately = _uiState.value.saveAfterPreparation
             updateAndPersist {
                 it.copy(
                     stage = V2ManualShiftLoadStage.REVIEW,
@@ -754,15 +777,17 @@ internal class V2ManualShiftLoadCoordinator(
                     omittedDates = prepared.omittedDates,
                     warnings = prepared.warnings,
                     reviewFingerprint = prepared.fingerprint,
+                    saveAfterPreparation = false,
                     isLoading = false,
                 )
             }
+            if (shouldSaveImmediately) save()
         } catch (error: CancellationException) {
             throw error
         } catch (error: SelectedTemplateUnavailableException) {
             recoverFromUnavailableTemplate()
         } catch (error: Exception) {
-            showError(error.message ?: "No pudimos preparar la revisión. Reintentá.")
+            showError(error.message ?: "No pudimos preparar la carga. Reintentá.")
         } finally {
             _uiState.update { it.copy(isLoading = false) }
         }
@@ -1146,6 +1171,7 @@ private fun V2ManualShiftLoadPersistedState.toUiState() = V2ManualShiftLoadUiSta
     occupiedDates = occupiedDates,
     acknowledgedWarnings = acknowledgedWarnings,
     reviewFingerprint = reviewFingerprint,
+    saveAfterPreparation = saveAfterPreparation,
 )
 
 private fun V2ManualShiftLoadUiState.toPersistedState() = V2ManualShiftLoadPersistedState(
@@ -1159,6 +1185,7 @@ private fun V2ManualShiftLoadUiState.toPersistedState() = V2ManualShiftLoadPersi
     occupiedDates = occupiedDates,
     acknowledgedWarnings = acknowledgedWarnings,
     reviewFingerprint = reviewFingerprint,
+    saveAfterPreparation = saveAfterPreparation,
 )
 
 internal fun SavedStateHandle.readV2ManualShiftLoadState(): V2ManualShiftLoadPersistedState =
@@ -1185,6 +1212,7 @@ internal fun SavedStateHandle.readV2ManualShiftLoadState(): V2ManualShiftLoadPer
             .toSet(),
         acknowledgedWarnings = get<ArrayList<String>>(KEY_ACKNOWLEDGED_WARNINGS).orEmpty(),
         reviewFingerprint = get<String>(KEY_REVIEW_FINGERPRINT),
+        saveAfterPreparation = get<Boolean>(KEY_SAVE_AFTER_PREPARATION) ?: false,
     )
 
 internal fun SavedStateHandle.writeV2ManualShiftLoadState(state: V2ManualShiftLoadPersistedState) {
@@ -1200,6 +1228,7 @@ internal fun SavedStateHandle.writeV2ManualShiftLoadState(state: V2ManualShiftLo
             KEY_OCCUPIED_DATES,
             KEY_ACKNOWLEDGED_WARNINGS,
             KEY_REVIEW_FINGERPRINT,
+            KEY_SAVE_AFTER_PREPARATION,
         ).forEach { key -> remove<Any>(key) }
         return
     }
@@ -1213,6 +1242,7 @@ internal fun SavedStateHandle.writeV2ManualShiftLoadState(state: V2ManualShiftLo
     this[KEY_OCCUPIED_DATES] = ArrayList(state.occupiedDates.sorted().map(LocalDate::toString))
     this[KEY_ACKNOWLEDGED_WARNINGS] = ArrayList(state.acknowledgedWarnings)
     this[KEY_REVIEW_FINGERPRINT] = state.reviewFingerprint
+    this[KEY_SAVE_AFTER_PREPARATION] = state.saveAfterPreparation
 }
 
 private fun String.toUuidOrNull(): UUID? = runCatching(UUID::fromString).getOrNull()
@@ -1227,3 +1257,4 @@ private const val KEY_OCCUPIED_POLICY = "v2_manual_shift.occupied_policy"
 private const val KEY_OCCUPIED_DATES = "v2_manual_shift.occupied_dates"
 private const val KEY_ACKNOWLEDGED_WARNINGS = "v2_manual_shift.acknowledged_warnings"
 private const val KEY_REVIEW_FINGERPRINT = "v2_manual_shift.review_fingerprint"
+private const val KEY_SAVE_AFTER_PREPARATION = "v2_manual_shift.save_after_preparation"

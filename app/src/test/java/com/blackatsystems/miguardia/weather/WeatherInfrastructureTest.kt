@@ -36,59 +36,166 @@ import org.junit.Test
 class WeatherInfrastructureTest {
     private val now = Instant.parse("2026-08-16T12:00:00Z")
     private val clock = Clock.fixed(now, ZoneId.of("UTC"))
+    private val objectiveId = UUID.fromString("00000000-0000-0000-0000-000000000901")
     private val location = WeatherLocation(
-        "cordoba-capital",
-        "Córdoba Capital, Argentina",
-        -31.4201,
-        -64.1888,
-        ZoneId.of("America/Argentina/Cordoba"),
+        objectiveId.toString(),
+        "Hospital ficticio",
+        -34.6037,
+        -58.3816,
+        ZoneId.of("America/Argentina/Buenos_Aires"),
     )
 
     @Test
-    fun `URL is fixed HTTPS and contains no shift data`() {
+    fun `URL uses objective coordinates and zone without shift data`() {
         val url = buildOpenMeteoUrl(location)
         assertEquals("https", url.protocol)
         assertEquals("api.open-meteo.com", url.host)
         assertEquals("/v1/forecast", url.path)
-        assertTrue(url.query.contains("latitude=-31.4201"))
-        assertTrue(url.query.contains("longitude=-64.1888"))
+        assertTrue(url.query.contains("latitude=-34.6037"))
+        assertTrue(url.query.contains("longitude=-58.3816"))
+        assertTrue(url.query.contains("timezone=America%2FArgentina%2FBuenos_Aires"))
         assertTrue(url.query.contains("forecast_days=16"))
         assertTrue(url.query.contains("timeformat=unixtime"))
         assertFalse(url.toString().contains("shift", ignoreCase = true))
         assertFalse(url.toString().contains("objective", ignoreCase = true))
+        assertFalse(url.toString().contains(location.id))
+        assertFalse(url.toString().contains(location.displayName))
     }
 
     @Test
-    fun `cache round trip persists canonical snapshot and clears only owned files`() = runBlocking {
-        val root = temporaryDirectory()
-        val unrelated = File(root, "keep.txt").apply { writeText("keep") }
-        val store = WeatherCacheStore(root)
-        val expected = forecast(now)
-        store.write(expected)
-        assertEquals(expected, store.read())
-        store.clear()
-        assertNull(store.read())
+    fun `objective caches stay isolated and clearing one preserves the others`() = runBlocking {
+        val filesDir = temporaryDirectory()
+        val cacheRoot = File(filesDir, WeatherCacheStore.DIRECTORY_NAME).apply { mkdirs() }
+        val unrelated = File(cacheRoot, "keep.txt").apply { writeText("keep") }
+        val otherLocation = location.copy(
+            id = UUID.fromString("00000000-0000-0000-0000-000000000902").toString(),
+            displayName = "Clínica ficticia",
+            latitude = -32.9442,
+            longitude = -60.6505,
+        )
+        val firstStore = WeatherCacheStore.forLocation(filesDir, location)
+        val secondStore = WeatherCacheStore.forLocation(filesDir, otherLocation)
+        val firstForecast = forecast(now, location)
+        val secondForecast = forecast(now.minusSeconds(60), otherLocation)
+
+        firstStore.write(firstForecast)
+        secondStore.write(secondForecast)
+
+        assertEquals(firstForecast, firstStore.read())
+        assertEquals(secondForecast, secondStore.read())
+        firstStore.clear()
+        assertNull(firstStore.read())
+        assertEquals(secondForecast, secondStore.read())
         assertTrue(unrelated.exists())
     }
 
     @Test
-    fun `truncated and unknown cache never crash or become valid`() = runBlocking {
-        val root = temporaryDirectory()
-        val store = WeatherCacheStore(root)
-        File(root, "weather_v1.cache").writeBytes(byteArrayOf(1, 2, 3))
+    fun `two locations of the same objective use different cache files`() = runBlocking {
+        val filesDir = temporaryDirectory()
+        val previousLocation = location.copy(latitude = -31.4201, longitude = -64.1888)
+        val otherObjective = location.copy(
+            id = UUID.fromString("00000000-0000-0000-0000-000000000902").toString(),
+            displayName = "Otro objetivo ficticio",
+        )
+        val previousStore = WeatherCacheStore.forLocation(filesDir, previousLocation)
+        val currentStore = WeatherCacheStore.forLocation(filesDir, location)
+        val otherStore = WeatherCacheStore.forLocation(filesDir, otherObjective)
+        val previousForecast = forecast(now.minusSeconds(120), previousLocation)
+        val currentForecast = forecast(now, location)
+        val otherForecast = forecast(now, otherObjective)
+
+        previousStore.write(previousForecast)
+        currentStore.write(currentForecast)
+        otherStore.write(otherForecast)
+
+        assertEquals(previousForecast, previousStore.read())
+        assertEquals(currentForecast, currentStore.read())
+        assertEquals(
+            3,
+            File(filesDir, WeatherCacheStore.DIRECTORY_NAME)
+                .listFiles()
+                .orEmpty()
+                .count { it.extension == "cache" },
+        )
+
+        WeatherCacheStore.clearObjective(filesDir, location.id)
+
+        assertNull(previousStore.read())
+        assertNull(currentStore.read())
+        assertEquals(otherForecast, otherStore.read())
+    }
+
+    @Test
+    fun `renaming an objective creates a different in-memory repository identity`() {
+        val renamed = location.copy(displayName = "Hospital ficticio renombrado")
+
+        assertTrue(weatherRepositoryKey(location) != weatherRepositoryKey(renamed))
+    }
+
+    @Test
+    fun `clear all removes every objective and legacy weather cache but preserves unrelated files`() = runBlocking {
+        val filesDir = temporaryDirectory()
+        val cacheRoot = File(filesDir, WeatherCacheStore.DIRECTORY_NAME).apply { mkdirs() }
+        val unrelated = File(cacheRoot, "keep.txt").apply { writeText("keep") }
+        val firstStore = WeatherCacheStore.forLocation(filesDir, location)
+        val secondLocation = location.copy(
+            id = UUID.fromString("00000000-0000-0000-0000-000000000902").toString(),
+            displayName = "Clínica ficticia",
+        )
+        val secondStore = WeatherCacheStore.forLocation(filesDir, secondLocation)
+        val legacyStore = WeatherCacheStore.inFilesDir(filesDir)
+        firstStore.write(forecast(now))
+        secondStore.write(forecast(now.minusSeconds(60)))
+        legacyStore.write(forecast(now.minusSeconds(120)))
+
+        WeatherCacheStore.clearAll(filesDir)
+
+        assertNull(firstStore.read())
+        assertNull(secondStore.read())
+        assertNull(legacyStore.read())
+        assertTrue(unrelated.exists())
+    }
+
+    @Test
+    fun `truncated and unknown objective cache never crash or become valid`() = runBlocking {
+        val filesDir = temporaryDirectory()
+        val store = WeatherCacheStore.forLocation(filesDir, location)
+        store.write(forecast(now))
+        val target = objectiveCacheFile(filesDir, "cache")
+        target.writeBytes(byteArrayOf(1, 2, 3))
         assertNull(store.read())
-        File(root, "weather_v1.cache").writeBytes(ByteArray(64) { 7 })
+        target.writeBytes(ByteArray(64) { 7 })
         assertNull(store.read())
     }
 
     @Test
-    fun `orphan temporary file never replaces last valid cache`() = runBlocking {
-        val root = temporaryDirectory()
-        val store = WeatherCacheStore(root)
+    fun `orphan objective temporary file never replaces last valid cache`() = runBlocking {
+        val filesDir = temporaryDirectory()
+        val store = WeatherCacheStore.forLocation(filesDir, location)
         val expected = forecast(now.minusSeconds(1200))
         store.write(expected)
-        File(root, "weather_v1.tmp").writeText("partial")
+        val target = objectiveCacheFile(filesDir, "cache")
+        File(target.parentFile, target.name.removeSuffix(".cache") + ".tmp").writeText("partial")
         assertEquals(expected, store.read())
+    }
+
+    @Test
+    fun `repository rejects cache from old coordinates of the same objective`() = runBlocking {
+        val filesDir = temporaryDirectory()
+        val cache = WeatherCacheStore.forLocation(filesDir, location)
+        val previousLocation = location.copy(latitude = -31.4201, longitude = -64.1888)
+        cache.write(forecast(now, previousLocation))
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+        val preferences = WeatherPreferencesStore(File(filesDir, "${UUID.randomUUID()}.preferences_pb"), scope)
+        val repository = DefaultWeatherRepository(
+            location,
+            WeatherForecastClient { error("latest() no debe iniciar una descarga") },
+            cache,
+            preferences,
+            clock,
+        )
+
+        assertNull(repository.latest())
     }
 
     @Test
@@ -128,7 +235,7 @@ class WeatherInfrastructureTest {
                     cancelled.set(true)
                 }
             },
-            WeatherCacheStore(root),
+            WeatherCacheStore.forLocation(root, location),
             preferences,
             clock,
         )
@@ -141,10 +248,36 @@ class WeatherInfrastructureTest {
     }
 
     @Test
+    fun `clearing cache cancels an active download and leaves no forecast behind`() = runBlocking {
+        val root = temporaryDirectory()
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+        val preferences = WeatherPreferencesStore(File(root, "${UUID.randomUUID()}.preferences_pb"), scope)
+        val started = CompletableDeferred<Unit>()
+        val repository = DefaultWeatherRepository(
+            location,
+            WeatherForecastClient {
+                started.complete(Unit)
+                awaitCancellation()
+            },
+            WeatherCacheStore.forLocation(root, location),
+            preferences,
+            clock,
+        )
+        val refresh = launch { repository.refreshIfStale(force = true) }
+        started.await()
+
+        repository.clearCache()
+        refresh.join()
+
+        assertTrue(refresh.isCancelled)
+        assertNull(repository.latest())
+    }
+
+    @Test
     fun `failed refresh never overwrites last valid forecast`() = runBlocking {
         val cached = forecast(now.minusSeconds(7 * 3600))
         val root = temporaryDirectory()
-        val cache = WeatherCacheStore(root)
+        val cache = WeatherCacheStore.forLocation(root, location)
         cache.write(cached)
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
         val preferences = WeatherPreferencesStore(File(root, "${UUID.randomUUID()}.preferences_pb"), scope)
@@ -169,7 +302,7 @@ class WeatherInfrastructureTest {
     @Test
     fun `valid retry after blocks immediate manual retry`() = runBlocking {
         val root = temporaryDirectory()
-        val cache = WeatherCacheStore(root)
+        val cache = WeatherCacheStore.forLocation(root, location)
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
         val preferences = WeatherPreferencesStore(File(root, "${UUID.randomUUID()}.preferences_pb"), scope)
         val count = AtomicInteger()
@@ -229,7 +362,7 @@ class WeatherInfrastructureTest {
         fetchDelayMillis: Long = 0,
     ): Fixture {
         val root = temporaryDirectory()
-        val cache = WeatherCacheStore(root)
+        val cache = WeatherCacheStore.forLocation(root, location)
         cached?.let { cache.write(it) }
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
         val preferences = WeatherPreferencesStore(File(root, "${UUID.randomUUID()}.preferences_pb"), scope)
@@ -243,7 +376,7 @@ class WeatherInfrastructureTest {
         return Fixture(repository, preferences, count)
     }
 
-    private fun forecast(fetchedAt: Instant): WeatherForecast {
+    private fun forecast(fetchedAt: Instant, atLocation: WeatherLocation = location): WeatherForecast {
         val hours = (0..2).map { offset ->
             val from = now.plusSeconds(offset * 3600L)
             WeatherHour(
@@ -260,10 +393,17 @@ class WeatherInfrastructureTest {
                 windDirectionDegrees = 180.0,
             )
         }
-        return WeatherForecast("open-meteo", location, fetchedAt, hours.first().validFrom, hours.last().validUntilExclusive, hours)
+        return WeatherForecast("open-meteo", atLocation, fetchedAt, hours.first().validFrom, hours.last().validUntilExclusive, hours)
     }
 
     private fun temporaryDirectory(): File = Files.createTempDirectory("weather-${UUID.randomUUID()}").toFile()
+
+    private fun objectiveCacheFile(filesDir: File, extension: String): File =
+        requireNotNull(
+            File(filesDir, WeatherCacheStore.DIRECTORY_NAME)
+                .listFiles()
+                ?.singleOrNull { it.name.startsWith(WeatherCacheStore.OWNED_PREFIX) && it.extension == extension },
+        )
 
     private data class Fixture(
         val repository: DefaultWeatherRepository,

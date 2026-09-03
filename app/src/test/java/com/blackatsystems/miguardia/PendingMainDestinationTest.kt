@@ -1,5 +1,7 @@
 package com.blackatsystems.miguardia
 
+import com.blackatsystems.miguardia.ui.help.HelpReadState
+import com.blackatsystems.miguardia.ui.help.HelpUiState
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.cancelAndJoin
@@ -105,5 +107,33 @@ class PendingMainDestinationTest {
         }
 
         assertEquals(request, coordinator.state.value)
+    }
+
+    @Test
+    fun `onboarding gate retains destination then consumes it exactly once`() = runBlocking {
+        val coordinator = PendingMainDestinationCoordinator()
+        val request = coordinator.capture(
+            PendingMainDestination(MainActivity.ACTION_OPEN_CALENDAR),
+        )
+        var executions = 0
+        val pendingHelp = HelpUiState(
+            readState = HelpReadState.Ready(0),
+            workSetupResolved = true,
+            rootIsV2Ready = true,
+        )
+        if (pendingHelp.canConsumePendingDestination) {
+            coordinator.consume(request) { executions++ }
+        }
+        assertEquals(request, coordinator.state.value)
+        assertEquals(0, executions)
+
+        val completedHelp = pendingHelp.copy(readState = HelpReadState.Ready(1))
+        if (completedHelp.canConsumePendingDestination) {
+            coordinator.consume(request) { executions++ }
+        }
+        coordinator.consume(request) { executions++ }
+
+        assertEquals(1, executions)
+        assertNull(coordinator.state.value)
     }
 }

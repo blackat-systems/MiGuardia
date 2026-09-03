@@ -21,6 +21,7 @@ import com.blackatsystems.miguardia.core.domain.backup.BackupPreview
 import com.blackatsystems.miguardia.core.domain.backup.BackupRecordClassification
 import com.blackatsystems.miguardia.core.domain.backup.BackupRecordKey
 import com.blackatsystems.miguardia.core.domain.backup.BackupValue
+import com.blackatsystems.miguardia.core.domain.backup.MiGuardiaBackupContract
 import com.blackatsystems.miguardia.core.domain.work.WorkSector
 import com.blackatsystems.miguardia.ui.theme.MiGuardiaTheme
 import org.junit.Assert.assertEquals
@@ -80,7 +81,7 @@ class BackupComposeTest {
         compose.onNodeWithTag("backup-choose-merge").performScrollTo().assertIsNotEnabled()
         compose.onNodeWithTag("backup-choose-replace").assertIsEnabled()
         compose.onNodeWithText("La línea temporal es distinta: combinar está bloqueado.").assertIsDisplayed()
-        compose.onNodeWithText("Formato de copia V1 · datos internos Room V5").assertIsDisplayed()
+        compose.onNodeWithText("Formato de copia V1 · datos internos Room V6").assertIsDisplayed()
     }
 
     @Test
@@ -258,7 +259,7 @@ class BackupComposeTest {
             backupId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
             createdAtEpochMillis = 1_788_131_400_000L,
             zoneId = "America/Argentina/Buenos_Aires",
-            roomVersion = 5,
+            roomVersion = MiGuardiaBackupContract.ROOM_VERSION,
             timelineId = null,
             photoMode = BackupPhotoMode.OMITTED,
             tableCounts = mapOf("objectives" to 1),

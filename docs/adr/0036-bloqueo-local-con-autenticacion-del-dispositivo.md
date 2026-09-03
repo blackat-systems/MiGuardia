@@ -164,6 +164,22 @@ Fuentes oficiales:
 - [`Activity.setRecentsScreenshotEnabled`](https://developer.android.com/reference/android/app/Activity#setRecentsScreenshotEnabled(boolean));
 - [`FLAG_SECURE` para actividades sensibles](https://developer.android.com/security/fraud-prevention/activities#flag_secure).
 
+### Nota de compatibilidad aceptada el 2026-09-03
+
+La QA física posterior demostró que Biometric 1.1.0 resolvía transitivamente
+Fragment 1.2.5 y que esa versión cerraba la actividad al ejecutar un launcher
+moderno de permisos: rechazaba el código de solicitud antes de entregar el
+callback a MiGuardia. El puente manual inicialmente incorporado no podía
+resolver una excepción anterior a ese callback.
+
+Se fija por ello `androidx.fragment:fragment:1.9.0`, versión estable oficial y
+Apache 2.0, y se retira el puente manual. Esta dependencia correctiva no agrega
+red, permisos, servicios, almacenamiento, telemetría ni una nueva frontera de
+producto. Mantener 1.2.5 o implementar otro puente propio se descarta porque no
+evita el punto real del cierre. Una regresión instrumentada ejecuta ahora el
+launcher real. La matriz dirigida pasó 30/30 en Samsung API 36 después del
+cambio.
+
 ## Consecuencias
 
 - La persona usa la misma huella o credencial que ya protege el teléfono.

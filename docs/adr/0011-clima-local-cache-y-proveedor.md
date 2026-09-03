@@ -5,6 +5,14 @@
 - Revisión de API, licencia, términos, privacidad y precios: 2026-08-16
 - Autoridad: MAIN, después de auditar la entrega de `CLIMA`
 
+> La ubicación fija de V1 y el rechazo del permiso de ubicación quedan
+> reemplazados para MiGuardia 2.0 por ADR 0038, incluida la búsqueda consciente
+> de una dirección mediante Android y la captura puntual aproximada. Las
+> secciones de este documento que nombran Córdoba fija, caché único o cero
+> permisos describen V1 y son históricas. Los contratos de transporte,
+> proveedor reemplazable, degradación offline y ausencia de polling continúan
+> vigentes.
+
 ## Contexto
 
 MiGuardia necesita mostrar el pronóstico que cubre el intervalo real de una guardia y enriquecer opcionalmente las notificaciones, sin convertir la red en una dependencia del calendario, de las alarmas o de los datos laborales. La V1 tiene una única ubicación funcional: Córdoba Capital. No usa ubicación del teléfono ni la dirección histórica de un objetivo.

@@ -32,6 +32,7 @@ import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
+import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
@@ -42,6 +43,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.sync.Mutex
@@ -82,9 +84,18 @@ class WidgetRuntime(
     @Volatile
     private var observationDate: LocalDate? = null
     private var observationJob: Job? = null
-    private var weatherRefreshJob: Job? = null
     @Volatile
     private var pausedForRestore = false
+    private val queuedWeatherRefreshes = QueuedWeatherRefreshes<UUID>(
+        scope = scope,
+        isEnabled = { !pausedForRestore },
+        refreshItem = { shiftId ->
+            localDataStore().shifts.getById(shiftId)?.let { shift ->
+                weatherRuntime.refreshIfEnabled(shift, force = false)
+            }
+        },
+        afterBatch = { refreshNow(allowWeatherRefresh = false) },
+    )
     val isPausedForRestore: Boolean get() = pausedForRestore
 
     fun start() {
@@ -239,7 +250,8 @@ class WidgetRuntime(
                     sources.observe(today),
                     preferences.instances,
                     weatherRuntime.preferences.preferences,
-                ) { source, configs, _ -> source to configs }
+                    weatherRuntime.cacheInvalidations.onStart { emit(null) },
+                ) { source, configs, _, _ -> source to configs }
                     .collect { (source, configs) ->
                         latestSource = source
                         val currentInstalled = renderer.installedIds().validIds()
@@ -291,12 +303,17 @@ class WidgetRuntime(
         )
         val weatherBoundary = weatherExpiryBoundary(result, installedConfigs)
         scheduler.schedule(weatherBoundary?.let { minOf(eventBoundary, it) } ?: eventBoundary)
-        if (
-            allowWeatherRefresh && installedConfigs.any { (id, config) ->
-                renderer.isExpandedLayout(id) && weatherCanRefresh(result, config)
+        if (allowWeatherRefresh) {
+            val weatherShiftIds = installedConfigs.mapNotNull { (id, config) ->
+                if (renderer.isExpandedLayout(id) && weatherCanRefresh(result, config)) {
+                    weatherShift(result, config)?.shiftId
+                } else {
+                    null
+                }
+            }.distinct()
+            if (weatherShiftIds.isNotEmpty()) {
+                queuedWeatherRefreshes.request(weatherShiftIds)
             }
-        ) {
-            refreshWeatherAfterLocalRender()
         }
     }
 
@@ -305,8 +322,9 @@ class WidgetRuntime(
         config: WidgetInstancePreferences,
     ): String? {
         val shift = weatherShift(result, config) ?: return null
+        val rawShift = localDataStore().shifts.getById(shift.shiftId) ?: return null
         val global = weatherRuntime.preferences.current()
-        val forecast = weatherRuntime.repository.latest()
+        val forecast = weatherRuntime.latestForShift(rawShift)
         return widgetWeatherTextFromCache(shift, global, forecast, result.referenceInstant)
     }
 
@@ -325,16 +343,20 @@ class WidgetRuntime(
     ): Instant? {
         val global = weatherRuntime.preferences.current()
         if (!global.enabled || !global.providerExplanationAccepted) return null
-        val forecast = weatherRuntime.repository.latest() ?: return null
-        if (weatherFreshness(forecast.fetchedAt, result.referenceInstant) != WeatherFreshness.FRESH) return null
-        val isVisible = configs.any { (id, config) ->
-            if (!renderer.isExpandedLayout(id)) return@any false
-            val shift = weatherShift(result, config) ?: return@any false
-            summarizeShiftWeather(shift.start, shift.end, forecast).coverage == WeatherCoverage.COMPLETE
+        val expiryCandidates = configs.mapNotNull { (id, config) ->
+            if (!renderer.isExpandedLayout(id)) return@mapNotNull null
+            val shift = weatherShift(result, config) ?: return@mapNotNull null
+            val rawShift = localDataStore().shifts.getById(shift.shiftId) ?: return@mapNotNull null
+            val forecast = weatherRuntime.latestForShift(rawShift) ?: return@mapNotNull null
+            if (weatherFreshness(forecast.fetchedAt, result.referenceInstant) != WeatherFreshness.FRESH) {
+                return@mapNotNull null
+            }
+            if (summarizeShiftWeather(shift.start, shift.end, forecast).coverage != WeatherCoverage.COMPLETE) {
+                return@mapNotNull null
+            }
+            forecast.fetchedAt.plus(Duration.ofMinutes(60)).plusSeconds(1)
         }
-        if (!isVisible) return null
-        return forecast.fetchedAt.plus(Duration.ofMinutes(60)).plusSeconds(1)
-            .takeIf { it > result.referenceInstant }
+        return expiryCandidates.minOrNull()?.takeIf { it > result.referenceInstant }
     }
 
     private fun weatherShift(
@@ -357,20 +379,6 @@ class WidgetRuntime(
         return result.events.firstOrNull { it.identity == identity } as? NextEventItem.Shift
     }
 
-    private fun refreshWeatherAfterLocalRender() {
-        if (weatherRefreshJob?.isActive == true) return
-        weatherRefreshJob = scope.launch {
-            try {
-                weatherRuntime.refreshIfEnabled(force = false)
-                refreshNow(allowWeatherRefresh = false)
-            } catch (cancelled: CancellationException) {
-                throw cancelled
-            } catch (_: Exception) {
-                // El evento local ya fue renderizado; Clima se degrada a ausencia de dato.
-            }
-        }
-    }
-
     private suspend fun awaitRestorations(ids: IntArray) {
         ids.validIds().map { id -> restoreBarriers[id] }.filterNotNull().forEach { it.await() }
     }
@@ -380,8 +388,7 @@ class WidgetRuntime(
         observationJob = null
         observationDate = null
         latestSource = null
-        weatherRefreshJob?.cancel()
-        weatherRefreshJob = null
+        queuedWeatherRefreshes.cancel()
         scheduler.cancel()
         unregisterConfigurationReceiver()
     }

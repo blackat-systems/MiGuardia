@@ -117,15 +117,19 @@ fun WeatherSurfaceHost(state: WeatherUiState, actions: WeatherActions) {
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     ScreenHeading(
-                        title = if (state.surface == WeatherSurface.GLOBAL) "Clima" else "Clima de la guardia",
+                        title = if (state.surface == WeatherSurface.GLOBAL) "Clima" else "Clima de la jornada",
                         supportingText = if (state.surface == WeatherSurface.GLOBAL) {
-                            "Córdoba Capital fija. MiGuardia no usa la ubicación del teléfono."
+                            "Pronóstico según la ubicación guardada en cada objetivo."
                         } else {
                             state.selectedShift?.let { "${it.objectiveNameSnapshot} · ${it.timeRange()}" }.orEmpty()
                         },
                     )
                     state.errorMessage?.let {
-                        PersistentMessage(it, onDismiss = actions.clearMessage, onRetry = actions.refresh)
+                        PersistentMessage(
+                            it,
+                            onDismiss = actions.clearMessage,
+                            onRetry = if (state.surface == WeatherSurface.SHIFT) actions.refresh else null,
+                        )
                     }
                     if (state.isLoading) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) { CircularProgressIndicator() }
@@ -152,8 +156,8 @@ private fun GlobalWeatherSettings(
         title = "Proveedor y privacidad",
         supportingText = "Pronóstico orientativo; no reemplaza alertas oficiales ni garantiza condiciones de trabajo.",
     ) {
-        Text("Open-Meteo recibe sólo la coordenada fija de Córdoba y la IP habitual de conexión. No se envían guardias, objetivos, direcciones ni datos del teléfono.")
-        Text("El endpoint gratuito se usa únicamente durante desarrollo privado/no comercial. Una publicación comercial requiere un plan compatible u otro proveedor.")
+        Text("Open-Meteo recibe sólo las coordenadas del objetivo consultado y la IP habitual de conexión. No se envían guardias, nombres, direcciones ni notas.")
+        Text("El servicio gratuito se usa únicamente durante desarrollo privado/no comercial. Una publicación comercial requiere un plan compatible u otro proveedor.")
         AttributionLinks(openUrl)
         if (!state.preferences.providerExplanationAccepted) {
             Button(onClick = actions.enableAfterExplanation, modifier = Modifier.fillMaxWidth()) {
@@ -177,20 +181,15 @@ private fun GlobalWeatherSettings(
         )
         Text("Los avisos reducidos u ocultos nunca muestran clima. Un fallo meteorológico no retrasa ni elimina el aviso.")
     }
-    SectionCard("Caché privado") {
-        Text(cacheStatus(state))
-        Button(
-            enabled = state.preferences.enabled && !state.isRefreshing,
-            onClick = actions.refresh,
-            modifier = Modifier.fillMaxWidth(),
-        ) { Text(if (state.isRefreshing) "Actualizando…" else "Actualizar") }
-        TextButton(onClick = { confirmClear = true }) { Text("Borrar caché meteorológico") }
+    SectionCard("Pronósticos guardados") {
+        Text("Cada objetivo conserva su último pronóstico. Puede actualizarse al mostrar una jornada de ese lugar.")
+        TextButton(onClick = { confirmClear = true }) { Text("Borrar pronósticos guardados") }
     }
     if (confirmClear) {
         AlertDialog(
             onDismissRequest = { confirmClear = false },
-            title = { Text("Borrar caché") },
-            text = { Text("Se eliminará únicamente el último pronóstico guardado. La configuración se conserva.") },
+            title = { Text("Borrar pronósticos guardados") },
+            text = { Text("Se eliminarán los pronósticos guardados de todos los objetivos. La configuración se conserva.") },
             confirmButton = {
                 TextButton(onClick = { confirmClear = false; actions.clearCache() }) { Text("Borrar") }
             },
@@ -207,19 +206,21 @@ private fun ShiftWeatherDetail(
 ) {
     val shift = state.selectedShift
     if (shift == null) {
-        Text(state.ineligibleReason ?: "No pudimos encontrar la guardia.")
+        Text(state.ineligibleReason ?: "No pudimos encontrar la jornada.")
         return
     }
     ShiftIdentity(shift)
-    Text("Ubicación: Córdoba Capital, Argentina", fontWeight = FontWeight.SemiBold)
-    state.ineligibleReason?.let { Text(it) }
+    Text(
+        "Pronóstico para: ${state.weatherLocationName ?: "ubicación sin configurar"}",
+        fontWeight = FontWeight.SemiBold,
+    )
     if (!state.preferences.providerExplanationAccepted) {
         SectionCard(
             title = "Proveedor y privacidad",
             supportingText = "Pronóstico orientativo; no reemplaza alertas oficiales ni garantiza condiciones de trabajo.",
         ) {
-            Text("Open-Meteo recibe sólo la coordenada fija de Córdoba y la IP habitual de conexión. No se envían guardias, objetivos, direcciones ni datos del teléfono.")
-            Text("El endpoint gratuito se usa únicamente durante desarrollo privado/no comercial. Una publicación comercial requiere un plan compatible u otro proveedor.")
+            Text("Open-Meteo recibe sólo las coordenadas del objetivo consultado y la IP habitual de conexión. No se envían guardias, nombres, direcciones ni notas.")
+            Text("El servicio gratuito se usa únicamente durante desarrollo privado/no comercial. Una publicación comercial requiere un plan compatible u otro proveedor.")
             AttributionLinks(openUrl)
             Button(onClick = actions.enableAfterExplanation, modifier = Modifier.fillMaxWidth()) {
                 Text("Entiendo y habilitar Clima")
@@ -229,20 +230,27 @@ private fun ShiftWeatherDetail(
     }
     if (!state.preferences.enabled) {
         SectionCard("Clima desactivado") {
-            Text("La explicación ya fue aceptada. Podés volver a habilitar el pronóstico fijo de Córdoba.")
+            Text("La explicación ya fue aceptada. Podés volver a habilitar el pronóstico por objetivo.")
             Button(onClick = actions.enableAfterExplanation, modifier = Modifier.fillMaxWidth()) { Text("Habilitar Clima") }
         }
         AttributionLinks(openUrl)
         return
     }
+    state.ineligibleReason?.let { reason ->
+        SectionCard("Clima no disponible para esta jornada") {
+            Text(reason)
+        }
+        AttributionLinks(openUrl)
+        return
+    }
     state.shiftSummary?.let { summary -> SummaryCard(summary, state.preferences.unitSystem) }
-        ?: Text("No hay pronóstico disponible para esta guardia.")
+        ?: Text("Todavía no hay un pronóstico disponible para esta jornada.")
     Text(cacheStatus(state))
-    if (state.shiftHours.isEmpty()) {
-        Text("No hay horas cubiertas dentro del horizonte disponible.")
-    } else {
+    if (state.forecast != null && state.shiftHours.isEmpty()) {
+        Text("El pronóstico guardado no incluye las horas de esta jornada.")
+    } else if (state.shiftHours.isNotEmpty()) {
         SectionCard(
-            title = "Temperatura durante la guardia",
+            title = "Clima durante la jornada",
             supportingText = "Deslizá hacia la derecha.",
         ) {
             LazyRow(
@@ -267,7 +275,7 @@ private fun ShiftWeatherDetail(
 
 @Composable
 private fun ShiftIdentity(shift: Shift) {
-    SectionCard("Guardia") {
+    SectionCard("Jornada") {
         Text("${shift.objectiveNameSnapshot} (${shift.objectiveAbbreviationSnapshot})", fontWeight = FontWeight.Bold)
         Text(shift.localStartDate.format(DateFormatter))
         Text(shift.timeRange())
@@ -277,18 +285,20 @@ private fun ShiftIdentity(shift: Shift) {
 @Composable
 private fun SummaryCard(summary: ShiftWeatherSummary, unit: WeatherUnitSystem) {
     SectionCard(
-        title = "Resumen de toda la guardia",
+        title = "Resumen de toda la jornada",
         supportingText = when (summary.coverage) {
             WeatherCoverage.COMPLETE -> "Cobertura completa"
             WeatherCoverage.PARTIAL -> "Cobertura parcial: no se rellenan horas faltantes"
-            WeatherCoverage.NONE -> "Fuera del horizonte disponible"
+            WeatherCoverage.NONE -> "Sin horas disponibles para esta jornada"
         },
     ) {
         summary.condition?.let { Text("Condición relevante: ${it.spanishLabel()}") }
         rangeText("Temperatura", summary.minimumTemperatureCelsius, summary.maximumTemperatureCelsius, unit)?.let { Text(it) }
         rangeText("Sensación", summary.minimumApparentTemperatureCelsius, summary.maximumApparentTemperatureCelsius, unit)?.let { Text(it) }
         summary.maximumPrecipitationProbabilityPercent?.let { Text("Máxima probabilidad de lluvia: $it %") }
-        summary.precipitationMillimeters?.let { Text("Precipitación estimada en el intervalo: ${"%.1f".format(Locale.US, it)} mm") }
+        summary.precipitationMillimeters?.let {
+            Text("Precipitación estimada en el intervalo: ${"%.1f".format(SpanishArgentina, it)} mm")
+        }
         summary.maximumWindSpeedKmh?.let { Text("Viento máximo: ${it.toInt()} km/h") }
         summary.maximumWindGustKmh?.let { Text("Ráfaga máxima: ${it.toInt()} km/h") }
     }
@@ -318,8 +328,20 @@ private fun HourCard(hour: WeatherHour, unit: WeatherUnitSystem, zoneId: ZoneId)
                 color = MaterialTheme.colorScheme.primary,
             )
             Text(hour.condition.spanishLabel(), maxLines = 2)
+            hour.apparentTemperatureCelsius?.let {
+                Text("Sensación ${temperatureText(it, unit)}", style = MaterialTheme.typography.bodySmall)
+            }
             hour.precipitationProbabilityPercent?.let {
                 Text("Lluvia $it %", style = MaterialTheme.typography.bodySmall)
+            }
+            hour.precipitationMillimeters?.let {
+                Text("${"%.1f".format(SpanishArgentina, it)} mm", style = MaterialTheme.typography.bodySmall)
+            }
+            hour.windSpeedKmh?.let {
+                Text("Viento ${it.toInt()} km/h", style = MaterialTheme.typography.bodySmall)
+            }
+            hour.windGustKmh?.let {
+                Text("Ráfagas ${it.toInt()} km/h", style = MaterialTheme.typography.bodySmall)
             }
         }
     }

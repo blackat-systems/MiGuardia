@@ -10,6 +10,7 @@
     <string name="weather">Clima</string>
     <string name="widget_home">Widget de inicio</string>
     <string name="appearance">Apariencia</string>
+    <string name="help">Ayuda</string>
     <string name="open_menu">Abrir menú</string>
     <string name="drawer_tagline">Tu guardia, clara y a mano.</string>
     <string name="drawer_section_work">Tu trabajo</string>
@@ -24,6 +25,7 @@
     <string name="drawer_weather_description">Pronóstico para tus guardias.</string>
     <string name="drawer_widget_description">Próximo evento en la pantalla de inicio.</string>
     <string name="drawer_appearance_description">Tema y zoom de MiGuardia.</string>
+    <string name="drawer_help_description">Consultá funciones o repetí el recorrido inicial.</string>
     <string name="next_guard">Próximo evento</string>
     <string name="appearance_intro">Elegí cómo se ve MiGuardia sin modificar los ajustes de Android.</string>
     <string name="previous_month">Mes anterior</string>

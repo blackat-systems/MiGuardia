@@ -80,7 +80,7 @@ import com.blackatsystems.miguardia.core.database.entity.WorkplaceRuleRevisionEn
         IndependentExtraWorkRecordEntity::class,
         AvailabilityWindowEntity::class,
     ],
-    version = 5,
+    version = 6,
     exportSchema = true,
 )
 internal abstract class MiGuardiaV2Database : RoomDatabase() {
@@ -111,7 +111,7 @@ internal abstract class MiGuardiaV2Database : RoomDatabase() {
             context.applicationContext,
             MiGuardiaV2Database::class.java,
             databaseName,
-        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5).build()
+        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6).build()
 
         internal val MIGRATION_1_2: Migration = object : Migration(1, 2) {
             override fun migrate(db: SupportSQLiteDatabase) {
@@ -450,6 +450,13 @@ internal abstract class MiGuardiaV2Database : RoomDatabase() {
                     "CREATE INDEX IF NOT EXISTS `index_availability_windows_configurationRevisionId_timelineId_sector` " +
                         "ON `availability_windows` (`configurationRevisionId`, `timelineId`, `sector`)",
                 )
+            }
+        }
+
+        internal val MIGRATION_5_6: Migration = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `objectives` ADD COLUMN `weatherLatitude` REAL")
+                db.execSQL("ALTER TABLE `objectives` ADD COLUMN `weatherLongitude` REAL")
             }
         }
 

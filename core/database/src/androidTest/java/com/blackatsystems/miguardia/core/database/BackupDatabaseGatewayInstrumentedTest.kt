@@ -9,8 +9,11 @@ import com.blackatsystems.miguardia.core.domain.backup.BackupRecord
 import com.blackatsystems.miguardia.core.domain.backup.BackupTable
 import com.blackatsystems.miguardia.core.domain.backup.BackupValue
 import com.blackatsystems.miguardia.core.domain.backup.InvalidBackupException
+import com.blackatsystems.miguardia.core.domain.backup.MiGuardiaBackupContract
 import com.blackatsystems.miguardia.core.domain.backup.MiGuardiaBackupSchemaV5
+import com.blackatsystems.miguardia.core.domain.backup.MiGuardiaBackupSchemaV6
 import com.blackatsystems.miguardia.core.domain.backup.estimateDecodedDatabaseBytes
+import com.blackatsystems.miguardia.core.domain.backup.upgradeSupportedBackupSchema
 import java.time.Instant
 import java.time.LocalDate
 import java.util.UUID
@@ -46,7 +49,7 @@ class BackupDatabaseGatewayInstrumentedTest {
     }
 
     @Test
-    fun capturesAndReopensExactlyTheTwentySevenLogicalTables() = runBlocking {
+    fun capturesAndReopensExactlyTheTwentySevenLogicalTablesIncludingWeatherLocation() = runBlocking {
         val expected = fullSnapshot()
 
         store.backups.validateCandidate(expected)
@@ -56,6 +59,37 @@ class BackupDatabaseGatewayInstrumentedTest {
         store.backups.verifyLiveAfterReopen(expected)
         assertEquals(27, expected.tables.size)
         assertTrue(expected.tables.all { it.records.size == 1 })
+    }
+
+    @Test
+    fun roomFiveBackupUpgradesIntoRoomSixWithNullWeatherLocationAndReopens() = runBlocking {
+        val current = fullSnapshot()
+        val legacy = current.copy(
+            roomVersion = MiGuardiaBackupContract.LEGACY_ROOM_VERSION_V5,
+            roomIdentityHash = MiGuardiaBackupContract.LEGACY_ROOM_IDENTITY_HASH_V5,
+            tables = MiGuardiaBackupSchemaV5.tables.map { legacySpec ->
+                val table = current.tables.single { it.name == legacySpec.name }
+                table.copy(
+                    columns = legacySpec.columns,
+                    records = table.records.map { record ->
+                        if (table.name == "objectives") {
+                            record.copy(values = record.values.dropLast(2))
+                        } else {
+                            record
+                        }
+                    },
+                )
+            },
+        ).also(MiGuardiaBackupSchemaV5::requireValid)
+        val upgraded = upgradeSupportedBackupSchema(legacy)
+
+        store.backups.validateCandidate(upgraded)
+        store.backups.replace(upgraded)
+
+        assertEquals(upgraded, store.backups.capture())
+        val objective = upgraded.tables.single { it.name == "objectives" }.records.single()
+        assertEquals(listOf(BackupValue.Null, BackupValue.Null), objective.values.takeLast(2))
+        store.backups.verifyLiveAfterReopen(upgraded)
     }
 
     @Test
@@ -233,7 +267,7 @@ class BackupDatabaseGatewayInstrumentedTest {
 
     private fun emptySnapshot(): BackupDatabaseSnapshot = BackupDatabaseSnapshot(
         timelineId = null,
-        tables = MiGuardiaBackupSchemaV5.tables.map { spec ->
+        tables = MiGuardiaBackupSchemaV6.tables.map { spec ->
             BackupTable(spec.name, spec.columns, spec.primaryKey, emptyList())
         },
     )
@@ -249,6 +283,7 @@ class BackupDatabaseGatewayInstrumentedTest {
             "objectives" to row(
                 text(OBJECTIVE_ID), text("Objetivo ficticio"), text("FIC"), text("Dirección ficticia"),
                 nullValue(), integer(1), integer(CREATED_AT), integer(CREATED_AT),
+                real(WEATHER_LATITUDE), real(WEATHER_LONGITUDE),
             ),
             "shifts" to row(
                 text(SHIFT_ID), integer(plannedStart), integer(plannedEnd), text(ZONE_ID), text("2026-08-10"),
@@ -360,7 +395,7 @@ class BackupDatabaseGatewayInstrumentedTest {
         )
         return BackupDatabaseSnapshot(
             timelineId = TIMELINE_ID,
-            tables = MiGuardiaBackupSchemaV5.tables.map { spec ->
+            tables = MiGuardiaBackupSchemaV6.tables.map { spec ->
                 BackupTable(spec.name, spec.columns, spec.primaryKey, listOf(requireNotNull(rows[spec.name])))
             },
         )
@@ -370,6 +405,7 @@ class BackupDatabaseGatewayInstrumentedTest {
     private fun text(value: String): BackupValue = BackupValue.Text(value)
     private fun integer(value: Int): BackupValue = BackupValue.Integer(value.toLong())
     private fun integer(value: Long): BackupValue = BackupValue.Integer(value)
+    private fun real(value: Double): BackupValue = BackupValue.Real(value)
     private fun nullValue(): BackupValue = BackupValue.Null
 
     private fun BackupDatabaseSnapshot.withObjectives(records: List<BackupRecord>) = copy(
@@ -386,6 +422,8 @@ class BackupDatabaseGatewayInstrumentedTest {
             BackupValue.Integer(1),
             BackupValue.Integer(CREATED_AT),
             BackupValue.Integer(CREATED_AT),
+            BackupValue.Null,
+            BackupValue.Null,
         ),
     )
 
@@ -402,6 +440,8 @@ class BackupDatabaseGatewayInstrumentedTest {
         const val CREATED_AT = 1_788_131_400_000L
         const val HOUR_MILLIS = 3_600_000L
         const val COLOR = -13_408_615L
+        const val WEATHER_LATITUDE = -31.4201
+        const val WEATHER_LONGITUDE = -64.1888
         const val OBJECTIVE_ID = "11111111-1111-4111-8111-111111111111"
         const val OTHER_OBJECTIVE_ID = "22222222-2222-4222-8222-222222222222"
         const val TIMELINE_ID = "30000000-0000-4000-8000-000000000001"

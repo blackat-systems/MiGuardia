@@ -90,6 +90,7 @@ class NavigationDrawerComposeTest {
             "Clima",
             "Widget de inicio",
             "Copias y restauración",
+            "Ayuda",
             "Bloqueo de acceso",
             "Apariencia",
         ).forEach { label ->
@@ -108,6 +109,7 @@ class NavigationDrawerComposeTest {
         compose.onNodeWithTag("main-destination-summary").assertIsNotSelected()
         compose.onNodeWithTag("main-destination-access_lock").assertIsNotSelected()
         compose.onNodeWithTag("main-destination-appearance").assertIsNotSelected()
+        compose.onNodeWithTag("main-destination-help").assertIsNotSelected()
     }
 
     @Test
@@ -127,6 +129,10 @@ class NavigationDrawerComposeTest {
             "Tema de MiGuardia",
             "Zoom de MiGuardia",
         ).forEach { compose.onNodeWithText(it).assertExists() }
+        compose.onNodeWithTag("main-navigation-drawer").assertIsNotDisplayed()
+
+        openDestination("main-destination-help", "Ayuda")
+        compose.onNodeWithTag("help-screen").assertIsDisplayed()
         compose.onNodeWithTag("main-navigation-drawer").assertIsNotDisplayed()
 
         compose.onNodeWithContentDescription("Abrir menú").performClick()

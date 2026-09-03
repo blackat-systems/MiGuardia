@@ -28,15 +28,15 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class WeatherInfrastructureInstrumentedTest {
     private val location = WeatherLocation(
-        "cordoba-capital",
-        "Córdoba Capital, Argentina",
-        -31.4201,
-        -64.1888,
-        ZoneId.of("America/Argentina/Cordoba"),
+        "00000000-0000-0000-0000-000000000901",
+        "Hospital ficticio",
+        -34.6037,
+        -58.3816,
+        ZoneId.of("America/Argentina/Buenos_Aires"),
     )
 
     @Test
-    fun manifestAddsOnlyInternetForWeatherAndRejectsCleartext() {
+    fun manifestAllowsOnlyApproximateObjectiveLocationAndRejectsCleartext() {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
         val info = context.packageManager.getPackageInfo(
             context.packageName,
@@ -44,9 +44,10 @@ class WeatherInfrastructureInstrumentedTest {
         )
         val permissions = info.requestedPermissions.orEmpty().toSet()
         assertTrue(Manifest.permission.INTERNET in permissions)
+        assertTrue(Manifest.permission.ACCESS_COARSE_LOCATION in permissions)
         assertFalse(Manifest.permission.ACCESS_NETWORK_STATE in permissions)
         assertFalse(Manifest.permission.ACCESS_FINE_LOCATION in permissions)
-        assertFalse(Manifest.permission.ACCESS_COARSE_LOCATION in permissions)
+        assertFalse(Manifest.permission.ACCESS_BACKGROUND_LOCATION in permissions)
         assertFalse(Manifest.permission.READ_EXTERNAL_STORAGE in permissions)
         assertEquals(0, context.applicationInfo.flags and ApplicationInfo.FLAG_USES_CLEARTEXT_TRAFFIC)
     }
@@ -123,7 +124,7 @@ class WeatherInfrastructureInstrumentedTest {
         val apparent = if (nullTemperature) "[null,20.0]" else "[19.0,20.0]"
         return """
             {
-              "timezone":"America/Argentina/Cordoba",
+              "timezone":"America/Argentina/Buenos_Aires",
               "hourly_units":{
                 "time":"unixtime","temperature_2m":"°C","apparent_temperature":"°C",
                 "precipitation_probability":"%","precipitation":"mm","weather_code":"wmo code",

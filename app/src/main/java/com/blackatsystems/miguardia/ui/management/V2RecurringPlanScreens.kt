@@ -32,6 +32,11 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -40,8 +45,10 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.TextRange
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import com.blackatsystems.miguardia.core.domain.model.MonthlyOrdinal
 import com.blackatsystems.miguardia.core.domain.model.RecurringPlanAggregate
@@ -53,7 +60,10 @@ import com.blackatsystems.miguardia.core.domain.shift.RecurringOccupantKind
 import com.blackatsystems.miguardia.core.domain.shift.ShiftPlanningWarning
 import com.blackatsystems.miguardia.core.domain.shift.describeRecurringPattern
 import com.blackatsystems.miguardia.core.domain.work.WorkSetupState
+import com.blackatsystems.miguardia.ui.components.AdvancedOptionsSection
+import com.blackatsystems.miguardia.ui.components.ContextHelp
 import com.blackatsystems.miguardia.ui.components.PersistentMessage
+import com.blackatsystems.miguardia.ui.components.removedOnlyAutomaticSeparator
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -212,7 +222,7 @@ private fun RecurringHeader(state: V2RecurringUiState, onBack: () -> Unit) {
                 V2RecurringStage.PLANS,
                 V2RecurringStage.PLAN_DETAIL,
                 -> "Planes recurrentes"
-                V2RecurringStage.PREVIEW -> "Revisar plan"
+                V2RecurringStage.PREVIEW -> "Confirmar repetición"
                 else -> when (state.mode) {
                     V2RecurringMode.CREATE -> "Repetir jornadas"
                     V2RecurringMode.CHANGE -> "Cambiar desde una fecha"
@@ -271,16 +281,25 @@ private fun PlanDetailStep(state: V2RecurringUiState, actions: V2RecurringAction
         if (latest.kind == RecurringPlanRevisionKind.FINALIZED) "Estado: finalizado" else "Estado: activo",
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
-    Text("Revisiones guardadas: ${plan.revisions.size}")
-    Text("Ocurrencias registradas: ${plan.occurrences.size}")
     val counts = plan.occurrences.groupingBy { it.state }.eachCount()
-    Text(
-        "Automáticas ${counts[com.blackatsystems.miguardia.core.domain.model.RecurringOccurrenceState.AUTOMATIC] ?: 0} · " +
-            "personalizadas ${counts[com.blackatsystems.miguardia.core.domain.model.RecurringOccurrenceState.CUSTOMIZED] ?: 0} · " +
-            "excluidas ${counts[com.blackatsystems.miguardia.core.domain.model.RecurringOccurrenceState.EXCLUDED] ?: 0} · " +
-            "retiradas ${counts[com.blackatsystems.miguardia.core.domain.model.RecurringOccurrenceState.RETIRED] ?: 0}",
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
+    AdvancedOptionsSection(
+        help = ContextHelp(
+            title = "Historia de la repetición",
+            whatItDoes = "Muestra el detalle técnico de las veces que este plan cambió y de las jornadas que quedaron personalizadas, excluidas o retiradas.",
+            howToUseIt = "Abrilo sólo si necesitás entender por qué una fecha ya no sigue exactamente el plan.",
+            example = "Si cambiaste sólo el horario de un lunes, esa jornada aparece como personalizada.",
+        ),
+    ) {
+        Text("Cambios guardados: ${plan.revisions.size}")
+        Text("Jornadas registradas: ${plan.occurrences.size}")
+        Text(
+            "Automáticas ${counts[com.blackatsystems.miguardia.core.domain.model.RecurringOccurrenceState.AUTOMATIC] ?: 0} · " +
+                "personalizadas ${counts[com.blackatsystems.miguardia.core.domain.model.RecurringOccurrenceState.CUSTOMIZED] ?: 0} · " +
+                "excluidas ${counts[com.blackatsystems.miguardia.core.domain.model.RecurringOccurrenceState.EXCLUDED] ?: 0} · " +
+                "retiradas ${counts[com.blackatsystems.miguardia.core.domain.model.RecurringOccurrenceState.RETIRED] ?: 0}",
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
     if (latest.kind == RecurringPlanRevisionKind.ACTIVE) {
         val suggestedCut = maxOf(state.referenceDate ?: latest.effectiveFrom, latest.effectiveFrom)
         Button(
@@ -311,7 +330,7 @@ private fun EditorStep(state: V2RecurringUiState, actions: V2RecurringActions) {
         Text(cut.fullDate(), fontWeight = FontWeight.Bold, modifier = Modifier.testTag("v2-recurring-cut-date"))
         Text("El pasado y las excepciones no se modificarán.", color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
-    Text("1. Plantilla guardada", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+    Text("1. Elegí un horario", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
     Column(modifier = Modifier.selectableGroup(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         state.templateOptions.forEach { option ->
             val selected = option.template.id == state.selectedTemplateId
@@ -351,29 +370,10 @@ private fun EditorStep(state: V2RecurringUiState, actions: V2RecurringActions) {
             }
         }
     }
-    OutlinedTextField(
-        value = state.position,
-        onValueChange = actions.updatePosition,
-        enabled = !state.isLoading && !state.isSaving,
-        label = { Text("Puesto o función (opcional)") },
-        modifier = Modifier
-            .fillMaxWidth()
-            .testTag("v2-recurring-position"),
-        singleLine = true,
-    )
-
-    Text("2. Patrón", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-    V2RecurringPatternKind.entries.forEach { kind ->
-        ChoiceRow(
-            label = kind.visibleName(),
-            selected = state.patternKind == kind,
-            enabled = !state.isLoading && !state.isSaving,
-            tag = "v2-recurring-pattern-${kind.name}",
-            onClick = { actions.selectPattern(kind) },
-        )
-    }
-    when (state.patternKind) {
-        V2RecurringPatternKind.WEEKDAYS -> DayOfWeek.entries.forEach { day ->
+    Text("2. Elegí los días", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+    if (state.patternKind == V2RecurringPatternKind.WEEKDAYS) {
+        Text("Marcá los días de la semana en los que trabajás.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        DayOfWeek.entries.forEach { day ->
             MultiChoiceRow(
                 label = day.visibleName(),
                 selected = day in state.weekdays,
@@ -382,80 +382,138 @@ private fun EditorStep(state: V2RecurringUiState, actions: V2RecurringActions) {
                 onClick = { actions.toggleWeekday(day) },
             )
         }
-        V2RecurringPatternKind.EVERY_N_DAYS,
-        V2RecurringPatternKind.EVERY_N_WEEKS,
-        -> OutlinedTextField(
-            value = state.intervalText,
-            onValueChange = actions.updateInterval,
-            enabled = !state.isLoading && !state.isSaving,
-            label = { Text("Cantidad positiva") },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            modifier = Modifier
-                .fillMaxWidth()
-                .testTag("v2-recurring-interval"),
-            singleLine = true,
+    } else {
+        Text(
+            "Forma elegida: ${state.patternKind.visibleName()}. Podés cambiarla en Opciones avanzadas.",
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        V2RecurringPatternKind.MONTHLY -> {
-            Text("Orden dentro del mes", fontWeight = FontWeight.SemiBold)
-            MonthlyOrdinal.entries.forEach { ordinal ->
-                ChoiceRow(
-                    label = ordinal.visibleName(),
-                    selected = state.monthlyOrdinal == ordinal,
-                    enabled = !state.isLoading && !state.isSaving,
-                    tag = "v2-recurring-ordinal-${ordinal.name}",
-                    onClick = { actions.selectMonthlyOrdinal(ordinal) },
-                )
-            }
-            Text("Día de la semana", fontWeight = FontWeight.SemiBold)
-            DayOfWeek.entries.forEach { day ->
-                ChoiceRow(
-                    label = day.visibleName(),
-                    selected = state.monthlyDayOfWeek == day,
-                    enabled = !state.isLoading && !state.isSaving,
-                    tag = "v2-recurring-monthly-day-${day.name}",
-                    onClick = { actions.selectMonthlyDay(day) },
-                )
-            }
-        }
     }
 
-    Text("3. Rango inclusivo", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-    OutlinedTextField(
+    Text("3. Elegí desde cuándo y hasta cuándo", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+    AutomaticRecurringDateField(
         value = state.startDateText,
         onValueChange = actions.updateStartDate,
         enabled = state.cutDate == null && !state.isLoading && !state.isSaving,
-        label = { Text("Inicio (AAAA-MM-DD)") },
+        label = "Desde",
         modifier = Modifier
             .fillMaxWidth()
             .testTag("v2-recurring-start-date"),
-        singleLine = true,
     )
-    OutlinedTextField(
+    AutomaticRecurringDateField(
         value = state.endDateText,
         onValueChange = actions.updateEndDate,
         enabled = !state.isLoading && !state.isSaving,
-        label = { Text("Final (AAAA-MM-DD)") },
+        label = "Hasta",
         modifier = Modifier
             .fillMaxWidth()
             .testTag("v2-recurring-end-date"),
-        singleLine = true,
     )
 
-    Text("4. Si una fecha ya está ocupada", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-    RecurringConflictPolicy.entries.forEach { policy ->
-        ChoiceRow(
-            label = policy.visibleName(),
-            selected = state.conflictPolicy == policy,
-            enabled = !state.isLoading && !state.isSaving,
-            tag = "v2-recurring-policy-${policy.name}",
-            onClick = { actions.selectConflictPolicy(policy) },
+    advancedRecurringRequirementMessage(state)?.let { message ->
+        Text(
+            "$message Está en Opciones avanzadas.",
+            color = MaterialTheme.colorScheme.primary,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.testTag("v2-recurring-advanced-required"),
         )
     }
-    if (state.conflictPolicy == RecurringConflictPolicy.KEEP_BOTH) {
-        Text(
-            "Mantener ambas puede dejar dos jornadas el mismo día. La vista previa mostrará cada advertencia.",
-            color = MaterialTheme.colorScheme.error,
+    AdvancedOptionsSection(
+        initiallyExpanded = state.patternKind != V2RecurringPatternKind.WEEKDAYS ||
+            state.position.isNotBlank() ||
+            state.conflictPolicy != RecurringConflictPolicy.KEEP_EXISTING,
+        help = ContextHelp(
+            title = "Opciones para repetir jornadas",
+            whatItDoes = "Permite usar repeticiones menos comunes, agregar un puesto y decidir qué hacer si una fecha ya tiene otra jornada.",
+            howToUseIt = "Para la mayoría alcanza con elegir días de la semana. Abrí esto sólo si repetís cada cierta cantidad de días o semanas, una vez por mes, o necesitás resolver fechas ocupadas.",
+            example = "Si trabajás una jornada cada 3 días, elegí Cada cierta cantidad de días. Si una fecha ya está ocupada, Conservar lo existente evita reemplazarla.",
+        ),
+    ) {
+        OutlinedTextField(
+            value = state.position,
+            onValueChange = actions.updatePosition,
+            enabled = !state.isLoading && !state.isSaving,
+            label = { Text("Puesto o función (opcional)") },
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag("v2-recurring-position"),
+            singleLine = true,
         )
+        Text("Otra forma de repetición", fontWeight = FontWeight.SemiBold)
+        V2RecurringPatternKind.entries.forEach { kind ->
+            ChoiceRow(
+                label = kind.visibleName(),
+                selected = state.patternKind == kind,
+                enabled = !state.isLoading && !state.isSaving,
+                tag = "v2-recurring-pattern-${kind.name}",
+                onClick = { actions.selectPattern(kind) },
+            )
+        }
+        when (state.patternKind) {
+            V2RecurringPatternKind.WEEKDAYS -> Unit
+            V2RecurringPatternKind.EVERY_N_DAYS,
+            V2RecurringPatternKind.EVERY_N_WEEKS,
+            -> OutlinedTextField(
+                value = state.intervalText,
+                onValueChange = actions.updateInterval,
+                enabled = !state.isLoading && !state.isSaving,
+                label = {
+                    Text(
+                        if (state.patternKind == V2RecurringPatternKind.EVERY_N_DAYS) {
+                            "Cantidad de días"
+                        } else {
+                            "Cantidad de semanas"
+                        },
+                    )
+                },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("v2-recurring-interval"),
+                singleLine = true,
+            )
+            V2RecurringPatternKind.MONTHLY -> {
+                Text("Qué semana del mes", fontWeight = FontWeight.SemiBold)
+                MonthlyOrdinal.entries.forEach { ordinal ->
+                    ChoiceRow(
+                        label = ordinal.visibleName(),
+                        selected = state.monthlyOrdinal == ordinal,
+                        enabled = !state.isLoading && !state.isSaving,
+                        tag = "v2-recurring-ordinal-${ordinal.name}",
+                        onClick = { actions.selectMonthlyOrdinal(ordinal) },
+                    )
+                }
+                Text("Qué día", fontWeight = FontWeight.SemiBold)
+                DayOfWeek.entries.forEach { day ->
+                    ChoiceRow(
+                        label = day.visibleName(),
+                        selected = state.monthlyDayOfWeek == day,
+                        enabled = !state.isLoading && !state.isSaving,
+                        tag = "v2-recurring-monthly-day-${day.name}",
+                        onClick = { actions.selectMonthlyDay(day) },
+                    )
+                }
+            }
+        }
+        Text("Si una fecha ya tiene una jornada", fontWeight = FontWeight.SemiBold)
+        Text(
+            "Las jornadas que cambiaste a mano o tienen datos protegidos siempre se conservan.",
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        RecurringConflictPolicy.entries.forEach { policy ->
+            ChoiceRow(
+                label = policy.visibleName(),
+                selected = state.conflictPolicy == policy,
+                enabled = !state.isLoading && !state.isSaving,
+                tag = "v2-recurring-policy-${policy.name}",
+                onClick = { actions.selectConflictPolicy(policy) },
+            )
+        }
+        if (state.conflictPolicy == RecurringConflictPolicy.KEEP_BOTH) {
+            Text(
+                "Puede quedar más de una jornada el mismo día. MiGuardia te lo mostrará antes de guardar.",
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
     }
     Button(
         onClick = actions.review,
@@ -463,8 +521,23 @@ private fun EditorStep(state: V2RecurringUiState, actions: V2RecurringActions) {
         modifier = Modifier
             .fillMaxWidth()
             .testTag("v2-recurring-review"),
-    ) { Text("Ver todas las fechas") }
+    ) { Text("Ver cuántas jornadas se crearán") }
 }
+
+internal fun advancedRecurringRequirementMessage(state: V2RecurringUiState): String? =
+    when (state.patternKind) {
+        V2RecurringPatternKind.EVERY_N_DAYS,
+        V2RecurringPatternKind.EVERY_N_WEEKS,
+        -> if (state.intervalText.toIntOrNull()?.takeIf { it > 0 } == null) {
+            "Ingresá una cantidad entera mayor que cero."
+        } else {
+            null
+        }
+
+        V2RecurringPatternKind.WEEKDAYS,
+        V2RecurringPatternKind.MONTHLY,
+        -> null
+    }
 
 @Composable
 private fun PreviewStep(state: V2RecurringUiState, actions: V2RecurringActions) {
@@ -478,35 +551,6 @@ private fun PreviewStep(state: V2RecurringUiState, actions: V2RecurringActions) 
     }
     Text("Inicio ${state.startDateText} · final ${state.endDateText}")
     Text("Cantidad total de fechas: ${preview.dates.size}", fontWeight = FontWeight.Bold)
-    if (preview.dates.isNotEmpty()) {
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(max = 360.dp)
-                .testTag("v2-recurring-exact-dates"),
-            color = MaterialTheme.colorScheme.surfaceContainerLow,
-            shape = MaterialTheme.shapes.medium,
-        ) {
-            Column(
-                modifier = Modifier
-                    .padding(12.dp)
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(5.dp),
-            ) {
-                preview.dates.forEach { date ->
-                    val result = preview.results.firstOrNull { it.date == date }
-                    Text("${date.fullDate()} — ${result?.action?.visibleName() ?: "sin cambio"}")
-                    result?.occupants.orEmpty().forEach { occupant ->
-                        Text(
-                            "  Ocupa: ${occupant.shift.objectiveNameSnapshot} · ${occupant.kind.visibleName()}",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-            }
-        }
-    }
-    Text("Libres: ${preview.freeDates.size} · ocupadas: ${preview.occupiedDates.size} · protegidas: ${preview.protectedDates.size}")
     if (preview.medicalLeaveDates.isNotEmpty()) {
         Text(
             "Carpeta médica: ${preview.medicalLeaveDates.sorted().joinToString { it.fullDate() }}",
@@ -514,6 +558,44 @@ private fun PreviewStep(state: V2RecurringUiState, actions: V2RecurringActions) 
         )
     }
     WarningList(preview)
+    AdvancedOptionsSection(
+        help = ContextHelp(
+            title = "Detalle de las fechas",
+            whatItDoes = "Muestra una por una las fechas que MiGuardia calculó y qué ocurrirá en las que ya están ocupadas.",
+            howToUseIt = "No necesitás abrirlo para guardar. Usalo si querés comprobar una fecha puntual antes de confirmar.",
+            example = "Podés revisar si un feriado o una jornada que cargaste antes se conservará.",
+        ),
+    ) {
+        if (preview.dates.isNotEmpty()) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 360.dp)
+                    .testTag("v2-recurring-exact-dates"),
+                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                shape = MaterialTheme.shapes.medium,
+            ) {
+                Column(
+                    modifier = Modifier
+                        .padding(12.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(5.dp),
+                ) {
+                    preview.dates.forEach { date ->
+                        val result = preview.results.firstOrNull { it.date == date }
+                        Text("${date.fullDate()} — ${result?.action?.visibleName() ?: "sin cambio"}")
+                        result?.occupants.orEmpty().forEach { occupant ->
+                            Text(
+                                "  Ocupa: ${occupant.shift.objectiveNameSnapshot} · ${occupant.kind.visibleName()}",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        Text("Libres: ${preview.freeDates.size} · ocupadas: ${preview.occupiedDates.size} · protegidas: ${preview.protectedDates.size}")
+    }
     if (state.mode == V2RecurringMode.FINALIZE) {
         val retired = preview.results.count { it.action == RecurringDateAction.RETIRE_AUTOMATIC }
         val preserved = preview.results.count {
@@ -523,7 +605,10 @@ private fun PreviewStep(state: V2RecurringUiState, actions: V2RecurringActions) 
                 RecurringDateAction.KEEP_EXCLUDED,
             )
         }
-        Text("Se retirarán $retired jornadas automáticas intactas y se conservarán $preserved excepciones o protecciones.")
+        Text(
+            "Se retirarán $retired jornadas creadas por la repetición que no tenían cambios y " +
+                "se conservarán $preserved excepciones o protecciones.",
+        )
     }
     Button(
         onClick = actions.save,
@@ -534,7 +619,7 @@ private fun PreviewStep(state: V2RecurringUiState, actions: V2RecurringActions) 
     ) {
         Text(
             when (state.mode) {
-                V2RecurringMode.CREATE -> "Crear plan y jornadas"
+                V2RecurringMode.CREATE -> "Guardar repetición"
                 V2RecurringMode.CHANGE -> "Cambiar todo lo futuro"
                 V2RecurringMode.FINALIZE -> "Finalizar desde esta fecha"
             },
@@ -557,6 +642,74 @@ private fun WarningList(preview: RecurringMutationPreview) {
             color = MaterialTheme.colorScheme.error,
         )
     }
+}
+
+@Composable
+private fun AutomaticRecurringDateField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+) {
+    var editingValue by remember {
+        mutableStateOf(TextFieldValue(value, selection = TextRange(value.length)))
+    }
+    LaunchedEffect(value) {
+        if (value != editingValue.text) {
+            editingValue = TextFieldValue(value, selection = TextRange(value.length))
+        }
+    }
+    OutlinedTextField(
+        value = editingValue,
+        onValueChange = { candidate ->
+            val next = applyAutomaticDateEdit(editingValue, candidate) ?: return@OutlinedTextField
+            editingValue = next
+            onValueChange(next.text)
+        },
+        modifier = modifier,
+        enabled = enabled,
+        label = { Text(label) },
+        placeholder = { Text("DD/MM/AAAA") },
+        supportingText = { Text("Escribí 8 números. MiGuardia agrega las barras.") },
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        singleLine = true,
+    )
+}
+
+internal fun applyAutomaticDateEdit(
+    previous: TextFieldValue,
+    candidate: TextFieldValue,
+): TextFieldValue? {
+    val formatted = formatRecurringDateInput(candidate.text) ?: return null
+    val selectedWholePreviousValue = previous.selection.start != previous.selection.end &&
+        minOf(previous.selection.start, previous.selection.end) == 0 &&
+        maxOf(previous.selection.start, previous.selection.end) == previous.text.length
+    val preserveDeletion = candidate.text.length < previous.text.length &&
+        !selectedWholePreviousValue &&
+        !removedOnlyAutomaticSeparator(previous.text, candidate.text, '/')
+    if (preserveDeletion) {
+        return candidate.copy(
+            selection = TextRange(
+                candidate.selection.start.coerceIn(0, candidate.text.length),
+                candidate.selection.end.coerceIn(0, candidate.text.length),
+            ),
+        )
+    }
+    return TextFieldValue(
+        text = formatted,
+        selection = TextRange(
+            start = automaticDateCursorOffset(candidate.text, candidate.selection.start, formatted.length),
+            end = automaticDateCursorOffset(candidate.text, candidate.selection.end, formatted.length),
+        ),
+    )
+}
+
+private fun automaticDateCursorOffset(rawValue: String, rawOffset: Int, formattedLength: Int): Int {
+    if (rawOffset >= rawValue.length) return formattedLength
+    val digitOffset = rawValue.take(rawOffset.coerceIn(0, rawValue.length)).count { it in '0'..'9' }
+    val separators = (if (digitOffset > 2) 1 else 0) + (if (digitOffset > 4) 1 else 0)
+    return (digitOffset + separators).coerceIn(0, formattedLength)
 }
 
 @Composable
@@ -624,14 +777,14 @@ private fun RevisionSummary(revision: com.blackatsystems.miguardia.core.domain.m
 
 private fun V2RecurringPatternKind.visibleName(): String = when (this) {
     V2RecurringPatternKind.WEEKDAYS -> "Días de la semana"
-    V2RecurringPatternKind.EVERY_N_DAYS -> "Cada N días"
-    V2RecurringPatternKind.EVERY_N_WEEKS -> "Cada N semanas"
-    V2RecurringPatternKind.MONTHLY -> "Mensual por orden y día"
+    V2RecurringPatternKind.EVERY_N_DAYS -> "Cada cierta cantidad de días"
+    V2RecurringPatternKind.EVERY_N_WEEKS -> "Cada cierta cantidad de semanas"
+    V2RecurringPatternKind.MONTHLY -> "Un día de cada mes"
 }
 
 private fun RecurringConflictPolicy.visibleName(): String = when (this) {
     RecurringConflictPolicy.KEEP_EXISTING -> "Conservar lo existente"
-    RecurringConflictPolicy.REPLACE_AUTOMATIC_INTACT -> "Reemplazar sólo jornadas automáticas intactas"
+    RecurringConflictPolicy.REPLACE_AUTOMATIC_INTACT -> "Reemplazar jornadas repetidas sin cambios"
     RecurringConflictPolicy.KEEP_BOTH -> "Mantener ambas"
     RecurringConflictPolicy.CANCEL -> "Cancelar"
 }
@@ -640,7 +793,7 @@ private fun RecurringDateAction.visibleName(): String = when (this) {
     RecurringDateAction.CREATE -> "se creará"
     RecurringDateAction.UPDATE_AUTOMATIC -> "se actualizará"
     RecurringDateAction.KEEP_EXISTING_AS_EXCLUDED -> "se omitirá y quedará excluida"
-    RecurringDateAction.REPLACE_AUTOMATIC -> "reemplazará una automática intacta"
+    RecurringDateAction.REPLACE_AUTOMATIC -> "reemplazará una jornada repetida sin cambios"
     RecurringDateAction.KEEP_BOTH -> "se mantendrán ambas"
     RecurringDateAction.PRESERVE_PROTECTED -> "se conservará por protección"
     RecurringDateAction.RETIRE_AUTOMATIC -> "se retirará"
@@ -652,7 +805,7 @@ private fun RecurringDateAction.visibleName(): String = when (this) {
 
 private fun RecurringOccupantKind.visibleName(): String = when (this) {
     RecurringOccupantKind.MANUAL -> "jornada manual protegida"
-    RecurringOccupantKind.AUTOMATIC_INTACT -> "automática intacta"
+    RecurringOccupantKind.AUTOMATIC_INTACT -> "jornada repetida sin cambios"
     RecurringOccupantKind.CUSTOMIZED -> "personalizada protegida"
     RecurringOccupantKind.PROTECTED -> "protegida por estado, nota, aviso u horario real"
 }
@@ -674,11 +827,11 @@ private fun DayOfWeek.visibleName(): String = when (this) {
 }
 
 private fun MonthlyOrdinal.visibleName(): String = when (this) {
-    MonthlyOrdinal.FIRST -> "Primero"
-    MonthlyOrdinal.SECOND -> "Segundo"
-    MonthlyOrdinal.THIRD -> "Tercero"
-    MonthlyOrdinal.FOURTH -> "Cuarto"
-    MonthlyOrdinal.LAST -> "Último"
+    MonthlyOrdinal.FIRST -> "Primera"
+    MonthlyOrdinal.SECOND -> "Segunda"
+    MonthlyOrdinal.THIRD -> "Tercera"
+    MonthlyOrdinal.FOURTH -> "Cuarta"
+    MonthlyOrdinal.LAST -> "Última"
 }
 
 private fun LocalDate.fullDate(): String = format(FULL_DATE_FORMATTER)

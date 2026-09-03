@@ -13,11 +13,13 @@ import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.unit.dp
 import com.blackatsystems.miguardia.core.domain.model.MonthlyOrdinal
 import com.blackatsystems.miguardia.core.domain.model.Objective
@@ -59,7 +61,7 @@ class V2RecurringPlanComposeTest {
     val compose = createComposeRule()
 
     @Test
-    fun formExposesOnlyTheFourFrozenPatternsAndEveryExactConflictChoice() {
+    fun normalFormShowsWeekdaysAndKeepsPatternsAndConflictsInAdvancedOptions() {
         val selectedPatterns = mutableListOf<V2RecurringPatternKind>()
         val selectedPolicies = mutableListOf<RecurringConflictPolicy>()
         setSurface(
@@ -70,6 +72,22 @@ class V2RecurringPlanComposeTest {
             ),
         )
 
+        compose.onNodeWithTag("v2-recurring-weekday-MONDAY").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("v2-recurring-position").assertDoesNotExist()
+        V2RecurringPatternKind.entries.forEach { pattern ->
+            compose.onNodeWithTag("v2-recurring-pattern-${pattern.name}").assertDoesNotExist()
+        }
+        RecurringConflictPolicy.entries.forEach { policy ->
+            compose.onNodeWithTag("v2-recurring-policy-${policy.name}").assertDoesNotExist()
+        }
+
+        compose.onNodeWithTag("advanced-options-toggle").performScrollTo().performClick()
+        compose.onNodeWithText("Cada cierta cantidad de días").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Cada cierta cantidad de semanas").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Un día de cada mes").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Reemplazar jornadas repetidas sin cambios")
+            .performScrollTo()
+            .assertIsDisplayed()
         V2RecurringPatternKind.entries.forEach { pattern ->
             compose.onNodeWithTag("v2-recurring-pattern-${pattern.name}")
                 .performScrollTo()
@@ -91,6 +109,22 @@ class V2RecurringPlanComposeTest {
     }
 
     @Test
+    fun invalidIntervalRemainsExplainedAfterAdvancedOptionsAreCollapsed() {
+        setSurface(
+            state = formState().copy(
+                patternKind = V2RecurringPatternKind.EVERY_N_DAYS,
+                intervalText = "",
+            ),
+        )
+
+        compose.onNodeWithTag("v2-recurring-advanced-required").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("v2-recurring-interval").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("advanced-options-toggle").performScrollTo().performClick()
+        compose.onNodeWithTag("v2-recurring-interval").assertDoesNotExist()
+        compose.onNodeWithText("Está en Opciones avanzadas.", substring = true).assertIsDisplayed()
+    }
+
+    @Test
     fun weekdaysExposeCheckboxSemanticsBecauseTheyAllowMultipleSelections() {
         setSurface(formState())
 
@@ -103,11 +137,38 @@ class V2RecurringPlanComposeTest {
     }
 
     @Test
+    fun dateFieldsAddSlashesWhileThePersonTypesOnlyNumbers() {
+        var state by mutableStateOf(formState().copy(startDateText = "", endDateText = ""))
+        compose.setContent {
+            MiGuardiaTheme {
+                Box(Modifier.size(width = 820.dp, height = 460.dp)) {
+                    V2RecurringPlanSurfaceHost(
+                        state = state,
+                        actions = V2RecurringActions(
+                            updateStartDate = { state = state.copy(startDateText = it) },
+                            updateEndDate = { state = state.copy(endDateText = it) },
+                        ),
+                    )
+                }
+            }
+        }
+
+        compose.onNodeWithTag("v2-recurring-start-date")
+            .performScrollTo()
+            .performTextInput("02092026")
+        compose.onNodeWithTag("v2-recurring-start-date").assertTextContains("02/09/2026")
+        compose.onNodeWithTag("v2-recurring-end-date")
+            .performScrollTo()
+            .performTextInput("03102026")
+        compose.onNodeWithTag("v2-recurring-end-date").assertTextContains("03/10/2026")
+    }
+
+    @Test
     fun changeKeepsCutDateImmutableAndNamesTemplateTimeColorPositionAndWarningsInText() {
         val state = formState().copy(
             mode = V2RecurringMode.CHANGE,
             cutDate = START,
-            startDateText = START.toString(),
+            startDateText = "23/08/2026",
             position = "Puesto ficticio",
             conflictPolicy = RecurringConflictPolicy.KEEP_BOTH,
         )
@@ -119,7 +180,7 @@ class V2RecurringPlanComposeTest {
         compose.onNodeWithText("Trabajo habitual · 21:00–06:00").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Color #FF336699").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText(
-            "Mantener ambas puede dejar dos jornadas el mismo día. La vista previa mostrará cada advertencia.",
+            "Puede quedar más de una jornada el mismo día. MiGuardia te lo mostrará antes de guardar.",
         ).performScrollTo().assertIsDisplayed()
     }
 
@@ -140,6 +201,9 @@ class V2RecurringPlanComposeTest {
         compose.onNodeWithText("Carpeta médica: lunes 24 de agosto de 2026")
             .performScrollTo()
             .assertIsDisplayed()
+        compose.onNodeWithTag("v2-recurring-exact-dates").assertDoesNotExist()
+        compose.onNodeWithTag("advanced-options-toggle").performScrollTo().performClick()
+        compose.onNodeWithTag("v2-recurring-exact-dates").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("martes 1 de septiembre de 2026 — se creará")
             .performScrollTo()
             .assertIsDisplayed()
@@ -178,7 +242,7 @@ class V2RecurringPlanComposeTest {
     }
 
     @Test
-    fun planDetailOffersFutureChangeAndFinalizationAndNamesEveryOccurrenceState() {
+    fun planDetailKeepsTechnicalOccurrenceStatesInAdvancedOptions() {
         val aggregate = aggregate()
         setSurface(
             V2RecurringUiState(
@@ -191,6 +255,9 @@ class V2RecurringPlanComposeTest {
             ),
         )
         compose.onNodeWithText("Estado: activo").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Automáticas 0 · personalizadas 0 · excluidas 0 · retiradas 0")
+            .assertDoesNotExist()
+        compose.onNodeWithTag("advanced-options-toggle").performScrollTo().performClick()
         compose.onNodeWithText("Automáticas 0 · personalizadas 0 · excluidas 0 · retiradas 0")
             .performScrollTo()
             .assertIsDisplayed()
@@ -266,8 +333,8 @@ class V2RecurringPlanComposeTest {
         weekdays = setOf(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY),
         monthlyOrdinal = MonthlyOrdinal.LAST,
         monthlyDayOfWeek = DayOfWeek.FRIDAY,
-        startDateText = START.toString(),
-        endDateText = START.plusMonths(1).toString(),
+        startDateText = "23/08/2026",
+        endDateText = "23/09/2026",
     )
 
     private fun preview(dates: List<LocalDate>) = RecurringMutationPreview(

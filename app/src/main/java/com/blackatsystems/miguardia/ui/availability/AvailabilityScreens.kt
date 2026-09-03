@@ -31,6 +31,7 @@ import com.blackatsystems.miguardia.core.domain.model.AvailabilityTemporalState
 import com.blackatsystems.miguardia.core.domain.model.AvailabilityWindowRecord
 import com.blackatsystems.miguardia.core.domain.work.AvailabilityLabel
 import com.blackatsystems.miguardia.ui.components.EmptyState
+import com.blackatsystems.miguardia.ui.components.AutomaticTimeField
 import com.blackatsystems.miguardia.ui.components.PersistentMessage
 import com.blackatsystems.miguardia.ui.components.SectionCard
 import com.blackatsystems.miguardia.ui.components.SurfaceHeader
@@ -147,7 +148,7 @@ private fun AvailabilityOverview(state: AvailabilityUiState, actions: Availabili
         val label = source.labelOn(source.today)
         SectionCard(
             title = label?.displayName ?: "No uso disponibilidad",
-            supportingText = "Esta elección tiene vigencia por fecha y no modifica tu referencia de horas.",
+            supportingText = "Esta elección tiene vigencia por fecha y no modifica tu meta de horas.",
         ) {
             Text("Ventanas registradas: ${source.windows.size}")
         }
@@ -227,12 +228,10 @@ private fun WindowEditor(state: AvailabilityUiState, actions: AvailabilityAction
             title = "Fecha ${draft.ownerDate ?: ""}",
             supportingText = "La fecha dueña no cambia al corregir. Para moverla, eliminá y creá otra ventana.",
         ) { }
-        OutlinedTextField(
+        AutomaticTimeField(
             value = draft.startTime,
             onValueChange = { actions.updateWindow(draft.copy(startTime = it)) },
-            label = { Text("Inicio") },
-            supportingText = { Text("HH:mm") },
-            singleLine = true,
+            label = "Inicio",
             modifier = Modifier.fillMaxWidth().testTag("availability-start"),
         )
         OutlinedTextField(
@@ -243,12 +242,10 @@ private fun WindowEditor(state: AvailabilityUiState, actions: AvailabilityAction
             singleLine = true,
             modifier = Modifier.fillMaxWidth().testTag("availability-end-date"),
         )
-        OutlinedTextField(
+        AutomaticTimeField(
             value = draft.endTime,
             onValueChange = { actions.updateWindow(draft.copy(endTime = it)) },
-            label = { Text("Final") },
-            supportingText = { Text("HH:mm") },
-            singleLine = true,
+            label = "Final",
             modifier = Modifier.fillMaxWidth().testTag("availability-end"),
         )
         Text("Una disponibilidad puede superar 24 horas. No se combina automáticamente con ventanas contiguas.")
@@ -389,14 +386,14 @@ fun AvailabilityHoursSection(state: AvailabilityUiState) {
     if (source.calculationError != null) {
         SectionCard(
             title = "Disponibilidad",
-            supportingText = "Las ventanas siguen guardadas, pero el desglose no está disponible hasta poder recalcularlo.",
+            supportingText = "Las ventanas siguen guardadas, pero el detalle no está disponible hasta poder recalcularlo.",
         ) { Text(source.calculationError) }
         return
     }
     val totals = source.totals ?: return
     SectionCard(
         title = "Disponibilidad",
-        supportingText = "Este desglose no altera el avance de horas trabajadas.",
+        supportingText = "Este detalle no altera el avance de horas trabajadas.",
     ) {
         if (state.loadState == AvailabilityLoadState.ERROR) {
             Text("No pudimos actualizar los datos. Se muestra la última información válida.")

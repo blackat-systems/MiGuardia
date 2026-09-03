@@ -80,6 +80,35 @@ class RgbColorPickerComposeTest {
         compose.onNodeWithText("Cambiar color").performScrollTo().assertIsDisplayed()
     }
 
+    @Test
+    fun pickerKeepsTenCommonColorsAtTheBottomAndAppliesTheChosenOne() {
+        var state by mutableStateOf(workSetupState())
+        compose.setContent {
+            MiGuardiaTheme(appZoom = AppZoom.EXTRA_LARGE) {
+                WorkSetupSurfaceHost(
+                    state = state,
+                    actions = WorkSetupActions(
+                        updateTemplateDraft = { transform ->
+                            state = state.copy(templateDraft = transform(state.templateDraft))
+                        },
+                    ),
+                )
+            }
+        }
+
+        compose.onNodeWithTag("work-template-color").performScrollTo().performClick()
+        listOf("Rojo", "Naranja", "Amarillo", "Verde", "Turquesa", "Celeste", "Azul", "Violeta", "Morado", "Rosa")
+            .forEach { name ->
+                compose.onNodeWithContentDescription("Color común $name").performScrollTo().assertIsDisplayed()
+            }
+        compose.onNodeWithContentDescription("Color común Rosa").performClick()
+        compose.onNodeWithText("Usar color").performClick()
+
+        compose.runOnIdle {
+            assertEquals(0xFFD81B60.toInt(), state.templateDraft.colorArgb)
+        }
+    }
+
     private fun workSetupState(): WorkSetupUiState {
         val timelineId = UUID(0L, 1L)
         val sector = WorkSector.NURSING

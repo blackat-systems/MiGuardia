@@ -54,6 +54,10 @@ import com.blackatsystems.miguardia.core.domain.work.PerPeriodHoursLookup
 import com.blackatsystems.miguardia.core.domain.work.WorkConfigurationHistory
 import com.blackatsystems.miguardia.core.domain.work.WorkTypeBehavior
 import com.blackatsystems.miguardia.ui.components.EmptyState
+import com.blackatsystems.miguardia.ui.components.AutomaticTimeField
+import com.blackatsystems.miguardia.ui.components.AdvancedOptionsSection
+import com.blackatsystems.miguardia.ui.components.ContextHelp
+import com.blackatsystems.miguardia.ui.components.ContextHelpButton
 import com.blackatsystems.miguardia.ui.components.PersistentMessage
 import com.blackatsystems.miguardia.ui.components.PrimaryAction
 import com.blackatsystems.miguardia.ui.components.SectionCard
@@ -166,7 +170,7 @@ private fun HoursProgressScreen(
 ) {
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(Modifier.fillMaxSize().safeDrawingPadding()) {
-            SurfaceHeader("Referencia y avance de horas", "Cerrar", actions.close)
+            SurfaceHeader("Tus horas", "Cerrar", actions.close)
             HorizontalDivider()
             when (state.loadState) {
                 HoursAndExtrasLoadState.LOADING -> NeutralLoading("Calculando tu avance…")
@@ -206,80 +210,87 @@ private fun HoursProgressContent(
     ) {
         state.message?.let { PersistentMessage(it, onDismiss = actions.clearMessage) }
         SectionCard(
-            title = referenceLabel(progress.segment.ownerRevision.value.hoursReference),
-            supportingText = if (progress.segment.endExclusive == java.time.LocalDate.MAX) {
-                "Tramo vigente desde ${progress.segment.startInclusive}, sin límite periódico."
-            } else {
-                "Tramo ${progress.segment.startInclusive} a ${progress.segment.endExclusive.minusDays(1)}."
-            },
+            title = "Tus horas",
+            supportingText = "Una vista corta de lo trabajado. MiGuardia no calcula pagos.",
         ) {
-            progress.segment.ownerRevision.value.hoursReference.periodOrNull()?.let { period ->
-                Text("Período: ${period.visibleLabel()}")
-            }
-            Text("Último inicio: ${progress.segment.ownerRevision.value.hoursReferenceStartedOn ?: "No corresponde"}")
-            Text(
-                "Próximo límite: " + if (progress.segment.endExclusive == java.time.LocalDate.MAX) {
-                    "No corresponde"
-                } else {
-                    progress.segment.endExclusive.toString()
-                },
-            )
-            Text("Meta: ${targetLabel(progress.segment.target)}", fontWeight = FontWeight.SemiBold)
-            if (progress.segment.isShortNaturalSegment) {
-                Text(
-                    "Este tramo comenzó dentro del período y usa la meta completa, sin prorrateo.",
-                    color = MaterialTheme.vigiliaColors.info,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-        }
-        SectionCard(
-            title = "Avance trabajado",
-            supportingText = "Los resultados se recalculan; no se guardan como totales.",
-        ) {
-            ProgressLine("Trabajo habitual", progress.regularWorkedMinutes)
+            ProgressLine("Horas trabajadas sin extras", progress.regularWorkedMinutes)
             ProgressLine(
                 "Horas extra",
                 Math.subtractExact(progress.totalWorkedMinutes, progress.regularWorkedMinutes),
             )
             ProgressLine("Total trabajado", progress.totalWorkedMinutes, emphasized = true)
-            ProgressLine("Ayuda a cumplir", progress.helpsMeetReferenceMinutes)
-            ProgressLine("No ayuda a cumplir", progress.doesNotHelpReferenceMinutes)
-            ProgressLine("Pendiente programado", progress.pendingScheduledMinutes)
-            progress.missingMinutes?.takeIf { it > 0L }?.let { ProgressLine("Faltan", it, emphasized = true) }
-            progress.excessMinutes?.takeIf { it > 0L }?.let { ProgressLine("Superación", it, emphasized = true) }
+            Text("Meta de horas: ${targetLabel(progress.segment.target)}", fontWeight = FontWeight.SemiBold)
+            progress.missingMinutes?.takeIf { it > 0L }?.let { ProgressLine("Te faltan", it, emphasized = true) }
+            progress.excessMinutes?.takeIf { it > 0L }?.let {
+                ProgressLine("Horas por encima de la meta", it, emphasized = true)
+            }
             progress.completionPercentage?.let { value ->
                 Text("Avance: ${"%.1f".format(SpanishArgentina, value)} %", fontWeight = FontWeight.Bold)
             }
+            ContextHelpButton(
+                ContextHelp(
+                    title = "Horas trabajadas sin extras",
+                    whatItDoes = "Muestra las horas de tus jornadas que no marcaste como extra.",
+                    howToUseIt = "Si corregís el horario real, MiGuardia usa ese horario y separa sólo los tramos que vos marcaste como extra.",
+                    example = "Guardia de 08:00 a 16:00 y extensión de 16:00 a 18:00 marcada como extra: 8 h sin extras y 2 h extra.",
+                ),
+            )
         }
-        val dedicatedExtras = progress.extrasByClass.filter { it.key.showDedicatedSummary }
-        if (dedicatedExtras.isNotEmpty()) {
-            SectionCard("Desglose de extras") {
-                dedicatedExtras.forEach { item ->
-                    Text(
-                        "${item.key.name}: ${minutesLabel(item.totalMinutes)} · " +
-                            if (item.key.helpsMeetHoursReference) "ayuda a cumplir" else "no ayuda a cumplir",
-                    )
+        AdvancedOptionsSection(
+            help = ContextHelp(
+                title = "Detalle y meta de horas",
+                whatItDoes = "Muestra cómo se calculó el total y permite configurar una meta propia.",
+                howToUseIt = "Abrilo si querés revisar qué horas cuentan para tu meta o cambiar cada cuánto vuelve a empezar.",
+                example = "Meta mensual de 160 h: si llevás 150 h que cuentan, MiGuardia muestra que faltan 10 h.",
+            ),
+        ) {
+            SectionCard(
+                title = referenceLabel(progress.segment.ownerRevision.value.hoursReference),
+                supportingText = if (progress.segment.endExclusive == java.time.LocalDate.MAX) {
+                    "Vigente desde ${progress.segment.startInclusive}."
+                } else {
+                    "Desde ${progress.segment.startInclusive} hasta ${progress.segment.endExclusive.minusDays(1)}."
+                },
+            ) {
+                progress.segment.ownerRevision.value.hoursReference.periodOrNull()?.let { period ->
+                    Text("Período: ${period.visibleLabel()}")
+                }
+                ProgressLine("Horas que cuentan para tu meta", progress.helpsMeetReferenceMinutes)
+                ProgressLine("Extras que no cuentan para la meta", progress.doesNotHelpReferenceMinutes)
+                ProgressLine("Horas de jornadas que todavía faltan trabajar", progress.pendingScheduledMinutes)
+                if (progress.segment.isShortNaturalSegment) {
+                    Text("La meta completa se mantiene aunque esta configuración haya empezado dentro del período.")
                 }
             }
-        }
-        AvailabilityHoursSection(availabilityState)
-        Button(
-            onClick = actions.openReferenceEditor,
-            modifier = Modifier.fillMaxWidth().testTag("hours-reference-configure"),
-        ) { Text("Configurar o cambiar referencia") }
-        if (progress.segment.ownerRevision.value.hoursReference is HoursReference.PerPeriod) {
-            OutlinedButton(
-                onClick = actions.openPerPeriodValueEditor,
-                modifier = Modifier.fillMaxWidth().testTag("hours-period-value-edit"),
-            ) {
-                Text(
-                    if (progress.segment.target == HoursTargetState.MissingPerPeriodValue) {
-                        "Informar meta de este período"
-                    } else {
-                        "Corregir meta de este período"
-                    },
-                )
+            val dedicatedExtras = progress.extrasByClass.filter { it.key.showDedicatedSummary }
+            if (dedicatedExtras.isNotEmpty()) {
+                SectionCard("Tus extras por tipo") {
+                    dedicatedExtras.forEach { item ->
+                        Text(
+                            "${item.key.name}: ${minutesLabel(item.totalMinutes)} · " +
+                                if (item.key.helpsMeetHoursReference) "cuenta para la meta" else "no cuenta para la meta",
+                        )
+                    }
+                }
+            }
+            AvailabilityHoursSection(availabilityState)
+            Button(
+                onClick = actions.openReferenceEditor,
+                modifier = Modifier.fillMaxWidth().testTag("hours-reference-configure"),
+            ) { Text("Configurar meta de horas") }
+            if (progress.segment.ownerRevision.value.hoursReference is HoursReference.PerPeriod) {
+                OutlinedButton(
+                    onClick = actions.openPerPeriodValueEditor,
+                    modifier = Modifier.fillMaxWidth().testTag("hours-period-value-edit"),
+                ) {
+                    Text(
+                        if (progress.segment.target == HoursTargetState.MissingPerPeriodValue) {
+                            "Informar meta de este período"
+                        } else {
+                            "Corregir meta de este período"
+                        },
+                    )
+                }
             }
         }
     }
@@ -361,7 +372,7 @@ private fun ReferenceEditorScreen(state: HoursAndExtrasUiState, actions: HoursAn
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(Modifier.fillMaxSize().safeDrawingPadding()) {
             SurfaceHeader(
-                if (draft?.stage == EditorStage.REVIEW) "Revisar referencia" else "Configurar referencia",
+                if (draft?.stage == EditorStage.REVIEW) "Revisar meta" else "Configurar meta",
                 "Atrás",
                 actions.backReference,
             )
@@ -388,10 +399,10 @@ private fun ReferenceDraftContent(state: HoursAndExtrasUiState, actions: HoursAn
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         state.message?.let { PersistentMessage(it, onDismiss = actions.clearMessage) }
-        SectionCard("¿Qué referencia usás?") {
+        SectionCard("¿Tenés una meta de horas?") {
             ReferenceChoiceRow("Todavía no la configuré", HoursReferenceChoice.PENDING, draft, actions)
-            ReferenceChoiceRow("No uso una referencia de horas", HoursReferenceChoice.NOT_USED, draft, actions)
-            ReferenceChoiceRow("Tengo una referencia, pero no sé cuántas horas", HoursReferenceChoice.UNKNOWN, draft, actions)
+            ReferenceChoiceRow("No uso una meta de horas", HoursReferenceChoice.NOT_USED, draft, actions)
+            ReferenceChoiceRow("Tengo una meta, pero no sé cuántas horas", HoursReferenceChoice.UNKNOWN, draft, actions)
             ReferenceChoiceRow("La cantidad es fija", HoursReferenceChoice.FIXED, draft, actions)
             ReferenceChoiceRow("La cantidad cambia en cada período", HoursReferenceChoice.PER_PERIOD, draft, actions)
         }
@@ -456,7 +467,7 @@ private fun ReferenceDraftContent(state: HoursAndExtrasUiState, actions: HoursAn
                 OutlinedTextField(
                     value = draft.requiredMinutes,
                     onValueChange = { value -> actions.updateReferenceDraft { it.copy(requiredMinutes = value) } },
-                    label = { Text("Minutos de referencia") },
+                    label = { Text("Meta total en minutos") },
                     supportingText = { Text("Ingresá un entero positivo. MiGuardia no propone un valor por sector.") },
                     modifier = Modifier.fillMaxWidth().testTag("hours-fixed-minutes"),
                     singleLine = true,
@@ -507,7 +518,7 @@ private fun ReferenceDraftContent(state: HoursAndExtrasUiState, actions: HoursAn
             }
         }
         PrimaryAction(
-            label = "Revisar referencia",
+            label = "Revisar meta",
             onClick = actions.reviewReference,
             enabled = !state.isSaving,
             working = state.isSaving,
@@ -575,7 +586,7 @@ private fun ReferenceReviewContent(state: HoursAndExtrasUiState, actions: HoursA
             ) { checked -> actions.updateReferenceDraft { it.copy(confirmShortFirstSegment = checked) } }
         }
         PrimaryAction(
-            label = "Guardar referencia",
+            label = "Guardar meta",
             onClick = actions.saveReference,
             enabled = !state.isSaving && draft.stage == EditorStage.REVIEW,
             working = state.isSaving,
@@ -690,12 +701,11 @@ private fun IndependentExtraDraftContent(
                 }
         }
         SectionCard("Horario exacto realizado") {
-            OutlinedTextField(
+            AutomaticTimeField(
                 value = draft.startTime,
-                onValueChange = { value -> actions.updateExtraDraft { it.copy(startTime = value.take(5)) } },
-                label = { Text("Inicio (HH:mm)") },
+                onValueChange = { value -> actions.updateExtraDraft { it.copy(startTime = value) } },
+                label = "Inicio",
                 modifier = Modifier.fillMaxWidth().testTag("extra-start-time"),
-                singleLine = true,
             )
             OutlinedTextField(
                 value = draft.endDate,
@@ -705,18 +715,17 @@ private fun IndependentExtraDraftContent(
                 modifier = Modifier.fillMaxWidth().testTag("extra-end-date"),
                 singleLine = true,
             )
-            OutlinedTextField(
+            AutomaticTimeField(
                 value = draft.endTime,
-                onValueChange = { value -> actions.updateExtraDraft { it.copy(endTime = value.take(5)) } },
-                label = { Text("Final (HH:mm)") },
+                onValueChange = { value -> actions.updateExtraDraft { it.copy(endTime = value) } },
+                label = "Final",
                 modifier = Modifier.fillMaxWidth().testTag("extra-end-time"),
-                singleLine = true,
             )
         }
-        SectionCard("Clase extra") {
+        SectionCard("Tipo de horas extra") {
             val available = source.extraClasses.filter { it.isActive || it.id == draft.extraClassId }
             if (source.extraClasses.none { it.isActive }) {
-                Text("No hay una clase extra utilizable. El borrador se conservará si abrís el catálogo.")
+                Text("No hay un tipo de horas extra utilizable. El borrador se conservará si abrís el catálogo.")
                 OutlinedButton(
                     onClick = onOpenExtraClassCatalog,
                     modifier = Modifier.fillMaxWidth().testTag("extra-open-class-catalog"),
@@ -725,7 +734,7 @@ private fun IndependentExtraDraftContent(
             available.forEach { extraClass ->
                 SimpleChoice(
                     extraClass.name +
-                        (if (extraClass.helpsMeetHoursReference) " · ayuda a cumplir" else " · no ayuda") +
+                        (if (extraClass.helpsMeetHoursReference) " · cuenta para la meta" else " · no cuenta para la meta") +
                         if (!extraClass.isActive) " · archivada" else "",
                     draft.extraClassId == extraClass.id,
                     tag = "extra-class-${extraClass.id}",
@@ -804,7 +813,7 @@ private fun IndependentExtraReviewContent(state: HoursAndExtrasUiState, actions:
                 Text("Duración: ${minutesLabel(record.durationMinutes)}")
                 Text("Tipo: ${record.snapshot.workTypeName}")
                 Text("Clase: ${record.snapshot.className}")
-                Text(if (record.snapshot.helpsMeetHoursReference) "Ayuda a cumplir la referencia" else "No ayuda a cumplir la referencia")
+                Text(if (record.snapshot.helpsMeetHoursReference) "Cuenta para tu meta" else "No cuenta para tu meta")
                 record.snapshot.position?.let { Text("Puesto: $it") }
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -914,7 +923,7 @@ fun IndependentExtraDetailCard(
             Text("${record.start.visibleAt(record.zoneId)} – ${record.end.visibleAt(record.zoneId)}")
             Text("Duración: ${minutesLabel(record.durationMinutes)}")
             Text("Clase: ${record.snapshot.className}")
-            Text(if (record.snapshot.helpsMeetHoursReference) "Ayuda a la referencia" else "No ayuda a la referencia")
+            Text(if (record.snapshot.helpsMeetHoursReference) "Cuenta para tu meta" else "No cuenta para tu meta")
             record.snapshot.position?.let { Text("Puesto: $it") }
             OutlinedButton(
                 onClick = onCorrect,
@@ -1057,10 +1066,10 @@ private fun targetLabel(target: HoursTargetState): String = when (target) {
 
 private fun referenceLabel(reference: HoursReference): String = when (reference) {
     HoursReference.PendingSetup -> "Todavía no configurada"
-    HoursReference.NotUsed -> "Sin referencia de horas"
-    is HoursReference.Unknown -> "Referencia con cantidad desconocida"
-    is HoursReference.Fixed -> "Referencia fija"
-    is HoursReference.PerPeriod -> "Referencia variable por período"
+    HoursReference.NotUsed -> "Sin meta de horas"
+    is HoursReference.Unknown -> "Meta con cantidad desconocida"
+    is HoursReference.Fixed -> "Meta fija"
+    is HoursReference.PerPeriod -> "Meta variable por período"
 }
 
 private fun HoursPeriod.visibleLabel(): String = when (this) {

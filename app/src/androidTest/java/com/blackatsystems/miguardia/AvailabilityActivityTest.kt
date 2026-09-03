@@ -49,6 +49,7 @@ class AvailabilityActivityTest {
         check(context.packageName == QA_APPLICATION_ID) {
             "La prueba integral de disponibilidad sólo puede ejecutarse contra el paquete QA."
         }
+        markOnboardingCompletedForTest()
         ownerDate = LocalDate.now(AppDefaults.zoneId())
         val start = ZonedDateTime.of(ownerDate, LocalTime.of(8, 0), AppDefaults.zoneId())
         val timestamp = Instant.now().truncatedTo(ChronoUnit.MINUTES).minus(1, ChronoUnit.DAYS)
@@ -168,6 +169,8 @@ class AvailabilityActivityTest {
         compose.onNodeWithTag("main-menu-button").performClick()
         waitForTag("drawer-action-work-setup")
         compose.onNodeWithTag("drawer-action-work-setup").performScrollTo().performClick()
+        waitForTag("advanced-options-toggle")
+        compose.onNodeWithTag("advanced-options-toggle").performScrollTo().performClick()
         waitForTag("work-setup-availability")
         compose.onNodeWithTag("work-setup-availability").performScrollTo().performClick()
         waitForTag("availability-configure")

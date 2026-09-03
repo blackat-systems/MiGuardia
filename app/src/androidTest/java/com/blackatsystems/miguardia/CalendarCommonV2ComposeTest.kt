@@ -161,7 +161,11 @@ class CalendarCommonV2ComposeTest {
                             providerExplanationAccepted = true,
                         ),
                         shiftBriefs = mapOf(
-                            shift.id to ShiftWeatherBrief(summary, WeatherFreshness.FRESH),
+                            shift.id to ShiftWeatherBrief(
+                                summary,
+                                WeatherFreshness.FRESH,
+                                shift.sourceObjectiveId,
+                            ),
                         ),
                     ),
                 )

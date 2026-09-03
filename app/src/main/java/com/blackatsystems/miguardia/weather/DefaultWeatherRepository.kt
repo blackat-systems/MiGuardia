@@ -27,13 +27,13 @@ internal class DefaultWeatherRepository(
     private val mutex = Mutex()
     @Volatile private var activeRefresh: ActiveRefresh? = null
 
-    override suspend fun latest(): WeatherForecast? = cache.read()
+    override suspend fun latest(): WeatherForecast? = cache.read().matchingLocation()
 
     override suspend fun refreshIfStale(force: Boolean): WeatherRefreshResult {
         val callerJob = checkNotNull(currentCoroutineContext()[Job])
         val selection = mutex.withLock {
             activeRefresh?.let { return@withLock RefreshSelection(it, ownsRefresh = false) }
-            val cached = cache.read()
+            val cached = cache.read().matchingLocation()
             val now = clock.instant()
             val retryUntil = preferences.current().retryAfterUntilEpochMillis?.let(java.time.Instant::ofEpochMilli)
             if (retryUntil != null && retryUntil > now) {
@@ -71,6 +71,9 @@ internal class DefaultWeatherRepository(
     }
 
     override suspend fun clearCache() {
+        val active = mutex.withLock { activeRefresh }
+        active?.ownerJob?.cancel()
+        active?.result?.join()
         cache.clear()
     }
 
@@ -106,6 +109,14 @@ internal class DefaultWeatherRepository(
         val ownerJob: Job,
         val cachedForecast: WeatherForecast?,
     )
+
+    private fun WeatherForecast?.matchingLocation(): WeatherForecast? = this?.takeIf {
+        it.location.id == this@DefaultWeatherRepository.location.id &&
+            it.location.displayName == this@DefaultWeatherRepository.location.displayName &&
+            it.location.latitude == this@DefaultWeatherRepository.location.latitude &&
+            it.location.longitude == this@DefaultWeatherRepository.location.longitude &&
+            it.location.zoneId == this@DefaultWeatherRepository.location.zoneId
+    }
 
     private data class RefreshSelection(
         val active: ActiveRefresh,

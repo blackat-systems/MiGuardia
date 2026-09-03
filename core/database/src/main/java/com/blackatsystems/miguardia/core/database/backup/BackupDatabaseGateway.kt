@@ -16,7 +16,7 @@ import com.blackatsystems.miguardia.core.domain.backup.BackupTableSpec
 import com.blackatsystems.miguardia.core.domain.backup.BackupValue
 import com.blackatsystems.miguardia.core.domain.backup.InvalidBackupException
 import com.blackatsystems.miguardia.core.domain.backup.MiGuardiaBackupContract
-import com.blackatsystems.miguardia.core.domain.backup.MiGuardiaBackupSchemaV5
+import com.blackatsystems.miguardia.core.domain.backup.MiGuardiaBackupSchemaV6
 import java.io.File
 import java.io.IOException
 import java.time.LocalDate
@@ -45,7 +45,7 @@ class BackupDatabaseGateway internal constructor(
     }
 
     suspend fun replace(snapshot: BackupDatabaseSnapshot) {
-        MiGuardiaBackupSchemaV5.requireValid(snapshot)
+        MiGuardiaBackupSchemaV6.requireValid(snapshot)
         database.withTransaction {
             val sqlite = database.openHelper.writableDatabase
             requireExpectedSchema(sqlite)
@@ -68,8 +68,8 @@ class BackupDatabaseGateway internal constructor(
         beforeReplace: suspend (BackupDatabaseSnapshot) -> Unit,
         afterReplace: suspend () -> Unit,
     ) {
-        MiGuardiaBackupSchemaV5.requireValid(expectedCurrent)
-        MiGuardiaBackupSchemaV5.requireValid(replacement)
+        MiGuardiaBackupSchemaV6.requireValid(expectedCurrent)
+        MiGuardiaBackupSchemaV6.requireValid(replacement)
         BackupMemoryBudget.requireSnapshotFits(expectedCurrent, decodedMemoryLimitBytes)
         BackupMemoryBudget.requireSnapshotFits(replacement, decodedMemoryLimitBytes)
         database.withTransaction {
@@ -95,7 +95,7 @@ class BackupDatabaseGateway internal constructor(
         snapshot: BackupDatabaseSnapshot,
         decodedMemoryLimitBytes: Long = BackupMemoryBudget.operationalHeapBytes(),
     ) {
-        MiGuardiaBackupSchemaV5.requireValid(snapshot)
+        MiGuardiaBackupSchemaV6.requireValid(snapshot)
         BackupMemoryBudget.requireSnapshotFits(snapshot, decodedMemoryLimitBytes)
         val candidateName = "miguardia-backup-candidate-${UUID.randomUUID()}.db"
         val candidate = MiGuardiaV2Database.build(context, candidateName)
@@ -183,7 +183,7 @@ class BackupDatabaseGateway internal constructor(
         tables = snapshot.tables.map { table ->
             if (table.name == "schedule_photos") table.copy(records = emptyList()) else table
         },
-    ).also(MiGuardiaBackupSchemaV5::requireValid)
+    ).also(MiGuardiaBackupSchemaV6::requireValid)
 
     private fun captureInsideTransaction(
         sqlite: SupportSQLiteDatabase,
@@ -192,9 +192,9 @@ class BackupDatabaseGateway internal constructor(
         val estimator = BackupDatabaseMemoryEstimator(decodedMemoryLimitBytes)
         estimator.consumeSnapshotObject()
         estimator.consumeString(MiGuardiaBackupContract.ROOM_IDENTITY_HASH)
-        estimator.consumeTableReferences(MiGuardiaBackupSchemaV5.tables.size)
+        estimator.consumeTableReferences(MiGuardiaBackupSchemaV6.tables.size)
         var totalRows = 0
-        val tables = MiGuardiaBackupSchemaV5.tables.map { spec ->
+        val tables = MiGuardiaBackupSchemaV6.tables.map { spec ->
             estimator.consumeTableMetadata(spec.name, spec.columns, spec.primaryKey)
             val query = buildString {
                 append("SELECT ")
@@ -230,7 +230,7 @@ class BackupDatabaseGateway internal constructor(
         val timelineId = (roots.records.singleOrNull()?.values?.get(timelineIndex) as? BackupValue.Text)?.value
         timelineId?.let(estimator::consumeString)
         return BackupDatabaseSnapshot(timelineId = timelineId, tables = tables).also(
-            MiGuardiaBackupSchemaV5::requireValid,
+            MiGuardiaBackupSchemaV6::requireValid,
         )
     }
 
@@ -239,10 +239,10 @@ class BackupDatabaseGateway internal constructor(
         snapshot: BackupDatabaseSnapshot,
     ) {
         sqlite.execSQL("PRAGMA defer_foreign_keys = ON")
-        MiGuardiaBackupSchemaV5.tables.asReversed().forEach { spec ->
+        MiGuardiaBackupSchemaV6.tables.asReversed().forEach { spec ->
             sqlite.execSQL("DELETE FROM ${spec.name.quoted()}")
         }
-        MiGuardiaBackupSchemaV5.tables.forEach { spec ->
+        MiGuardiaBackupSchemaV6.tables.forEach { spec ->
             val table = snapshot.table(spec.name)
             val contracts = readColumnContracts(sqlite, spec)
             val statement = sqlite.compileStatement(insertSql(spec))
@@ -263,9 +263,9 @@ class BackupDatabaseGateway internal constructor(
             "SELECT identity_hash FROM room_master_table WHERE id = 42 LIMIT 1",
         ).use { cursor -> if (cursor.moveToFirst()) cursor.getString(0) else null }
         if (identity != MiGuardiaBackupContract.ROOM_IDENTITY_HASH) {
-            throw InvalidBackupException("La identidad de la base Room V5 no coincide.")
+            throw InvalidBackupException("La identidad de la base Room V6 no coincide.")
         }
-        MiGuardiaBackupSchemaV5.tables.forEach { spec -> readColumnContracts(sqlite, spec) }
+        MiGuardiaBackupSchemaV6.tables.forEach { spec -> readColumnContracts(sqlite, spec) }
     }
 
     private fun readColumnContracts(
@@ -291,13 +291,13 @@ class BackupDatabaseGateway internal constructor(
             }
         }
         if (contracts.map(ColumnContract::name) != spec.columns) {
-            throw InvalidBackupException("La forma real de ${spec.name} no coincide con Room V5.")
+            throw InvalidBackupException("La forma real de ${spec.name} no coincide con Room V6.")
         }
         val primaryKey = contracts.filter { it.primaryKeyPosition > 0 }
             .sortedBy(ColumnContract::primaryKeyPosition)
             .map(ColumnContract::name)
         if (primaryKey != spec.primaryKey) {
-            throw InvalidBackupException("La clave primaria de ${spec.name} no coincide con Room V5.")
+            throw InvalidBackupException("La clave primaria de ${spec.name} no coincide con Room V6.")
         }
         return contracts
     }

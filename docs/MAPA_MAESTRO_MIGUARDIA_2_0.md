@@ -189,7 +189,9 @@ Copias y restauración locales — cerradas; local y Samsung API 36 verdes
         ↓
 Bloqueo de acceso local — cerrado; local y Samsung API 36 (31/31) verdes
         ↓
-Ayuda y recorrido inicial 2.0 — prompt habilitado; tarea no abierta
+Ayuda + simplificación + ubicación/clima por objetivo — cerrado funcionalmente
+        ↓
+Integración y depuración de cambios de último momento — 707/707 JVM, Room 123/123 y Samsung dirigido 30/30
         ↓
 Auditoría de la aplicación completa y candidato local
 ```
@@ -265,14 +267,24 @@ directa nueva. API 26/API 33 y la inspección visual OEM de Recientes continúan
 pendientes. Ayuda y recorrido inicial 2.0 queda como siguiente bloque
 recomendado.
 
-Actualización de preparación de Ayuda del 2026-09-02: Joaquin pidió el prompt y
-MAIN habilitó `docs/prompts/AYUDA_Y_RECORRIDO_INICIAL_V2.md` sobre la base
-funcional `b64f07a`. El selector de rubro y el primer conjunto laboral conservan
-su flujo real; la guía espera la salida consciente de la pantalla de
-finalización y comienza sólo con `V2Ready` y `WorkSetupSurface.NONE`. No crea
-datos y puede repetirse desde una entrada permanente `Ayuda`. ADR 0037 fija el
-DataStore versionado no portable y protege Copias, Bloqueo y Room V5. La tarea
-especialista todavía no fue abierta.
+Actualización del candidato compartido del 2026-09-02: la implementación de
+Ayuda quedó en el mismo checkout que simplificaciones de formularios, ubicación
+puntual para clima, clima por objetivo y Room V6. La guía conserva las
+prioridades de recuperación, Bloqueo y configuración real y comienza sólo con
+`V2Ready` y `WorkSetupSurface.NONE`. ADR 0037 fija su DataStore no portable y
+ADR 0038 limita la ubicación a conversión consciente de una dirección o captura
+aproximada y puntual de la ciudad actual.
+
+Actualización de auditoría MAIN del 2026-09-03: el candidato combinado fue
+revisado y corregido como una sola unidad. La QA autorizada en Samsung API 36
+descubrió una incompatibilidad real de Fragment 1.2.5 con los launchers modernos
+de permisos y un mensaje de ubicación que no finalizaba; ambos defectos quedaron
+corregidos y cubiertos. La batería final posterior pasó 707/707 pruebas JVM,
+lint sin errores y 351/351 tareas. Room V6 pasó 123/123 y la matriz dirigida de
+permisos, configuración y clima pasó 30/30 en el Samsung. El bloque queda
+funcionalmente cerrado, sin commit, y la puerta siguiente es la auditoría de la
+aplicación completa para emitir el candidato local. API 26/API 33 permanecen
+pendientes de compatibilidad.
 
 MAIN integra un bloque por vez. Cada bloque debe compilar, pasar sus pruebas,
 preservar el alcance ajeno y quedar documentado antes del siguiente. El mapa

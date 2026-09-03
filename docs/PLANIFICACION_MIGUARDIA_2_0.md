@@ -30,7 +30,15 @@ reglas reales las configura cada usuario.
 - No se guardan imágenes de certificados médicos.
 - No se incorporan montos, escalas, salarios, liquidaciones ni deducciones.
 - No se incorporan agenda de pacientes ni datos clínicos.
-- No se incorporan ubicación automática, OCR ni importación directa de Excel.
+- No se incorporan seguimiento automático ni ubicación en segundo plano. Por
+  decisión explícita del 2026-09-02, cada objetivo puede guardar una ubicación
+  aproximada mediante una captura puntual iniciada por la persona o convertir
+  conscientemente su dirección con el servicio de Android, únicamente para
+  consultar su clima. La conversión no usa un mapa embebido y su resultado se
+  confirma antes de guardarse. Si no existe dirección, la acción usa la
+  ubicación aproximada de la ciudad actual sólo después del toque y del permiso;
+  nunca se activa sola. Tampoco se incorporan OCR ni importación directa
+  de Excel.
 
 MiGuardia 1.0 continúa como base de código: sus componentes útiles se adaptan en
 lugar de reescribirlos sin motivo. Esa continuidad técnica no crea un modo V1
@@ -472,8 +480,11 @@ No recuerda automáticamente esas respuestas para la próxima ocasión.
 - Room guarda datos fuente e historia, nunca totales mensuales opacos.
 - Nombre/apodo y preferencias simples permanecen en sus DataStore dueños.
 - Preferencias de presentación del Resumen se guardan en DataStore.
-- La base activa es `MiGuardiaV2Database`, archivo `miguardia-v2.db`, versión 5
-  y veintisiete tablas, con migraciones explícitas `1→2→3→4→5`.
+- La base activa es `MiGuardiaV2Database`, archivo `miguardia-v2.db`, versión 6
+  y veintisiete tablas, con migraciones explícitas `1→2→3→4→5→6`.
+- La migración `5→6` agrega sólo coordenadas meteorológicas opcionales por
+  objetivo. Las copias lógicas V5 continúan admitidas y se leen con esas
+  coordenadas nulas.
 - No existe activación, adopción o migración de datos desde 1.0. El archivo
   histórico `miguardia.db` no se abre, transforma ni borra.
 - Cada versión posterior debe exportar esquema, migrar desde la versión V2
@@ -547,7 +558,9 @@ Validación por impacto:
 ## 19. Fuera del núcleo inicial
 
 - agenda de pacientes;
-- fichaje o ubicación automática;
+- fichaje, seguimiento de ubicación o ubicación en segundo plano; la captura
+  puntual y consciente de la ubicación de un objetivo para su clima sí está
+  admitida;
 - OCR o importación automática de cronogramas;
 - feriados automáticos;
 - fórmulas legales o salariales;
@@ -568,9 +581,14 @@ continúa con:
    Samsung API 36 verdes dentro de la matriz autorizada—;
 4. bloqueo de acceso local —cerrado por MAIN; batería local y Samsung API 36
    verdes—;
-5. Ayuda y recorrido inicial reescritos para la interfaz 2.0 definitiva
-   —prompt habilitado; tarea todavía no abierta—;
-6. auditoría de la aplicación completa y emisión de un candidato local.
+5. Ayuda y recorrido inicial reescritos para la interfaz 2.0 definitiva,
+   incluidos en el candidato compartido junto con simplificación, ubicación
+   puntual, clima por objetivo y Room V6 —cerrado funcionalmente por MAIN con
+   validación local y Samsung API 36 verdes; API 26/API 33 pendientes—;
+6. integración y depuración de esos cambios de último momento mediante
+   `INTEGRACION_Y_DEPURACION_DE_CAMBIOS_DE_ULTIMO_MOMENTO_V2.md` —707/707 JVM,
+   351/351 tareas, Room 123/123 y matriz dirigida Samsung 30/30 verdes—;
+7. auditoría de la aplicación completa y emisión de un candidato local.
 
 La decisión de Joaquin del 2026-08-23 reemplaza la apertura automática de esa
 cadena: MAIN recomienda el siguiente bloque, pero sólo prepara su prompt o abre
@@ -584,9 +602,22 @@ acceso local quedaron cerrados por MAIN. Bloqueo es opcional, usa la seguridad
 del teléfono sin PIN propio y no transporta su ajuste dentro de las copias.
 MAIN corrigió las carreras de autenticación y ciclo de vida detectadas durante
 la auditoría; la batería global pasó 653/653 pruebas JVM y la matriz final pasó
-31/31 en Samsung API 36. Room V5 y sus esquemas permanecen intactos. Ayuda y
-recorrido inicial 2.0 quedó preparado y habilitado mediante su prompt V2. La
-tarea especialista todavía no fue abierta.
+31/31 en Samsung API 36. Después se recibió un candidato compartido que reúne
+Ayuda y recorrido inicial con simplificaciones de uso, ubicación puntual para
+clima, clima por objetivo y Room V6. MAIN no debe separar ni reejecutar esas
+piezas: queda habilitada una dependencia específica para auditarlas, conectarlas
+y depurarlas como un solo sistema.
+
+Estado del 2026-09-03: MAIN recibió el handoff de esa dependencia, auditó el
+candidato combinado y corrigió defectos reproducibles en edición automática,
+requisitos avanzados, vocabulario, callbacks de ubicación y aislamiento del
+clima por objetivo. La QA autorizada en Samsung API 36 encontró además la
+incompatibilidad entre Fragment 1.2.5 y los launchers modernos de permisos y un
+estado visual de ubicación que no finalizaba; ambos quedaron corregidos. La
+batería final pasó 707/707 JVM, lint sin errores y 351/351 tareas. Room V6 pasó
+123/123 y la matriz dirigida posterior pasó 30/30. Corresponde ahora la
+auditoría final de la aplicación y la decisión de checkpoint; API 26/API 33
+continúan como evidencia de compatibilidad pendiente.
 
 ## 21. Idea futura guardada: agenda profesional
 
@@ -595,9 +626,9 @@ apartado opcional de **Agenda profesional** para Medicina y para una eventual
 incorporación de Psicología.
 
 La recomendación de orden es terminar primero la hoja de ruta vigente mediante
-Ayuda, recorrido inicial y la auditoría final. Bloqueo de acceso y Copias
-locales seguras ya están cerrados. Recién después conviene diseñar e implementar
-esta ampliación.
+la integración de Ayuda y los cambios de último momento, seguida por la
+auditoría final. Bloqueo de acceso y Copias locales seguras ya están cerrados.
+Recién después conviene diseñar e implementar esta ampliación.
 
 Si se aprueba, su primer alcance debería limitarse a pacientes y turnos. No
 incluiría historias clínicas, diagnósticos, tratamientos, evoluciones,

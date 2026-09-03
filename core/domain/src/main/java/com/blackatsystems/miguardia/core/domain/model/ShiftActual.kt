@@ -252,7 +252,7 @@ fun buildShiftActualSaveMutation(
     val differenceMinutes = Math.subtractExact(record.durationMinutes, plannedMinutes)
     val requiresChoice = differenceMinutes > 0
     if (requiresChoice) requireNotNull(draft.differenceChoice) {
-        "Elegí si la diferencia es habitual o una clase extra"
+        "Elegí si la diferencia cuenta como horas normales o como horas extra"
     }
     if (!requiresChoice) {
         require(draft.fragments.isEmpty()) { "No puede haber extras si el horario real no supera al planificado" }
@@ -262,7 +262,7 @@ fun buildShiftActualSaveMutation(
     var selectedClassForWrite: ExtraWorkClass? = null
     val intervals = when {
         !requiresChoice || draft.differenceChoice == ShiftActualDifferenceChoice.ALL_REGULAR -> {
-            require(draft.fragments.isEmpty()) { "La diferencia habitual no puede guardar fragmentos extra" }
+            require(draft.fragments.isEmpty()) { "Las horas normales no pueden guardar fragmentos extra" }
             emptyList()
         }
 
@@ -289,10 +289,10 @@ fun buildShiftActualSaveMutation(
 
                 is ShiftActualClassSelection.NewDraft -> {
                     val helps = requireNotNull(selection.helpsMeetHoursReference) {
-                        "Respondé si la clase ayuda a cumplir la referencia"
+                        "Respondé si estas horas cuentan para tu meta"
                     }
                     val dedicated = requireNotNull(selection.showDedicatedSummary) {
-                        "Respondé si la clase tendrá desglose propio"
+                        "Respondé si querés ver esta clase por separado en el resumen"
                     }
                     ExtraWorkClass.create(
                         id = selection.id,

@@ -1,5 +1,7 @@
 package com.blackatsystems.miguardia.ui.management
 
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import com.blackatsystems.miguardia.core.domain.model.MedicalLeave
 import com.blackatsystems.miguardia.core.domain.model.Objective
 import com.blackatsystems.miguardia.core.domain.model.RecurringMedicalLeaveVersion
@@ -82,10 +84,125 @@ class V2RecurringPlanCoordinatorTest {
     }
 
     @Test
+    fun dateInputAddsSlashesAndParsesOnlyRealCalendarDates() {
+        assertEquals("0", formatRecurringDateInput("0"))
+        assertEquals("02", formatRecurringDateInput("02"))
+        assertEquals("02/0", formatRecurringDateInput("020"))
+        assertEquals("02/09", formatRecurringDateInput("0209"))
+        assertEquals("02/09/2026", formatRecurringDateInput("02092026"))
+        assertEquals("02/09/2026", formatRecurringDateInput("2/9/2026"))
+        assertNull(formatRecurringDateInput("02-09-2026"))
+        assertNull(formatRecurringDateInput("020920260"))
+        assertEquals(LocalDate.of(2026, 9, 2), parseRecurringDate("02/09/2026"))
+        assertNull(parseRecurringDate("31/02/2026"))
+    }
+
+    @Test
+    fun dateEditAllowsDeletingAndCorrectingTheLeadingDayDigit() {
+        val deleted = applyAutomaticDateEdit(
+            previous = TextFieldValue("02/09/2026", selection = TextRange(1)),
+            candidate = TextFieldValue("2/09/2026", selection = TextRange(0)),
+        )
+        assertEquals("2/09/2026", deleted?.text)
+        assertEquals(TextRange(0), deleted?.selection)
+
+        val corrected = applyAutomaticDateEdit(
+            previous = requireNotNull(deleted),
+            candidate = TextFieldValue("12/09/2026", selection = TextRange(1)),
+        )
+        assertEquals("12/09/2026", corrected?.text)
+    }
+
+    @Test
+    fun dateEditReinsertsOnlyADeletedSeparatorAndCoordinatorPreservesDigitDeletion() {
+        val separatorDeleted = applyAutomaticDateEdit(
+            previous = TextFieldValue("02/09/2026", selection = TextRange(3)),
+            candidate = TextFieldValue("0209/2026", selection = TextRange(2)),
+        )
+        assertEquals("02/09/2026", separatorDeleted?.text)
+        assertEquals(TextRange(2), separatorDeleted?.selection)
+
+        val harness = harness()
+        harness.coordinator.openCreate(FIXTURE.ready)
+        harness.coordinator.updateEndDate("2/09/2026")
+        assertEquals("2/09/2026", harness.coordinator.uiState.value.endDateText)
+        harness.coordinator.updateEndDate("12/09/2026")
+        assertEquals("12/09/2026", harness.coordinator.uiState.value.endDateText)
+    }
+
+    @Test
+    fun replacingTheWholeDateStillNormalizesSingleDigitParts() {
+        val replaced = applyAutomaticDateEdit(
+            previous = TextFieldValue("02/09/2026", selection = TextRange(0, 10)),
+            candidate = TextFieldValue("2/9/2026", selection = TextRange(8)),
+        )
+
+        assertEquals("02/09/2026", replaced?.text)
+        assertEquals(TextRange(10), replaced?.selection)
+    }
+
+    @Test
+    fun advancedIntervalRequirementIsExplicitOnlyWhenItBlocksTheSelectedPattern() {
+        assertNull(
+            advancedRecurringRequirementMessage(
+                V2RecurringUiState(
+                    patternKind = V2RecurringPatternKind.WEEKDAYS,
+                    intervalText = "",
+                ),
+            ),
+        )
+        assertEquals(
+            "Ingresá una cantidad entera mayor que cero.",
+            advancedRecurringRequirementMessage(
+                V2RecurringUiState(
+                    patternKind = V2RecurringPatternKind.EVERY_N_DAYS,
+                    intervalText = "0",
+                ),
+            ),
+        )
+        assertNull(
+            advancedRecurringRequirementMessage(
+                V2RecurringUiState(
+                    patternKind = V2RecurringPatternKind.EVERY_N_WEEKS,
+                    intervalText = "2",
+                ),
+            ),
+        )
+    }
+
+    @Test
+    fun createShowsArgentineDatesAndKeepsAutomaticSeparatorsInTheDraft() {
+        val harness = harness()
+
+        harness.coordinator.openCreate(FIXTURE.ready)
+
+        assertEquals("23/08/2026", harness.coordinator.uiState.value.startDateText)
+        assertEquals("23/09/2026", harness.coordinator.uiState.value.endDateText)
+        harness.coordinator.updateEndDate("02102026")
+        assertEquals("02/10/2026", harness.coordinator.uiState.value.endDateText)
+    }
+
+    @Test
+    fun oldIsoDraftDatesAreRestoredInTheNewVisibleFormat() {
+        val harness = harness(
+            initial = V2RecurringPersistedState(
+                stage = V2RecurringStage.FORM,
+                mode = V2RecurringMode.CREATE,
+                timelineId = TIMELINE_ID,
+                startDateText = "2026-08-23",
+                endDateText = "2026-09-23",
+            ),
+        )
+
+        assertEquals("23/08/2026", harness.coordinator.uiState.value.startDateText)
+        assertEquals("23/09/2026", harness.coordinator.uiState.value.endDateText)
+    }
+
+    @Test
     fun everyPatternRecalculatesAnExactFinitePreviewWithoutWriting() {
         val harness = harness()
         harness.coordinator.openCreate(FIXTURE.ready)
-        harness.coordinator.updateEndDate(TODAY.plusMonths(2).toString())
+        harness.coordinator.updateEndDate(formatRecurringDate(TODAY.plusMonths(2)))
 
         val cases = listOf(
             V2RecurringPatternKind.WEEKDAYS to 9,
@@ -117,10 +234,10 @@ class V2RecurringPlanCoordinatorTest {
     fun invalidDatesAndMissingActiveTemplateKeepTheDraftAndNeverWrite() {
         val invalid = harness()
         invalid.coordinator.openCreate(FIXTURE.ready)
-        invalid.coordinator.updateStartDate("fecha inválida")
+        invalid.coordinator.updateStartDate("31022026")
         invalid.coordinator.review()
         assertEquals(V2RecurringStage.FORM, invalid.coordinator.uiState.value.stage)
-        assertTrue(invalid.coordinator.uiState.value.errorMessage.orEmpty().contains("AAAA-MM-DD"))
+        assertTrue(invalid.coordinator.uiState.value.errorMessage.orEmpty().contains("DD/MM/AAAA"))
         assertTrue(invalid.store.mutations.isEmpty())
 
         val archivedFixture = FIXTURE.copy(
@@ -212,7 +329,7 @@ class V2RecurringPlanCoordinatorTest {
         harness.coordinator.openCreate(FIXTURE.ready)
         harness.coordinator.selectPattern(V2RecurringPatternKind.EVERY_N_WEEKS)
         harness.coordinator.updateInterval("1")
-        harness.coordinator.updateEndDate(TODAY.plusMonths(1).toString())
+        harness.coordinator.updateEndDate(formatRecurringDate(TODAY.plusMonths(1)))
         harness.coordinator.review()
         val exactDates = requireNotNull(harness.coordinator.uiState.value.preview).dates
         assertTrue(exactDates.map { it.month }.distinct().size > 1)
@@ -247,7 +364,7 @@ class V2RecurringPlanCoordinatorTest {
         harness.coordinator.openCreate(FIXTURE.ready)
         harness.coordinator.selectPattern(V2RecurringPatternKind.EVERY_N_DAYS)
         harness.coordinator.updateInterval("5")
-        harness.coordinator.updateEndDate(TODAY.plusDays(10).toString())
+        harness.coordinator.updateEndDate(formatRecurringDate(TODAY.plusDays(10)))
         harness.coordinator.review()
         harness.coordinator.save()
 
@@ -358,7 +475,7 @@ class V2RecurringPlanCoordinatorTest {
         harness.coordinator.openCreate(FIXTURE.ready)
         harness.coordinator.selectPattern(V2RecurringPatternKind.EVERY_N_DAYS)
         harness.coordinator.updateInterval("2")
-        harness.coordinator.updateEndDate(TODAY.plusDays(10).toString())
+        harness.coordinator.updateEndDate(formatRecurringDate(TODAY.plusDays(10)))
         harness.coordinator.review()
         harness.coordinator.save()
         val planId = harness.store.plans.value.single().plan.id
@@ -366,8 +483,8 @@ class V2RecurringPlanCoordinatorTest {
 
         harness.coordinator.changeFrom(planId, cut)
         assertEquals(cut, harness.coordinator.uiState.value.cutDate)
-        harness.coordinator.updateStartDate(TODAY.plusDays(5).toString())
-        assertEquals(cut.toString(), harness.coordinator.uiState.value.startDateText)
+        harness.coordinator.updateStartDate(formatRecurringDate(TODAY.plusDays(5)))
+        assertEquals(formatRecurringDate(cut), harness.coordinator.uiState.value.startDateText)
         harness.coordinator.updateInterval("3")
         harness.coordinator.review()
         assertEquals(

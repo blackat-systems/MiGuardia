@@ -34,7 +34,7 @@ class LocalDataStoreInstrumentedTest {
     }
 
     @Test
-    fun v2DatabaseStartsAtVersionFiveWithTheExactTwentySevenTables() {
+    fun v2DatabaseStartsAtVersionSixWithTheExactTwentySevenTables() {
         database = MiGuardiaV2Database.build(context)
         val sqlite = database.openHelper.writableDatabase
         val tables = linkedSetOf<String>()
@@ -45,7 +45,7 @@ class LocalDataStoreInstrumentedTest {
             while (cursor.moveToNext()) tables += cursor.getString(0)
         }
 
-        assertEquals(5, sqlite.version)
+        assertEquals(6, sqlite.version)
         assertEquals(EXPECTED_TABLES, tables)
         assertFalse("schedule_combinations" in tables)
         assertFalse("shift_novelties" in tables)
@@ -62,6 +62,9 @@ class LocalDataStoreInstrumentedTest {
         assertFalse("sourceScheduleCombinationId" in columnNames(sqlite, "shifts"))
         val shiftColumns = tableInfo(sqlite, "shifts")
         assertEquals(1, shiftColumns.getValue("sourceObjectiveId"))
+        val objectiveColumns = tableInfo(sqlite, "objectives")
+        assertEquals(0, objectiveColumns.getValue("weatherLatitude"))
+        assertEquals(0, objectiveColumns.getValue("weatherLongitude"))
     }
 
     @Test
@@ -78,7 +81,7 @@ class LocalDataStoreInstrumentedTest {
     }
 
     @Test
-    fun exportedV2SchemasKeepVersionsOneToFourAndMatchVersionFive() {
+    fun exportedV2SchemasKeepVersionsOneToFiveAndMatchVersionSix() {
         val assetRoot = "com.blackatsystems.miguardia.core.database.MiGuardiaV2Database"
         val versionOne = InstrumentationRegistry.getInstrumentation().context.assets.open(
             "$assetRoot/1.json",
@@ -95,12 +98,16 @@ class LocalDataStoreInstrumentedTest {
         val versionFive = InstrumentationRegistry.getInstrumentation().context.assets.open(
             "$assetRoot/5.json",
         ).use { input -> input.readBytes() }
+        val versionSix = InstrumentationRegistry.getInstrumentation().context.assets.open(
+            "$assetRoot/6.json",
+        ).use { input -> input.readBytes() }
 
         assertEquals(EXPECTED_SCHEMA_ONE_SHA256, sha256(versionOne))
         assertEquals(EXPECTED_SCHEMA_TWO_SHA256, sha256(versionTwo))
         assertEquals(EXPECTED_SCHEMA_THREE_SHA256, sha256(versionThree))
         assertEquals(EXPECTED_SCHEMA_FOUR_SHA256, sha256(versionFour))
         assertEquals(EXPECTED_SCHEMA_FIVE_SHA256, sha256(versionFive))
+        assertEquals(EXPECTED_SCHEMA_SIX_SHA256, sha256(versionSix))
     }
 
     @Test
@@ -179,6 +186,7 @@ class LocalDataStoreInstrumentedTest {
         const val EXPECTED_SCHEMA_THREE_SHA256 = "39b7c4aeb0c2098acbe9fe9ffc7fb308c4aa30aa04f30a3a69b770a5cdda9428"
         const val EXPECTED_SCHEMA_FOUR_SHA256 = "796f1e7a02e095b956160b4135303df3bae49b1644d0d9ac6d226878d5b1cc6b"
         const val EXPECTED_SCHEMA_FIVE_SHA256 = "40b43c38d5fbcab0dcc871a0996749ffaae577b6aa67740e97aa10d005a8acc4"
+        const val EXPECTED_SCHEMA_SIX_SHA256 = "bb5818ea0c086a73b6dffff6f1f3f0e547f6bbe05adcd519d363845679545268"
         val EXPECTED_TABLES = linkedSetOf(
             "objectives",
             "shifts",

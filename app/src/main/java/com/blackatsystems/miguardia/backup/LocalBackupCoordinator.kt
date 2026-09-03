@@ -23,7 +23,7 @@ import com.blackatsystems.miguardia.core.domain.backup.BackupValue
 import com.blackatsystems.miguardia.core.domain.backup.ExtractedBackup
 import com.blackatsystems.miguardia.core.domain.backup.InvalidBackupException
 import com.blackatsystems.miguardia.core.domain.backup.MiGuardiaBackupContract
-import com.blackatsystems.miguardia.core.domain.backup.MiGuardiaBackupSchemaV5
+import com.blackatsystems.miguardia.core.domain.backup.MiGuardiaBackupSchemaV6
 import com.blackatsystems.miguardia.core.domain.backup.ResolvedBackupConflict
 import com.blackatsystems.miguardia.core.domain.backup.backupKey
 import com.blackatsystems.miguardia.reports.ReportArtifactStore
@@ -146,6 +146,7 @@ class LocalBackupCoordinator(
     private val localDataStore: LocalDataStore,
     private val preferences: PortablePreferencesGateway,
     private val pauseRuntimes: suspend () -> Unit = {},
+    private val clearDerivedCaches: suspend () -> Unit = {},
     private val resumeRuntimes: suspend () -> Unit = {},
     private val clock: Clock = Clock.systemUTC(),
     private val zoneId: ZoneId = AppDefaults.zoneId(),
@@ -664,6 +665,7 @@ class LocalBackupCoordinator(
                 throw error
             }
             val settings = try {
+                clearDerivedCaches()
                 val verifiedSettings = verifyState(
                     desiredDatabase,
                     desiredPreferences,
@@ -920,7 +922,7 @@ class LocalBackupCoordinator(
 
     private fun BackupDatabaseSnapshot.recordsMissingOrChangedIn(
         replacement: BackupDatabaseSnapshot,
-    ): Int = MiGuardiaBackupSchemaV5.tables.sumOf { spec ->
+    ): Int = MiGuardiaBackupSchemaV6.tables.sumOf { spec ->
         val replacementByKey = replacement.table(spec.name).records.associateBy { record ->
             record.backupKey(spec)
         }

@@ -124,7 +124,7 @@ class AvailabilityComposeTest {
         }
         compose.onNodeWithText("Disponibilidad").assertIsDisplayed()
         compose.onNodeWithText("Programada: 4 h 0 min").assertIsDisplayed()
-        compose.onNodeWithText("Este desglose no altera el avance de horas trabajadas.").assertIsDisplayed()
+        compose.onNodeWithText("Este detalle no altera el avance de horas trabajadas.").assertIsDisplayed()
     }
 
     @Test

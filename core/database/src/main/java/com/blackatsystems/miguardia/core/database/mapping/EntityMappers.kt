@@ -35,6 +35,8 @@ internal fun Objective.toEntity() = ObjectiveEntity(
     isActive = isActive,
     createdAtEpochMillis = createdAt.toEpochMilli(),
     updatedAtEpochMillis = updatedAt.toEpochMilli(),
+    weatherLatitude = weatherLatitude,
+    weatherLongitude = weatherLongitude,
 )
 
 internal fun ObjectiveEntity.toDomain(): Objective = decodeEntity("objetivo", id) {
@@ -47,6 +49,8 @@ internal fun ObjectiveEntity.toDomain(): Objective = decodeEntity("objetivo", id
         isActive = isActive,
         createdAt = Instant.ofEpochMilli(createdAtEpochMillis),
         updatedAt = Instant.ofEpochMilli(updatedAtEpochMillis),
+        weatherLatitude = weatherLatitude,
+        weatherLongitude = weatherLongitude,
     )
 }
 

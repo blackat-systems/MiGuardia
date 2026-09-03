@@ -54,6 +54,7 @@ class WorkCatalogPersistenceInstrumentedTest {
 
         store.close()
         openStore()
+        assertEquals(fixture.objective, store.objectives.getById(fixture.objective.id))
         val catalog = store.workCatalog.observeCatalog(V2TestIds.TIMELINE, fixture.place.sector).first()
         assertEquals(listOf(fixture.place), catalog.workPlaces)
         assertEquals(listOf(fixture.type), catalog.workTypes)
@@ -414,6 +415,7 @@ class WorkCatalogPersistenceInstrumentedTest {
             .observeRecentlyUsed(V2TestIds.TIMELINE, fixture.place.sector, 5)
             .first()
         assertEquals(listOf(fixture.template.id, secondTemplate.id), recent.map { it.template.id })
+        assertEquals(fixture.objective, recent.first().objective)
         assertEquals(firstLatest.shift.createdAt, recent[0].lastUsedAt)
         assertEquals(second.shift.createdAt, recent[1].lastUsedAt)
         assertEquals(
@@ -430,6 +432,7 @@ class WorkCatalogPersistenceInstrumentedTest {
             .observeRecentlyUsed(V2TestIds.TIMELINE, fixture.place.sector, 5)
             .first()
         assertEquals(listOf(fixture.template.id, secondTemplate.id), recent.map { it.template.id })
+        assertEquals(fixture.objective, recent.first().objective)
 
         store.workCatalog.setWorkTemplateActive(
             fixture.template.id,

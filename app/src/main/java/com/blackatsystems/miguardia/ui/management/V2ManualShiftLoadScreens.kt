@@ -38,6 +38,8 @@ import androidx.compose.ui.unit.dp
 import com.blackatsystems.miguardia.core.domain.shift.OccupiedDatePolicy
 import com.blackatsystems.miguardia.core.domain.work.WorkSetupState
 import com.blackatsystems.miguardia.ui.components.PersistentMessage
+import com.blackatsystems.miguardia.ui.components.AdvancedOptionsSection
+import com.blackatsystems.miguardia.ui.components.ContextHelp
 import com.blackatsystems.miguardia.ui.theme.vigiliaColors
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -50,6 +52,7 @@ data class V2ManualShiftLoadActions(
     val chooseTemplate: (UUID) -> Unit = {},
     val updatePosition: (String) -> Unit = {},
     val requestReview: () -> Unit = {},
+    val requestSave: () -> Unit = {},
     val confirmBackfill: () -> Unit = {},
     val cancelBackfill: () -> Unit = {},
     val chooseOccupiedPolicy: (OccupiedDatePolicy) -> Unit = {},
@@ -70,6 +73,7 @@ data class V2ManualShiftLoadActions(
             chooseTemplate = viewModel::chooseTemplate,
             updatePosition = viewModel::updatePosition,
             requestReview = viewModel::requestReview,
+            requestSave = viewModel::requestSave,
             confirmBackfill = viewModel::confirmBackfill,
             cancelBackfill = viewModel::cancelBackfill,
             chooseOccupiedPolicy = viewModel::chooseOccupiedPolicy,
@@ -198,7 +202,7 @@ private fun DateSelectionStep(
                 .heightIn(min = 48.dp)
                 .testTag("v2-manual-modify-confirmed-dates"),
         ) {
-            Text("Modificar días elegidos")
+            Text("Cambiar días")
         }
     }
 }
@@ -233,36 +237,45 @@ private fun TemplateSelectionStep(
         }
     }
     if (state.templateOptions.isNotEmpty()) {
-        OutlinedTextField(
-            value = state.position,
-            onValueChange = actions.updatePosition,
-            enabled = !state.isLoading && !state.isSaving,
-            label = { Text("Puesto o función (opcional)") },
-            singleLine = true,
-            modifier = Modifier
-                .fillMaxWidth()
-                .testTag("v2-manual-position"),
-        )
         Button(
-            onClick = actions.requestReview,
+            onClick = actions.requestSave,
             enabled = state.selectedTemplateId != null && !state.isLoading && !state.isSaving,
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = 56.dp)
-                .testTag("v2-manual-review"),
+                .testTag("v2-manual-save-direct"),
         ) {
-            Text("Revisar jornadas")
+            Text(if (state.selectedDates.size == 1) "Guardar jornada" else "Guardar ${state.selectedDates.size} jornadas")
+        }
+        AdvancedOptionsSection(
+            help = ContextHelp(
+                title = "Detalles antes de guardar",
+                whatItDoes = "Permite agregar un puesto o ver todas las fechas antes de guardar.",
+                howToUseIt = "No hace falta abrirlo para una carga normal. MiGuardia igual controla días ocupados y advertencias.",
+                example = "Podés escribir Puesto 3 o revisar una carga de diez días antes de confirmarla.",
+            ),
+        ) {
+            OutlinedTextField(
+                value = state.position,
+                onValueChange = actions.updatePosition,
+                enabled = !state.isLoading && !state.isSaving,
+                label = { Text("Puesto o función (opcional)") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().testTag("v2-manual-position"),
+            )
+            OutlinedButton(
+                onClick = actions.requestReview,
+                enabled = state.selectedTemplateId != null && !state.isLoading && !state.isSaving,
+                modifier = Modifier.fillMaxWidth().testTag("v2-manual-review"),
+            ) { Text("Ver fechas y detalles") }
         }
     }
-    OutlinedButton(
+    TextButton(
         onClick = onModifyCalendarSelection,
         enabled = !state.isLoading && !state.isSaving,
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 48.dp)
-            .testTag("v2-manual-modify-dates"),
+        modifier = Modifier.fillMaxWidth().testTag("v2-manual-modify-dates"),
     ) {
-        Text("Modificar días elegidos")
+        Text("Cambiar días")
     }
 }
 
@@ -405,7 +418,7 @@ private fun ReviewStep(
             CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.dp)
             Text("Guardando jornadas…", modifier = Modifier.padding(start = 8.dp))
         } else {
-            Text("Guardar jornadas")
+            Text(if (state.plannedDates.size == 1) "Guardar jornada" else "Guardar ${state.plannedDates.size} jornadas")
         }
     }
     OutlinedButton(
@@ -413,7 +426,7 @@ private fun ReviewStep(
         enabled = !state.isSaving && !state.isLoading,
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Text("Modificar días elegidos")
+        Text("Cambiar días")
     }
 }
 

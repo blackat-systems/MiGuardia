@@ -448,7 +448,7 @@ fun WidgetConfigurationScreen(
             }
             SectionCard(
                 title = "Clima opcional",
-                supportingText = "Sólo aparece en tamaño ampliado, privacidad Completa y una jornada con caché fresca y cobertura total.",
+                supportingText = "Sólo aparece en tamaño ampliado, privacidad Completa y una jornada con pronóstico reciente y completo.",
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),

@@ -22,7 +22,7 @@ object BackupPayloadCodec {
         output: OutputStream,
         encodedLimitBytes: Long,
     ) {
-        MiGuardiaBackupSchemaV5.requireValid(snapshot)
+        MiGuardiaBackupSchemaV6.requireValid(snapshot)
         val bounded = BoundedOutputStream(output, encodedLimitBytes, "database.bin")
         DataOutputStream(BufferedOutputStream(bounded)).use { data ->
             data.writeInt(DATABASE_MAGIC)
@@ -85,7 +85,7 @@ object BackupPayloadCodec {
             }
             data.requireFinished()
             BackupDatabaseSnapshot(roomVersion, identityHash, timelineId, tables).also(
-                MiGuardiaBackupSchemaV5::requireValid,
+                ::requireSupportedBackupSchema,
             )
         }
     }

@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.ActivityResultLauncher
 import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
@@ -14,6 +15,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -83,41 +86,28 @@ class AccessLockManifestInstrumentedTest {
     }
 
     @Test
-    fun fragmentCompatibilityBridgeDispatchesTheRealPermissionCallback() {
-        val permissions = arrayOf(Manifest.permission.POST_NOTIFICATIONS)
-        val key = "access-lock-permission-bridge-${System.nanoTime()}"
+    fun activityResultPermissionLauncherCompletesWithoutLegacyRequestCodeCrash() {
+        val key = "permission-launcher-${System.nanoTime()}"
         var callbackResult: Boolean? = null
+        var launcher: ActivityResultLauncher<String>? = null
+        val callback = CountDownLatch(1)
         val scenario = ActivityScenario.launch(MainActivity::class.java)
 
         try {
             scenario.onActivity { activity ->
-                val launcher = activity.activityResultRegistry.register(
+                val registeredLauncher = activity.activityResultRegistry.register(
                     key,
                     ActivityResultContracts.RequestPermission(),
                 ) { result ->
                     callbackResult = result
+                    callback.countDown()
                 }
-                val registryClass = activity.activityResultRegistry.javaClass.superclass
-                    ?: activity.activityResultRegistry.javaClass
-                val keyToRequestCode = registryClass.getDeclaredField("keyToRc")
-                keyToRequestCode.isAccessible = true
-                @Suppress("UNCHECKED_CAST")
-                val requestCode =
-                    (keyToRequestCode.get(activity.activityResultRegistry) as Map<String, Int>)
-                        .getValue(key)
-                val launchedKeysField = registryClass.getDeclaredField("launchedKeys")
-                launchedKeysField.isAccessible = true
-                @Suppress("UNCHECKED_CAST")
-                (launchedKeysField.get(activity.activityResultRegistry) as MutableList<String>) += key
-
-                activity.onRequestPermissionsResult(
-                    requestCode,
-                    permissions,
-                    intArrayOf(PackageManager.PERMISSION_DENIED),
-                )
-                launcher.unregister()
+                launcher = registeredLauncher
+                registeredLauncher.launch(Manifest.permission.CAMERA)
             }
+            assertTrue(callback.await(10, TimeUnit.SECONDS))
         } finally {
+            scenario.onActivity { launcher?.unregister() }
             scenario.close()
         }
 

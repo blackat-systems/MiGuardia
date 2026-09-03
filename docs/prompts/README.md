@@ -1,7 +1,7 @@
 # Índice canónico de prompts — MiGuardia
 
 - Estado: activo
-- Última auditoría completa: 2026-09-01
+- Última auditoría completa: 2026-09-03
 - Regla: un prompt sólo se ejecuta si este índice lo marca `ACTIVO` o
   `HABILITADO` y Joaquin autoriza la tarea
 
@@ -15,14 +15,17 @@
   la tarea siguiente por su cuenta.
 - **Contrato humano:** toda dependencia nueva explica primero `QUÉ HACE` y
   `POR QUÉ EXISTE`, tanto en su prompt como en su handoff.
-- **Última dependencia cerrada:** `BLOQUEO_DE_ACCESO_LOCAL_V2.md`; batería
-  global, auditorías independientes y matriz final 31/31 verdes en Samsung API
-  36.
-- **Bloque habilitado:** `AYUDA_Y_RECORRIDO_INICIAL_V2.md`.
-- **Tarea especialista:** todavía no abierta; Joaquin pidió preparar el prompt,
-  no crear otra tarea.
-- **Próximo bloque después de cerrar Ayuda:** auditoría de la aplicación
-  completa y emisión de un candidato local.
+- **Última dependencia cerrada:**
+  `INTEGRACION_Y_DEPURACION_DE_CAMBIOS_DE_ULTIMO_MOMENTO_V2.md`; batería local
+  y Samsung API 36 verdes.
+- **Candidato compartido actual:** Ayuda y recorrido inicial, simplificación de
+  formularios, ubicación puntual para clima, clima por objetivo, Room V6 y
+  compatibilidad de Copias fueron auditados y corregidos por MAIN como una sola
+  unidad. La batería local final pasó 707/707 pruebas JVM y 351/351 tareas;
+  Room pasó 123/123 y la matriz dirigida posterior 30/30 en Samsung API 36.
+- **Puerta pendiente:** auditoría de la aplicación completa y emisión de un
+  candidato local antes del checkpoint. API 26/API 33 continúan como matriz de
+  compatibilidad pendiente.
 - **Commits locales:** MAIN los crea automáticamente como checkpoints de
   bloques comprobados.
 - **Push puntual anterior de la rama 2.0:** ejecutado y verificado hasta
@@ -100,7 +103,8 @@ prevalecen para el estado operativo.
 | `INFORMES_LOCALES_DE_JORNADAS_Y_HORAS_V2.md` | **CERRADO** | PDF y XLSX locales derivados de Horas/Resumen, auditados y verificados por MAIN en Samsung API 36 |
 | `COPIAS_Y_RESTAURACION_LOCALES_SEGURAS_V2.md` | **CERRADO** | Copia lógica completa, cifrado opcional, vista previa y restauración consciente auditadas por MAIN; Samsung API 36 verde dentro de la matriz autorizada |
 | `BLOQUEO_DE_ACCESO_LOCAL_V2.md` | **CERRADO** | Puerta opcional con biometría fuerte o credencial segura del teléfono, plazos conscientes y privacidad de Recientes sin PIN propio; auditada y verificada por MAIN en Samsung API 36, con API 26/API 33 y revisión visual OEM de Recientes pendientes |
-| `AYUDA_Y_RECORRIDO_INICIAL_V2.md` | **HABILITADO** | Conserva el rubro y la primera configuración reales, agrega una guía versionada y una Ayuda permanente sobre la interfaz V2 definitiva |
+| `AYUDA_Y_RECORRIDO_INICIAL_V2.md` | **CERRADO DENTRO DEL CANDIDATO INTEGRAL** | Su implementación fue revisada junto con simplificación, ubicación, clima, Room V6 y Copias; local y Samsung API 36 verdes |
+| `INTEGRACION_Y_DEPURACION_DE_CAMBIOS_DE_ULTIMO_MOMENTO_V2.md` | **CERRADO POR MAIN — CHECKPOINT PENDIENTE** | MAIN cerró defectos reproducibles y obtuvo 707/707 JVM, 351/351 tareas, Room 123/123 y matriz dirigida Samsung 30/30; no reejecutar |
 
 ## Contratos históricos de MiGuardia 1.0
 
@@ -138,52 +142,54 @@ MAIN crea o actualiza el prompt de un bloque cuando Joaquin se lo pide. Una
 dependencia nueva sólo puede habilitarse cuando la anterior está cerrada y
 Joaquin indicó que quiere preparar o abrir la siguiente:
 
-1. Room v6 y configuración inicial: **cerrado**;
-2. **Cerrado:** lugares, tipos, plantillas y primera apertura visible — Corte A
-   de contratos y Room v7, más la configuración inicial, verificados;
-3. **Cerrado:** carga manual V2 de jornadas nuevas sobre la única grilla;
-4. **Cerrado:** edición y eliminación individual de una jornada V2 en su fecha
-   original;
-5. **Cerrado:** modo V1 retirado, código común preservado y Room V2 versión 1
-   fijada y verificada;
-6. **Cerrado:** repetir jornadas y decidir si un cambio afecta sólo una fecha o
-   todo lo futuro, mediante
-   `REPETIR_JORNADAS_Y_CAMBIAR_DESDE_UNA_FECHA_V2.md`;
-7. **Cerrado:** horario real y clasificación exacta de la diferencia
-   adicional en jornadas existentes, mediante
-   `REGISTRAR_HORARIO_REAL_Y_CLASIFICAR_HORAS_EXTRA_V2.md`;
-8. **Cerrado:** extras independientes y avance contra la referencia mediante
-   `EXTRAS_INDEPENDIENTES_Y_AVANCE_DE_HORAS_V2.md`; la persona elige la fecha
-   de reinicio y no existe prorrateo automático;
-9. **Cerrado:** guardias pasivas y disponibilidad mediante
-   `GUARDIAS_PASIVAS_Y_DISPONIBILIDAD_V2.md`;
-10. **Cerrado:** Calendario final y tarjeta superior mediante
-    `CALENDARIO_FINAL_Y_TARJETA_SUPERIOR_V2.md`;
-11. **Cerrado:** Resumen personalizable mediante
-    `RESUMEN_PERSONALIZABLE_V2.md`;
-12. **Cerrado:** adaptación de próximo evento y notificaciones mediante
-    `PROXIMO_EVENTO_Y_NOTIFICACIONES_V2.md`;
-13. **Parcial histórica resuelta:** primera auditoría integral del núcleo y
-    compatibilidad Android;
-14. **Cerrado:** tres barreras de integración incorporadas mediante
-    `PRUEBAS_CRUZADAS_DEL_NUCLEO_V2.md`;
-15. **Cerrado:** matriz Samsung API 36, Android 8/API 26 y Android 13/API 33,
-    seguida por la repetición de
-    `AUDITORIA_INTEGRAL_DEL_NUCLEO_Y_COMPATIBILIDAD_ANDROID_V2.md` con
-    veredicto `NÚCLEO APTO PARA SEGUNDA CAPA`;
-16. **Cerrado:** Widget de próximo evento mediante
+1. **Cerrado:** adaptar el Calendario al tamaño del teléfono.
+2. **Cerrado:** crear las reglas internas configurables de trabajo.
+3. **Cerrado:** guardar la configuración y migrar Room sin destruir historia.
+4. **Cerrado:** crear lugares, tipos y horarios guardados.
+5. **Cerrado:** elegir el rubro y preparar el primer lugar de trabajo.
+6. **Cerrado:** elegir días y cargar jornadas desde horarios guardados.
+7. **Cerrado:** corregir o eliminar una jornada V2 individual.
+8. **Cerrado:** retirar el modo V1 conservando el código útil.
+9. **Cerrado:** repetir jornadas y decidir si un cambio afecta una fecha o todo
+   lo futuro mediante `REPETIR_JORNADAS_Y_CAMBIAR_DESDE_UNA_FECHA_V2.md`.
+10. **Cerrado:** registrar el horario real y clasificar horas extra mediante
+    `REGISTRAR_HORARIO_REAL_Y_CLASIFICAR_HORAS_EXTRA_V2.md`.
+11. **Cerrado:** registrar extras independientes y medir el avance de horas
+    mediante `EXTRAS_INDEPENDIENTES_Y_AVANCE_DE_HORAS_V2.md`.
+12. **Cerrado:** registrar guardias pasivas y descontar sólo el trabajo
+    coincidente mediante `GUARDIAS_PASIVAS_Y_DISPONIBILIDAD_V2.md`.
+13. **Cerrado:** terminar el Calendario y la tarjeta superior mediante
+    `CALENDARIO_FINAL_Y_TARJETA_SUPERIOR_V2.md`.
+14. **Cerrado:** mostrar y personalizar el Resumen mediante
+    `RESUMEN_PERSONALIZABLE_V2.md`.
+15. **Cerrado:** adaptar próximo evento y notificaciones como una sola verdad
+    mediante `PROXIMO_EVENTO_Y_NOTIFICACIONES_V2.md`.
+16. **Cerrado:** auditoría integral del núcleo y compatibilidad Android.
+    - **16.a — Cerrado:** tres barreras de integración incorporadas mediante
+      `PRUEBAS_CRUZADAS_DEL_NUCLEO_V2.md`.
+    - **16.b — Cerrado:** matriz Samsung API 36, Android 8/API 26 y Android
+      13/API 33, seguida por la repetición de
+      `AUDITORIA_INTEGRAL_DEL_NUCLEO_Y_COMPATIBILIDAD_ANDROID_V2.md` con
+      veredicto `NÚCLEO APTO PARA SEGUNDA CAPA`.
+17. **Cerrado:** Widget de próximo evento mediante
     `WIDGET_DE_PROXIMO_EVENTO_V2.md`; Samsung API 36 verde, API 26/API 33
-    pendientes de compatibilidad;
-17. **Cerrado:** Informes locales de jornadas y horas mediante
-    `INFORMES_LOCALES_DE_JORNADAS_Y_HORAS_V2.md`; local y Samsung API 36 verdes;
-18. **Cerrado:** copias y restauración locales seguras mediante
+    pendientes de compatibilidad.
+18. **Cerrado:** Informes locales de jornadas y horas mediante
+    `INFORMES_LOCALES_DE_JORNADAS_Y_HORAS_V2.md`; local y Samsung API 36 verdes.
+19. **Cerrado:** copias y restauración locales seguras mediante
     `COPIAS_Y_RESTAURACION_LOCALES_SEGURAS_V2.md`; batería local y matriz Samsung
-    API 36 autorizada verdes, con recorrido SAF cifrado real;
-19. **Cerrado:** bloqueo de acceso local mediante
-    `BLOQUEO_DE_ACCESO_LOCAL_V2.md`; batería global y Samsung API 36 verdes;
-20. **Habilitado, tarea todavía no abierta:** Ayuda y recorrido inicial 2.0
-    mediante `AYUDA_Y_RECORRIDO_INICIAL_V2.md`;
-21. auditoría de la aplicación completa y candidato local.
+    API 36 autorizada verdes, con recorrido SAF cifrado real.
+20. **Cerrado:** bloqueo de acceso local mediante
+    `BLOQUEO_DE_ACCESO_LOCAL_V2.md`; batería global y Samsung API 36 verdes.
+21. **Cerrado dentro del candidato integral:** Ayuda y recorrido
+    inicial 2.0 mediante `AYUDA_Y_RECORRIDO_INICIAL_V2.md`, junto con la
+    simplificación, ubicación puntual, clima por objetivo y Room V6.
+22. **Cerrado por MAIN — checkpoint pendiente:** integración y
+    depuración mediante
+    `INTEGRACION_Y_DEPURACION_DE_CAMBIOS_DE_ULTIMO_MOMENTO_V2.md`; 707/707 JVM,
+    351/351 tareas y Samsung API 36 verdes, sin commit.
+23. **Pendiente:** auditoría de la aplicación completa y candidato local,
+    después de cerrar la puerta física anterior.
 
 Cuando Joaquin pide un prompt, MAIN lo habilita en este índice después de cerrar
 su contrato y dependencias, y crea automáticamente el checkpoint documental

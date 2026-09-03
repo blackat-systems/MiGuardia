@@ -8,10 +8,12 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -31,6 +33,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
@@ -171,6 +174,55 @@ internal fun RgbColorPickerDialog(
                         Text("HEX: #${selectedColor.toUInt().toString(16).takeLast(6).uppercase()}")
                     }
                 }
+
+                Text("Colores comunes", fontWeight = FontWeight.SemiBold)
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth().testTag("common-colors"),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    maxItemsInEachRow = 5,
+                ) {
+                    CommonColorPresets.forEach { preset ->
+                        val selected = selectedColor == preset.argb
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .selectable(
+                                    selected = selected,
+                                    role = Role.RadioButton,
+                                    onClick = {
+                                        val hsv = FloatArray(3).also {
+                                            android.graphics.Color.colorToHSV(preset.argb, it)
+                                        }
+                                        hue = hsv[0]
+                                        saturation = hsv[1]
+                                        brightness = hsv[2]
+                                    },
+                                )
+                                .semantics {
+                                    contentDescription = "Color común ${preset.name}"
+                                    stateDescription = if (selected) "Elegido" else "Disponible"
+                                }
+                                .testTag("common-color-${preset.name.lowercase()}")
+                                .border(
+                                    width = if (selected) 3.dp else 1.dp,
+                                    color = if (selected) {
+                                        MaterialTheme.colorScheme.onSurface
+                                    } else {
+                                        MaterialTheme.colorScheme.outline
+                                    },
+                                    shape = MaterialTheme.shapes.medium,
+                                ),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Box(
+                                Modifier
+                                    .size(32.dp)
+                                    .background(Color(preset.argb), MaterialTheme.shapes.small),
+                            )
+                        }
+                    }
+                }
             }
         },
         confirmButton = {
@@ -181,3 +233,18 @@ internal fun RgbColorPickerDialog(
         },
     )
 }
+
+internal data class CommonColorPreset(val name: String, val argb: Int)
+
+internal val CommonColorPresets: List<CommonColorPreset> = listOf(
+    CommonColorPreset("Rojo", 0xFFE53935.toInt()),
+    CommonColorPreset("Naranja", 0xFFFB8C00.toInt()),
+    CommonColorPreset("Amarillo", 0xFFFDD835.toInt()),
+    CommonColorPreset("Verde", 0xFF43A047.toInt()),
+    CommonColorPreset("Turquesa", 0xFF00897B.toInt()),
+    CommonColorPreset("Celeste", 0xFF00ACC1.toInt()),
+    CommonColorPreset("Azul", 0xFF1E88E5.toInt()),
+    CommonColorPreset("Violeta", 0xFF5C4DFF.toInt()),
+    CommonColorPreset("Morado", 0xFF8E24AA.toInt()),
+    CommonColorPreset("Rosa", 0xFFD81B60.toInt()),
+)

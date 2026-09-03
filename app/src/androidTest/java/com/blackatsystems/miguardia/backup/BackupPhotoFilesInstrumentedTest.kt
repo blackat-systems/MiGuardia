@@ -8,7 +8,7 @@ import com.blackatsystems.miguardia.core.domain.backup.BackupDatabaseSnapshot
 import com.blackatsystems.miguardia.core.domain.backup.BackupRecord
 import com.blackatsystems.miguardia.core.domain.backup.BackupTable
 import com.blackatsystems.miguardia.core.domain.backup.BackupValue
-import com.blackatsystems.miguardia.core.domain.backup.MiGuardiaBackupSchemaV5
+import com.blackatsystems.miguardia.core.domain.backup.MiGuardiaBackupSchemaV6
 import com.blackatsystems.miguardia.core.domain.backup.InvalidBackupException
 import java.io.File
 import java.security.MessageDigest
@@ -144,7 +144,7 @@ class BackupPhotoFilesInstrumentedTest {
 
     private fun snapshot(objectiveName: String): BackupDatabaseSnapshot = BackupDatabaseSnapshot(
         timelineId = null,
-        tables = MiGuardiaBackupSchemaV5.tables.map { spec ->
+        tables = MiGuardiaBackupSchemaV6.tables.map { spec ->
             BackupTable(
                 spec.name,
                 spec.columns,

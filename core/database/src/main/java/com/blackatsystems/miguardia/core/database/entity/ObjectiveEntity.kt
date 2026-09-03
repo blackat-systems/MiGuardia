@@ -20,4 +20,6 @@ internal data class ObjectiveEntity(
     val isActive: Boolean,
     val createdAtEpochMillis: Long,
     val updatedAtEpochMillis: Long,
+    val weatherLatitude: Double? = null,
+    val weatherLongitude: Double? = null,
 )

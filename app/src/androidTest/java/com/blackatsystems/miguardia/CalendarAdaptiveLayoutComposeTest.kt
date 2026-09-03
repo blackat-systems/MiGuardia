@@ -79,6 +79,8 @@ class CalendarAdaptiveLayoutComposeTest {
         val viewport = compose.onNodeWithTag("calendar-scroll-viewport").bounds()
         assertContained(viewport, compose.onNodeWithTag("next-event-card").bounds())
         compose.onNodeWithTag("calendar-v2-load-shifts").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("calendar-work-setup-action").assertDoesNotExist()
+        compose.onNodeWithTag("advanced-options-toggle").performScrollTo().performClick()
         compose.onNodeWithTag("calendar-work-setup-action").performScrollTo().assertIsDisplayed()
         assertTrue(scrollRange.value() > 0f)
     }
@@ -93,6 +95,7 @@ class CalendarAdaptiveLayoutComposeTest {
         compose.onNodeWithTag("calendar-scrollbar-track").assertIsDisplayed()
         val initialThumbTop = compose.onNodeWithTag("calendar-scrollbar-thumb").bounds().top
 
+        compose.onNodeWithTag("advanced-options-toggle").performScrollTo().performClick()
         compose.onNodeWithTag("calendar-work-setup-action").performScrollTo().assertIsDisplayed()
         assertTrue(container.verticalScrollRange().value() > 0f)
         val movedThumb = compose.onNodeWithTag("calendar-scrollbar-thumb").bounds()
@@ -146,6 +149,7 @@ class CalendarAdaptiveLayoutComposeTest {
             gridText("08:00–16:00", RIGHTMOST_SHIFT_DATE).performScrollTo().assertIsDisplayed()
             gridText("Cancelada", RIGHTMOST_SHIFT_DATE).performScrollTo().assertIsDisplayed()
             compose.onNodeWithTag("calendar-v2-load-shifts").performScrollTo().assertIsDisplayed()
+            compose.onNodeWithTag("advanced-options-toggle").performScrollTo().performClick()
             compose.onNodeWithTag("calendar-work-setup-action").performScrollTo().assertIsDisplayed()
         }
     }

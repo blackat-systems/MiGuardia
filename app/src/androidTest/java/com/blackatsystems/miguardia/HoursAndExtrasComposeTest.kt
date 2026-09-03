@@ -83,9 +83,9 @@ class HoursAndExtrasComposeTest {
             state = contentState()
         }
         compose.onNodeWithTag("hours-progress-content").assertIsDisplayed()
-        compose.onNodeWithText("Meta: 100 h").assertIsDisplayed()
+        compose.onNodeWithText("Meta de horas: 100 h").assertIsDisplayed()
         compose.onNodeWithText("Avance: 0,0 %").assertIsDisplayed()
-        compose.onNodeWithText("Faltan").assertIsDisplayed()
+        compose.onNodeWithText("Te faltan").assertIsDisplayed()
     }
 
     @Test
@@ -111,8 +111,8 @@ class HoursAndExtrasComposeTest {
 
         listOf(
             "Todavía no la configuré",
-            "No uso una referencia de horas",
-            "Tengo una referencia, pero no sé cuántas horas",
+            "No uso una meta de horas",
+            "Tengo una meta, pero no sé cuántas horas",
             "La cantidad es fija",
             "La cantidad cambia en cada período",
         ).forEach { compose.onNodeWithText(it).assertIsDisplayed() }
@@ -181,7 +181,7 @@ class HoursAndExtrasComposeTest {
 
         compose.onNodeWithText("Trabajo extra independiente").assertIsDisplayed()
         compose.onNodeWithText("Clase: Refuerzo especial").assertIsDisplayed()
-        compose.onNodeWithText("No ayuda a la referencia").assertIsDisplayed()
+        compose.onNodeWithText("No cuenta para tu meta").assertIsDisplayed()
         compose.onNodeWithText("Corregir trabajo extra").performClick()
         compose.onNodeWithText("Eliminar trabajo extra").performClick()
         compose.runOnIdle {
@@ -209,7 +209,8 @@ class HoursAndExtrasComposeTest {
             }
         }
 
-        compose.onNodeWithText("Meta: Falta informar").assertIsDisplayed()
+        compose.onNodeWithText("Meta de horas: Falta informar").assertIsDisplayed()
+        compose.onNodeWithTag("advanced-options-toggle").performScrollTo().performClick()
         compose.onNodeWithText("Informar meta de este período").performScrollTo().performClick()
         compose.onNodeWithTag("hours-period-value-minutes").assertIsDisplayed()
         compose.onNodeWithText("Debe ser un entero positivo; no se prorratea.", substring = true)
@@ -240,6 +241,7 @@ class HoursAndExtrasComposeTest {
             }
         }
 
+        compose.onNodeWithTag("advanced-options-toggle").performScrollTo().performClick()
         listOf(false, true).forEach { darkTheme ->
             AppZoom.entries.forEach { appZoom ->
                 compose.runOnIdle {

@@ -1,6 +1,6 @@
 # 21 — Ayuda y recorrido inicial V2
 
-- Estado: **HABILITADO — IMPLEMENTACIÓN PENDIENTE**
+- Estado: **CERRADO DENTRO DEL CANDIDATO INTEGRAL — NO REEJECUTAR**
 - Fecha: 2026-09-02
 - Proyecto obligatorio:
   `C:\Users\Joaquin\Desktop\chatgptprojects\MiGuardia-2.0`
@@ -10,6 +10,13 @@
 - HEAD de entrada: el checkpoint documental exacto que MAIN informe al abrir
   la tarea
 - Nombre humano: **Ayuda y recorrido inicial 2.0**
+
+Nota de cierre MAIN del 2026-09-03: este contrato de origen quedó integrado en
+el candidato combinado de Ayuda, simplificación, ubicación, clima por objetivo
+y Room V6. La batería final pasó 707/707 JVM y 351/351 tareas; la matriz
+Samsung API 36 quedó verde. Las menciones posteriores a Room V5 y a la QA
+pendiente describen el límite original de esta dependencia y no deben usarse
+para reabrirla ni para revertir la evolución conjunta a Room V6.
 
 ## QUÉ HACE
 

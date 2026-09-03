@@ -302,6 +302,32 @@ class WorkSetupCoordinatorTest {
                 requireTypeName = true,
             ).isValid,
         )
+        assertEquals(
+            "Ingresá el inicio nocturno con formato HH:mm.",
+            advancedPlaceRequirementMessage(
+                WorkPlaceDraft(
+                    nightHoursEnabled = true,
+                    nightStart = "",
+                    nightEnd = "06:00",
+                ),
+            ),
+        )
+        assertNull(
+            advancedPlaceRequirementMessage(
+                WorkPlaceDraft(
+                    nightHoursEnabled = false,
+                    nightStart = "",
+                    nightEnd = "",
+                ),
+            ),
+        )
+        assertEquals(
+            "Ingresá el nombre del tipo de trabajo.",
+            advancedTemplateRequirementMessage(WorkTemplateDraft(), requireTypeName = true),
+        )
+        assertNull(
+            advancedTemplateRequirementMessage(WorkTemplateDraft(), requireTypeName = false),
+        )
     }
 
     @Test
@@ -323,6 +349,8 @@ class WorkSetupCoordinatorTest {
                 showWeekendSummary = true,
                 classifyHoliday = true,
                 showHolidaySummary = true,
+                weatherLatitude = -31.4201,
+                weatherLongitude = -64.1888,
             )
         }
         fillValidFirstSet(coordinator, "Dependencia ficticia", "DFI", "Guardia habitual")
@@ -343,6 +371,120 @@ class WorkSetupCoordinatorTest {
         assertTrue(weekend.showDedicatedSummary)
         assertTrue(saved.firstRuleRevision.rules.holiday.differentTreatment)
         assertTrue(saved.firstRuleRevision.rules.holiday.showDedicatedSummary)
+        assertEquals(-31.4201, saved.objective.weatherLatitude)
+        assertEquals(-64.1888, saved.objective.weatherLongitude)
+    }
+
+    @Test
+    fun readyCatalogCanSaveCurrentLocationForOneObjective() {
+        val context = v2Context(WorkSector.PRIVATE_SECURITY)
+        val catalog = FakeWorkCatalogRepository()
+        val objectives = FakeObjectiveRepository()
+        val clearedWeatherObjectives = mutableListOf<UUID>()
+        val coordinator = coordinator(
+            configurations = FakeWorkConfigurationRepository(context.history),
+            catalog = catalog,
+            objectives = objectives,
+            clearWeatherCacheForObjective = { clearedWeatherObjectives += it },
+        )
+        coordinator.openFirstWorkSet()
+        fillValidFirstSet(coordinator, "Objetivo ficticio", "OBJ", "Guardia habitual")
+        coordinator.saveFirstWorkSet()
+        val saved = requireNotNull(catalog.createdFirstWorkSet)
+        objectives.replaceAll(listOf(saved.objective))
+        coordinator.openOverview()
+
+        coordinator.saveObjectiveLocation(saved.objective.id, -31.4201, -64.1888)
+
+        assertEquals(1, catalog.updateWorkPlaceCalls)
+        val updated = requireNotNull(catalog.updatedWorkPlace)
+        assertEquals(saved.objective, updated.previousObjective)
+        assertEquals(-31.4201, updated.updatedObjective.weatherLatitude)
+        assertEquals(-64.1888, updated.updatedObjective.weatherLongitude)
+        assertNull(coordinator.uiState.value.savingLocationObjectiveId)
+        assertTrue(coordinator.uiState.value.infoMessage.orEmpty().contains("ubicación quedó guardada"))
+        assertEquals(listOf(saved.objective.id), clearedWeatherObjectives)
+
+        objectives.replaceAll(listOf(updated.updatedObjective))
+        coordinator.clearObjectiveLocation(saved.objective.id)
+
+        assertEquals(2, catalog.updateWorkPlaceCalls)
+        val cleared = requireNotNull(catalog.updatedWorkPlace)
+        assertEquals(updated.updatedObjective, cleared.previousObjective)
+        assertNull(cleared.updatedObjective.weatherLatitude)
+        assertNull(cleared.updatedObjective.weatherLongitude)
+        assertTrue(coordinator.uiState.value.infoMessage.orEmpty().contains("ubicación se quitó"))
+        assertEquals(listOf(saved.objective.id, saved.objective.id), clearedWeatherObjectives)
+    }
+
+    @Test
+    fun secondLocationResultIsRejectedExplicitlyWhileAnotherSaveIsRunning() {
+        val context = v2Context(WorkSector.PRIVATE_SECURITY)
+        val catalog = FakeWorkCatalogRepository().apply {
+            updateWorkPlaceGate = CompletableDeferred()
+        }
+        val objectives = FakeObjectiveRepository()
+        val coordinator = coordinator(
+            configurations = FakeWorkConfigurationRepository(context.history),
+            catalog = catalog,
+            objectives = objectives,
+        )
+        coordinator.openFirstWorkSet()
+        fillValidFirstSet(coordinator, "Objetivo ficticio", "OBJ", "Guardia habitual")
+        coordinator.saveFirstWorkSet()
+        val saved = requireNotNull(catalog.createdFirstWorkSet)
+        objectives.replaceAll(listOf(saved.objective))
+        coordinator.openOverview()
+
+        assertTrue(coordinator.saveObjectiveLocation(saved.objective.id, -31.4201, -64.1888))
+        assertFalse(coordinator.saveObjectiveLocation(saved.objective.id, -32.0, -65.0))
+        assertEquals(saved.objective.id, coordinator.uiState.value.savingLocationObjectiveId)
+        assertEquals(1, catalog.updateWorkPlaceCalls)
+
+        catalog.updateWorkPlaceGate?.complete(Unit)
+        assertNull(coordinator.uiState.value.savingLocationObjectiveId)
+    }
+
+    @Test
+    fun lateCatalogLocationResultIsRejectedAfterLeavingTheOverview() {
+        val context = v2Context(WorkSector.PRIVATE_SECURITY)
+        val catalog = FakeWorkCatalogRepository()
+        val objectives = FakeObjectiveRepository()
+        val coordinator = coordinator(
+            configurations = FakeWorkConfigurationRepository(context.history),
+            catalog = catalog,
+            objectives = objectives,
+        )
+        coordinator.openFirstWorkSet()
+        fillValidFirstSet(coordinator, "Objetivo ficticio", "OBJ", "Guardia habitual")
+        coordinator.saveFirstWorkSet()
+        val saved = requireNotNull(catalog.createdFirstWorkSet)
+        objectives.replaceAll(listOf(saved.objective))
+        coordinator.openOverview()
+        coordinator.returnToCalendar()
+
+        assertFalse(coordinator.saveObjectiveLocation(saved.objective.id, -31.4201, -64.1888))
+        assertEquals(0, catalog.updateWorkPlaceCalls)
+    }
+
+    @Test
+    fun lateDraftLocationResultCannotRepopulateAChangedOrAbandonedForm() {
+        val coordinator = coordinator(
+            configurations = FakeWorkConfigurationRepository(v2Context(WorkSector.MEDICINE).history),
+        )
+        coordinator.openFirstWorkSet()
+        val originalRequestId = coordinator.uiState.value.draftLocationRequestId
+        coordinator.updatePlaceDraft { it.copy(address = "Dirección nueva") }
+
+        assertFalse(coordinator.saveDraftLocation(originalRequestId, -31.4201, -64.1888))
+        assertNull(coordinator.uiState.value.placeDraft.weatherLatitude)
+
+        val currentRequestId = coordinator.uiState.value.draftLocationRequestId
+        coordinator.updatePlaceDraft { it.copy(name = "Hospital ficticio", abbreviation = "HFI") }
+        coordinator.continueToTemplate()
+
+        assertFalse(coordinator.saveDraftLocation(currentRequestId, -31.4201, -64.1888))
+        assertNull(coordinator.uiState.value.placeDraft.weatherLatitude)
     }
 
     @Test
@@ -667,6 +809,8 @@ class WorkSetupCoordinatorTest {
                 showWeekendSummary = true,
                 classifyHoliday = true,
                 showHolidaySummary = true,
+                weatherLatitude = -31.4201,
+                weatherLongitude = -64.1888,
             ),
             templateDraft = WorkTemplateDraft(
                 typeName = "Jornada habitual",
@@ -693,6 +837,7 @@ class WorkSetupCoordinatorTest {
         persisted: WorkSetupPersistedState = WorkSetupPersistedState(),
         persist: (WorkSetupPersistedState) -> Unit = {},
         clock: Clock = CLOCK,
+        clearWeatherCacheForObjective: suspend (UUID) -> Unit = {},
     ): WorkSetupCoordinator {
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined).also(scopes::add)
         val uuids = (1L..100L).map { value -> UUID(0L, value) }.iterator()
@@ -703,6 +848,7 @@ class WorkSetupCoordinatorTest {
             clock = clock,
             uuidProvider = { uuids.next() },
             scope = scope,
+            clearWeatherCacheForObjective = clearWeatherCacheForObjective,
             initialPersistedState = persisted,
             persist = persist,
         )
@@ -843,6 +989,9 @@ private class FakeWorkCatalogRepository : WorkCatalogRepository {
     var createdFirstWorkSet: FirstWorkSet? = null
     var createdWorkPlace: NewWorkPlace? = null
     var createdTemplate: WorkTemplate? = null
+    var updateWorkPlaceCalls: Int = 0
+    var updatedWorkPlace: WorkPlaceUpdate? = null
+    var updateWorkPlaceGate: CompletableDeferred<Unit>? = null
 
     override fun observeCatalog(timelineId: UUID, sector: WorkSector): Flow<WorkCatalog> =
         catalogFlow(timelineId, sector)
@@ -897,7 +1046,11 @@ private class FakeWorkCatalogRepository : WorkCatalogRepository {
             workplaceRuleRevisions = current.workplaceRuleRevisions + newWorkPlace.firstRuleRevision,
         )
     }
-    override suspend fun updateWorkPlace(update: WorkPlaceUpdate) = error("No se usa")
+    override suspend fun updateWorkPlace(update: WorkPlaceUpdate) {
+        updateWorkPlaceCalls++
+        updatedWorkPlace = update
+        updateWorkPlaceGate?.await()
+    }
     override suspend fun setWorkPlaceActive(id: UUID, isActive: Boolean, updatedAt: Instant) = error("No se usa")
     override suspend fun createWorkType(workType: WorkType) = error("No se usa")
     override suspend fun updateWorkType(update: WorkTypeUpdate) = error("No se usa")
@@ -938,6 +1091,10 @@ private class FakeWorkCatalogRepository : WorkCatalogRepository {
 private class FakeObjectiveRepository : ObjectiveRepository {
     private val objectives = MutableStateFlow<List<Objective>>(emptyList())
     var observeFailure: Throwable? = null
+
+    fun replaceAll(values: List<Objective>) {
+        objectives.value = values
+    }
 
     override fun observeActive(): Flow<List<Objective>> = objectives
     override fun observeAll(): Flow<List<Objective>> = flow {

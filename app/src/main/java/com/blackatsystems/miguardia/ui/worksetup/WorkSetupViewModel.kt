@@ -24,6 +24,7 @@ import com.blackatsystems.miguardia.core.domain.work.WorkCatalog
 import com.blackatsystems.miguardia.core.domain.work.WorkConfiguration
 import com.blackatsystems.miguardia.core.domain.work.WorkConfigurationHistory
 import com.blackatsystems.miguardia.core.domain.work.WorkPlace
+import com.blackatsystems.miguardia.core.domain.work.WorkPlaceUpdate
 import com.blackatsystems.miguardia.core.domain.work.WorkSector
 import com.blackatsystems.miguardia.core.domain.work.WorkSetupState
 import com.blackatsystems.miguardia.core.domain.work.WorkTemplate
@@ -52,6 +53,7 @@ class WorkSetupViewModel(
     objectiveRepository: ObjectiveRepository,
     clock: Clock,
     uuidProvider: () -> UUID,
+    clearWeatherCacheForObjective: suspend (UUID) -> Unit,
     private val savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
     private val coordinator = WorkSetupCoordinator(
@@ -60,6 +62,7 @@ class WorkSetupViewModel(
         objectiveRepository = objectiveRepository,
         clock = clock,
         uuidProvider = uuidProvider,
+        clearWeatherCacheForObjective = clearWeatherCacheForObjective,
         scope = viewModelScope,
         initialPersistedState = savedStateHandle.readWorkSetupState(),
         persist = savedStateHandle::writeWorkSetupState,
@@ -75,6 +78,9 @@ class WorkSetupViewModel(
     fun openFirstWorkSet() = coordinator.openFirstWorkSet()
     fun updatePlaceDraft(transform: (WorkPlaceDraft) -> WorkPlaceDraft) =
         coordinator.updatePlaceDraft(transform)
+    fun saveDraftLocation(requestId: Long, latitude: Double, longitude: Double) =
+        coordinator.saveDraftLocation(requestId, latitude, longitude)
+    fun clearDraftLocation(requestId: Long) = coordinator.clearDraftLocation(requestId)
     fun updateTemplateDraft(transform: (WorkTemplateDraft) -> WorkTemplateDraft) =
         coordinator.updateTemplateDraft(transform)
     fun continueToTemplate() = coordinator.continueToTemplate()
@@ -85,6 +91,9 @@ class WorkSetupViewModel(
     fun saveAdditionalTemplate() = coordinator.saveAdditionalTemplate()
     fun startAnotherPlace() = coordinator.startAnotherPlace()
     fun saveAdditionalPlace() = coordinator.saveAdditionalPlace()
+    fun saveObjectiveLocation(objectiveId: UUID, latitude: Double, longitude: Double) =
+        coordinator.saveObjectiveLocation(objectiveId, latitude, longitude)
+    fun clearObjectiveLocation(objectiveId: UUID) = coordinator.clearObjectiveLocation(objectiveId)
     fun returnToCalendar() = coordinator.returnToCalendar()
     fun requestBack() = coordinator.requestBack()
     fun dismissDiscard() = coordinator.dismissDiscard()
@@ -97,6 +106,7 @@ class WorkSetupViewModel(
         private val objectiveRepository: ObjectiveRepository,
         private val clock: Clock,
         private val uuidProvider: () -> UUID = UUID::randomUUID,
+        private val clearWeatherCacheForObjective: suspend (UUID) -> Unit = {},
     ) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
             require(modelClass.isAssignableFrom(WorkSetupViewModel::class.java))
@@ -107,6 +117,7 @@ class WorkSetupViewModel(
                 objectiveRepository = objectiveRepository,
                 clock = clock,
                 uuidProvider = uuidProvider,
+                clearWeatherCacheForObjective = clearWeatherCacheForObjective,
                 savedStateHandle = extras.createSavedStateHandle(),
             ) as T
         }
@@ -121,6 +132,7 @@ internal class WorkSetupCoordinator(
     private val clock: Clock,
     private val uuidProvider: () -> UUID,
     private val scope: CoroutineScope,
+    private val clearWeatherCacheForObjective: suspend (UUID) -> Unit = {},
     initialPersistedState: WorkSetupPersistedState = WorkSetupPersistedState(),
     private val persist: (WorkSetupPersistedState) -> Unit = {},
 ) {
@@ -214,6 +226,7 @@ internal class WorkSetupCoordinator(
             it.copy(
                 surface = WorkSetupSurface.FIRST_WORK_SET,
                 step = WorkSetupStep.PLACE_AND_RULES,
+                draftLocationRequestId = it.draftLocationRequestId + 1,
                 placeDraft = if (it.placeDraft == WorkPlaceDraft()) WorkPlaceDraft() else it.placeDraft,
                 templateDraft = if (it.templateDraft == WorkTemplateDraft()) {
                     WorkTemplateDraft(typeName = sector.suggestedRegularTypeName())
@@ -229,7 +242,56 @@ internal class WorkSetupCoordinator(
 
     fun updatePlaceDraft(transform: (WorkPlaceDraft) -> WorkPlaceDraft) {
         if (_uiState.value.isSavingWorkSet) return
-        updateAndPersist { it.copy(placeDraft = transform(it.placeDraft), errorMessage = null) }
+        updateAndPersist {
+            val updatedDraft = transform(it.placeDraft)
+            it.copy(
+                placeDraft = updatedDraft,
+                draftLocationRequestId = if (updatedDraft.address != it.placeDraft.address) {
+                    it.draftLocationRequestId + 1
+                } else {
+                    it.draftLocationRequestId
+                },
+                errorMessage = null,
+            )
+        }
+    }
+
+    fun saveDraftLocation(requestId: Long, latitude: Double, longitude: Double): Boolean =
+        updateDraftLocation(requestId, latitude, longitude)
+
+    fun clearDraftLocation(requestId: Long): Boolean = updateDraftLocation(requestId, null, null)
+
+    private fun updateDraftLocation(
+        requestId: Long,
+        latitude: Double?,
+        longitude: Double?,
+    ): Boolean {
+        val state = _uiState.value
+        if (
+            state.surface !in setOf(WorkSetupSurface.FIRST_WORK_SET, WorkSetupSurface.ADDITIONAL_PLACE) ||
+            state.step != WorkSetupStep.PLACE_AND_RULES ||
+            state.isSavingWorkSet ||
+            state.draftLocationRequestId != requestId
+        ) {
+            return false
+        }
+        val updatedDraft = runCatching {
+            state.placeDraft.copy(weatherLatitude = latitude, weatherLongitude = longitude)
+        }.getOrElse { return false }
+        updateAndPersist { current ->
+            if (
+                current.surface !in setOf(WorkSetupSurface.FIRST_WORK_SET, WorkSetupSurface.ADDITIONAL_PLACE) ||
+                current.step != WorkSetupStep.PLACE_AND_RULES ||
+                current.isSavingWorkSet ||
+                current.draftLocationRequestId != requestId
+            ) {
+                current
+            } else {
+                current.copy(placeDraft = updatedDraft, errorMessage = null)
+            }
+        }
+        return _uiState.value.placeDraft == updatedDraft &&
+            _uiState.value.draftLocationRequestId == requestId
     }
 
     fun updateTemplateDraft(transform: (WorkTemplateDraft) -> WorkTemplateDraft) {
@@ -244,7 +306,11 @@ internal class WorkSetupCoordinator(
             return
         }
         updateAndPersist {
-            it.copy(step = WorkSetupStep.TYPE_AND_TEMPLATE, errorMessage = null)
+            it.copy(
+                step = WorkSetupStep.TYPE_AND_TEMPLATE,
+                draftLocationRequestId = it.draftLocationRequestId + 1,
+                errorMessage = null,
+            )
         }
     }
 
@@ -422,6 +488,7 @@ internal class WorkSetupCoordinator(
             it.copy(
                 surface = WorkSetupSurface.ADDITIONAL_PLACE,
                 placeDraft = WorkPlaceDraft(),
+                draftLocationRequestId = it.draftLocationRequestId + 1,
                 showDiscardConfirmation = false,
                 errorMessage = null,
                 infoMessage = null,
@@ -480,11 +547,94 @@ internal class WorkSetupCoordinator(
         }
     }
 
+    fun saveObjectiveLocation(objectiveId: UUID, latitude: Double, longitude: Double): Boolean =
+        updateObjectiveLocation(objectiveId, latitude, longitude)
+
+    fun clearObjectiveLocation(objectiveId: UUID): Boolean = updateObjectiveLocation(objectiveId, null, null)
+
+    private fun updateObjectiveLocation(
+        objectiveId: UUID,
+        latitude: Double?,
+        longitude: Double?,
+    ): Boolean {
+        val state = _uiState.value
+        if (
+            state.rootState !is WorkSetupState.V2Ready ||
+            state.surface != WorkSetupSurface.OVERVIEW ||
+            state.savingLocationObjectiveId != null
+        ) {
+            return false
+        }
+        val previousObjective = state.objectivesById[objectiveId] ?: return false
+        val previousPlace = state.catalog?.workPlaces?.singleOrNull { it.objectiveId == objectiveId } ?: return false
+        val timestamp = clock.instant()
+        val update = runCatching {
+            WorkPlaceUpdate(
+                previousWorkPlace = previousPlace,
+                updatedWorkPlace = previousPlace.copy(updatedAt = timestamp),
+                previousObjective = previousObjective,
+                updatedObjective = previousObjective.copy(
+                    weatherLatitude = latitude,
+                    weatherLongitude = longitude,
+                    updatedAt = timestamp,
+                ),
+            )
+        }.getOrElse {
+            _uiState.update { it.copy(errorMessage = "La ubicación obtenida no es válida.") }
+            return false
+        }
+        _uiState.update {
+            it.copy(savingLocationObjectiveId = objectiveId, errorMessage = null, infoMessage = null)
+        }
+        scope.launch {
+            try {
+                catalogRepository.updateWorkPlace(update)
+                val cacheClearFailure = runCatching {
+                    clearWeatherCacheForObjective(objectiveId)
+                }.exceptionOrNull()
+                _uiState.update {
+                    it.copy(
+                        savingLocationObjectiveId = null,
+                        infoMessage = if (cacheClearFailure != null) {
+                            null
+                        } else if (latitude == null) {
+                            "La ubicación se quitó de ${previousObjective.fullName} y se borró su pronóstico guardado."
+                        } else {
+                            "La ubicación quedó guardada para el clima de ${previousObjective.fullName}."
+                        },
+                        errorMessage = if (cacheClearFailure != null) {
+                            "La ubicación cambió, pero no pudimos borrar su pronóstico anterior. Podés borrarlo desde Clima > Pronósticos guardados."
+                        } else {
+                            null
+                        },
+                    )
+                }
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                _uiState.update {
+                    it.copy(
+                        savingLocationObjectiveId = null,
+                        errorMessage = error.toEverydayMessage(
+                            if (latitude == null) {
+                                "No pudimos quitar la ubicación. Intentá de nuevo."
+                            } else {
+                                "No pudimos guardar la ubicación. Podés intentarlo de nuevo con la dirección o con tu ciudad actual."
+                            },
+                        ),
+                    )
+                }
+            }
+        }
+        return true
+    }
+
     fun returnToCalendar() {
         updateAndPersist {
             it.copy(
                 surface = WorkSetupSurface.NONE,
                 step = WorkSetupStep.PLACE_AND_RULES,
+                draftLocationRequestId = it.draftLocationRequestId + 1,
                 placeDraft = WorkPlaceDraft(),
                 templateDraft = WorkTemplateDraft(),
                 showDiscardConfirmation = false,
@@ -500,7 +650,11 @@ internal class WorkSetupCoordinator(
         when {
             state.surface == WorkSetupSurface.FIRST_WORK_SET &&
                 state.step == WorkSetupStep.TYPE_AND_TEMPLATE -> updateAndPersist {
-                it.copy(step = WorkSetupStep.PLACE_AND_RULES, errorMessage = null)
+                it.copy(
+                    step = WorkSetupStep.PLACE_AND_RULES,
+                    draftLocationRequestId = it.draftLocationRequestId + 1,
+                    errorMessage = null,
+                )
             }
 
             state.surface == WorkSetupSurface.COMPLETION -> returnToCalendar()
@@ -644,6 +798,8 @@ internal class WorkSetupCoordinator(
             isActive = true,
             createdAt = timestamp,
             updatedAt = timestamp,
+            weatherLatitude = state.placeDraft.weatherLatitude,
+            weatherLongitude = state.placeDraft.weatherLongitude,
         ).normalizedForNewV2WorkPlace()
         val workPlace = WorkPlace(
             id = uuidProvider(),
@@ -798,6 +954,8 @@ internal fun SavedStateHandle.readWorkSetupState(): WorkSetupPersistedState = Wo
         showWeekendSummary = get<Boolean>(KEY_WEEKEND_SUMMARY) ?: false,
         classifyHoliday = get<Boolean>(KEY_HOLIDAY) ?: false,
         showHolidaySummary = get<Boolean>(KEY_HOLIDAY_SUMMARY) ?: false,
+        weatherLatitude = get<Double>(KEY_WEATHER_LATITUDE),
+        weatherLongitude = get<Double>(KEY_WEATHER_LONGITUDE),
     ),
     templateDraft = WorkTemplateDraft(
         typeName = get<String>(KEY_TYPE_NAME).orEmpty(),
@@ -827,6 +985,8 @@ internal fun SavedStateHandle.writeWorkSetupState(state: WorkSetupPersistedState
     this[KEY_WEEKEND_SUMMARY] = state.placeDraft.showWeekendSummary
     this[KEY_HOLIDAY] = state.placeDraft.classifyHoliday
     this[KEY_HOLIDAY_SUMMARY] = state.placeDraft.showHolidaySummary
+    this[KEY_WEATHER_LATITUDE] = state.placeDraft.weatherLatitude
+    this[KEY_WEATHER_LONGITUDE] = state.placeDraft.weatherLongitude
     this[KEY_TYPE_NAME] = state.templateDraft.typeName
     this[KEY_START_TIME] = state.templateDraft.startTime
     this[KEY_END_TIME] = state.templateDraft.endTime
@@ -854,6 +1014,8 @@ private const val KEY_SUNDAY = "work_setup_sunday"
 private const val KEY_WEEKEND_SUMMARY = "work_setup_weekend_summary"
 private const val KEY_HOLIDAY = "work_setup_holiday"
 private const val KEY_HOLIDAY_SUMMARY = "work_setup_holiday_summary"
+private const val KEY_WEATHER_LATITUDE = "work_setup_weather_latitude"
+private const val KEY_WEATHER_LONGITUDE = "work_setup_weather_longitude"
 private const val KEY_TYPE_NAME = "work_setup_type_name"
 private const val KEY_START_TIME = "work_setup_start_time"
 private const val KEY_END_TIME = "work_setup_end_time"

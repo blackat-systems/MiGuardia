@@ -107,14 +107,14 @@ class XlsxReportWriter {
             addOptionalSection(section)
         }
         add(emptyRow())
-        add(row(text("Referencias de horas", Style.SECTION)))
+        add(row(text("Metas de horas", Style.SECTION)))
         add(
             row(
                 text("Desde", Style.HEADER),
                 text("Hasta", Style.HEADER),
                 text("Estado", Style.HEADER),
                 text("Meta (min)", Style.HEADER),
-                text("Horas que cumplen (min)", Style.HEADER),
+                text("Horas que cuentan (min)", Style.HEADER),
                 text("Faltante (min)", Style.HEADER),
                 text("Superación (min)", Style.HEADER),
             ),
@@ -171,7 +171,7 @@ class XlsxReportWriter {
                 text("Fin real - hora", Style.HEADER),
                 text("Minutos contabilizados", Style.HEADER),
                 text("Horas legibles", Style.HEADER),
-                text("Minutos habituales", Style.HEADER),
+                text("$REGULAR_WORK_LABEL (min)", Style.HEADER),
                 text("Minutos extra", Style.HEADER),
                 text("Clase extra", Style.HEADER),
                 text("Minutos nocturnos", Style.HEADER),

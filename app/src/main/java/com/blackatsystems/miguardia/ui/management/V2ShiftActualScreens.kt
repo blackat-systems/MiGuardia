@@ -2,6 +2,7 @@ package com.blackatsystems.miguardia.ui.management
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -36,11 +37,17 @@ import com.blackatsystems.miguardia.core.domain.model.ShiftActualDifferenceChoic
 import com.blackatsystems.miguardia.core.domain.work.ExtraWorkClass
 import com.blackatsystems.miguardia.core.domain.work.WorkSetupState
 import com.blackatsystems.miguardia.ui.components.PersistentMessage
+import com.blackatsystems.miguardia.ui.components.AutomaticTimeField
+import com.blackatsystems.miguardia.ui.components.AdvancedOptionsSection
+import com.blackatsystems.miguardia.ui.components.ContextHelp
+import com.blackatsystems.miguardia.ui.components.ContextHelpButton
 import com.blackatsystems.miguardia.ui.components.SectionCard
 import com.blackatsystems.miguardia.ui.components.SurfaceHeader
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.UUID
@@ -194,7 +201,7 @@ private fun ActualSummary(actual: ShiftActualAggregate, zoneId: ZoneId) {
     Text("Real: ${actual.record.actualStart.visibleAt(zoneId)} – ${actual.record.actualEnd.visibleAt(zoneId)}")
     Text("Motivo: ${actual.record.differenceReason}")
     actual.record.explanation?.let { Text("Explicación: $it") }
-    Text("Trabajo habitual: ${actual.regularMinutes.asHoursAndMinutes()}")
+    Text("Horas trabajadas sin extras: ${actual.regularMinutes.asHoursAndMinutes()}")
     actual.extraIntervals.forEachIndexed { index, fragment ->
         Text(
             "Extra ${index + 1}: ${fragment.classNameSnapshot} · " +
@@ -380,6 +387,7 @@ private fun IdentityStage(editor: V2ShiftActualEditorState) {
 @Composable
 private fun ActualTimeStage(editor: V2ShiftActualEditorState, actions: V2ShiftActualActions) {
     val draft = editor.draft
+    val shift = editor.expectation.planned.shift
     SectionCard(
         title = "Horario realmente trabajado",
         supportingText = "Ingresá fecha y hora completas. El intervalo usa minutos enteros y debe haber terminado.",
@@ -389,6 +397,7 @@ private fun ActualTimeStage(editor: V2ShiftActualEditorState, actions: V2ShiftAc
             date = draft.startDate,
             time = draft.startTime,
             offset = draft.startOffset,
+            zoneId = shift.zoneId,
             tag = "v2-actual-start",
             onDate = { value -> actions.updateDraft { it.copy(startDate = value, startOffset = null) } },
             onTime = { value -> actions.updateDraft { it.copy(startTime = value, startOffset = null) } },
@@ -399,6 +408,7 @@ private fun ActualTimeStage(editor: V2ShiftActualEditorState, actions: V2ShiftAc
             date = draft.endDate,
             time = draft.endTime,
             offset = draft.endOffset,
+            zoneId = shift.zoneId,
             tag = "v2-actual-end",
             onDate = { value -> actions.updateDraft { it.copy(endDate = value, endOffset = null) } },
             onTime = { value -> actions.updateDraft { it.copy(endTime = value, endOffset = null) } },
@@ -427,35 +437,76 @@ private fun DateTimeFields(
     date: String,
     time: String,
     offset: String?,
+    zoneId: ZoneId,
     tag: String,
     onDate: (String) -> Unit,
     onTime: (String) -> Unit,
     onOffset: (String) -> Unit,
 ) {
     Text(prefix, fontWeight = FontWeight.SemiBold)
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        OutlinedTextField(
-            value = date,
-            onValueChange = onDate,
-            label = { Text("Fecha AAAA-MM-DD") },
-            singleLine = true,
-            modifier = Modifier.weight(1.35f).testTag("$tag-date"),
-        )
-        OutlinedTextField(
-            value = time,
-            onValueChange = onTime,
-            label = { Text("Hora HH:mm") },
-            singleLine = true,
-            modifier = Modifier.weight(1f).testTag("$tag-time"),
-        )
+    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+        if (maxWidth < 360.dp) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = date,
+                    onValueChange = onDate,
+                    label = { Text("Fecha AAAA-MM-DD") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth().testTag("$tag-date"),
+                )
+                AutomaticTimeField(
+                    value = time,
+                    onValueChange = onTime,
+                    label = "Hora",
+                    modifier = Modifier.fillMaxWidth().testTag("$tag-time"),
+                )
+            }
+        } else {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = date,
+                    onValueChange = onDate,
+                    label = { Text("Fecha AAAA-MM-DD") },
+                    singleLine = true,
+                    modifier = Modifier.weight(1.35f).testTag("$tag-date"),
+                )
+                AutomaticTimeField(
+                    value = time,
+                    onValueChange = onTime,
+                    label = "Hora",
+                    modifier = Modifier.weight(1f).testTag("$tag-time"),
+                )
+            }
+        }
     }
-    OutlinedTextField(
-        value = offset.orEmpty(),
-        onValueChange = onOffset,
-        label = { Text("Offset si la hora es ambigua, por ejemplo -03:00") },
-        singleLine = true,
-        modifier = Modifier.fillMaxWidth().testTag("$tag-offset"),
-    )
+    val validOffsets = runCatching {
+        zoneId.rules.getValidOffsets(
+            LocalDateTime.of(LocalDate.parse(date), LocalTime.parse(time)),
+        )
+    }.getOrDefault(emptyList())
+    if (validOffsets.size > 1) {
+        SectionCard(
+            title = "Esta hora aparece dos veces",
+            supportingText = "Elegí la primera o la segunda. Esto sólo ocurre en lugares que cambian el reloj.",
+        ) {
+            ContextHelpButton(
+                ContextHelp(
+                    title = "Hora repetida por cambio de reloj",
+                    whatItDoes = "Distingue dos instantes que comparten la misma fecha y hora local.",
+                    howToUseIt = "Elegí Primera vez salvo que sepas que trabajaste después de que el reloj retrocedió; en ese caso elegí Segunda vez.",
+                    example = "Si el reloj pasa de 03:00 a 02:00, las 02:30 ocurren dos veces.",
+                ),
+            )
+            validOffsets.forEachIndexed { index, validOffset ->
+                ChoiceButton(
+                    label = if (index == 0) "Primera vez" else "Segunda vez",
+                    selected = offset == validOffset.id,
+                    tag = "$tag-offset-${index + 1}",
+                    onClick = { onOffset(validOffset.id) },
+                )
+            }
+        }
+    }
 }
 
 @Composable
@@ -467,10 +518,10 @@ private fun ClassificationStage(
     val draft = editor.draft
     SectionCard(
         title = "Clasificar la diferencia",
-        supportingText = "MiGuardia no crea extras por referencia, cobertura, noche, feriado ni fin de semana.",
+        supportingText = "MiGuardia no crea extras por tu meta, cobertura, noche, feriado ni fin de semana.",
     ) {
         ChoiceButton(
-            label = "Toda la diferencia es habitual",
+            label = "Contarla como horas normales",
             selected = draft.choice == ShiftActualDifferenceChoice.ALL_REGULAR,
             tag = "v2-actual-choice-regular",
             onClick = {
@@ -490,17 +541,17 @@ private fun ClassificationStage(
             },
         )
         ChoiceButton(
-            label = "La diferencia es una clase extra",
+            label = "La diferencia corresponde a un tipo de horas extra",
             selected = draft.choice == ShiftActualDifferenceChoice.EXTRA_CLASS,
             tag = "v2-actual-choice-extra",
             onClick = { actions.updateDraft { it.copy(choice = ShiftActualDifferenceChoice.EXTRA_CLASS) } },
         )
         if (draft.choice == ShiftActualDifferenceChoice.EXTRA_CLASS) {
-            Text("Clase extra", fontWeight = FontWeight.SemiBold)
+            Text("Tipo de horas extra", fontWeight = FontWeight.SemiBold)
             if (state.isLoadingClasses) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     CircularProgressIndicator(Modifier.testTag("v2-actual-classes-loading"))
-                    Text("Leyendo clases extra…")
+                    Text("Leyendo tipos de horas extra…")
                 }
             }
             state.classesLoadError?.let { message ->
@@ -508,7 +559,7 @@ private fun ClassificationStage(
                 OutlinedButton(
                     onClick = actions.retryClasses,
                     modifier = Modifier.fillMaxWidth().testTag("v2-actual-classes-retry"),
-                ) { Text("Reintentar clases") }
+                ) { Text("Reintentar tipos") }
             }
             state.classes
                 .filter { it.isActive || it.id == draft.selectedClassId }
@@ -538,7 +589,7 @@ private fun ClassificationStage(
                 onClick = actions.startInlineClass,
                 enabled = !state.isLoadingClasses && state.classesLoadError == null,
                 modifier = Modifier.fillMaxWidth().testTag("v2-actual-inline-class"),
-            ) { Text("Crear clase al guardar") }
+            ) { Text("Crear tipo al guardar") }
             if (draft.isCreatingInlineClass) InlineClassDraft(draft, actions)
             Text("Fragmentos exactos", fontWeight = FontWeight.SemiBold)
             Text(
@@ -546,7 +597,7 @@ private fun ClassificationStage(
                 style = MaterialTheme.typography.bodySmall,
             )
             draft.fragments.forEachIndexed { index, fragment ->
-                FragmentEditor(index, fragment, actions)
+                FragmentEditor(index, fragment, editor.expectation.planned.shift.zoneId, actions)
             }
             OutlinedButton(
                 onClick = actions.addFragment,
@@ -586,19 +637,46 @@ private fun InlineClassDraft(draft: V2ActualEditorDraft, actions: V2ShiftActualA
             label = { Text("Nombre") },
             modifier = Modifier.fillMaxWidth().testTag("v2-actual-inline-name"),
         )
-        YesNoChoice(
-            title = "¿Ayuda a cumplir la referencia?",
-            value = draft.inlineHelpsReference,
-            tag = "v2-actual-inline-helps",
-            onValue = { value -> actions.updateDraft { it.copy(inlineHelpsReference = value) } },
-        )
-        YesNoChoice(
-            title = "¿Tendrá desglose propio en Resumen?",
-            value = draft.inlineDedicatedSummary,
-            tag = "v2-actual-inline-dedicated",
-            onValue = { value -> actions.updateDraft { it.copy(inlineDedicatedSummary = value) } },
-        )
-        TextButton(onClick = actions.cancelInlineClass) { Text("Cancelar clase nueva") }
+        val missingAnswers = listOf(draft.inlineHelpsReference, draft.inlineDedicatedSummary).count { it == null }
+        if (missingAnswers > 0) Text("Faltan $missingAnswers respuestas en Opciones avanzadas.")
+        AdvancedOptionsSection(
+            help = ContextHelp(
+                title = "Opciones de esta hora extra",
+                whatItDoes = "Define si cuenta para tu meta y si querés verla por separado.",
+                howToUseIt = "Respondé ambas preguntas según tu forma de trabajo.",
+                example = "Una extensión puede sumar al total trabajado sin contar para tu meta.",
+            ),
+        ) {
+            YesNoChoice(
+                title = "¿Estas horas extra cuentan para tu meta?",
+                value = draft.inlineHelpsReference,
+                tag = "v2-actual-inline-helps",
+                onValue = { value -> actions.updateDraft { it.copy(inlineHelpsReference = value) } },
+            )
+            ContextHelpButton(
+                ContextHelp(
+                    title = "Cuenta para tu meta",
+                    whatItDoes = "Decide si estas horas se suman al avance de tu meta.",
+                    howToUseIt = "Elegí Sí si completan la meta; No si sólo querés sumarlas al total trabajado.",
+                    example = "Con 150 h y una meta de 160 h, 10 h con Sí completan la meta. Con No, el total es 160 h pero la meta sigue en 150 h.",
+                ),
+            )
+            YesNoChoice(
+                title = "¿Querés ver este tipo por separado?",
+                value = draft.inlineDedicatedSummary,
+                tag = "v2-actual-inline-dedicated",
+                onValue = { value -> actions.updateDraft { it.copy(inlineDedicatedSummary = value) } },
+            )
+            ContextHelpButton(
+                ContextHelp(
+                    title = "Ver este tipo por separado",
+                    whatItDoes = "Muestra una fila con el nombre de este tipo sin cambiar ningún total.",
+                    howToUseIt = "Elegí Sí para distinguirlo; No para dejarlo sólo dentro de Extras y Total trabajado.",
+                    example = "Con Sí: Servicio extra, 8 h. Con No, las 8 h siguen contando en Extras.",
+                ),
+            )
+        }
+        TextButton(onClick = actions.cancelInlineClass) { Text("Cancelar tipo nuevo") }
     }
 }
 
@@ -620,6 +698,7 @@ private fun YesNoChoice(title: String, value: Boolean?, tag: String, onValue: (B
 private fun FragmentEditor(
     index: Int,
     fragment: V2ActualFragmentInput,
+    zoneId: ZoneId,
     actions: V2ShiftActualActions,
 ) {
     SectionCard(title = "Fragmento ${index + 1}", supportingText = "UUID: ${fragment.id}") {
@@ -628,6 +707,7 @@ private fun FragmentEditor(
             date = fragment.startDate,
             time = fragment.startTime,
             offset = fragment.startOffset,
+            zoneId = zoneId,
             tag = "v2-actual-fragment-${fragment.id}-start",
             onDate = { value -> actions.updateFragment(fragment.id) { it.copy(startDate = value, startOffset = null) } },
             onTime = { value -> actions.updateFragment(fragment.id) { it.copy(startTime = value, startOffset = null) } },
@@ -638,6 +718,7 @@ private fun FragmentEditor(
             date = fragment.endDate,
             time = fragment.endTime,
             offset = fragment.endOffset,
+            zoneId = zoneId,
             tag = "v2-actual-fragment-${fragment.id}-end",
             onDate = { value -> actions.updateFragment(fragment.id) { it.copy(endDate = value, endOffset = null) } },
             onTime = { value -> actions.updateFragment(fragment.id) { it.copy(endTime = value, endOffset = null) } },
@@ -660,9 +741,9 @@ private fun ReviewStage(editor: V2ShiftActualEditorState) {
         Text("Planificado: ${shift.startAt.visibleAt(shift.zoneId)} – ${shift.endAt.visibleAt(shift.zoneId)}")
         ActualSummary(mutation.replacement, shift.zoneId)
         mutation.classToCreate?.let { newClass ->
-            Text("Se creará la clase: ${newClass.name}", fontWeight = FontWeight.SemiBold)
+            Text("Se creará el tipo de horas extra: ${newClass.name}", fontWeight = FontWeight.SemiBold)
         }
-        Text("No se calcula avance ni cumplimiento en este bloque.", style = MaterialTheme.typography.bodySmall)
+        Text("Este paso sólo guarda lo que pasó en la jornada.", style = MaterialTheme.typography.bodySmall)
     }
 }
 
@@ -673,7 +754,7 @@ private fun ExtraClassCatalogScreen(state: V2ShiftActualUiState, actions: V2Shif
             .fillMaxSize()
             .safeDrawingPadding(),
     ) {
-        SurfaceHeader("Clases de horas extra", "Cerrar", actions.close)
+        SurfaceHeader("Tipos de horas extra", "Cerrar", actions.close)
         HorizontalDivider()
         Column(
             modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
@@ -713,8 +794,9 @@ private fun ClassEditor(
 ) {
     SectionCard(
         title = if (editor.expected == null) "Nueva clase" else "Editar clase",
-        supportingText = "Ambas respuestas comienzan sin valor al crear. Los cambios no reescriben fotografías históricas.",
+        supportingText = "Poné un nombre simple. Las decisiones técnicas quedan en Opciones avanzadas.",
     ) {
+        val missingAnswers = listOf(editor.helpsReference, editor.dedicatedSummary).count { it == null }
         editor.errorMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             listOf("Horas extras", "Extensión de turno", "Servicio extra").forEach { suggestion ->
@@ -729,16 +811,46 @@ private fun ClassEditor(
             label = { Text("Nombre") },
             modifier = Modifier.fillMaxWidth().testTag("v2-extra-class-name"),
         )
-        YesNoChoice(
-            "¿Ayuda a cumplir la referencia?",
-            editor.helpsReference,
-            "v2-extra-class-helps",
-        ) { value -> actions.updateClassEditor { it.copy(helpsReference = value) } }
-        YesNoChoice(
-            "¿Tendrá desglose propio en Resumen?",
-            editor.dedicatedSummary,
-            "v2-extra-class-dedicated",
-        ) { value -> actions.updateClassEditor { it.copy(dedicatedSummary = value) } }
+        if (missingAnswers > 0) {
+            Text("Faltan $missingAnswers respuestas en Opciones avanzadas.", color = MaterialTheme.colorScheme.primary)
+        }
+        AdvancedOptionsSection(
+            help = ContextHelp(
+                title = "Opciones de este tipo de horas extra",
+                whatItDoes = "Define si estas horas cuentan para tu meta y si querés verlas por separado.",
+                howToUseIt = "Respondé Sí o No en ambas preguntas. No hay una respuesta automática porque depende de tu forma de trabajo.",
+                example = "Servicio extra puede sumar al total trabajado sin contar para una meta mensual.",
+            ),
+            initiallyExpanded = editor.expected != null,
+        ) {
+            YesNoChoice(
+                "¿Estas horas extra cuentan para tu meta?",
+                editor.helpsReference,
+                "v2-extra-class-helps",
+            ) { value -> actions.updateClassEditor { it.copy(helpsReference = value) } }
+            ContextHelpButton(
+                ContextHelp(
+                    title = "Cuenta para tu meta",
+                    whatItDoes = "Decide si las horas de este tipo se suman al avance de tu meta.",
+                    howToUseIt = "Elegí Sí si se usan para completar la meta. Elegí No si querés registrarlas como trabajadas y extra, pero sin acercar la meta.",
+                    example = "Meta 160 h: 150 h sin extras y 10 h de este tipo. Con Sí muestra 160 h; con No muestra 150 h, aunque el total trabajado sigue en 160 h.",
+                ),
+            )
+            YesNoChoice(
+                "¿Querés ver este tipo por separado?",
+                editor.dedicatedSummary,
+                "v2-extra-class-dedicated",
+            ) { value -> actions.updateClassEditor { it.copy(dedicatedSummary = value) } }
+            ContextHelpButton(
+                ContextHelp(
+                    title = "Ver este tipo por separado",
+                    whatItDoes = "Muestra una fila con el nombre de este tipo en Tus horas y en el Resumen.",
+                    howToUseIt = "Elegí Sí si querés distinguirlo. Elegí No si alcanza con verlo dentro de Extras y Total trabajado.",
+                    example = "Con Sí: Servicio extra, 8 h. Con No, esas 8 h siguen dentro de Extras y Total trabajado.",
+                ),
+            )
+            Text("Cambiar estas opciones no reinterpreta horas que ya guardaste.")
+        }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(onClick = actions.cancelClassEditor, modifier = Modifier.weight(1f)) {
                 Text("Cancelar")
@@ -763,8 +875,8 @@ private fun ClassCatalogRow(
         title = extraClass.name,
         supportingText = if (extraClass.isActive) "Activa" else "Archivada",
     ) {
-        Text(if (extraClass.helpsMeetHoursReference) "Ayuda a cumplir la referencia: Sí" else "Ayuda a cumplir la referencia: No")
-        Text(if (extraClass.showDedicatedSummary) "Desglose propio: Sí" else "Desglose propio: No")
+        Text(if (extraClass.helpsMeetHoursReference) "Cuenta para tu meta: Sí" else "Cuenta para tu meta: No")
+        Text(if (extraClass.showDedicatedSummary) "Se ve por separado: Sí" else "Se ve por separado: No")
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(
                 onClick = { actions.editClass(extraClass.id) },

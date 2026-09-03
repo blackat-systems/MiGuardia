@@ -43,6 +43,7 @@ import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.ZoneOffset
@@ -117,7 +118,7 @@ class V2ShiftActualComposeTest {
 
         compose.onNodeWithText("Planificado: 2026-08-25 08:00", substring = true).assertIsDisplayed()
         compose.onNodeWithText("Real: 2026-08-25 07:30", substring = true).assertIsDisplayed()
-        compose.onNodeWithText("Trabajo habitual: 8 h 0 min").assertIsDisplayed()
+        compose.onNodeWithText("Horas trabajadas sin extras: 8 h 0 min").assertIsDisplayed()
         compose.onNodeWithText("Extra 1: Horas extras", substring = true).assertIsDisplayed()
         compose.onNodeWithText("Extra 2: Horas extras", substring = true).assertIsDisplayed()
         compose.onNodeWithText("Total real: 9 h 0 min").assertIsDisplayed()
@@ -149,6 +150,8 @@ class V2ShiftActualComposeTest {
         compose.onNodeWithTag("v2-extra-class-save").performScrollTo().assertIsNotEnabled()
         compose.onNodeWithTag("v2-extra-class-name").performScrollTo().performTextReplacement("Servicio extra")
         compose.onNodeWithTag("v2-extra-class-save").performScrollTo().assertIsNotEnabled()
+        compose.onNodeWithTag("v2-extra-class-helps-sí").assertDoesNotExist()
+        compose.onNodeWithTag("advanced-options-toggle").performScrollTo().performClick()
         compose.onNodeWithTag("v2-extra-class-helps-sí").performScrollTo().performClick().assertIsSelected()
         compose.onNodeWithTag("v2-extra-class-dedicated-no").performScrollTo().performClick().assertIsSelected()
         compose.onNodeWithTag("v2-extra-class-save").performScrollTo().assertIsEnabled()
@@ -237,6 +240,73 @@ class V2ShiftActualComposeTest {
         compose.runOnIdle { assertEquals(null, state.editor?.draft?.startOffset) }
         compose.onNodeWithTag("v2-actual-end-date").performTextReplacement("2026-08-26")
         compose.runOnIdle { assertEquals(null, state.editor?.draft?.endOffset) }
+    }
+
+    @Test
+    fun repeatedClockTimeOffersTwoExplicitChoicesOnlyWhenNeeded() {
+        val repeatedDate = LocalDate.of(2026, 11, 1)
+        val repeatedTime = LocalTime.of(1, 30)
+        val repeatedZone = ZoneId.of("America/New_York")
+        val secondOffset = repeatedZone.rules
+            .getValidOffsets(LocalDateTime.of(repeatedDate, repeatedTime))[1]
+            .id
+        val base = expectation()
+        val repeatedExpectation = base.copy(
+            planned = base.planned.copy(
+                shift = base.planned.shift.copy(zoneId = repeatedZone),
+            ),
+        )
+        var state by mutableStateOf(
+            V2ShiftActualUiState(
+                surface = V2ShiftActualSurface.EDITOR,
+                editor = V2ShiftActualEditorState(
+                    expectation = repeatedExpectation,
+                    ordinal = 1,
+                    count = 1,
+                    ownerDate = repeatedDate,
+                    stage = V2ShiftActualStage.ACTUAL_TIME,
+                    draft = V2ActualEditorDraft(
+                        startDate = repeatedDate.toString(),
+                        startTime = repeatedTime.toString(),
+                        endDate = repeatedDate.toString(),
+                        endTime = "03:00",
+                    ),
+                ),
+            ),
+        )
+        compose.setContent {
+            MiGuardiaTheme {
+                V2ShiftActualSurfaceHost(
+                    state,
+                    V2ShiftActualActions(
+                        updateDraft = { transform ->
+                            state = state.copy(editor = state.editor?.let { it.copy(draft = transform(it.draft)) })
+                        },
+                    ),
+                )
+            }
+        }
+
+        compose.onNodeWithTag("v2-actual-start-offset-1").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("v2-actual-start-offset-2").performScrollTo().assertIsDisplayed().performClick()
+        compose.runOnIdle { assertEquals(secondOffset, state.editor?.draft?.startOffset) }
+
+        compose.runOnIdle {
+            state = state.copy(
+                editor = state.editor?.copy(
+                    expectation = base,
+                    ownerDate = DATE,
+                    draft = V2ActualEditorDraft(
+                        startDate = DATE.toString(),
+                        startTime = "08:00",
+                        endDate = DATE.toString(),
+                        endTime = "16:00",
+                    ),
+                ),
+            )
+        }
+        compose.onNodeWithTag("v2-actual-start-offset-1").assertDoesNotExist()
+        compose.onNodeWithTag("v2-actual-start-offset-2").assertDoesNotExist()
     }
 
     @Test

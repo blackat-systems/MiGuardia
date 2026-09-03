@@ -337,7 +337,7 @@ private fun buildCompliancePeriod(
                     unit = SummaryValueUnit.MINUTES,
                     kind = SummaryContributionKind.REFERENCE_TARGET,
                     sourceLabel = "Meta configurada para este período",
-                    explanation = "Proviene de la referencia de horas vigente al comenzar el período completo.",
+                    explanation = "Proviene de la meta de horas vigente al comenzar el período completo.",
                 ),
             ),
         )
@@ -370,7 +370,7 @@ private fun buildCompliancePeriod(
                 contribution.copy(
                     id = "$prefix:excess:work:${contribution.id}",
                     kind = SummaryContributionKind.REFERENCE_WORK_OFFSET,
-                    explanation = "Se suma porque esta franja cuenta para el cumplimiento.",
+                    explanation = "Se suma porque esta franja cuenta para el avance de tu meta.",
                 )
             }
             val targetOffset = requireNotNull(target).contributions.map { contribution ->
@@ -472,7 +472,13 @@ private fun buildEssentials(
             null
         },
         regularWorked = if (hasWorkSource) {
-            hoursMetric("essential:regular", "Trabajo habitual", regular, metadata, HoursContribution::workedMinutes)
+            hoursMetric(
+                "essential:regular",
+                "Horas trabajadas sin extras",
+                regular,
+                metadata,
+                HoursContribution::workedMinutes,
+            )
         } else {
             null
         },
@@ -579,7 +585,7 @@ private fun buildAvailability(
                         segment.activeWorkKeys.isNotEmpty() ->
                             "Esta franja coincide con trabajo activo y reemplaza disponibilidad."
                         else ->
-                            "La disponibilidad permanece separada del trabajo y del cumplimiento."
+                            "La disponibilidad permanece separada del trabajo y del avance de tu meta."
                     },
                 )
             }

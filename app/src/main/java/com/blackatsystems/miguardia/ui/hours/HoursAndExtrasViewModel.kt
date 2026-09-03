@@ -434,7 +434,7 @@ class HoursAndExtrasViewModel(
                         referenceDraft = null,
                         referenceReview = null,
                         isSaving = false,
-                        message = "La referencia quedó guardada desde ${review.startedOn}.",
+                        message = "La meta quedó guardada desde ${review.startedOn}.",
                     )
                     savedStateHandle.writeSurface(HoursAndExtrasSurface.PROGRESS)
                 }
@@ -543,7 +543,7 @@ class HoursAndExtrasViewModel(
             if (result == PerPeriodHoursValueWriteResult.Conflict) {
                 _uiState.value = _uiState.value.copy(
                     isSaving = false,
-                    message = "La referencia o la meta cambió. El borrador se conserva para revisarlo.",
+                    message = "La meta cambió. El borrador se conserva para revisarlo.",
                 )
                 return@launch
             }
@@ -1224,16 +1224,16 @@ internal fun buildHoursReferenceReview(
     }
     val firstConfiguredDate = history.timeline.revisions.first().effectiveFrom
     require(!startedOn.isBefore(firstConfiguredDate)) {
-        "La referencia no puede comenzar antes del $firstConfiguredDate"
+        "La meta no puede comenzar antes del $firstConfiguredDate"
     }
     val reference = when (draft.choice) {
         HoursReferenceChoice.PENDING -> HoursReference.PendingSetup
         HoursReferenceChoice.NOT_USED -> HoursReference.NotUsed
         HoursReferenceChoice.UNKNOWN -> HoursReference.Unknown(period)
         HoursReferenceChoice.FIXED -> HoursReference.Fixed(
-            period = requireNotNull(period) { "Elegí un período para la referencia fija" },
+            period = requireNotNull(period) { "Elegí un período para la meta fija" },
             requiredMinutes = PositiveMinutes(
-                parsePositiveHoursValue(draft.requiredMinutes, "minutos de referencia"),
+                parsePositiveHoursValue(draft.requiredMinutes, "minutos de la meta"),
             ),
         )
         HoursReferenceChoice.PER_PERIOD -> HoursReference.PerPeriod(
@@ -1242,7 +1242,7 @@ internal fun buildHoursReferenceReview(
                 )?.takeIf { existing -> existing.period == period }
                 ?.definitionId
                 ?: draft.definitionId,
-            period = requireNotNull(period) { "Elegí un período para la referencia variable" },
+            period = requireNotNull(period) { "Elegí un período para la meta variable" },
         )
     }
     val window = reference.periodOrNull()?.windowContaining(startedOn)

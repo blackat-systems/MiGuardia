@@ -46,6 +46,7 @@ class V2ShiftActualActivityTest {
         check(context.packageName == QA_APPLICATION_ID) {
             "La prueba integral de horario real sólo puede ejecutarse contra el paquete QA."
         }
+        markOnboardingCompletedForTest()
         val zone = AppDefaults.zoneId()
         val end = Instant.now().truncatedTo(ChronoUnit.MINUTES).minus(2, ChronoUnit.MINUTES)
         val start = end.minus(1, ChronoUnit.HOURS)

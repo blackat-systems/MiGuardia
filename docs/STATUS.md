@@ -9,12 +9,17 @@ no significa que exista ya una implementación nueva.
 El núcleo laboral V2 quedó aprobado por MAIN. La segunda capa está
 desbloqueada. **Widget de próximo evento**, **Informes locales de jornadas y
 horas**, **Copias y restauración locales seguras** y **Bloqueo de acceso local**
-quedaron cerrados. Bloqueo pasó la batería global definitiva y una matriz final
-Samsung API 36 de 31/31 pruebas después de las correcciones de MAIN. No existe
-otro candidato ejecutable sin integrar. **Ayuda y recorrido inicial 2.0** quedó
-preparado y `HABILITADO` mediante
-`docs/prompts/AYUDA_Y_RECORRIDO_INICIAL_V2.md`; la tarea especialista todavía
-no fue abierta.
+quedaron cerrados. El candidato combinado de **Ayuda y recorrido inicial 2.0**,
+simplificación de formularios, ubicación puntual, clima por objetivo, Room V6 y
+compatibilidad de Copias fue auditado y corregido localmente por MAIN. La
+batería final posterior a los arreglos pasó 707/707 pruebas JVM y 351/351
+tareas. La QA autorizada en Samsung API 36 detectó y permitió cerrar dos
+defectos reales: la incompatibilidad de Fragment 1.2.5 con el launcher moderno
+de permisos y un mensaje de ubicación que quedaba guardando indefinidamente.
+Room volvió a pasar 123/123 y la matriz dirigida posterior pasó 30/30. El
+candidato continúa sin commit; Ayuda y su DataStore pasaron además 9/9 al
+cierre. El bloque quedó funcionalmente cerrado y listo para la auditoría
+integral final.
 
 MAIN 2.0 está reactivada para recibir los handoffs que Joaquin entregue,
 auditarlos, integrarlos, probarlos y cerrarlos. Joaquin decide cuándo pedir el
@@ -34,6 +39,31 @@ ejecutó y verificó en `ad777bb`. Ambas autorizaciones quedaron consumidas y no
 se extienden a pushes posteriores, tags, un Release, `main`, la publicación de
 la aplicación ni ninguna acción sobre el paquete o los datos de producción.
 
+El 2026-09-02 quedó preparado para auditoría de MAIN un candidato de
+simplificación de interfaz: carga manual directa, repetición progresiva,
+explicaciones contextuales `(?)`, ingreso de horas con separador automático y
+diez colores comunes sin retirar el selector completo. El mismo candidato
+reemplaza el clima fijo de Córdoba por coordenadas opcionales de cada objetivo,
+capturadas sólo al tocar una acción y sin seguimiento. La base exclusiva V2
+pasa de Room 5 a Room 6 mediante `5→6`; una copia lógica Room V5 se actualiza al
+leerla agregando ambas coordenadas como nulas.
+
+El 2026-09-03 MAIN recibió el handoff, auditó el diff y corrigió defectos
+reproducibles en la edición automática de horas y fechas, los requisitos
+avanzados ocultos, el vocabulario de informes, los callbacks tardíos de
+ubicación y el aislamiento del clima por objetivo. La QA física encontró luego
+una incompatibilidad real entre Fragment 1.2.5 y los launchers modernos de
+Android, además de un estado visual de ubicación que no finalizaba. Ambos
+defectos quedaron corregidos y cubiertos. La batería final ejecutada desde cero
+pasó 707/707 pruebas JVM, `lintDebug` con 0 errores y 351/351 tareas; se
+construyeron Debug, QA, Release y ambos APK de instrumentación. Room V6 quedó
+confirmado con 27 tablas, 0 vistas, 2 consultas de preparación y migración
+explícita `5→6`; pasó 123/123 en el Samsung después del arreglo. La matriz
+dirigida posterior pasó 30/30 y el recorrido real cubrió permiso aproximado,
+Geocoder, ubicación por objetivo, Fotos, SAF, Informes, notificaciones y
+autenticación del dispositivo. API 26 y API 33 permanecen como compatibilidad
+pendiente.
+
 Decisión de producto del 2026-08-23: MiGuardia 1.0 fue una prueba interna sin
 usuarios y continúa únicamente como base de código. MiGuardia 2.0 no migra datos
 de 1.0, no necesita un modo `MIGRATED_V1` ni una activación V1→V2 y comienza con
@@ -52,6 +82,9 @@ La auditoría de reactivación y Puerta 0 está registrada en
 `docs/audits/2026-08-21-reactivacion-main-y-puerta-cero.md`.
 El flujo vigente de handoffs y checkpoints está registrado en
 `docs/audits/2026-08-23-flujo-handoffs-y-checkpoints-main.md`.
+La auditoría local del candidato combinado de Ayuda y cambios de último momento
+está registrada en
+`docs/audits/2026-09-03-integracion-y-depuracion-cambios-ultimo-momento-v2-main.md`.
 La separación entre continuidad de código y ausencia de migración de datos V1
 está registrada en `docs/adr/0024-continuidad-de-codigo-sin-migracion-de-datos-v1.md`
 y auditada en
@@ -223,10 +256,10 @@ y auditada en
   coincidían en `836d908`; esa autorización no puede reutilizarse.
 - El dominio nuevo vive en `core/domain/.../work/`; no se recuperó el candidato
   mensual descartado. El runtime V1 ya fue retirado. `MiGuardiaV2Database`
-  conserva su cadena explícita `1→2→3→4→5` y ya persiste configuración, carga,
+  conserva su cadena explícita `1→2→3→4→5→6` y ya persiste configuración, carga,
   edición/eliminación, recurrencias, horario real, clases extra, extras
-  independientes, el inicio consciente de la referencia de horas y ventanas de
-  disponibilidad.
+  independientes, el inicio consciente de la referencia de horas, ventanas de
+  disponibilidad y coordenadas meteorológicas opcionales por objetivo.
 
 ## Antecedente histórico descartado: candidato mensual
 
@@ -1327,11 +1360,15 @@ continúa siendo una puerta separada. La evidencia durable está en
 `docs/audits/2026-09-01-bloqueo-de-acceso-local-v2-main.md`. No existe una
 autorización vigente de push.
 
-## Ayuda y recorrido inicial 2.0 — prompt habilitado
+## Ayuda, simplificación, ubicación y clima — candidato integral verde
 
-Joaquin pidió preparar la dependencia siguiente. MAIN auditó la documentación
-histórica y la interfaz V2 actual y resolvió la adaptación mediante ADR 0037 y
-`docs/prompts/AYUDA_Y_RECORRIDO_INICIAL_V2.md`.
+Joaquin recibió un candidato de Ayuda y después incorporó cambios de último
+momento para simplificar el uso cotidiano y definir la ubicación meteorológica.
+El checkout actual conserva ambas entregas juntas. MAIN ya las auditó, corrigió
+y verificó como una sola unidad, incluida la QA física autorizada en Samsung
+API 36. El bloque quedó funcionalmente cerrado, pero todavía no fue confirmado
+en Git. `docs/prompts/AYUDA_Y_RECORRIDO_INICIAL_V2.md` queda como contrato de
+origen cerrado y no reejecutable.
 
 El contrato conserva este orden:
 
@@ -1350,16 +1387,21 @@ controles reales sin mutar datos y puede omitirse. `Ayuda` aparece una sola vez
 en el grupo `Aplicación` y permite repetir el recorrido sin reactivar la marca
 de primera apertura.
 
-La única persistencia nueva autorizada es el DataStore local y versionado
-`onboarding.preferences_pb`, con `completed_version=1`. Esa marca no se agrega
-a las 17 preferencias portables de Copias. Room V5, sus 27 tablas y esquemas,
-Gradle, manifiesto, permisos, dependencias, paquete, versión y SDK permanecen
-protegidos.
+El candidato agrega el DataStore local y versionado
+`onboarding.preferences_pb`, con `completed_version=1`, sin incorporarlo a las
+17 preferencias portables de Copias. También propone Room V6 mediante migración
+explícita `5→6` para las coordenadas meteorológicas opcionales por objetivo; las
+copias lógicas V5 deben seguir leyéndose con coordenadas nulas. La dirección se
+convierte conscientemente mediante el `Geocoder` de Android y, cuando falta, la
+persona puede pedir una sola captura aproximada de su ciudad actual. No se
+autoriza ubicación precisa, en segundo plano ni seguimiento.
 
-Base funcional del contrato:
-`b64f07a6a92ad16f789eceb395c469239ee46eb4`. La dependencia debe comenzar
-desde el checkpoint documental que MAIN informe al abrirla. Pedir el prompt no
-creó una tarea, no autorizó dispositivo y no habilitó push.
+Base funcional del candidato:
+`f8ddbe2754bad62df43d1cef3e1f0c6b3bcb2352`. MAIN repitió la auditoría hunk por
+hunk, incorporó correcciones acotadas y obtuvo 707/707 JVM, lint sin errores y
+351/351 tareas. En Samsung API 36, Room pasó 123/123 y la matriz dirigida
+posterior a las correcciones pasó 30/30. No existe autorización vigente de
+commit ni de push.
 
 ## Flujo vigente de MAIN
 
@@ -1394,9 +1436,9 @@ posteriores.
 - cualquier cálculo monetario o liquidación permanece fuera del producto;
 - un eventual cambio de profesión después de la selección inicial de rubro;
   no forma parte de la secuencia actual y sólo se abre si aparece un caso real;
-- recomendación futura, todavía no habilitada: después de completar Ayuda,
-  recorrido inicial y la auditoría final —el núcleo laboral, Copias y Bloqueo de
-  acceso ya están cerrados—, evaluar una
+- recomendación futura, todavía no habilitada: después de integrar Ayuda y los
+  cambios de último momento y completar la auditoría final —el núcleo laboral,
+  Copias y Bloqueo de acceso ya están cerrados—, evaluar una
   `Agenda profesional` opcional para Medicina y una posible Psicología. Su
   primer alcance sería pacientes y turnos, sin historias clínicas,
   diagnósticos, tratamientos ni evoluciones. Psicología requeriría aprobar por
@@ -1406,8 +1448,8 @@ posteriores.
   pendientes de compatibilidad—, Informes —cerrado por MAIN; local y Samsung
   API 36 verdes—, Copias y restauración —cerrado por MAIN; local y Samsung API
   36 verdes dentro de la matriz autorizada—, Bloqueo —cerrado por MAIN; local y
-  Samsung API 36 verdes— y Ayuda y recorrido inicial 2.0 —prompt habilitado,
-  tarea todavía no abierta—;
+  Samsung API 36 verdes— y Ayuda/últimos cambios —candidato integral verde en
+  local y Samsung API 36, con API 26/API 33 pendientes—;
 - logo y tipografías definitivas.
 
 ## Todavía no implementado
@@ -1422,12 +1464,13 @@ posteriores.
 
 El núcleo quedó aprobado y la segunda capa está desbloqueada. **Widget de
 próximo evento**, **Informes locales**, **Copias y restauración locales
-seguras** y **Bloqueo de acceso local** están cerrados. El próximo bloque
-habilitado es **Ayuda y recorrido inicial 2.0**; su prompt está listo y la tarea
-especialista todavía no fue abierta. Después de cerrarlo corresponde la
-auditoría completa y la emisión del candidato local. API 26/API 33 de Widget,
-Copias y Bloqueo continúan pendientes para la matriz de compatibilidad
-posterior.
+seguras** y **Bloqueo de acceso local** están cerrados. **Integración y
+depuración de cambios de último momento V2** quedó funcionalmente cerrada por
+MAIN: 707/707 JVM, lint sin errores, 351/351 tareas, Room 123/123 y matriz
+dirigida 30/30 en Samsung API 36, sin findings P0–P2 abiertos. La puerta
+inmediata es la auditoría completa de la aplicación para emitir el candidato
+local y decidir el checkpoint. API 26/API 33 de Widget, Copias, Bloqueo y este
+bloque continúan pendientes para la matriz de compatibilidad posterior.
 
 El disparo físico de una alarma exacta, un reinicio real del Samsung y API 37
 conservan puertas separadas para el candidato final. Los pushes autorizados para

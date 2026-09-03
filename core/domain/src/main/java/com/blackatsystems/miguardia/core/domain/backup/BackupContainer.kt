@@ -88,7 +88,7 @@ object BackupContainer {
     ): BackupManifest {
         rejectEmptyPassword(password)
         try {
-            MiGuardiaBackupSchemaV5.requireValid(database)
+            MiGuardiaBackupSchemaV6.requireValid(database)
             require(createdAtEpochMillis > 0L)
             require(photoAssets.size <= MiGuardiaBackupContract.MAX_PHOTO_COUNT)
             if (photoMode == BackupPhotoMode.OMITTED && photoAssets.isNotEmpty()) {
@@ -207,18 +207,20 @@ object BackupContainer {
             payloadZip.deletePrivateFileChecked("el payload temporal autenticado")
 
             val manifestFile = File(extracted, MANIFEST_ENTRY)
-            val manifest = manifestFile.inputStream().use(BackupPayloadCodec::readManifest)
-            val database = File(extracted, DATABASE_ENTRY).inputStream().use { input ->
+            val sourceManifest = manifestFile.inputStream().use(BackupPayloadCodec::readManifest)
+            val sourceDatabase = File(extracted, DATABASE_ENTRY).inputStream().use { input ->
                 BackupPayloadCodec.readDatabase(input, decodedMemoryLimitBytes)
             }
             val preferences = File(extracted, PREFERENCES_ENTRY).inputStream().use(
                 BackupPayloadCodec::readPreferences,
             )
             val photos = File(extracted, PHOTOS_ENTRY).inputStream().use(BackupPayloadCodec::readPhotos)
-            val payload = BackupPayload(database, preferences, manifest.photoMode, photos)
-            verifyExtracted(manifest, payload, extracted)
+            val sourcePayload = BackupPayload(sourceDatabase, preferences, sourceManifest.photoMode, photos)
+            verifyExtracted(sourceManifest, sourcePayload, extracted)
+            val database = upgradeSupportedBackupSchema(sourceDatabase)
+            val payload = sourcePayload.copy(database = database)
             return ExtractedBackup(
-                manifest = manifest,
+                manifest = sourceManifest,
                 payload = payload,
                 photoDirectory = File(extracted, "photos"),
                 extractionRoot = operation,
@@ -275,8 +277,8 @@ object BackupContainer {
         payload: BackupPayload,
         extracted: File,
     ) {
-        MiGuardiaBackupSchemaV5.requireValid(payload.database)
-        if (manifest.roomVersion != MiGuardiaBackupContract.ROOM_VERSION ||
+        requireSupportedBackupSchema(payload.database)
+        if (manifest.roomVersion != payload.database.roomVersion ||
             manifest.timelineId != payload.database.timelineId ||
             manifest.photoMode != payload.photoMode ||
             manifest.tableCounts != payload.database.tables.associate { it.name to it.records.size }

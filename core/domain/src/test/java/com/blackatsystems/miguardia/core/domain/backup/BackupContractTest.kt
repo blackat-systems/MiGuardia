@@ -29,20 +29,109 @@ class BackupContractTest {
         assertEquals("application/vnd.blackatsystems.miguardia.backup", MiGuardiaBackupContract.MIME_TYPE)
         assertEquals(1, MiGuardiaBackupContract.FORMAT_VERSION)
         assertEquals(1, MiGuardiaBackupContract.MIN_READER_VERSION)
+        assertEquals(6, MiGuardiaBackupContract.ROOM_VERSION)
+        assertEquals("7eb39f6fab5a44e69350e206716554be", MiGuardiaBackupContract.ROOM_IDENTITY_HASH)
         assertEquals(310_000, MiGuardiaBackupContract.PBKDF2_ITERATIONS)
         assertEquals(256, MiGuardiaBackupContract.AES_KEY_BITS)
         assertEquals(128, MiGuardiaBackupContract.GCM_TAG_BITS)
+        assertEquals(
+            listOf(
+                "id",
+                "fullName",
+                "abbreviation",
+                "address",
+                "note",
+                "isActive",
+                "createdAtEpochMillis",
+                "updatedAtEpochMillis",
+                "weatherLatitude",
+                "weatherLongitude",
+            ),
+            MiGuardiaBackupSchemaV6.byName.getValue("objectives").columns,
+        )
     }
 
     @Test
     fun databaseCodecIsDeterministicAndRoundTripsAllTables() {
-        val snapshot = emptySnapshot().withObjective(OBJECTIVE_ID, "Objetivo Norte")
+        val snapshot = emptySnapshot().withObjective(
+            OBJECTIVE_ID,
+            "Objetivo Norte",
+            weatherLatitude = WEATHER_LATITUDE,
+            weatherLongitude = WEATHER_LONGITUDE,
+        )
         val first = ByteArrayOutputStream().also { BackupPayloadCodec.writeDatabase(snapshot, it) }.toByteArray()
         val second = ByteArrayOutputStream().also { BackupPayloadCodec.writeDatabase(snapshot, it) }.toByteArray()
 
         assertTrue(first.contentEquals(second))
         assertEquals(snapshot, BackupPayloadCodec.readDatabase(ByteArrayInputStream(first)))
         assertEquals(27, snapshot.tables.size)
+    }
+
+    @Test
+    fun databaseCodecDecodesAndUpgradesRoomFiveWithoutInventingWeatherLocation() {
+        val legacy = emptySnapshot()
+            .withObjective(OBJECTIVE_ID, "Objetivo de copia V5")
+            .asLegacyRoomFiveSnapshot()
+        val encoded = encodeLegacyRoomFiveDatabase(legacy)
+
+        val decoded = BackupPayloadCodec.readDatabase(ByteArrayInputStream(encoded))
+        val upgraded = upgradeSupportedBackupSchema(decoded)
+
+        assertEquals(MiGuardiaBackupContract.LEGACY_ROOM_VERSION_V5, decoded.roomVersion)
+        assertEquals(MiGuardiaBackupContract.LEGACY_ROOM_IDENTITY_HASH_V5, decoded.roomIdentityHash)
+        assertFalse("weatherLatitude" in decoded.table("objectives").columns)
+        assertFalse("weatherLongitude" in decoded.table("objectives").columns)
+        assertEquals(MiGuardiaBackupContract.ROOM_VERSION, upgraded.roomVersion)
+        assertEquals(MiGuardiaBackupContract.ROOM_IDENTITY_HASH, upgraded.roomIdentityHash)
+        val upgradedObjectives = upgraded.table("objectives")
+        assertEquals(listOf("weatherLatitude", "weatherLongitude"), upgradedObjectives.columns.takeLast(2))
+        assertEquals(listOf(BackupValue.Null, BackupValue.Null), upgradedObjectives.records.single().values.takeLast(2))
+        MiGuardiaBackupSchemaV6.requireValid(upgraded)
+    }
+
+    @Test
+    fun roomFiveContainerPreservesItsSourceVersionWhileAdaptingThePayloadToRoomSix() {
+        val current = File(temporary.root, "room-six-source.miguardia-backup")
+        createPlaintext(
+            current,
+            temporary.newFolder("room-six-source-work"),
+            emptySnapshot().withObjective(OBJECTIVE_ID, "Objetivo de copia V5"),
+        )
+        val entries = readLogicalEntries(current)
+        val legacyDatabase = emptySnapshot()
+            .withObjective(OBJECTIVE_ID, "Objetivo de copia V5")
+            .asLegacyRoomFiveSnapshot()
+        val legacyDatabaseBytes = encodeLegacyRoomFiveDatabase(legacyDatabase)
+        entries["database.bin"] = legacyDatabaseBytes
+        val currentManifest = BackupPayloadCodec.readManifest(
+            ByteArrayInputStream(entries.getValue("manifest.bin")),
+        )
+        val legacyManifest = currentManifest.copy(
+            roomVersion = MiGuardiaBackupContract.LEGACY_ROOM_VERSION_V5,
+            tableCounts = legacyDatabase.tables.associate { it.name to it.records.size },
+            entries = currentManifest.entries.map { entry ->
+                if (entry.name == "database.bin") {
+                    entry.copy(
+                        uncompressedBytes = legacyDatabaseBytes.size.toLong(),
+                        sha256 = legacyDatabaseBytes.sha256(),
+                    )
+                } else {
+                    entry
+                }
+            },
+        )
+        entries["manifest.bin"] = ByteArrayOutputStream().also { output ->
+            BackupPayloadCodec.writeManifest(legacyManifest, output)
+        }.toByteArray()
+        val legacy = File(temporary.root, "room-five-container.miguardia-backup")
+        writePlainEntries(legacy, entries)
+
+        BackupContainer.extract(legacy, temporary.newFolder("room-five-container-read"), null).use { extracted ->
+            assertEquals(MiGuardiaBackupContract.LEGACY_ROOM_VERSION_V5, extracted.manifest.roomVersion)
+            assertEquals(MiGuardiaBackupContract.ROOM_VERSION, extracted.payload.database.roomVersion)
+            val objective = extracted.payload.database.table("objectives").records.single()
+            assertEquals(listOf(BackupValue.Null, BackupValue.Null), objective.values.takeLast(2))
+        }
     }
 
     @Test
@@ -951,7 +1040,7 @@ class BackupContractTest {
             },
         )
 
-        assertFails<InvalidBackupException> { MiGuardiaBackupSchemaV5.requireValid(duplicate) }
+        assertFails<InvalidBackupException> { MiGuardiaBackupSchemaV6.requireValid(duplicate) }
     }
 
     @Test
@@ -961,8 +1050,8 @@ class BackupContractTest {
         val canonical = emptySnapshot().withRecords("objectives", listOf(first, second))
         val reversed = emptySnapshot().withRecords("objectives", listOf(second, first))
 
-        MiGuardiaBackupSchemaV5.requireValid(canonical)
-        assertFails<InvalidBackupException> { MiGuardiaBackupSchemaV5.requireValid(reversed) }
+        MiGuardiaBackupSchemaV6.requireValid(canonical)
+        assertFails<InvalidBackupException> { MiGuardiaBackupSchemaV6.requireValid(reversed) }
         assertFails<InvalidBackupException> {
             BackupPayloadCodec.writeDatabase(reversed, ByteArrayOutputStream())
         }
@@ -1000,7 +1089,7 @@ class BackupContractTest {
         assertFails<UnresolvedBackupConflictException> {
             BackupComparator.mergeDatabase(current, incoming, comparison.conflicts, emptyList())
         }
-        MiGuardiaBackupSchemaV5.requireValid(incoming)
+        MiGuardiaBackupSchemaV6.requireValid(incoming)
     }
 
     @Test
@@ -1074,7 +1163,7 @@ class BackupContractTest {
 
     private fun emptySnapshot(): BackupDatabaseSnapshot = BackupDatabaseSnapshot(
         timelineId = null,
-        tables = MiGuardiaBackupSchemaV5.tables.map { spec ->
+        tables = MiGuardiaBackupSchemaV6.tables.map { spec ->
             BackupTable(spec.name, spec.columns, spec.primaryKey, emptyList())
         },
     )
@@ -1096,7 +1185,7 @@ class BackupContractTest {
     )
 
     private fun record(tableName: String, vararg values: Pair<String, BackupValue>): BackupRecord {
-        val spec = MiGuardiaBackupSchemaV5.byName.getValue(tableName)
+        val spec = MiGuardiaBackupSchemaV6.byName.getValue(tableName)
         val byName = values.toMap()
         return BackupRecord(spec.columns.map { column -> byName[column] ?: BackupValue.Null })
     }
@@ -1194,7 +1283,12 @@ class BackupContractTest {
         "updatedAtEpochMillis" to BackupValue.Integer(CREATED_AT),
     )
 
-    private fun BackupDatabaseSnapshot.withObjective(id: String, name: String): BackupDatabaseSnapshot = copy(
+    private fun BackupDatabaseSnapshot.withObjective(
+        id: String,
+        name: String,
+        weatherLatitude: Double? = null,
+        weatherLongitude: Double? = null,
+    ): BackupDatabaseSnapshot = copy(
         tables = tables.map { table ->
             if (table.name == "objectives") {
                 table.copy(
@@ -1209,6 +1303,8 @@ class BackupContractTest {
                                 BackupValue.Integer(1),
                                 BackupValue.Integer(CREATED_AT),
                                 BackupValue.Integer(CREATED_AT),
+                                weatherLatitude?.let { BackupValue.Real(it) } ?: BackupValue.Null,
+                                weatherLongitude?.let { BackupValue.Real(it) } ?: BackupValue.Null,
                             ),
                         ),
                     ),
@@ -1218,6 +1314,76 @@ class BackupContractTest {
             }
         },
     )
+
+    private fun BackupDatabaseSnapshot.asLegacyRoomFiveSnapshot(): BackupDatabaseSnapshot = copy(
+        roomVersion = MiGuardiaBackupContract.LEGACY_ROOM_VERSION_V5,
+        roomIdentityHash = MiGuardiaBackupContract.LEGACY_ROOM_IDENTITY_HASH_V5,
+        tables = tables.map { table ->
+            if (table.name == "objectives") {
+                table.copy(
+                    columns = table.columns.dropLast(2),
+                    records = table.records.map { record -> record.copy(values = record.values.dropLast(2)) },
+                )
+            } else {
+                table
+            }
+        },
+    ).also(::requireSupportedBackupSchema)
+
+    private fun encodeLegacyRoomFiveDatabase(snapshot: BackupDatabaseSnapshot): ByteArray =
+        ByteArrayOutputStream().also { output ->
+            DataOutputStream(output).use { data ->
+                data.writeInt(DATABASE_MAGIC)
+                data.writeInt(snapshot.roomVersion)
+                data.writeBackupString(snapshot.roomIdentityHash)
+                data.writeBoolean(snapshot.timelineId != null)
+                snapshot.timelineId?.let { data.writeBackupString(it) }
+                data.writeInt(snapshot.tables.size)
+                snapshot.tables.forEach { table ->
+                    data.writeBackupString(table.name)
+                    data.writeBackupStrings(table.columns)
+                    data.writeBackupStrings(table.primaryKey)
+                    data.writeInt(table.records.size)
+                    table.records.forEach { record ->
+                        record.values.forEach { value -> data.writeBackupValue(value) }
+                    }
+                }
+            }
+        }.toByteArray()
+
+    private fun DataOutputStream.writeBackupStrings(values: List<String>) {
+        writeInt(values.size)
+        values.forEach { value -> writeBackupString(value) }
+    }
+
+    private fun DataOutputStream.writeBackupString(value: String) {
+        val encoded = value.toByteArray(Charsets.UTF_8)
+        writeInt(encoded.size)
+        write(encoded)
+    }
+
+    private fun DataOutputStream.writeBackupValue(value: BackupValue) {
+        when (value) {
+            BackupValue.Null -> writeByte(VALUE_NULL)
+            is BackupValue.Text -> {
+                writeByte(VALUE_TEXT)
+                writeBackupString(value.value)
+            }
+            is BackupValue.Integer -> {
+                writeByte(VALUE_INTEGER)
+                writeLong(value.value)
+            }
+            is BackupValue.Real -> {
+                writeByte(VALUE_REAL)
+                writeLong(java.lang.Double.doubleToRawLongBits(value.value))
+            }
+            is BackupValue.Binary -> {
+                writeByte(VALUE_BINARY)
+                writeInt(value.value.size)
+                write(value.value)
+            }
+        }
+    }
 
     private fun BackupDatabaseSnapshot.withTimeline(id: String): BackupDatabaseSnapshot = copy(
         timelineId = id,
@@ -1482,6 +1648,14 @@ class BackupContractTest {
 
     private companion object {
         const val CREATED_AT = 1_788_131_400_000L
+        const val DATABASE_MAGIC = 0x4D474442
+        const val VALUE_NULL = 0
+        const val VALUE_TEXT = 1
+        const val VALUE_INTEGER = 2
+        const val VALUE_REAL = 3
+        const val VALUE_BINARY = 4
+        const val WEATHER_LATITUDE = -31.4201
+        const val WEATHER_LONGITUDE = -64.1888
         const val BACKUP_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
         const val OBJECTIVE_ID = "11111111-1111-4111-8111-111111111111"
         const val OTHER_OBJECTIVE_ID = "17171717-1717-4717-8717-171717171717"

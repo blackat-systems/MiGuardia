@@ -65,6 +65,14 @@ class XlsxReportWriterTest {
         assertTrue(workbook.contains("name=\"Disponibilidad\""))
         assertTrue(workbook.contains("name=\"Situaciones\""))
         assertTrue(workbook.contains("name=\"Notas\""))
+        val summary = entries.getValue("xl/worksheets/sheet1.xml").toString(Charsets.UTF_8)
+        val workRows = entries.getValue("xl/worksheets/sheet2.xml").toString(Charsets.UTF_8)
+        assertTrue(summary.contains("Metas de horas"))
+        assertTrue(summary.contains("Horas que cuentan (min)"))
+        assertFalse(summary.contains("Referencias de horas"))
+        assertFalse(summary.contains("Horas que cumplen (min)"))
+        assertTrue(workRows.contains("Horas trabajadas sin extras (min)"))
+        assertFalse(workRows.contains("Minutos habituales"))
     }
 
     @Test

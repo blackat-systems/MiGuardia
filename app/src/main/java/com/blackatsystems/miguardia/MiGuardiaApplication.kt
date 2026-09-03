@@ -11,6 +11,7 @@ import com.blackatsystems.miguardia.reports.ReportArtifactStore
 import com.blackatsystems.miguardia.reports.ReportPhotoStager
 import com.blackatsystems.miguardia.core.domain.AppDefaults
 import com.blackatsystems.miguardia.ui.summary.SummaryPreferencesStore
+import com.blackatsystems.miguardia.ui.help.OnboardingPreferencesStore
 import com.blackatsystems.miguardia.weather.WeatherPreferencesStore
 import com.blackatsystems.miguardia.weather.WeatherRuntime
 import com.blackatsystems.miguardia.widget.WidgetPreferencesStore
@@ -67,6 +68,9 @@ class MiGuardiaApplication : Application() {
     internal val accessLockPreferences: AccessLockPreferencesStore by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         AccessLockPreferencesStore(this)
     }
+    internal val onboardingPreferences: OnboardingPreferencesStore by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
+        OnboardingPreferencesStore(this)
+    }
     internal val accessLockCoordinator: AccessLockCoordinator by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         AccessLockCoordinator(accessLockPreferences, applicationScope)
     }
@@ -120,7 +124,7 @@ class MiGuardiaApplication : Application() {
         )
     }
     val weatherRuntime: WeatherRuntime by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
-        WeatherRuntime(this, weatherPreferences)
+        WeatherRuntime(this, weatherPreferences, localDataStore.objectives)
     }
     val notificationRuntime: NotificationRuntime by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         NotificationRuntime(this, localDataStore, notificationPreferences, weatherRuntime)
@@ -142,6 +146,9 @@ class MiGuardiaApplication : Application() {
                 weatherRuntime.cancelRefresh()
                 notificationRuntime.pauseForRestore()
                 widgetRuntime.pauseForRestore()
+            },
+            clearDerivedCaches = {
+                weatherRuntime.clearCache()
             },
             resumeRuntimes = {
                 portablePreferences.ensureAccessibleSoundOrFallback()

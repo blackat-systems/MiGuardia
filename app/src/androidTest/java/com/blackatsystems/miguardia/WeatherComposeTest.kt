@@ -60,7 +60,7 @@ class WeatherComposeTest {
     }
 
     @Test
-    fun disabledWeatherRequiresConsciousExplanation() {
+    fun disabledWeatherExplainsPerObjectivePrivacyBeforeConsciousActivation() {
         var enabled = 0
         compose.setContent {
             MaterialTheme {
@@ -70,7 +70,8 @@ class WeatherComposeTest {
                 )
             }
         }
-        compose.onNodeWithText("Open-Meteo recibe sólo la coordenada fija de Córdoba y la IP habitual de conexión. No se envían guardias, objetivos, direcciones ni datos del teléfono.").assertExists()
+        compose.onNodeWithText("Pronóstico según la ubicación guardada en cada objetivo.").assertExists()
+        compose.onNodeWithText("Open-Meteo recibe sólo las coordenadas del objetivo consultado y la IP habitual de conexión. No se envían guardias, nombres, direcciones ni notas.").assertExists()
         compose.onNodeWithText("Entiendo y habilitar Clima").performScrollTo().performClick()
         compose.runOnIdle { assertEquals(1, enabled) }
     }
@@ -96,6 +97,29 @@ class WeatherComposeTest {
 
         compose.onNodeWithText("Pronóstico actualizado.").assertIsDisplayed()
         compose.onNodeWithText("Clima").assertIsDisplayed()
+        compose.onNodeWithText("Cada objetivo conserva su último pronóstico. Puede actualizarse al mostrar una jornada de ese lugar.").assertExists()
+    }
+
+    @Test
+    fun globalWeatherConfirmsClearingCachesForEveryObjective() {
+        var clears = 0
+        compose.setContent {
+            MaterialTheme {
+                WeatherSurfaceHost(
+                    WeatherUiState(
+                        surface = WeatherSurface.GLOBAL,
+                        preferences = WeatherPreferences(enabled = true, providerExplanationAccepted = true),
+                        isLoading = false,
+                    ),
+                    WeatherActions(clearCache = { clears++ }),
+                )
+            }
+        }
+
+        compose.onNodeWithText("Borrar pronósticos guardados").performScrollTo().performClick()
+        compose.onNodeWithText("Se eliminarán los pronósticos guardados de todos los objetivos. La configuración se conserva.").assertIsDisplayed()
+        compose.onNodeWithText("Borrar").performClick()
+        compose.runOnIdle { assertEquals(1, clears) }
     }
 
     @Test
@@ -117,6 +141,29 @@ class WeatherComposeTest {
         compose.onNodeWithText("Proveedor y privacidad").assertExists()
         compose.onNodeWithText("Entiendo y habilitar Clima").performScrollTo().performClick()
         compose.runOnIdle { assertEquals(1, enabled) }
+    }
+
+    @Test
+    fun shiftWithoutObjectiveLocationExplainsHowToEnableItAndCannotRefresh() {
+        compose.setContent {
+            MaterialTheme {
+                WeatherSurfaceHost(
+                    WeatherUiState(
+                        surface = WeatherSurface.SHIFT,
+                        preferences = WeatherPreferences(enabled = true, providerExplanationAccepted = true),
+                        selectedShift = shift(),
+                        ineligibleReason = "Este objetivo todavía no tiene ubicación. Activala cuando estés allí desde Mi forma de trabajar > Opciones avanzadas.",
+                        isLoading = false,
+                    ),
+                    WeatherActions(),
+                )
+            }
+        }
+
+        compose.onNodeWithText("Pronóstico para: ubicación sin configurar").assertExists()
+        compose.onNodeWithText("Este objetivo todavía no tiene ubicación. Activala cuando estés allí desde Mi forma de trabajar > Opciones avanzadas.").assertExists()
+        compose.onNodeWithText("Todavía no hay un pronóstico disponible para esta jornada.").assertDoesNotExist()
+        compose.onNodeWithText("Actualizar").assertDoesNotExist()
     }
 
     @Test
@@ -148,6 +195,7 @@ class WeatherComposeTest {
                         forecast = forecast,
                         freshness = WeatherFreshness.FRESH,
                         selectedShift = shift,
+                        weatherLocationName = forecast.location.displayName,
                         shiftSummary = summary,
                         shiftHours = forecast.hours,
                         isLoading = false,
@@ -156,8 +204,10 @@ class WeatherComposeTest {
                 )
             }
         }
+        compose.onNodeWithText("Pronóstico para: Objetivo ficticio").assertExists()
         compose.onNodeWithText("Cobertura completa").assertExists()
         compose.onNodeWithText("Temperatura: 10–17 °C").assertExists()
+        compose.onNodeWithText("Precipitación estimada en el intervalo: 4,5 mm").assertExists()
         compose.onNodeWithText("Deslizá hacia la derecha.").assertExists()
         compose.onNodeWithTag("weather-hourly-carousel").assertExists()
         compose.onNodeWithText("17/08 00:00").performScrollTo().assertExists()
@@ -190,15 +240,16 @@ class WeatherComposeTest {
         colorArgbSnapshot = 0xff336699.toInt(),
         position = null,
         status = ShiftStatus.PLANNED,
-        sourceObjectiveId = UUID(0L, 193L),
+        sourceObjectiveId = OBJECTIVE_ID,
         createdAt = NOW,
         updatedAt = NOW,
     )
 
     private companion object {
         val NOW: Instant = Instant.parse("2026-08-16T20:00:00Z")
+        val OBJECTIVE_ID: UUID = UUID.fromString("00000000-0000-0000-0000-000000000901")
         val LOCATION = WeatherLocation(
-            "cordoba-capital", "Córdoba Capital, Argentina", -31.4201, -64.1888, ZoneId.of("America/Argentina/Cordoba"),
+            OBJECTIVE_ID.toString(), "Objetivo ficticio", -34.6037, -58.3816, ZoneId.of("America/Argentina/Buenos_Aires"),
         )
     }
 }

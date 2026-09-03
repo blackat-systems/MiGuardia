@@ -18,6 +18,7 @@ import com.blackatsystems.miguardia.core.domain.AppDefaults
 import com.blackatsystems.miguardia.core.domain.model.Shift
 import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
 import com.blackatsystems.miguardia.ui.theme.AppZoom
+import com.blackatsystems.miguardia.ui.help.HelpTourStep
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
@@ -48,6 +49,7 @@ class V2ReadyCalendarRecreationActivityTest {
         check(context.packageName == QA_APPLICATION_ID) {
             "La recreación V2Ready sólo puede probarse contra el paquete QA."
         }
+        markOnboardingCompletedForTest()
         check(
             context.getSharedPreferences(
                 MainActivity.DISPLAY_PREFERENCES,
@@ -151,6 +153,73 @@ class V2ReadyCalendarRecreationActivityTest {
         compose.onNodeWithTag("shift-notifications-$SHIFT_ID")
             .performScrollTo()
             .assertIsDisplayed()
+    }
+
+    @Test
+    fun replayFromHelpKeepsItsStepAcrossActivityRecreationAndReturnsToHelp() {
+        compose.onNodeWithContentDescription("Abrir menú").performClick()
+        compose.onNodeWithTag("main-destination-help").performScrollTo().performClick()
+        waitForTag("help-screen")
+        compose.onNodeWithTag("help-repeat-tour").performScrollTo().performClick()
+        waitForTag("help-introduction-1")
+        compose.onNodeWithTag("help-introduction-next").performScrollTo().performClick()
+        waitForTag("help-introduction-2")
+
+        requireNotNull(scenario).recreate()
+
+        waitForTag("help-introduction-2")
+        compose.onNodeWithTag("help-replay-close").performScrollTo().performClick()
+        waitForTag("help-screen")
+    }
+
+    @Test
+    fun automaticGuideRunsOnceAfterSetupAndDoesNotReturnAfterCompletion() {
+        scenario?.close()
+        scenario = null
+        resetOnboardingForTest()
+
+        scenario = ActivityScenario.launch(MainActivity::class.java)
+        waitForTag("help-introduction-1")
+
+        repeat(3) { index ->
+            compose.onNodeWithTag("help-introduction-next").performScrollTo().performClick()
+            if (index < 2) waitForTag("help-introduction-${index + 2}")
+        }
+        HelpTourStep.entries.forEachIndexed { index, step ->
+            waitForTag("help-tour-${step.name.lowercase()}")
+            compose.onNodeWithTag("help-tour-next").performScrollTo().performClick()
+            if (index < HelpTourStep.entries.lastIndex) compose.waitForIdle()
+        }
+
+        waitForTag("calendar-v2-load-shifts")
+        compose.onNodeWithTag("help-introduction-1").assertDoesNotExist()
+
+        requireNotNull(scenario).recreate()
+
+        waitForTag("calendar-v2-load-shifts")
+        compose.onNodeWithTag("help-introduction-1").assertDoesNotExist()
+    }
+
+    @Test
+    fun notificationDestinationWaitsForAutomaticGuideAndOpensAfterSkip() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        scenario?.close()
+        scenario = null
+        resetOnboardingForTest()
+
+        scenario = ActivityScenario.launch(
+            Intent(context, MainActivity::class.java)
+                .setAction(MainActivity.ACTION_VIEW_SHIFT)
+                .putExtra(MainActivity.EXTRA_SHIFT_ID, SHIFT_ID.toString()),
+        )
+
+        waitForTag("help-introduction-1")
+        compose.onNodeWithText(SHIFT_IDENTITY).assertDoesNotExist()
+        compose.onNodeWithTag("help-skip").performScrollTo().performClick()
+        compose.onNodeWithTag("help-confirm-skip").performClick()
+
+        waitForText(SHIFT_IDENTITY)
+        compose.onNodeWithText(selectedDate.fullDisplayName()).assertIsDisplayed()
     }
 
     private fun waitForTag(tag: String) {

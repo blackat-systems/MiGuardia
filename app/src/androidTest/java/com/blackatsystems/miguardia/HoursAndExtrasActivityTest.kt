@@ -52,6 +52,7 @@ class HoursAndExtrasActivityTest {
         check(context.packageName == QA_APPLICATION_ID) {
             "La prueba integral de extras independientes sólo puede ejecutarse contra el paquete QA."
         }
+        markOnboardingCompletedForTest()
         val zone = AppDefaults.zoneId()
         val end = Instant.now().truncatedTo(ChronoUnit.MINUTES).minus(2, ChronoUnit.MINUTES)
         val start = end.minus(1, ChronoUnit.HOURS)
@@ -161,6 +162,8 @@ class HoursAndExtrasActivityTest {
         waitForTag("main-menu-button")
         compose.onNodeWithContentDescription("Abrir menú").performClick()
         compose.onNodeWithTag("drawer-action-work-setup").performClick()
+        waitForTag("advanced-options-toggle")
+        compose.onNodeWithTag("advanced-options-toggle").performScrollTo().performClick()
         waitForTag("work-setup-hours-progress")
         compose.onNodeWithTag("work-setup-hours-progress").performScrollTo().performClick()
         waitForTag("hours-reference-configure")
@@ -176,7 +179,7 @@ class HoursAndExtrasActivityTest {
 
         requireNotNull(scenario).recreate()
         waitForTag("hours-reference-save")
-        compose.onNodeWithText("Referencia fija").assertIsDisplayed()
+        compose.onNodeWithText("Meta fija").assertIsDisplayed()
         compose.onNodeWithTag("hours-reference-save").performScrollTo().performClick()
 
         val today = LocalDate.now(AppDefaults.zoneId())

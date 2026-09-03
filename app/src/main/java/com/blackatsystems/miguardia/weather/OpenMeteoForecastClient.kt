@@ -13,6 +13,7 @@ import java.net.HttpURLConnection
 import java.net.SocketTimeoutException
 import java.net.URL
 import java.net.UnknownHostException
+import java.net.URLEncoder
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -130,7 +131,7 @@ internal fun buildOpenMeteoUrl(location: WeatherLocation): URL {
             "&longitude=${location.longitude}" +
             "&hourly=$hourly" +
             "&forecast_days=16" +
-            "&timezone=America%2FArgentina%2FCordoba" +
+            "&timezone=${URLEncoder.encode(location.zoneId.id, Charsets.UTF_8.name())}" +
             "&timeformat=unixtime" +
             "&temperature_unit=celsius" +
             "&precipitation_unit=mm" +

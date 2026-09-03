@@ -54,6 +54,8 @@ internal fun buildV2CatalogFixture(): SeededV2Catalog {
         isActive = true,
         createdAt = V2TestIds.NOW,
         updatedAt = V2TestIds.NOW,
+        weatherLatitude = -31.4201,
+        weatherLongitude = -64.1888,
     )
     val place = WorkPlace(
         id = V2TestIds.PLACE,

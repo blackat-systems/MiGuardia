@@ -62,7 +62,7 @@ class V2ManualShiftLoadComposeTest {
     val compose = createComposeRule()
 
     @Test
-    fun v2ReadyOffersThePrimaryLoadActionAndKeepsWorkSetupSecondary() {
+    fun v2ReadyKeepsLoadPrimaryAndWorkSetupInsideAdvancedOptions() {
         var starts = 0
         var entersEditMode = 0
         setApp(
@@ -70,12 +70,16 @@ class V2ManualShiftLoadComposeTest {
             onEnterEditMode = { entersEditMode++ },
         )
 
+        compose.onNodeWithTag("calendar-work-setup-action").assertDoesNotExist()
+        compose.onNodeWithTag("calendar-v2-repeat-shifts").assertDoesNotExist()
         compose.onNodeWithTag("calendar-v2-load-shifts").performScrollTo().assertIsDisplayed().performClick()
         compose.runOnIdle {
             assertEquals(1, starts)
             assertEquals(1, entersEditMode)
         }
+        compose.onNodeWithTag("advanced-options-toggle").performScrollTo().performClick()
         compose.onNodeWithTag("calendar-work-setup-action").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("calendar-v2-repeat-shifts").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Cargar datos").assertDoesNotExist()
         compose.onNodeWithText("Editar calendario").assertDoesNotExist()
     }
@@ -141,8 +145,49 @@ class V2ManualShiftLoadComposeTest {
 
         compose.onNodeWithTag("day-$date").performScrollTo().assertIsNotEnabled()
         compose.onNodeWithContentDescription("Mes anterior").assertIsNotEnabled()
-        compose.onNodeWithText("Salir de la carga").performScrollTo().assertIsNotEnabled()
+        compose.onNodeWithText("Cancelar carga").performScrollTo().assertIsNotEnabled()
         compose.onNodeWithTag("calendar-edit-tools").assertDoesNotExist()
+    }
+
+    @Test
+    fun cancelLoadRequiresConfirmationBeforeDiscardingTheDraft() {
+        val date = LocalDate.of(2026, 8, 10)
+        var cancels = 0
+        var finishCalls = 0
+        setApp(
+            calendarProvider = {
+                calendarState(
+                    interactionMode = CalendarInteractionMode.EDIT,
+                    days = listOf(day(date)),
+                    editSelectedDates = setOf(date),
+                    editSelectionConfirmed = true,
+                )
+            },
+            manualStateProvider = {
+                V2ManualShiftLoadUiState(
+                    stage = V2ManualShiftLoadStage.CHOOSE_TEMPLATE,
+                    timelineId = TIMELINE_ID,
+                    selectedDates = setOf(date),
+                )
+            },
+            manualActions = V2ManualShiftLoadActions(cancel = { cancels++ }),
+            onFinishEditMode = { finishCalls++ },
+        )
+
+        compose.onNodeWithText("Cancelar carga").performScrollTo().performClick()
+        compose.onNodeWithText("¿Descartar esta carga?").assertIsDisplayed()
+        compose.onNodeWithText("Seguir cargando").performClick()
+        compose.runOnIdle {
+            assertEquals(0, cancels)
+            assertEquals(0, finishCalls)
+        }
+
+        compose.onNodeWithText("Cancelar carga").performScrollTo().performClick()
+        compose.onNodeWithText("Descartar carga").performClick()
+        compose.runOnIdle {
+            assertEquals(1, cancels)
+            assertEquals(1, finishCalls)
+        }
     }
 
     @Test
@@ -270,10 +315,11 @@ class V2ManualShiftLoadComposeTest {
     }
 
     @Test
-    fun sameScheduleOptionsStayDistinctByWorkTypeAndSelectedState() {
+    fun sameScheduleOptionsStayDistinctAndPrimarySaveDoesNotRequireOpeningThePreview() {
         val first = option(typeName = "Trabajo habitual", templateId = UUID(0L, 5L))
         val second = option(typeName = "Capacitación", typeId = UUID(0L, 6L), templateId = UUID(0L, 7L))
         var chosen: UUID? = null
+        var saveRequests = 0
         var reviewRequests = 0
         var state by mutableStateOf(
             V2ManualShiftLoadUiState(
@@ -291,6 +337,7 @@ class V2ManualShiftLoadComposeTest {
                     chosen = id
                     state = state.copy(selectedTemplateId = id)
                 },
+                requestSave = { saveRequests++ },
                 requestReview = { reviewRequests++ },
             ),
         )
@@ -308,9 +355,16 @@ class V2ManualShiftLoadComposeTest {
         compose.onNodeWithContentDescription(
             "FIC, Capacitación, de 08:00 a 16:00, color #336699, seleccionado",
         ).assertIsDisplayed()
-        compose.onNodeWithTag("v2-manual-review").assertIsEnabled().performClick()
+        compose.onNodeWithTag("v2-manual-review").assertDoesNotExist()
+        compose.onNodeWithTag("v2-manual-save-direct").assertIsEnabled().performClick()
         compose.runOnIdle {
             assertEquals(second.template.id, chosen)
+            assertEquals(1, saveRequests)
+            assertEquals(0, reviewRequests)
+        }
+        compose.onNodeWithTag("advanced-options-toggle").performClick()
+        compose.onNodeWithTag("v2-manual-review").assertIsEnabled().performClick()
+        compose.runOnIdle {
             assertEquals(1, reviewRequests)
         }
     }
@@ -479,6 +533,7 @@ class V2ManualShiftLoadComposeTest {
             actions = V2ManualShiftLoadActions(retry = { retries++ }),
         )
 
+        compose.onNodeWithTag("advanced-options-toggle").performClick()
         compose.onNodeWithText("10/08/2026").assertIsDisplayed()
         compose.onNodeWithText("Puesto ficticio").assertIsDisplayed()
         compose.onNodeWithText("No pudimos preparar la revisión.").assertIsDisplayed()
@@ -498,7 +553,7 @@ class V2ManualShiftLoadComposeTest {
     }
 
     @Test
-    fun reviewActionRemainsReachableAcrossThemesAndInternalZooms() {
+    fun directSaveActionRemainsReachableAcrossThemesAndInternalZooms() {
         val date = LocalDate.of(2026, 8, 10)
         val selected = option()
         var darkTheme by mutableStateOf(true)
@@ -538,7 +593,7 @@ class V2ManualShiftLoadComposeTest {
                     darkTheme = dark
                     appZoom = zoom
                 }
-                compose.onNodeWithTag("v2-manual-review")
+                compose.onNodeWithTag("v2-manual-save-direct")
                     .performScrollTo()
                     .assertIsDisplayed()
                     .assertIsEnabled()

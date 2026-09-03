@@ -68,6 +68,13 @@ recorrido no crea lugares, horarios, jornadas, extras, disponibilidades,
 archivos, widgets, avisos ni permisos. Tampoco usa datos ficticios en
 producción.
 
+Las superficies de uso frecuente muestran primero el camino mínimo. Las
+decisiones menos comunes permanecen en `Opciones avanzadas`, plegadas de forma
+predeterminada y sin perder funcionalidad. Cada bloque técnico nuevo incluye
+una acción `(?)` con tres partes estables: `Qué hace`, `Cómo usarlo` y
+`Ejemplo`. Un dato obligatorio oculto se anuncia como respuesta pendiente para
+que el botón de guardar nunca parezca fallar sin explicación.
+
 En la primera ejecución puede omitirse conscientemente. Completar u omitir
 abre el Calendario en consulta. El paso visible puede sobrevivir a recreación,
 pero no se guarda como progreso de negocio.
@@ -118,6 +125,12 @@ Los textos de Ayuda no muestran datos concretos de la persona ni se registran
 datos laborales en logs.
 
 ### Contratos protegidos
+
+Nota de evolución del 2026-09-03: esta lista describe el límite original del
+bloque Ayuda. El candidato combinado autorizado incorporó después ubicación y
+clima por objetivo, con Room V6 y migración explícita `5→6`. Esa evolución fue
+auditada y validada como una sola unidad; no constituye una escritura Room de
+Ayuda ni habilita reejecutar este contrato aislado.
 
 Este bloque no modifica:
 

@@ -33,6 +33,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -52,6 +53,10 @@ import androidx.compose.ui.unit.dp
 import com.blackatsystems.miguardia.core.domain.work.WorkSector
 import com.blackatsystems.miguardia.core.domain.work.WorkSetupState
 import com.blackatsystems.miguardia.ui.components.EmptyState
+import com.blackatsystems.miguardia.ui.components.AdvancedOptionsSection
+import com.blackatsystems.miguardia.ui.components.AutomaticTimeField
+import com.blackatsystems.miguardia.ui.components.ContextHelp
+import com.blackatsystems.miguardia.ui.components.ObjectiveLocationCapture
 import com.blackatsystems.miguardia.ui.components.PersistentMessage
 import com.blackatsystems.miguardia.ui.components.PrimaryAction
 import com.blackatsystems.miguardia.ui.components.ScreenHeading
@@ -73,6 +78,8 @@ data class WorkSetupActions(
     val openHoursProgress: () -> Unit = {},
     val openAvailability: () -> Unit = {},
     val updatePlaceDraft: ((WorkPlaceDraft) -> WorkPlaceDraft) -> Unit = {},
+    val saveDraftLocation: (Long, Double, Double) -> Boolean = { _, _, _ -> false },
+    val clearDraftLocation: (Long) -> Boolean = { false },
     val updateTemplateDraft: ((WorkTemplateDraft) -> WorkTemplateDraft) -> Unit = {},
     val continueToTemplate: () -> Unit = {},
     val saveFirstWorkSet: () -> Unit = {},
@@ -82,6 +89,8 @@ data class WorkSetupActions(
     val saveAdditionalTemplate: () -> Unit = {},
     val startAnotherPlace: () -> Unit = {},
     val saveAdditionalPlace: () -> Unit = {},
+    val saveObjectiveLocation: (UUID, Double, Double) -> Boolean = { _, _, _ -> false },
+    val clearObjectiveLocation: (UUID) -> Boolean = { false },
     val returnToCalendar: () -> Unit = {},
     val requestBack: () -> Unit = {},
     val dismissDiscard: () -> Unit = {},
@@ -96,6 +105,8 @@ data class WorkSetupActions(
             openOverview = viewModel::openOverview,
             openFirstWorkSet = viewModel::openFirstWorkSet,
             updatePlaceDraft = viewModel::updatePlaceDraft,
+            saveDraftLocation = viewModel::saveDraftLocation,
+            clearDraftLocation = viewModel::clearDraftLocation,
             updateTemplateDraft = viewModel::updateTemplateDraft,
             continueToTemplate = viewModel::continueToTemplate,
             saveFirstWorkSet = viewModel::saveFirstWorkSet,
@@ -105,6 +116,8 @@ data class WorkSetupActions(
             saveAdditionalTemplate = viewModel::saveAdditionalTemplate,
             startAnotherPlace = viewModel::startAnotherPlace,
             saveAdditionalPlace = viewModel::saveAdditionalPlace,
+            saveObjectiveLocation = viewModel::saveObjectiveLocation,
+            clearObjectiveLocation = viewModel::clearObjectiveLocation,
             returnToCalendar = viewModel::returnToCalendar,
             requestBack = viewModel::requestBack,
             dismissDiscard = viewModel::dismissDiscard,
@@ -362,30 +375,60 @@ private fun WorkSetupOverview(state: WorkSetupUiState, actions: WorkSetupActions
                         onClick = actions.startAnotherPlace,
                         modifier = Modifier.fillMaxWidth(),
                     ) { Text("Agregar otro lugar") }
-                    OutlinedButton(
-                        onClick = actions.openRecurringPlans,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("work-setup-recurring-plans"),
-                    ) { Text("Planes recurrentes") }
-                    OutlinedButton(
-                        onClick = actions.openExtraClasses,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("work-setup-extra-classes"),
-                    ) { Text("Clases de horas extra") }
-                    OutlinedButton(
-                        onClick = actions.openHoursProgress,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("work-setup-hours-progress"),
-                    ) { Text("Referencia y avance de horas") }
-                    OutlinedButton(
-                        onClick = actions.openAvailability,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("work-setup-availability"),
-                    ) { Text("Guardias pasivas y disponibilidad") }
+                }
+                AdvancedOptionsSection(
+                    help = ContextHelp(
+                        title = "Opciones avanzadas de trabajo",
+                        whatItDoes = "Reúne repeticiones, metas de horas, tipos de horas extra, disponibilidad y ubicación para Clima.",
+                        howToUseIt = "Abrila sólo cuando necesites configurar alguna de esas funciones. La carga normal de jornadas no depende de este menú.",
+                        example = "Si trabajás siempre lunes, miércoles y viernes, podés crear una repetición desde acá.",
+                    ),
+                ) {
+                    SectionCard("Herramientas opcionales") {
+                        OutlinedButton(
+                            onClick = actions.openRecurringPlans,
+                            modifier = Modifier.fillMaxWidth().testTag("work-setup-recurring-plans"),
+                        ) { Text("Repeticiones guardadas") }
+                        OutlinedButton(
+                            onClick = actions.openExtraClasses,
+                            modifier = Modifier.fillMaxWidth().testTag("work-setup-extra-classes"),
+                        ) { Text("Tipos de horas extra") }
+                        OutlinedButton(
+                            onClick = actions.openHoursProgress,
+                            modifier = Modifier.fillMaxWidth().testTag("work-setup-hours-progress"),
+                        ) { Text("Tus horas y tu meta") }
+                        OutlinedButton(
+                            onClick = actions.openAvailability,
+                            modifier = Modifier.fillMaxWidth().testTag("work-setup-availability"),
+                        ) { Text("Disponibilidad") }
+                    }
+                    state.activePlaceOptions.forEach { option ->
+                        val objective = state.objectivesById[option.objectiveId]
+                        if (objective != null) {
+                            key(objective.id) {
+                                SectionCard(
+                                    title = "Clima de ${option.label}",
+                                    supportingText = if (objective.hasWeatherLocation) {
+                                        "La ubicación ya está guardada."
+                                    } else {
+                                        "Podés usar una dirección o tu ciudad actual con ubicación aproximada, sin seguimiento."
+                                    },
+                                ) {
+                                    ObjectiveLocationCapture(
+                                        address = objective.address.orEmpty(),
+                                        hasSavedLocation = objective.hasWeatherLocation,
+                                        enabled = state.savingLocationObjectiveId == null,
+                                        onLocationCaptured = { latitude, longitude ->
+                                            actions.saveObjectiveLocation(objective.id, latitude, longitude)
+                                        },
+                                        onLocationRemoved = {
+                                            actions.clearObjectiveLocation(objective.id)
+                                        },
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -394,9 +437,10 @@ private fun WorkSetupOverview(state: WorkSetupUiState, actions: WorkSetupActions
 
 @Composable
 private fun FirstWorkSetScreen(state: WorkSetupUiState, actions: WorkSetupActions) {
+    val placeLabel = state.selectedSector?.suggestedVocabulary?.placeLabel ?: "Lugar de trabajo"
     Column(Modifier.fillMaxSize().safeDrawingPadding()) {
         SurfaceHeader(
-            title = if (state.step == WorkSetupStep.PLACE_AND_RULES) "Lugar y reglas" else "Tipo y horario",
+            title = if (state.step == WorkSetupStep.PLACE_AND_RULES) placeLabel else "Horario y color",
             navigationLabel = if (state.step == WorkSetupStep.PLACE_AND_RULES) "Cerrar" else "Atrás",
             onNavigation = actions.requestBack,
         )
@@ -421,11 +465,15 @@ private fun FirstWorkSetScreen(state: WorkSetupUiState, actions: WorkSetupAction
                 PlaceAndRulesForm(
                     state = state,
                     actions = actions,
-                    primaryLabel = "Continuar al tipo y horario",
+                    primaryLabel = "Continuar al horario",
                     onPrimary = actions.continueToTemplate,
                 )
             } else {
-                TypeAndTemplateForm(state, actions, saveLabel = "Guardar lugar y horario")
+                TypeAndTemplateForm(
+                    state,
+                    actions,
+                    saveLabel = "Guardar ${placeLabel.lowercase(Locale.forLanguageTag("es-AR"))} y horario",
+                )
             }
         }
     }
@@ -465,28 +513,60 @@ private fun PlaceAndRulesForm(
             singleLine = true,
             enabled = !state.isSavingWorkSet,
         )
-        OutlinedTextField(
-            value = draft.address,
-            onValueChange = { value -> actions.updatePlaceDraft { it.copy(address = value) } },
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text("Dirección (opcional)") },
-            singleLine = true,
-            enabled = !state.isSavingWorkSet,
-        )
-        OutlinedTextField(
-            value = draft.note,
-            onValueChange = { value -> actions.updatePlaceDraft { it.copy(note = value) } },
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text("Nota personal y privada (opcional)") },
-            minLines = 2,
-            enabled = !state.isSavingWorkSet,
+    }
+    advancedPlaceRequirementMessage(draft)?.let { message ->
+        Text(
+            "$message Abrí Opciones avanzadas para corregirlo.",
+            color = MaterialTheme.vigiliaColors.info,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.testTag("work-place-advanced-required"),
         )
     }
-    SectionCard(
-        title = "Reglas para clasificar horas",
-        supportingText = "Sólo sirven para mostrar horas aparte. No calculan montos ni convierten tiempo en extras.",
+    AdvancedOptionsSection(
+        help = ContextHelp(
+            title = "Datos y reglas opcionales",
+            whatItDoes = "Permite guardar una dirección o nota, activar Clima para este objetivo y separar horas nocturnas, de fin de semana o feriados.",
+            howToUseIt = "Dejá todo cerrado si sólo querés cargar jornadas. Abrilo únicamente si necesitás una de estas funciones.",
+            example = "Podés distinguir la franja 21:00–06:00 sin convertirla automáticamente en hora extra.",
+        ),
     ) {
-        CheckRow(
+        SectionCard("Datos opcionales") {
+            OutlinedTextField(
+                value = draft.address,
+                onValueChange = { value -> actions.updatePlaceDraft { it.copy(address = value) } },
+                modifier = Modifier.fillMaxWidth().testTag("work-place-address"),
+                label = { Text("Dirección (opcional)") },
+                singleLine = true,
+                enabled = !state.isSavingWorkSet,
+            )
+            OutlinedTextField(
+                value = draft.note,
+                onValueChange = { value -> actions.updatePlaceDraft { it.copy(note = value) } },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Nota personal y privada (opcional)") },
+                minLines = 2,
+                enabled = !state.isSavingWorkSet,
+            )
+            Text(
+                "La dirección se guarda en tu teléfono. Sólo si tocás Usar esta dirección, Android la consulta para encontrar coordenadas aproximadas.",
+            )
+            ObjectiveLocationCapture(
+                address = draft.address,
+                hasSavedLocation = draft.weatherLatitude != null && draft.weatherLongitude != null,
+                enabled = !state.isSavingWorkSet,
+                onLocationCaptured = { latitude, longitude ->
+                    actions.saveDraftLocation(state.draftLocationRequestId, latitude, longitude)
+                },
+                onLocationRemoved = {
+                    actions.clearDraftLocation(state.draftLocationRequestId)
+                },
+            )
+        }
+        SectionCard(
+            title = "Separar horas en los detalles",
+            supportingText = "No calcula pagos ni convierte tiempo en horas extra.",
+        ) {
+            CheckRow(
             label = "¿En este lugar contás horas nocturnas?",
             checked = draft.nightHoursEnabled,
             enabled = !state.isSavingWorkSet,
@@ -494,7 +574,7 @@ private fun PlaceAndRulesForm(
                 actions.updatePlaceDraft { it.copy(nightHoursEnabled = checked) }
             },
         )
-        if (draft.nightHoursEnabled) {
+            if (draft.nightHoursEnabled) {
             TimeFields(
                 start = draft.nightStart,
                 end = draft.nightEnd,
@@ -504,8 +584,8 @@ private fun PlaceAndRulesForm(
                 onEndChange = { value -> actions.updatePlaceDraft { it.copy(nightEnd = value) } },
                 enabled = !state.isSavingWorkSet,
             )
-        }
-        CheckRow(
+            }
+            CheckRow(
             label = "Distinguir sábados",
             checked = draft.classifySaturday,
             enabled = !state.isSavingWorkSet,
@@ -513,7 +593,7 @@ private fun PlaceAndRulesForm(
                 actions.updatePlaceDraft { it.copy(classifySaturday = checked) }
             },
         )
-        CheckRow(
+            CheckRow(
             label = "Distinguir domingos",
             checked = draft.classifySunday,
             enabled = !state.isSavingWorkSet,
@@ -521,17 +601,17 @@ private fun PlaceAndRulesForm(
                 actions.updatePlaceDraft { it.copy(classifySunday = checked) }
             },
         )
-        if (draft.classifySaturday || draft.classifySunday) {
+            if (draft.classifySaturday || draft.classifySunday) {
             CheckRow(
-                label = "Mostrar esas horas aparte en el Resumen futuro",
+                label = "Mostrar esas horas aparte en el Resumen",
                 checked = draft.showWeekendSummary,
                 enabled = !state.isSavingWorkSet,
                 onCheckedChange = { checked ->
                     actions.updatePlaceDraft { it.copy(showWeekendSummary = checked) }
                 },
             )
-        }
-        CheckRow(
+            }
+            CheckRow(
             label = "Distinguir feriados",
             checked = draft.classifyHoliday,
             enabled = !state.isSavingWorkSet,
@@ -539,15 +619,16 @@ private fun PlaceAndRulesForm(
                 actions.updatePlaceDraft { it.copy(classifyHoliday = checked) }
             },
         )
-        if (draft.classifyHoliday) {
+            if (draft.classifyHoliday) {
             CheckRow(
-                label = "Mostrar feriados aparte en el Resumen futuro",
+                label = "Mostrar feriados aparte en el Resumen",
                 checked = draft.showHolidaySummary,
                 enabled = !state.isSavingWorkSet,
                 onCheckedChange = { checked ->
                     actions.updatePlaceDraft { it.copy(showHolidaySummary = checked) }
                 },
             )
+            }
         }
     }
     PrimaryAction(
@@ -593,26 +674,8 @@ private fun TypeAndTemplateForm(
     val draft = state.templateDraft
     var choosingColor by remember { mutableStateOf(false) }
     SectionCard(
-        title = "Trabajo habitual",
-        supportingText = "El nombre es editable. Siempre contará como trabajo normal.",
-    ) {
-        OutlinedTextField(
-            value = draft.typeName,
-            onValueChange = { value -> actions.updateTemplateDraft { it.copy(typeName = value) } },
-            modifier = Modifier.fillMaxWidth().testTag("work-type-name"),
-            label = { Text("Tipo de trabajo") },
-            singleLine = true,
-            enabled = !state.isSavingWorkSet,
-        )
-        Text(
-            "Las horas extras, una extensión del turno, la disponibilidad y las situaciones especiales se podrán registrar por separado cuando esas funciones estén disponibles.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-    SectionCard(
-        title = "Primer horario",
-        supportingText = "Guardamos el inicio y el final exactos; no usamos categorías genéricas de día o noche.",
+        title = "Tu primer horario",
+        supportingText = "Escribí cuatro números en cada hora. Los dos puntos aparecen solos.",
     ) {
         TimeFields(
             start = draft.startTime,
@@ -647,6 +710,34 @@ private fun TypeAndTemplateForm(
             ) {
                 Text(if (draft.colorArgb == null) "Elegir color" else "Cambiar color")
             }
+        }
+    }
+    advancedTemplateRequirementMessage(draft, requireTypeName = true)?.let { message ->
+        Text(
+            "$message Está en Opciones avanzadas.",
+            color = MaterialTheme.vigiliaColors.info,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.testTag("work-template-advanced-required"),
+        )
+    }
+    AdvancedOptionsSection(
+        help = ContextHelp(
+            title = "Nombre del trabajo",
+            whatItDoes = "Le pone un nombre a tu trabajo normal para distinguirlo de horas extra u otras situaciones.",
+            howToUseIt = "La sugerencia ya está lista. Cambiala sólo si en tu trabajo usan otro nombre.",
+            example = "Vigilancia: Guardia habitual. Enfermería: Turno habitual.",
+        ),
+    ) {
+        SectionCard("Nombre del trabajo") {
+            OutlinedTextField(
+                value = draft.typeName,
+                onValueChange = { value -> actions.updateTemplateDraft { it.copy(typeName = value) } },
+                modifier = Modifier.fillMaxWidth().testTag("work-type-name"),
+                label = { Text("Nombre") },
+                singleLine = true,
+                enabled = !state.isSavingWorkSet,
+            )
+            Text("Siempre contará como trabajo normal. Las horas extra se registran por separado.")
         }
     }
     PrimaryAction(
@@ -822,13 +913,11 @@ private fun WorkTimeField(
     testTag: String,
     modifier: Modifier,
 ) {
-    OutlinedTextField(
+    AutomaticTimeField(
         value = value,
-        onValueChange = { onValueChange(it.take(5)) },
+        onValueChange = onValueChange,
         modifier = modifier.testTag(testTag),
-        label = { Text(label) },
-        placeholder = { Text("HH:mm") },
-        singleLine = true,
+        label = label,
         enabled = enabled,
     )
 }

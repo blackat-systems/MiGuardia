@@ -199,6 +199,8 @@ internal interface WorkCatalogDao {
                 objective.isActive AS objective_isActive,
                 objective.createdAtEpochMillis AS objective_createdAtEpochMillis,
                 objective.updatedAtEpochMillis AS objective_updatedAtEpochMillis,
+                objective.weatherLatitude AS objective_weatherLatitude,
+                objective.weatherLongitude AS objective_weatherLongitude,
                 work_place.id AS workPlace_id,
                 work_place.timelineId AS workPlace_timelineId,
                 work_place.sector AS workPlace_sector,

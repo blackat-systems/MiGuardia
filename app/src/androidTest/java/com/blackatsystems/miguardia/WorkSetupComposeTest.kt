@@ -19,6 +19,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.unit.dp
 import com.blackatsystems.miguardia.core.domain.calendar.CalendarDay
 import com.blackatsystems.miguardia.core.domain.work.EffectiveRevision
@@ -30,6 +31,7 @@ import com.blackatsystems.miguardia.core.domain.work.WorkSector
 import com.blackatsystems.miguardia.core.domain.work.WorkSetupState
 import com.blackatsystems.miguardia.backup.BackupActions
 import com.blackatsystems.miguardia.ui.MiGuardiaApp
+import com.blackatsystems.miguardia.ui.calendar.CalendarInteractionMode
 import com.blackatsystems.miguardia.ui.calendar.CalendarLoadState
 import com.blackatsystems.miguardia.ui.calendar.CalendarUiState
 import com.blackatsystems.miguardia.ui.management.V2RecurringActions
@@ -55,7 +57,7 @@ class WorkSetupComposeTest {
     val compose = createComposeRule()
 
     @Test
-    fun overviewOffersHoursProgressAndAvailabilityEntries() {
+    fun overviewKeepsHoursProgressAndAvailabilityInsideAdvancedOptions() {
         var opened = 0
         var availabilityOpened = 0
         compose.setContent {
@@ -70,6 +72,9 @@ class WorkSetupComposeTest {
             }
         }
 
+        compose.onNodeWithTag("work-setup-hours-progress").assertDoesNotExist()
+        compose.onNodeWithTag("work-setup-availability").assertDoesNotExist()
+        compose.onNodeWithTag("advanced-options-toggle").performScrollTo().performClick()
         compose.onNodeWithTag("work-setup-hours-progress")
             .performScrollTo()
             .assertIsDisplayed()
@@ -198,8 +203,11 @@ class WorkSetupComposeTest {
         setApp(
             stateProvider = { state },
             recurringActions = V2RecurringActions(openPlans = { opened++ }),
+            calendar = calendarState().copy(interactionMode = CalendarInteractionMode.EDIT),
         )
 
+        compose.onNodeWithTag("work-setup-recurring-plans").assertDoesNotExist()
+        compose.onAllNodesWithTag("advanced-options-toggle")[1].performScrollTo().performClick()
         compose.onNodeWithTag("work-setup-recurring-plans").assertIsDisplayed().performClick()
         compose.runOnIdle { assertEquals(1, opened) }
 
@@ -233,14 +241,184 @@ class WorkSetupComposeTest {
             },
             requestBack = {},
         )
-        setApp(stateProvider = { state }, actions = actions)
+        setApp(
+            stateProvider = { state },
+            actions = actions,
+            calendar = calendarState().copy(interactionMode = CalendarInteractionMode.EDIT),
+        )
 
         compose.onNodeWithText("Paso 1 de 2").assertIsDisplayed()
-        compose.onNodeWithText("Continuar al tipo y horario").performScrollTo().performClick()
+        compose.onNodeWithText("Continuar al horario").performScrollTo().performClick()
         compose.onNodeWithText("Paso 2 de 2").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Guardia habitual").assertDoesNotExist()
+        compose.onNodeWithTag("advanced-options-toggle").performScrollTo().performClick()
         compose.onNodeWithText("Guardia habitual").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Este horario dura 24 horas.").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("Guardar lugar y horario").performScrollTo().assertIsEnabled()
+        compose.onNodeWithText("Guardar objetivo y horario").performScrollTo().assertIsEnabled()
+    }
+
+    @Test
+    fun firstSetUsesTheSelectedSectorVocabularyInsteadOfCallingEveryPlaceObjective() {
+        var state by mutableStateOf(
+            needsFirstSetState(WorkSector.MEDICINE).copy(
+                surface = WorkSetupSurface.FIRST_WORK_SET,
+                selectedSector = WorkSector.MEDICINE,
+                placeDraft = WorkPlaceDraft(name = "Hospital ficticio", abbreviation = "HFI"),
+                templateDraft = WorkTemplateDraft(typeName = "Jornada habitual"),
+            ),
+        )
+        val actions = WorkSetupActions(
+            continueToTemplate = {
+                state = state.copy(
+                    step = WorkSetupStep.TYPE_AND_TEMPLATE,
+                    templateDraft = state.templateDraft.copy(
+                        startTime = "08:00",
+                        endTime = "16:00",
+                        colorArgb = 0xFF123456.toInt(),
+                    ),
+                )
+            },
+            requestBack = {},
+        )
+        setApp(
+            stateProvider = { state },
+            actions = actions,
+            calendar = calendarState().copy(interactionMode = CalendarInteractionMode.EDIT),
+        )
+
+        compose.onAllNodesWithText("Hospital, clínica, consultorio o servicio")[0].assertIsDisplayed()
+        compose.onNodeWithText("Objetivo").assertDoesNotExist()
+        compose.onNodeWithText("Continuar al horario").performScrollTo().performClick()
+        compose.onNodeWithText("Guardar hospital, clínica, consultorio o servicio y horario")
+            .performScrollTo()
+            .assertIsEnabled()
+    }
+
+    @Test
+    fun firstSetExplainsAnIncompleteNightRuleOutsideCollapsedAdvancedOptions() {
+        val state = needsFirstSetState(WorkSector.PRIVATE_SECURITY).copy(
+            surface = WorkSetupSurface.FIRST_WORK_SET,
+            selectedSector = WorkSector.PRIVATE_SECURITY,
+            placeDraft = WorkPlaceDraft(
+                name = "Objetivo ficticio",
+                abbreviation = "OBJ",
+                nightHoursEnabled = true,
+            ),
+        )
+        setApp(stateProvider = { state })
+
+        compose.onNodeWithTag("work-place-advanced-required").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Abrí Opciones avanzadas para corregirlo.", substring = true)
+            .assertIsDisplayed()
+        compose.onNodeWithText("Inicio nocturno").assertDoesNotExist()
+        compose.onNodeWithTag("work-place-continue").performScrollTo().assertIsNotEnabled()
+    }
+
+    @Test
+    fun firstSetExplainsAMissingWorkNameOutsideCollapsedAdvancedOptions() {
+        val state = needsFirstSetState(WorkSector.PRIVATE_SECURITY).copy(
+            surface = WorkSetupSurface.FIRST_WORK_SET,
+            step = WorkSetupStep.TYPE_AND_TEMPLATE,
+            selectedSector = WorkSector.PRIVATE_SECURITY,
+            placeDraft = WorkPlaceDraft(name = "Objetivo ficticio", abbreviation = "OBJ"),
+            templateDraft = WorkTemplateDraft(
+                typeName = "",
+                startTime = "08:00",
+                endTime = "20:00",
+                colorArgb = 0xFF123456.toInt(),
+            ),
+        )
+        setApp(stateProvider = { state })
+
+        compose.onNodeWithTag("work-template-advanced-required").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Está en Opciones avanzadas.", substring = true).assertIsDisplayed()
+        compose.onNodeWithTag("work-type-name").assertDoesNotExist()
+        compose.onNodeWithTag("work-set-save").performScrollTo().assertIsNotEnabled()
+    }
+
+    @Test
+    fun timeFieldsInsertTheSeparatorWithoutAskingForPunctuation() {
+        var state by mutableStateOf(
+            needsFirstSetState(WorkSector.PRIVATE_SECURITY).copy(
+                surface = WorkSetupSurface.FIRST_WORK_SET,
+                step = WorkSetupStep.TYPE_AND_TEMPLATE,
+                selectedSector = WorkSector.PRIVATE_SECURITY,
+                placeDraft = WorkPlaceDraft(name = "Objetivo ficticio", abbreviation = "OBJ"),
+                templateDraft = WorkTemplateDraft(typeName = "Guardia habitual"),
+            ),
+        )
+        setApp(
+            stateProvider = { state },
+            actions = WorkSetupActions(
+                updateTemplateDraft = { transform ->
+                    state = state.copy(templateDraft = transform(state.templateDraft))
+                },
+            ),
+        )
+
+        compose.onNodeWithTag("work-time-start")
+            .performScrollTo()
+            .performTextReplacement("0830")
+        compose.onNodeWithTag("work-time-end")
+            .performScrollTo()
+            .performTextReplacement("1745")
+        compose.runOnIdle {
+            assertEquals("08:30", state.templateDraft.startTime)
+            assertEquals("17:45", state.templateDraft.endTime)
+        }
+    }
+
+    @Test
+    fun objectiveLocationOffersAddressOrActivateWhenThereAndCanBeRemoved() {
+        var state by mutableStateOf(
+            needsFirstSetState(WorkSector.PRIVATE_SECURITY).copy(
+                surface = WorkSetupSurface.FIRST_WORK_SET,
+                selectedSector = WorkSector.PRIVATE_SECURITY,
+                placeDraft = WorkPlaceDraft(name = "Objetivo ficticio", abbreviation = "OBJ"),
+            ),
+        )
+        val actions = WorkSetupActions(
+            updatePlaceDraft = { transform ->
+                state = state.copy(placeDraft = transform(state.placeDraft))
+            },
+            clearDraftLocation = {
+                state = state.copy(
+                    placeDraft = state.placeDraft.copy(
+                        weatherLatitude = null,
+                        weatherLongitude = null,
+                    ),
+                )
+                true
+            },
+        )
+        setApp(stateProvider = { state }, actions = actions)
+
+        compose.onNodeWithTag("advanced-options-toggle").performScrollTo().performClick()
+        compose.onNodeWithText("Usar mi ciudad actual para el clima").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Usar esta dirección para el clima").assertDoesNotExist()
+
+        compose.onNodeWithTag("work-place-address")
+            .performScrollTo()
+            .performTextReplacement("Av. Siempre Viva 742, Córdoba")
+        compose.onNodeWithText("Usar esta dirección para el clima").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Usar mi ubicación actual en su lugar").performScrollTo().assertIsDisplayed()
+
+        compose.runOnIdle {
+            state = state.copy(
+                placeDraft = state.placeDraft.copy(
+                    weatherLatitude = -31.4201,
+                    weatherLongitude = -64.1888,
+                ),
+            )
+        }
+        compose.onNodeWithText("Quitar ubicación guardada").performScrollTo().performClick()
+        compose.onNodeWithText("Las copias de seguridad que ya hayas creado no se modifican.", substring = true)
+            .assertIsDisplayed()
+        compose.onNodeWithText("Quitar").performClick()
+        compose.runOnIdle {
+            assertEquals(null, state.placeDraft.weatherLatitude)
+            assertEquals(null, state.placeDraft.weatherLongitude)
+        }
     }
 
     @Test

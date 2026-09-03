@@ -167,10 +167,12 @@ class BackupRecoveryInstrumentedTest {
                 preferences = incomingPreferences,
                 incomingPhotoBytes = incomingPhotoBytes,
             )
+            var clearDerivedCalls = 0
             val coordinator = LocalBackupCoordinator(
                 context = context,
                 localDataStore = store,
                 preferences = preferences,
+                clearDerivedCaches = { clearDerivedCalls++ },
                 clock = CLOCK,
                 zoneId = ZONE,
             )
@@ -189,6 +191,7 @@ class BackupRecoveryInstrumentedTest {
             assertEquals(incomingDatabase, store.backups.capture())
             assertEquals(incomingPreferences, preferences.capture(incomingDatabase))
             assertTrue(livePhoto.readBytes().contentEquals(incomingPhotoBytes))
+            assertEquals(1, clearDerivedCalls)
             assertFalse(File(context.noBackupFilesDir, "miguardia_backup_restore").exists())
             assertEquals(AccessLockStoreRead.Ready(localAccessLock), accessLock.read())
             assertNewAccessLockSessionIsClosed(accessLock, scope)
@@ -208,6 +211,7 @@ class BackupRecoveryInstrumentedTest {
             assertEquals(incomingDatabase, store.backups.capture())
             assertEquals(incomingPreferences, preferences.capture(incomingDatabase))
             assertTrue(livePhoto.readBytes().contentEquals(incomingPhotoBytes))
+            assertEquals(2, clearDerivedCalls)
             assertFalse(File(context.noBackupFilesDir, "miguardia_backup_restore").exists())
             assertEquals(AccessLockStoreRead.Ready(localAccessLock), accessLock.read())
             assertNewAccessLockSessionIsClosed(accessLock, scope)
@@ -848,6 +852,8 @@ class BackupRecoveryInstrumentedTest {
                                 BackupValue.Integer(1),
                                 BackupValue.Integer(CREATED_AT),
                                 BackupValue.Integer(CREATED_AT),
+                                BackupValue.Null,
+                                BackupValue.Null,
                             ),
                         ),
                     ),
@@ -893,6 +899,8 @@ class BackupRecoveryInstrumentedTest {
             BackupValue.Integer(1),
             BackupValue.Integer(CREATED_AT),
             BackupValue.Integer(CREATED_AT),
+            BackupValue.Null,
+            BackupValue.Null,
         ),
     )
 

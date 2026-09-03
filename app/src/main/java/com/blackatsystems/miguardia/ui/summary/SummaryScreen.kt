@@ -272,7 +272,7 @@ private fun SummaryContent(
     projection.availability?.let { availability ->
         SectionCard(
             title = "Disponibilidad",
-            supportingText = "Permanece separada del trabajo y del cumplimiento.",
+            supportingText = "Permanece separada del trabajo y del avance de tu meta.",
             modifier = Modifier.testTag("summary-availability"),
         ) {
             listOfNotNull(
@@ -304,7 +304,7 @@ private fun ComplianceSection(
     onOpenMetric: (String) -> Unit,
 ) {
     SectionCard(
-        title = "Cumplimiento de horas",
+        title = "Avance de horas",
         supportingText = "Las semanas y ciclos se muestran completos aunque crucen el mes.",
         modifier = Modifier.testTag("summary-compliance"),
     ) {
@@ -324,7 +324,7 @@ private fun ComplianceSection(
                     }
                 }
                 HoursTargetState.MissingPerPeriodValue -> Text("Falta informar la meta de este período.")
-                HoursTargetState.Unknown -> Text("La referencia existe, pero su cantidad de horas es desconocida.")
+                HoursTargetState.Unknown -> Text("Tenés una meta, pero no se indicó cuántas horas.")
                 HoursTargetState.PendingSetup,
                 HoursTargetState.NotUsed,
                 -> Unit

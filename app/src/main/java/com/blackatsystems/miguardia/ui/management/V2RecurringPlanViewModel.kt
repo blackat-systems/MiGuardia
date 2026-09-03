@@ -50,6 +50,8 @@ import java.time.Clock
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.format.ResolverStyle
 import java.util.UUID
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineStart
@@ -303,8 +305,8 @@ internal class V2RecurringPlanCoordinator(
             draftPlanId = uuidProvider.newUuid(),
             weekdays = setOf(today.dayOfWeek),
             monthlyDayOfWeek = today.dayOfWeek,
-            startDateText = today.toString(),
-            endDateText = today.plusMonths(1).toString(),
+            startDateText = formatRecurringDate(today),
+            endDateText = formatRecurringDate(today.plusMonths(1)),
             isLoading = true,
         )
         persistCurrent()
@@ -421,8 +423,8 @@ internal class V2RecurringPlanCoordinator(
             draftPlanId = planId,
             selectedPlanId = planId,
             cutDate = cutDate,
-            startDateText = cutDate.toString(),
-            endDateText = cutDate.toString(),
+            startDateText = formatRecurringDate(cutDate),
+            endDateText = formatRecurringDate(cutDate),
             isLoading = true,
             canRetry = false,
         )
@@ -449,7 +451,7 @@ internal class V2RecurringPlanCoordinator(
                         intervalText = patternState.interval.toString(),
                         monthlyOrdinal = patternState.ordinal,
                         monthlyDayOfWeek = patternState.dayOfWeek,
-                        endDateText = maxOf(latest.endDateInclusive, cutDate).toString(),
+                        endDateText = formatRecurringDate(maxOf(latest.endDateInclusive, cutDate)),
                         isLoading = false,
                         canRetry = false,
                         errorMessage = if (
@@ -504,10 +506,20 @@ internal class V2RecurringPlanCoordinator(
     fun selectMonthlyDay(value: DayOfWeek) = editDraft { it.copy(monthlyDayOfWeek = value) }
 
     fun updateStartDate(value: String) = editDraft { state ->
-        if (state.cutDate != null) state else state.copy(startDateText = value.take(DATE_TEXT_LENGTH))
+        if (state.cutDate != null) {
+            state
+        } else {
+            normalizeRecurringDateDraftUpdate(value)
+                ?.let { formatted -> state.copy(startDateText = formatted) }
+                ?: state
+        }
     }
 
-    fun updateEndDate(value: String) = editDraft { it.copy(endDateText = value.take(DATE_TEXT_LENGTH)) }
+    fun updateEndDate(value: String) = editDraft { state ->
+        normalizeRecurringDateDraftUpdate(value)
+            ?.let { formatted -> state.copy(endDateText = formatted) }
+            ?: state
+    }
 
     fun selectConflictPolicy(value: RecurringConflictPolicy) = editDraft {
         it.copy(conflictPolicy = value)
@@ -595,7 +607,7 @@ internal class V2RecurringPlanCoordinator(
         ) {
             return
         }
-        val effectiveStart = state.cutDate ?: LocalDate.parse(state.startDateText)
+        val effectiveStart = state.cutDate ?: parseDate(state.startDateText, "inicio")
         if (effectiveStart.isBefore(LocalDate.now(clock.withZone(zoneId)))) {
             prepared = null
             retryAction = V2RecurringRetryAction.REVIEW
@@ -628,8 +640,10 @@ internal class V2RecurringPlanCoordinator(
                 _uiState.value = V2RecurringUiState(
                     infoMessage = when (state.mode) {
                         V2RecurringMode.CREATE -> "Plan recurrente creado."
-                        V2RecurringMode.CHANGE -> "Plan actualizado desde ${state.cutDate}."
-                        V2RecurringMode.FINALIZE -> "Plan finalizado desde ${state.cutDate}."
+                        V2RecurringMode.CHANGE ->
+                            "Plan actualizado desde ${state.cutDate?.let(::formatRecurringDate).orEmpty()}."
+                        V2RecurringMode.FINALIZE ->
+                            "Plan finalizado desde ${state.cutDate?.let(::formatRecurringDate).orEmpty()}."
                     },
                     successSequence = sequence,
                 )
@@ -1106,8 +1120,8 @@ internal class V2RecurringPlanCoordinator(
         ?.takeIf { it > 0 }
         ?: error("La repetición necesita un intervalo entero positivo.")
 
-    private fun parseDate(value: String, label: String): LocalDate = runCatching { LocalDate.parse(value) }
-        .getOrElse { error("La fecha de $label debe escribirse como AAAA-MM-DD.") }
+    private fun parseDate(value: String, label: String): LocalDate = parseRecurringDate(value)
+        ?: error("La fecha de $label no es válida. Escribila como DD/MM/AAAA.")
 
     private fun persistCurrent() = persist(_uiState.value.toPersisted())
 
@@ -1141,7 +1155,6 @@ internal class V2RecurringPlanCoordinator(
 
     private companion object {
         const val MAX_POSITION_LENGTH = 120
-        const val DATE_TEXT_LENGTH = 10
         const val REVIEW_NEIGHBOR_DAYS = 2L
     }
 
@@ -1154,6 +1167,49 @@ internal class V2RecurringPlanCoordinator(
         SAVE,
     }
 }
+
+internal fun formatRecurringDateInput(rawValue: String): String? {
+    if (rawValue.any { character -> character !in '0'..'9' && character != '/' }) return null
+    if (rawValue.count { it == '/' } > 2) return null
+
+    if (rawValue.count { it == '/' } == 2) {
+        val parts = rawValue.split('/')
+        val day = parts[0]
+        val month = parts[1]
+        val year = parts[2]
+        if (
+            day.isNotEmpty() && month.isNotEmpty() && year.isNotEmpty() &&
+            day.length <= 2 && month.length <= 2 && year.length <= 4
+        ) {
+            return "${day.padStart(2, '0')}/${month.padStart(2, '0')}/$year"
+        }
+    }
+
+    val digits = rawValue.filter { it in '0'..'9' }
+    if (digits.length > 8) return null
+    return when {
+        digits.length <= 2 -> digits
+        digits.length <= 4 -> "${digits.take(2)}/${digits.drop(2)}"
+        else -> "${digits.take(2)}/${digits.substring(2, 4)}/${digits.drop(4)}"
+    }
+}
+
+internal fun normalizeRecurringDateDraftUpdate(rawValue: String): String? {
+    val formatted = formatRecurringDateInput(rawValue) ?: return null
+    return if ('/' in rawValue && rawValue.length < 10) rawValue else formatted
+}
+
+internal fun formatRecurringDate(date: LocalDate): String = date.format(RECURRING_DATE_FORMATTER)
+
+internal fun parseRecurringDate(value: String): LocalDate? =
+    runCatching { LocalDate.parse(value, RECURRING_DATE_FORMATTER) }
+        .recoverCatching { LocalDate.parse(value) }
+        .getOrNull()
+
+private fun normalizeRecurringDateText(value: String): String =
+    parseRecurringDate(value)?.let(::formatRecurringDate)
+        ?: formatRecurringDateInput(value)
+        ?: value.take(10)
 
 private fun safeMinusDays(date: LocalDate, days: Long): LocalDate =
     runCatching { date.minusDays(days) }.getOrDefault(LocalDate.MIN)
@@ -1191,8 +1247,8 @@ private fun V2RecurringPersistedState.toUiState() = V2RecurringUiState(
     intervalText = intervalText,
     monthlyOrdinal = monthlyOrdinal,
     monthlyDayOfWeek = monthlyDayOfWeek,
-    startDateText = startDateText,
-    endDateText = endDateText,
+    startDateText = normalizeRecurringDateText(startDateText),
+    endDateText = normalizeRecurringDateText(endDateText),
     conflictPolicy = conflictPolicy,
 )
 
@@ -1271,3 +1327,5 @@ private const val RECURRING_MONTHLY_DAY = "v2_recurring_monthly_day"
 private const val RECURRING_START = "v2_recurring_start"
 private const val RECURRING_END = "v2_recurring_end"
 private const val RECURRING_POLICY = "v2_recurring_policy"
+private val RECURRING_DATE_FORMATTER: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("dd/MM/uuuu").withResolverStyle(ResolverStyle.STRICT)

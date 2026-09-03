@@ -58,6 +58,7 @@ class V2RecurringPlanActivityTest {
         check(context.packageName == QA_APPLICATION_ID) {
             "La prueba recurrente sólo puede ejecutarse contra el paquete QA."
         }
+        markOnboardingCompletedForTest()
 
         startDate = LocalDate.now(AppDefaults.zoneId())
         val timestamp = Instant.now()
@@ -83,6 +84,10 @@ class V2RecurringPlanActivityTest {
 
         scenario = ActivityScenario.launch(MainActivity::class.java)
         compose.waitUntil(WAIT_MILLIS) {
+            compose.onAllNodesWithTag("advanced-options-toggle").fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.onNodeWithTag("advanced-options-toggle").performScrollTo().performClick()
+        compose.waitUntil(WAIT_MILLIS) {
             compose.onAllNodesWithTag("calendar-v2-repeat-shifts").fetchSemanticsNodes().isNotEmpty()
         }
     }
@@ -100,6 +105,7 @@ class V2RecurringPlanActivityTest {
             compose.onAllNodesWithTag("v2-recurring-template-$TEMPLATE_ID").fetchSemanticsNodes().isNotEmpty()
         }
         compose.onNodeWithTag("v2-recurring-template-$TEMPLATE_ID").performScrollTo().performClick()
+        compose.onNodeWithText("Opciones avanzadas").performScrollTo().performClick()
         compose.onNodeWithTag("v2-recurring-position").performScrollTo().performTextInput(POSITION)
 
         requireNotNull(scenario).recreate()
@@ -114,6 +120,8 @@ class V2RecurringPlanActivityTest {
             compose.onAllNodesWithTag("v2-recurring-save", useUnmergedTree = true)
                 .fetchSemanticsNodes().isNotEmpty()
         }
+        compose.onNodeWithTag("v2-recurring-exact-dates").assertDoesNotExist()
+        compose.onNodeWithText("Opciones avanzadas").performScrollTo().performClick()
         compose.onNodeWithTag("v2-recurring-exact-dates").assertIsDisplayed()
         compose.onNodeWithTag("v2-recurring-save", useUnmergedTree = true).performScrollTo().performClick()
 

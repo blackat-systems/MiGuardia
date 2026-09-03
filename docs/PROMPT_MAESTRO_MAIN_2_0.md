@@ -69,8 +69,8 @@ de convertirla en una implementación amplia.
 - Kotlin y Compose continúan como base.
 - El código parte de MiGuardia 1.0 y puede reutilizar sus componentes probados.
 - El runtime actual abre únicamente `MiGuardiaV2Database`, archivo
-  `miguardia-v2.db`, Room versión 5 y cadena explícita `1→2→3→4→5`; la cadena Room
-  histórica y las rutas V1 ya no forman parte de la ejecución.
+  `miguardia-v2.db`, Room versión 6 y cadena explícita `1→2→3→4→5→6`; la cadena
+  Room histórica y las rutas V1 ya no forman parte de la ejecución.
 - Se conservan inicialmente `minSdk 26`, `targetSdk 37`, `compileSdk 37` y Java
   17.
 - `Objective`, `Shift`, la configuración laboral, el catálogo y las

@@ -11,6 +11,7 @@ import java.io.DataOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
+import java.security.MessageDigest
 import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
@@ -19,17 +20,21 @@ import java.time.ZoneId
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-class WeatherCacheStore(private val root: File) {
+class WeatherCacheStore(
+    private val root: File,
+    private val cacheFile: String = CACHE_FILE,
+    private val temporaryFile: String = TEMP_FILE,
+) {
     suspend fun read(): WeatherForecast? = withContext(Dispatchers.IO) {
-        val target = File(root, CACHE_FILE)
+        val target = File(root, cacheFile)
         if (!target.isFile) return@withContext null
         runCatching { decode(target) }.getOrNull()
     }
 
     suspend fun write(forecast: WeatherForecast) = withContext(Dispatchers.IO) {
         if (!root.exists() && !root.mkdirs()) throw IOException("No se pudo preparar el caché meteorológico.")
-        val temporary = File(root, TEMP_FILE)
-        val target = File(root, CACHE_FILE)
+        val temporary = File(root, temporaryFile)
+        val target = File(root, cacheFile)
         try {
             encode(temporary, forecast)
             try {
@@ -48,7 +53,8 @@ class WeatherCacheStore(private val root: File) {
     }
 
     suspend fun clear() = withContext(Dispatchers.IO) {
-        root.listFiles()?.filter { it.name.startsWith(OWNED_PREFIX) }?.forEach(File::delete)
+        deleteOwnedFile(File(root, cacheFile))
+        deleteOwnedFile(File(root, temporaryFile))
     }
 
     private fun encode(file: File, forecast: WeatherForecast) {
@@ -144,5 +150,59 @@ class WeatherCacheStore(private val root: File) {
         const val MAX_HOURS = 16 * 24
         const val MAX_CACHE_BYTES = 2L * 1024L * 1024L
         fun inFilesDir(filesDir: File): WeatherCacheStore = WeatherCacheStore(File(filesDir, DIRECTORY_NAME))
+
+        fun forLocation(filesDir: File, location: WeatherLocation): WeatherCacheStore {
+            val safeId = safeObjectiveId(location.id)
+            val locationKey = listOf(
+                location.id,
+                location.displayName,
+                location.latitude.toBits().toString(),
+                location.longitude.toBits().toString(),
+                location.zoneId.id,
+            ).joinToString("|")
+            val fingerprint = MessageDigest.getInstance("SHA-256")
+                .digest(locationKey.toByteArray(Charsets.UTF_8))
+                .take(8)
+                .joinToString("") { byte -> "%02x".format(byte.toInt() and 0xff) }
+            return WeatherCacheStore(
+                root = File(filesDir, DIRECTORY_NAME),
+                cacheFile = "${OWNED_PREFIX}${safeId}_${fingerprint}_v1.cache",
+                temporaryFile = "${OWNED_PREFIX}${safeId}_${fingerprint}_v1.tmp",
+            )
+        }
+
+        suspend fun clearAll(filesDir: File) = withContext(Dispatchers.IO) {
+            File(filesDir, DIRECTORY_NAME)
+                .listFiles()
+                ?.filter { file ->
+                    file.name.startsWith(OWNED_PREFIX) ||
+                        file.name == CACHE_FILE ||
+                        file.name == TEMP_FILE
+                }
+                ?.forEach(::deleteOwnedFile)
+        }
+
+        suspend fun clearObjective(filesDir: File, objectiveId: String) = withContext(Dispatchers.IO) {
+            val objectivePrefix = "${OWNED_PREFIX}${safeObjectiveId(objectiveId)}_"
+            File(filesDir, DIRECTORY_NAME)
+                .listFiles()
+                ?.filter { file ->
+                    file.name.startsWith(objectivePrefix) ||
+                        file.name == CACHE_FILE ||
+                        file.name == TEMP_FILE
+                }
+                ?.forEach(::deleteOwnedFile)
+        }
+
+        private fun safeObjectiveId(objectiveId: String): String =
+            objectiveId.filter { it.isLetterOrDigit() || it == '-' }.take(64).also {
+                require(it.isNotBlank())
+            }
+
+        private fun deleteOwnedFile(file: File) {
+            if (file.exists() && !file.delete()) {
+                throw IOException("No se pudo eliminar un archivo meteorológico privado.")
+            }
+        }
     }
 }

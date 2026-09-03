@@ -635,8 +635,8 @@ internal class V2ShiftActualCoordinator(
         val context = readyContext ?: return
         val editor = state.classEditor ?: return
         if (state.isSaving) return
-        val helps = editor.helpsReference ?: return updateClassError("Respondé si ayuda a cumplir la referencia.")
-        val dedicated = editor.dedicatedSummary ?: return updateClassError("Respondé si tendrá desglose propio.")
+        val helps = editor.helpsReference ?: return updateClassError("Respondé si estas horas extra cuentan para tu meta.")
+        val dedicated = editor.dedicatedSummary ?: return updateClassError("Respondé si querés ver este tipo por separado.")
         val replacement = try {
             val timestamp = nextTimestamp(editor.expected?.updatedAt)
             editor.expected?.updated(

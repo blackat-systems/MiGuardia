@@ -13,7 +13,17 @@ enum class WeatherSurface { NONE, GLOBAL, SHIFT }
 data class ShiftWeatherBrief(
     val summary: ShiftWeatherSummary,
     val freshness: WeatherFreshness,
+    val objectiveId: UUID,
 )
+
+internal fun retainBriefsOutsideInvalidatedObjective(
+    briefs: Map<UUID, ShiftWeatherBrief>,
+    objectiveId: UUID?,
+): Map<UUID, ShiftWeatherBrief> = if (objectiveId == null) {
+    emptyMap()
+} else {
+    briefs.filterValues { brief -> brief.objectiveId != objectiveId }
+}
 
 data class WeatherUiState(
     val surface: WeatherSurface = WeatherSurface.NONE,
@@ -21,6 +31,7 @@ data class WeatherUiState(
     val forecast: WeatherForecast? = null,
     val freshness: WeatherFreshness? = null,
     val selectedShift: Shift? = null,
+    val weatherLocationName: String? = null,
     val shiftSummary: ShiftWeatherSummary? = null,
     val shiftHours: List<WeatherHour> = emptyList(),
     val shiftBriefs: Map<UUID, ShiftWeatherBrief> = emptyMap(),

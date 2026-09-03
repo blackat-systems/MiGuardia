@@ -43,6 +43,8 @@ data class WorkPlaceDraft(
     val showWeekendSummary: Boolean = false,
     val classifyHoliday: Boolean = false,
     val showHolidaySummary: Boolean = false,
+    val weatherLatitude: Double? = null,
+    val weatherLongitude: Double? = null,
 )
 
 data class WorkTemplateDraft(
@@ -54,6 +56,7 @@ data class WorkTemplateDraft(
 
 data class WorkPlaceOption(
     val id: UUID,
+    val objectiveId: UUID,
     val label: String,
     val abbreviation: String,
 )
@@ -79,6 +82,8 @@ data class WorkSetupUiState(
     val lastCreatedTypeId: UUID? = null,
     val isSavingWorkSet: Boolean = false,
     val isSavingTemplate: Boolean = false,
+    val draftLocationRequestId: Long = 0L,
+    val savingLocationObjectiveId: UUID? = null,
     val showDiscardConfirmation: Boolean = false,
     val errorMessage: String? = null,
     val infoMessage: String? = null,
@@ -98,6 +103,7 @@ data class WorkSetupUiState(
                 objectivesById[place.objectiveId]?.let { objective ->
                     WorkPlaceOption(
                         id = place.id,
+                        objectiveId = objective.id,
                         label = objective.fullName,
                         abbreviation = objective.abbreviation,
                     )
@@ -166,24 +172,28 @@ internal fun validatePlaceDraft(draft: WorkPlaceDraft): WorkSetupDraftValidation
     if (!abbreviationIsValid) {
         return WorkSetupDraftValidation("El nombre corto debe tener entre tres y cinco caracteres, sin espacios.")
     }
+    return WorkSetupDraftValidation(advancedPlaceRequirementMessage(draft))
+}
+
+internal fun advancedPlaceRequirementMessage(draft: WorkPlaceDraft): String? {
     if (draft.nightHoursEnabled) {
         val start = parseWorkTimeOrNull(draft.nightStart)
-            ?: return WorkSetupDraftValidation("Ingresá el inicio nocturno con formato HH:mm.")
+            ?: return "Ingresá el inicio nocturno con formato HH:mm."
         val end = parseWorkTimeOrNull(draft.nightEnd)
-            ?: return WorkSetupDraftValidation("Ingresá el final nocturno con formato HH:mm.")
+            ?: return "Ingresá el final nocturno con formato HH:mm."
         if (start == end) {
-            return WorkSetupDraftValidation("El inicio y el final de la franja nocturna deben ser distintos.")
+            return "El inicio y el final de la franja nocturna deben ser distintos."
         }
     }
-    return WorkSetupDraftValidation()
+    return null
 }
 
 internal fun validateTemplateDraft(
     draft: WorkTemplateDraft,
     requireTypeName: Boolean,
 ): WorkSetupDraftValidation {
-    if (requireTypeName && draft.typeName.isBlank()) {
-        return WorkSetupDraftValidation("Ingresá el nombre del tipo de trabajo.")
+    advancedTemplateRequirementMessage(draft, requireTypeName)?.let {
+        return WorkSetupDraftValidation(it)
     }
     if (parseWorkTimeOrNull(draft.startTime) == null) {
         return WorkSetupDraftValidation("Ingresá la hora de inicio con formato HH:mm.")
@@ -193,6 +203,15 @@ internal fun validateTemplateDraft(
     }
     if (draft.colorArgb == null) return WorkSetupDraftValidation("Elegí un color para el horario.")
     return WorkSetupDraftValidation()
+}
+
+internal fun advancedTemplateRequirementMessage(
+    draft: WorkTemplateDraft,
+    requireTypeName: Boolean,
+): String? = if (requireTypeName && draft.typeName.isBlank()) {
+    "Ingresá el nombre del tipo de trabajo."
+} else {
+    null
 }
 
 internal fun parseWorkTimeOrNull(rawValue: String): LocalTime? = try {

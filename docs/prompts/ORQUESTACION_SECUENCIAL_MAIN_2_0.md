@@ -262,8 +262,8 @@ demostrada durante una auditoría posterior.
 El motor de próximo evento y las notificaciones quedaron estabilizados como un
 único bloque para impedir reglas divergentes entre tarjeta y avisos.
 La base activa es exclusivamente `MiGuardiaV2Database`, archivo
-`miguardia-v2.db`, Room V2 versión 5 y veintisiete tablas, con cadena explícita
-`1→2→3→4→5`. No existe activación ni migración de datos V1→V2.
+`miguardia-v2.db`, Room V2 versión 6 y veintisiete tablas, con cadena explícita
+`1→2→3→4→5→6`. No existe activación ni migración de datos V1→V2.
 
 MAIN puede dividir uno de estos objetivos si su riesgo exige dos contratos
 ejecutables, pero no puede fusionar bloques de manera que se pierdan aislamiento
@@ -285,8 +285,12 @@ Sólo después de cerrar y auditar el núcleo laboral:
 20. Proteger el acceso local a MiGuardia
     —cerrado por MAIN el 2026-09-01; local y Samsung API 36 verdes—.
 21. Completar la Ayuda y el recorrido inicial sobre la interfaz definitiva
-    —prompt habilitado; tarea todavía no abierta—.
-22. Auditar la aplicación completa y emitir el candidato local MiGuardia 2.0.
+    —cerrado dentro del candidato combinado por MAIN; local y Samsung API 36
+    verdes—.
+22. Integrar y depurar los cambios de último momento
+    —cerrado por MAIN el 2026-09-03; 707/707 JVM, 351/351 tareas, Room 123/123 y
+    matriz dirigida Samsung 30/30 verdes—.
+23. Auditar la aplicación completa y emitir el candidato local MiGuardia 2.0.
 
 Estas cinco superficies locales permanecen en la hoja de ruta después del
 checkpoint del núcleo. Cada una se prepara sólo cuando Joaquin pida su prompt o
@@ -579,8 +583,8 @@ acción sobre producción.
 Los bloques **Calendario final y tarjeta superior**, **Resumen
 personalizable** y **Próximo evento y notificaciones** quedaron auditados,
 corregidos, verificados y cerrados por MAIN. `MiGuardiaV2Database`,
-`miguardia-v2.db` y Room V2 versión 5 continúan como base activa, con cadena
-explícita `1→2→3→4→5`.
+`miguardia-v2.db` y Room V2 versión 6 continúan como base activa, con cadena
+explícita `1→2→3→4→5→6`.
 
 Las tres barreras cruzadas quedaron integradas y la matriz Samsung API 36,
 Android 8/API 26 y Android 13/API 33 fue ejecutada. La repetición de
@@ -607,8 +611,17 @@ Joaquin pidió después Bloqueo de acceso local. ADR 0036 y
 o credencial del dispositivo, sin PIN propio y con ajuste no portable. MAIN
 auditó y corrigió las carreras de autenticación y ciclo de vida, repitió la
 batería global —653/653 JVM y 351/351 tareas— y obtuvo 31/31 en la matriz final
-Samsung API 36. El bloque queda cerrado. Ayuda y recorrido inicial 2.0 es el
-siguiente bloque: Joaquin pidió preparar el prompt y MAIN habilitó
-`AYUDA_Y_RECORRIDO_INICIAL_V2.md` sobre la base funcional `b64f07a`. La tarea
-especialista todavía no fue abierta. Ninguna autorización anterior de
-dispositivo, push, alarma exacta o reinicio se hereda.
+Samsung API 36. El bloque queda cerrado. Ayuda y recorrido inicial 2.0 se
+implementó después sobre la base funcional `b64f07a` y quedó combinado en el
+mismo checkout con simplificación de formularios, ubicación puntual, clima por
+objetivo, Room V6 y compatibilidad de Copias.
+
+MAIN recibió el handoff de integración y depuración y el 2026-09-03 auditó el
+conjunto, corrigió defectos reproducibles y ejecutó la matriz autorizada en
+Samsung API 36. Esa QA detectó y cerró una incompatibilidad de Fragment 1.2.5
+con los launchers modernos de permisos y un estado visual de ubicación que no
+finalizaba. La batería global posterior pasó 707/707 JVM y 351/351 tareas;
+Room V6 pasó 123/123 y la matriz dirigida posterior 30/30. El bloque queda
+funcionalmente cerrado, sin commit, y corresponde la auditoría final de la
+aplicación antes del checkpoint. API 26/API 33, push, alarma exacta y reinicio
+continúan como puertas separadas.

@@ -4,6 +4,11 @@
 - Fecha: 2026-08-29
 - Autoridad: Joaquin y MAIN 2.0
 
+> Actualización 2026-09-02: ADR 0038 elevó `MiGuardiaV2Database` a versión 6
+> mediante `5→6`, sin cambiar sus veintisiete tablas. Las referencias V5 de este
+> ADR describen el estado existente cuando se aprobó. Las copias lógicas V5
+> continúan admitidas y se elevan a V6 con coordenadas nulas al leerlas.
+
 ## Contexto
 
 MiGuardia V2 guarda toda la historia laboral localmente. La fuente principal es

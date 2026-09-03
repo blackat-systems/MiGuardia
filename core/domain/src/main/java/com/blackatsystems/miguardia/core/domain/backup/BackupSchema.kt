@@ -6,10 +6,7 @@ data class BackupTableSpec(
     val primaryKey: List<String>,
 )
 
-/**
- * Frozen logical allowlist for Room V5. It intentionally excludes sqlite internals,
- * room_master_table and every database file representation.
- */
+/** Frozen logical allowlist for backups created while Room V5 was current. */
 object MiGuardiaBackupSchemaV5 {
     val tables: List<BackupTableSpec> = listOf(
         spec("objectives", "id", "fullName", "abbreviation", "address", "note", "isActive", "createdAtEpochMillis", "updatedAtEpochMillis", pk = listOf("id")),
@@ -49,56 +46,12 @@ object MiGuardiaBackupSchemaV5 {
     }
 
     fun requireValid(snapshot: BackupDatabaseSnapshot) {
-        if (snapshot.roomVersion != MiGuardiaBackupContract.ROOM_VERSION) {
-            throw InvalidBackupException("La copia usa una versión de datos no compatible.")
-        }
-        if (snapshot.roomIdentityHash != MiGuardiaBackupContract.ROOM_IDENTITY_HASH) {
-            throw InvalidBackupException("La identidad Room de la copia no coincide con MiGuardia 2.0.")
-        }
-        if (snapshot.tables.map(BackupTable::name) != tables.map(BackupTableSpec::name)) {
-            throw InvalidBackupException("La copia no contiene exactamente las 27 tablas esperadas.")
-        }
-        var total = 0
-        snapshot.tables.zip(tables).forEach { (table, expected) ->
-            if (table.columns != expected.columns || table.primaryKey != expected.primaryKey) {
-                throw InvalidBackupException("La tabla ${expected.name} no coincide con el contrato Room V5.")
-            }
-            if (table.records.size > MiGuardiaBackupContract.MAX_TABLE_ROWS) {
-                throw InvalidBackupException("La tabla ${expected.name} supera el límite seguro de filas.")
-            }
-            table.records.forEach { record ->
-                if (record.values.size != expected.columns.size) {
-                    throw InvalidBackupException("Una fila de ${expected.name} tiene una forma inválida.")
-                }
-            }
-            total += table.records.size
-            if (total > MiGuardiaBackupContract.MAX_TOTAL_ROWS) {
-                throw InvalidBackupException("La copia supera el límite seguro de registros.")
-            }
-            var previousKey: BackupRecordKey? = null
-            table.records.forEach { record ->
-                val key = record.backupKey(expected)
-                previousKey?.let { previous ->
-                    when {
-                        compareBackupRecordKeys(previous, key) == 0 ->
-                            throw InvalidBackupException(
-                                "La tabla ${expected.name} contiene identidades duplicadas.",
-                            )
-                        compareBackupRecordKeys(previous, key) > 0 ->
-                            throw InvalidBackupException(
-                                "La tabla ${expected.name} no conserva el orden canónico de su clave primaria.",
-                            )
-                    }
-                }
-                previousKey = key
-            }
-        }
-        val roots = snapshot.table("work_configuration_roots")
-        val timelineIndex = roots.columns.indexOf("timelineId")
-        val storedTimeline = roots.records.singleOrNull()?.values?.get(timelineIndex) as? BackupValue.Text
-        if (roots.records.size > 1 || storedTimeline?.value != snapshot.timelineId) {
-            throw InvalidBackupException("La línea temporal declarada no coincide con los datos de la copia.")
-        }
+        requireValidBackupSnapshot(
+            snapshot = snapshot,
+            expectedRoomVersion = MiGuardiaBackupContract.LEGACY_ROOM_VERSION_V5,
+            expectedIdentityHash = MiGuardiaBackupContract.LEGACY_ROOM_IDENTITY_HASH_V5,
+            expectedTables = tables,
+        )
     }
 
     private fun spec(
@@ -106,6 +59,36 @@ object MiGuardiaBackupSchemaV5 {
         vararg columns: String,
         pk: List<String>,
     ): BackupTableSpec = BackupTableSpec(name, columns.toList(), pk)
+}
+
+/**
+ * Frozen logical allowlist for the current Room V6 database. It intentionally excludes sqlite internals,
+ * room_master_table and every database file representation.
+ */
+object MiGuardiaBackupSchemaV6 {
+    val tables: List<BackupTableSpec> = MiGuardiaBackupSchemaV5.tables.map { table ->
+        if (table.name == "objectives") {
+            table.copy(columns = table.columns + listOf("weatherLatitude", "weatherLongitude"))
+        } else {
+            table
+        }
+    }
+
+    val byName: Map<String, BackupTableSpec> = tables.associateBy(BackupTableSpec::name)
+
+    init {
+        check(tables.size == 27)
+        check(byName.size == tables.size)
+    }
+
+    fun requireValid(snapshot: BackupDatabaseSnapshot) {
+        requireValidBackupSnapshot(
+            snapshot = snapshot,
+            expectedRoomVersion = MiGuardiaBackupContract.ROOM_VERSION,
+            expectedIdentityHash = MiGuardiaBackupContract.ROOM_IDENTITY_HASH,
+            expectedTables = tables,
+        )
+    }
 }
 
 fun BackupRecord.backupKey(spec: BackupTableSpec): BackupRecordKey = BackupRecordKey(
@@ -134,6 +117,95 @@ private fun compareBackupValues(first: BackupValue, second: BackupValue): Int {
             java.lang.Double.compare(first.value, second.value)
         first is BackupValue.Binary && second is BackupValue.Binary -> compareBinary(first.value, second.value)
         else -> error("Tipos de copia incoherentes")
+    }
+}
+
+internal fun requireSupportedBackupSchema(snapshot: BackupDatabaseSnapshot) {
+    when (snapshot.roomVersion) {
+        MiGuardiaBackupContract.ROOM_VERSION -> MiGuardiaBackupSchemaV6.requireValid(snapshot)
+        MiGuardiaBackupContract.LEGACY_ROOM_VERSION_V5 -> MiGuardiaBackupSchemaV5.requireValid(snapshot)
+        else -> throw InvalidBackupException("La copia usa una versión de datos no compatible.")
+    }
+}
+
+fun upgradeSupportedBackupSchema(snapshot: BackupDatabaseSnapshot): BackupDatabaseSnapshot {
+    requireSupportedBackupSchema(snapshot)
+    if (snapshot.roomVersion == MiGuardiaBackupContract.ROOM_VERSION) return snapshot
+    val upgraded = snapshot.copy(
+        roomVersion = MiGuardiaBackupContract.ROOM_VERSION,
+        roomIdentityHash = MiGuardiaBackupContract.ROOM_IDENTITY_HASH,
+        tables = snapshot.tables.map { table ->
+            if (table.name == "objectives") {
+                table.copy(
+                    columns = table.columns + listOf("weatherLatitude", "weatherLongitude"),
+                    records = table.records.map { record ->
+                        record.copy(values = record.values + listOf(BackupValue.Null, BackupValue.Null))
+                    },
+                )
+            } else {
+                table
+            }
+        },
+    )
+    MiGuardiaBackupSchemaV6.requireValid(upgraded)
+    return upgraded
+}
+
+private fun requireValidBackupSnapshot(
+    snapshot: BackupDatabaseSnapshot,
+    expectedRoomVersion: Int,
+    expectedIdentityHash: String,
+    expectedTables: List<BackupTableSpec>,
+) {
+    if (snapshot.roomVersion != expectedRoomVersion) {
+        throw InvalidBackupException("La copia usa una versión de datos no compatible.")
+    }
+    if (snapshot.roomIdentityHash != expectedIdentityHash) {
+        throw InvalidBackupException("La identidad Room de la copia no coincide con MiGuardia 2.0.")
+    }
+    if (snapshot.tables.map(BackupTable::name) != expectedTables.map(BackupTableSpec::name)) {
+        throw InvalidBackupException("La copia no contiene exactamente las 27 tablas esperadas.")
+    }
+    var total = 0
+    snapshot.tables.zip(expectedTables).forEach { (table, expected) ->
+        if (table.columns != expected.columns || table.primaryKey != expected.primaryKey) {
+            throw InvalidBackupException("La tabla ${expected.name} no coincide con el contrato Room vigente.")
+        }
+        if (table.records.size > MiGuardiaBackupContract.MAX_TABLE_ROWS) {
+            throw InvalidBackupException("La tabla ${expected.name} supera el límite seguro de filas.")
+        }
+        table.records.forEach { record ->
+            if (record.values.size != expected.columns.size) {
+                throw InvalidBackupException("Una fila de ${expected.name} tiene una forma inválida.")
+            }
+        }
+        total += table.records.size
+        if (total > MiGuardiaBackupContract.MAX_TOTAL_ROWS) {
+            throw InvalidBackupException("La copia supera el límite seguro de registros.")
+        }
+        var previousKey: BackupRecordKey? = null
+        table.records.forEach { record ->
+            val key = record.backupKey(expected)
+            previousKey?.let { previous ->
+                when {
+                    compareBackupRecordKeys(previous, key) == 0 ->
+                        throw InvalidBackupException(
+                            "La tabla ${expected.name} contiene identidades duplicadas.",
+                        )
+                    compareBackupRecordKeys(previous, key) > 0 ->
+                        throw InvalidBackupException(
+                            "La tabla ${expected.name} no conserva el orden canónico de su clave primaria.",
+                        )
+                }
+            }
+            previousKey = key
+        }
+    }
+    val roots = snapshot.table("work_configuration_roots")
+    val timelineIndex = roots.columns.indexOf("timelineId")
+    val storedTimeline = roots.records.singleOrNull()?.values?.get(timelineIndex) as? BackupValue.Text
+    if (roots.records.size > 1 || storedTimeline?.value != snapshot.timelineId) {
+        throw InvalidBackupException("La línea temporal declarada no coincide con los datos de la copia.")
     }
 }
 
