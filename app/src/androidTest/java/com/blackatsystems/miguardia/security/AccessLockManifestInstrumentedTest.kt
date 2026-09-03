@@ -3,6 +3,7 @@ package com.blackatsystems.miguardia.security
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import android.os.Build
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.result.ActivityResultLauncher
 import androidx.datastore.preferences.preferencesDataStoreFile
@@ -37,9 +38,15 @@ class AccessLockManifestInstrumentedTest {
                 PackageManager.GET_SERVICES,
         )
         val requested = packageInfo.requestedPermissions.orEmpty().toSet()
-        val permission = context.packageManager.getPermissionInfo(Manifest.permission.USE_BIOMETRIC, 0)
 
         assertTrue(Manifest.permission.USE_BIOMETRIC in requested)
+        val supportedPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            Manifest.permission.USE_BIOMETRIC
+        } else {
+            assertTrue(Manifest.permission.USE_FINGERPRINT in requested)
+            Manifest.permission.USE_FINGERPRINT
+        }
+        val permission = context.packageManager.getPermissionInfo(supportedPermission, 0)
         assertEquals(
             android.content.pm.PermissionInfo.PROTECTION_NORMAL,
             permission.protectionLevel and android.content.pm.PermissionInfo.PROTECTION_MASK_BASE,

@@ -24,12 +24,13 @@ import java.time.Duration
 import java.time.Instant
 import java.time.ZoneOffset
 import java.util.UUID
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
-import kotlinx.coroutines.yield
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -421,10 +422,21 @@ class ShiftActualPersistenceInstrumentedTest {
     @Test
     fun expectationFlowReactsAndStructuralWritersRequireExactActualEvidence() = runBlocking {
         val write = seedShift(V2TestIds.uuid(231))
+        val initialEmission = CompletableDeferred<Unit>()
         val observed = async {
-            withTimeout(5_000) { store.shiftActuals.observeExpectation(write.shift.id).take(2).toList() }
+            withTimeout(5_000) {
+                store.shiftActuals.observeExpectation(write.shift.id)
+                    .onEach { expectation ->
+                        if (!initialEmission.isCompleted) {
+                            assertNull(requireNotNull(expectation).previousActual)
+                            initialEmission.complete(Unit)
+                        }
+                    }
+                    .take(2)
+                    .toList()
+            }
         }
-        yield()
+        withTimeout(5_000) { initialEmission.await() }
         val expectation = requireNotNull(store.shiftActuals.getExpectation(write.shift.id))
         val mutation = requireNotNull(
             buildShiftActualSaveMutation(
