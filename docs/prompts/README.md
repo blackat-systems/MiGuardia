@@ -20,11 +20,13 @@
   `95ebf531d71b8b781423475a1c38d15a8bd24742`.
 - **Candidato local actual:** la aplicación completa fue auditada por MAIN. El
   ícono adaptativo quedó en `381c342c630d8e5ee999ee3afadc25994f3642d8` y los
-  cierres funcionales finales en `f25d097acea37fc6b4126db39e6dbdb0ad793921`.
+  cierres funcionales finales en `f25d097acea37fc6b4126db39e6dbdb0ad793921`;
+  las correcciones de pruebas físicas quedaron en
+  `d9c927eb87a50bf9d6cf6a38c7f9e5d10216309a`.
   La batería fresca pasó 712/712 JVM y 351/351 tareas; una revisión independiente
   no dejó findings P0–P3 abiertos.
-- **Puerta pendiente:** matriz física final en Samsung API 36, API 26 y API 33.
-  AndroidTest está compilado, no ejecutado sobre los cambios finales.
+- **Puerta física:** Samsung API 36 cerrado con 42/42 pruebas instrumentadas y
+  revisión directa del ícono/Calendario. API 26 y API 33 continúan pendientes.
 - **Commits locales:** MAIN los crea automáticamente como checkpoints de
   bloques comprobados.
 - **Push puntual anterior de la rama 2.0:** ejecutado y verificado hasta
@@ -187,9 +189,10 @@ Joaquin indicó que quiere preparar o abrir la siguiente:
     depuración mediante
     `INTEGRACION_Y_DEPURACION_DE_CAMBIOS_DE_ULTIMO_MOMENTO_V2.md`; 707/707 JVM,
     351/351 tareas y Samsung API 36 verdes; checkpoint `95ebf531`.
-23. **Cerrado localmente por MAIN:** auditoría de la aplicación completa y
-    emisión del candidato local; 712/712 JVM, 351/351 tareas y revisión
-    independiente sin findings P0–P3. La matriz física final sigue pendiente.
+23. **Cerrado por MAIN en local y Samsung:** auditoría de la aplicación completa
+    y emisión del candidato local; 712/712 JVM, 351/351 tareas, revisión
+    independiente sin findings P0–P3 y matriz final Samsung API 36 de 42/42.
+    API 26 y API 33 siguen como compatibilidad pendiente.
 
 Cuando Joaquin pide un prompt, MAIN lo habilita en este índice después de cerrar
 su contrato y dependencias, y crea automáticamente el checkpoint documental

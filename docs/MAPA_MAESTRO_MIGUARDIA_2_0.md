@@ -195,7 +195,7 @@ Integración y depuración de cambios de último momento — cerrada en 95ebf531
         ↓
 Auditoría completa — CANDIDATO LOCAL AUDITADO; 712/712 JVM y 351/351 tareas
         ↓
-Matriz física final Samsung API 36 / API 26 / API 33 — pendiente
+Samsung API 36 — cerrado 42/42; API 26 / API 33 — pendientes
 ```
 
 Corrección de secuencia del 2026-08-27: Joaquin indicó que el bloque siguiente
@@ -290,8 +290,9 @@ Actualización de auditoría final del 2026-09-03: MAIN revisó la aplicación
 completa, cerró defectos de concurrencia, arranque, Calendario, accesibilidad,
 timeout y vocabulario, e integró un ícono adaptativo. La batería fresca pasó
 712/712 JVM y 351/351 tareas; la revisión independiente no dejó findings P0–P3.
-El resultado es un candidato local auditado. Samsung API 36, API 26 y API 33
-permanecen pendientes como matriz física final.
+El resultado es un candidato local auditado. Samsung API 36 pasó la matriz final
+afectada 42/42 y la revisión del ícono/Calendario; API 26 y API 33 permanecen
+pendientes como compatibilidad final.
 
 MAIN integra un bloque por vez. Cada bloque debe compilar, pasar sus pruebas,
 preservar el alcance ajeno y quedar documentado antes del siguiente. El mapa

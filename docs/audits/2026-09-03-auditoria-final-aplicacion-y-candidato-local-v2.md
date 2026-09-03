@@ -1,8 +1,8 @@
 # Auditoría final de la aplicación y candidato local V2
 
 - Fecha: 2026-09-03
-- Veredicto: **CANDIDATO LOCAL AUDITADO — MATRIZ FINAL DE COMPATIBILIDAD
-  PENDIENTE**
+- Veredicto: **CANDIDATO LOCAL AUDITADO — SAMSUNG API 36 VERDE;
+  COMPATIBILIDAD API 26/API 33 PENDIENTE**
 - Ruta: `C:\Users\Joaquin\Desktop\chatgptprojects\MiGuardia-2.0`
 - Rama: `codex/miguardia-2.0`
 - Base funcional integrada:
@@ -11,6 +11,10 @@
   `381c342c630d8e5ee999ee3afadc25994f3642d8`
 - Correcciones finales:
   `f25d097acea37fc6b4126db39e6dbdb0ad793921`
+- HEAD de entrada a la QA física:
+  `815481b4bdbcf760d1f0424879f63b21fbf66155`
+- Correcciones de pruebas físicas:
+  `d9c927eb87a50bf9d6cf6a38c7f9e5d10216309a`
 - Upstream preservado:
   `ad777bbe7b57bf0fbc4903ef2c2949b31b5357ce`
 
@@ -138,21 +142,57 @@ restauración de Copias.
 
 ## Evidencia física
 
-La QA previa del bloque integrado en `95ebf531` se conserva como evidencia
-heredada: Samsung API 36 había pasado Room 123/123 y una matriz dirigida 30/30.
-No se presenta esa evidencia como ejecución de las correcciones finales.
+Joaquin autorizó expresamente la QA física final en el Samsung `SM-S938B`,
+Android 16/API 36, serie `R5CY529W6PL`. MAIN instaló únicamente los APK QA y de
+prueba del candidato actual.
 
-En esta auditoría:
+La primera matriz dirigida detectó dos defectos en pruebas, no en producción:
 
-- instrumentación ejecutada: 0;
-- Samsung utilizado: no;
-- emuladores utilizados: no;
-- producción utilizada: no.
+- Feriados seleccionaba correctamente dos fechas, pero la aserción esperaba un
+  único nodo semántico;
+- una prueba de avisos intentaba eliminar una Vacación con el timestamp anterior
+  a la normalización de Room y el CAS nuevo la rechazaba correctamente.
+
+Ambas pruebas fueron alineadas con el comportamiento real: la primera exige dos
+fechas seleccionadas y la segunda vuelve a leer la fila persistida antes de una
+eliminación CAS. El APK de pruebas se recompiló y los dos casos pasaron 2/2.
+
+La revisión independiente aprobó ambos ajustes y confirmó que no ocultaban un
+defecto productivo. También detectó que la clase de avisos debía neutralizar de
+forma explícita una preferencia precisa heredada entre corridas. Su preparación
+ahora desactiva avisos, fija temporización inexacta y reconstruye el plan antes
+de cada caso. El único test que activa voluntariamente alarmas exactas conserva
+esa acción dentro de su propio método y fue excluido.
+
+La repetición final sobre ese estado quedó verde:
+
+- Vacaciones y persistencia Room: 9/9;
+- aplicación afectada: 33/33;
+- total instrumentado único: 42/42;
+- fallos, errores u omitidas: 0.
+
+Las 33 pruebas de aplicación fueron repetidas después de incorporar esa barrera
+de seguridad y volvieron a pasar 33/33.
+
+La matriz cubrió Vacaciones, Feriados, avisos y arranque frío, accesibilidad y
+regresiones de clima sobre el dispositivo.
+La revisión directa confirmó además que el ícono adaptativo se representa
+correctamente en One UI. Una captura inicial mostró sólo el borde de `Cargar
+jornadas`; se comprobó que correspondía al inicio normal de una pantalla
+desplazable. Al bajar, la acción apareció completa y por encima de la navegación
+del sistema. El zoom interno observado era 100 %.
+
+Al cerrar:
+
+- los dos paquetes de instrumentación fueron desinstalados;
+- `com.blackatsystems.miguardia.qa` quedó instalado y detenido; la clase de
+  avisos limpió la base QA como parte de su preparación explícita y se conservó
+  el estado sintético resultante sin una limpieza adicional al cierre;
+- producción `com.blackatsystems.miguardia` permaneció ausente y no fue tocada;
+- no se disparó una alarma exacta real ni se reinició el teléfono.
 
 Queda pendiente sobre el mismo candidato:
 
-- Samsung API 36: Vacaciones, Feriados, arranque frío de avisos, accesibilidad e
-  ícono bajo One UI;
 - API 26: Geocoder legado, recursos adaptativos y regresión esencial;
 - API 33: permisos modernos y capa monocromática;
 - API 37: puerta posterior del candidato publicable;
@@ -161,12 +201,14 @@ Queda pendiente sobre el mismo candidato:
 ## Estado Git
 
 - rama: `codex/miguardia-2.0`;
-- HEAD técnico al documentar:
-  `f25d097acea37fc6b4126db39e6dbdb0ad793921`;
-- divergencia al documentar: 20 adelante, 0 atrás;
+- HEAD técnico al cerrar la QA:
+  `d9c927eb87a50bf9d6cf6a38c7f9e5d10216309a`;
+- divergencia al cerrar la QA: 22 adelante, 0 atrás;
 - base funcional integrada: `95ebf531`;
 - ícono: `381c342`;
 - correcciones finales: `f25d097`;
+- documentación de entrada a QA: `815481b`;
+- correcciones de pruebas físicas: `d9c927e`;
 - upstream: `ad777bbe7b57bf0fbc4903ef2c2949b31b5357ce`;
 - `main`, `origin/main` y `v1.0.0^{}`:
   `82db6fd8eb2c511205968894dc9857a96b16ed20`;
@@ -176,7 +218,8 @@ Queda pendiente sobre el mismo candidato:
 
 ## Próxima puerta
 
-El código ya forma un candidato local auditado y reproducible. No debe llamarse
-publicable hasta ejecutar la matriz física final y revisar nuevamente el estado
-Git resultante. Un eventual push, tag, Release o uso de producción requiere una
-decisión separada de Joaquin.
+El código ya forma un candidato local auditado, reproducible y verde en el
+Samsung principal. No debe llamarse publicable hasta resolver o aceptar
+explícitamente la compatibilidad pendiente en API 26/API 33 y revisar nuevamente
+el estado Git resultante. Un eventual push, tag, Release o uso de producción
+requiere una decisión separada de Joaquin.

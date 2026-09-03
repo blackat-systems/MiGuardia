@@ -590,8 +590,8 @@ continúa con:
    351/351 tareas, Room 123/123 y matriz dirigida Samsung 30/30 verdes;
    checkpoint `95ebf531`—;
 7. auditoría de la aplicación completa y emisión de un candidato local
-   —cerrada localmente con 712/712 JVM, 351/351 tareas y revisión independiente
-   sin findings P0–P3; matriz física final pendiente—.
+   —cerrada con 712/712 JVM, 351/351 tareas, revisión independiente sin findings
+   P0–P3 y matriz final Samsung API 36 de 42/42; API 26/API 33 pendientes—.
 
 La decisión de Joaquin del 2026-08-23 reemplaza la apertura automática de esa
 cadena: MAIN recomienda el siguiente bloque, pero sólo prepara su prompt o abre
@@ -621,8 +621,9 @@ batería final pasó 707/707 JVM, lint sin errores y 351/351 tareas. Room V6 pas
 123/123 y la matriz dirigida posterior pasó 30/30. El resultado fue integrado
 en `95ebf531`. La auditoría final posterior cerró defectos de concurrencia,
 arranque, Calendario, accesibilidad, timeout y vocabulario, incorporó el ícono
-adaptativo y pasó 712/712 JVM y 351/351 tareas. La matriz final Samsung API 36,
-API 26 y API 33 continúa como evidencia de compatibilidad pendiente.
+adaptativo y pasó 712/712 JVM y 351/351 tareas. La matriz final afectada en
+Samsung API 36 pasó 42/42; API 26 y API 33 continúan como evidencia de
+compatibilidad pendiente.
 
 ## 21. Idea futura guardada: agenda profesional
 

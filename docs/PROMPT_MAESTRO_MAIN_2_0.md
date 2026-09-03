@@ -164,8 +164,8 @@ una decisión documentada.
 13. Ejecutar auditoría integral y compatibilidad Android.
 14. Construir la segunda capa local: widget, informes, copias, bloqueo y
     Ayuda/recorrido inicial.
-15. Auditar la aplicación completa y emitir el candidato local —cerrado
-    localmente por MAIN el 2026-09-03; matriz física final pendiente—.
+15. Auditar la aplicación completa y emitir el candidato local —cerrado por
+    MAIN el 2026-09-03; Samsung API 36 verde 42/42, API 26/API 33 pendientes—.
 
 Corrección de secuencia del 2026-08-27: Joaquin fijó Calendario final y tarjeta
 superior como próximo bloque después de disponibilidad. Las situaciones comunes

@@ -291,9 +291,9 @@ Sólo después de cerrar y auditar el núcleo laboral:
     —cerrado por MAIN el 2026-09-03; 707/707 JVM, 351/351 tareas, Room 123/123 y
     matriz dirigida Samsung 30/30 verdes; checkpoint `95ebf531`—.
 23. Auditar la aplicación completa y emitir el candidato local MiGuardia 2.0
-    —cerrado localmente por MAIN; 712/712 JVM, 351/351 tareas y revisión
-    independiente sin findings P0–P3; checkpoints técnicos `381c342` y
-    `f25d097`; matriz física final pendiente—.
+    —cerrado por MAIN; 712/712 JVM, 351/351 tareas, revisión independiente sin
+    findings P0–P3 y Samsung API 36 verde 42/42; checkpoints técnicos
+    `381c342`, `f25d097` y `d9c927e`; API 26/API 33 pendientes—.
 
 Estas cinco superficies locales permanecen en la hoja de ruta después del
 checkpoint del núcleo. Cada una se prepara sólo cuando Joaquin pida su prompt o
@@ -628,5 +628,5 @@ Room V6 pasó 123/123 y la matriz dirigida posterior 30/30. El bloque queda
 cerrado e integrado en `95ebf531`. La auditoría final posterior pasó 712/712
 JVM y 351/351 tareas, integró el ícono adaptativo y cerró los últimos defectos
 sin findings P0–P3 abiertos. El estado resultante es candidato local auditado.
-Samsung API 36, API 26/API 33, push, alarma exacta y reinicio continúan como
-puertas separadas.
+Samsung API 36 quedó cerrado 42/42. API 26/API 33, push, alarma exacta y
+reinicio continúan como puertas separadas.

@@ -19,9 +19,12 @@ los defectos finales en `f25d097acea37fc6b4126db39e6dbdb0ad793921`. La batería
 global ejecutada desde cero pasó 712/712 pruebas JVM y 351/351 tareas; lint
 quedó sin errores y las variantes Debug, QA, Release y ambos AndroidTest
 compilaron. Una revisión independiente final no dejó findings P0–P3 abiertos.
-El resultado es **CANDIDATO LOCAL AUDITADO — MATRIZ FINAL DE COMPATIBILIDAD
-PENDIENTE**: estas correcciones finales y el ícono todavía requieren Samsung
-API 36, API 26 y API 33 antes de un candidato publicable.
+Las correcciones de las pruebas encontradas durante la matriz física quedaron
+confirmadas en `d9c927eb87a50bf9d6cf6a38c7f9e5d10216309a`.
+El resultado es **CANDIDATO LOCAL AUDITADO — SAMSUNG API 36 VERDE;
+COMPATIBILIDAD API 26/API 33 PENDIENTE**. La matriz final afectada pasó 42/42
+en el Samsung y el ícono adaptativo quedó verificado bajo One UI. API 26 y API
+33 continúan pendientes antes de un candidato publicable.
 
 MAIN 2.0 está reactivada para recibir los handoffs que Joaquin entregue,
 auditarlos, integrarlos, probarlos y cerrarlos. Joaquin decide cuándo pedir el
@@ -1421,9 +1424,24 @@ de aplicación; lint conserva sólo seis avisos de actualización en configuraci
 existente. Room continúa en V6, con 27 entidades y esquemas intactos. La revisión
 independiente final no dejó findings P0–P3 abiertos.
 
-Este veredicto es local. Los AndroidTest del estado final fueron compilados, no
-ejecutados en esta auditoría. La evidencia Samsung anterior se conserva como
-heredada, pero no reemplaza la matriz física de los cambios finales.
+La matriz final afectada fue ejecutada en el Samsung `SM-S938B`, Android 16/API
+36: Vacaciones Room pasó 9/9 y aplicación 33/33, para un total único de 42/42.
+La primera corrida expuso dos expectativas de prueba obsoletas —selección múltiple
+de Feriados y normalización temporal de una Vacación bajo CAS—; MAIN las corrigió,
+recompiló AndroidTest y repitió la matriz completa en verde. El ícono adaptativo
+quedó verificado visualmente bajo One UI y `Cargar jornadas` quedó confirmado
+completo y alcanzable mediante desplazamiento.
+
+Una revisión independiente aprobó las dos correcciones de prueba. Como refuerzo,
+la preparación de la clase de avisos ahora desactiva explícitamente la
+temporización precisa antes de cada caso común; la repetición final conservó
+33/33 y excluyó el único recorrido que dispara alarmas exactas reales.
+
+Los paquetes de instrumentación fueron retirados. QA quedó instalada y detenida;
+la clase de avisos limpió la base QA durante su preparación y se conservó el
+estado sintético resultante sin otra limpieza al cierre. Producción permaneció
+ausente e intacta. No se disparó una alarma exacta real ni se reinició el
+Samsung.
 
 ## Flujo vigente de MAIN
 
@@ -1490,12 +1508,12 @@ checkpoints locales. La auditoría completa terminó con 712/712 pruebas JVM,
 351/351 tareas, lint sin errores y ningún finding P0–P3 abierto. MiGuardia queda
 como **CANDIDATO LOCAL AUDITADO**.
 
-La puerta inmediata es la matriz física final del mismo candidato: Samsung API
-36 para los recorridos y recursos finales, API 26 para compatibilidad heredada
-del Geocoder y API 33 para permisos e ícono monocromático. Después corresponde
-repetir el cierre Git y decidir, por separado, si se autoriza un push o se abre
-trabajo futuro. El disparo de alarma exacta y el reinicio real continúan siendo
-autorizaciones independientes.
+La puerta Samsung API 36 del mismo candidato quedó cerrada con 42/42 pruebas
+instrumentadas y revisión directa del ícono y del Calendario. Quedan API 26 para
+compatibilidad heredada del Geocoder y API 33 para permisos e ícono monocromático.
+Después corresponde decidir si esas dos puertas se ejecutan o se aceptan como
+pendientes antes de un candidato publicable. El push, el disparo de alarma exacta
+y el reinicio real continúan siendo autorizaciones independientes.
 
 API 37 también conserva una puerta separada para el candidato publicable. Los
 pushes autorizados para disponibilidad, Calendario final y Resumen fueron
