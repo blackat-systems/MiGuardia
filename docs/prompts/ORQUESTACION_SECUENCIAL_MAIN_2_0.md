@@ -1,6 +1,6 @@
 # Prompt coordinador — handoffs secuenciales de MAIN 2.0
 
-- Estado: **ACTIVO / COORDINADOR**
+- Estado: **CERRADO / CANDIDATO LOCAL COMPLETO**
 - Estado técnico actualizado: 2026-09-03
 - Fecha de autorización original: 2026-08-22
 - Flujo actualizado por Joaquin: 2026-08-23
@@ -295,7 +295,8 @@ Sólo después de cerrar y auditar el núcleo laboral:
     —cerrado por MAIN; 712/712 JVM, 351/351 tareas, revisión independiente sin
     findings P0–P3 y Samsung API 36 verde 42/42; checkpoints técnicos
     `381c342`, `f25d097`, `d9c927e` y `3e0b0bc`; API 26 verde 126/126 Room más
-    28/28 app y API 33 verde 126/126 Room más 55/55 app—.
+    28/28 app, API 33 verde 126/126 Room más 55/55 app y API 37 verde 126/126
+    Room más 176/176 app; ajuste técnico `0ef31e0`—.
 
 Estas cinco superficies locales permanecen en la hoja de ruta después del
 checkpoint del núcleo. Cada una se prepara sólo cuando Joaquin pida su prompt o
@@ -633,5 +634,7 @@ JVM y 351/351 tareas, integró el ícono adaptativo y cerró los últimos defect
 sin findings P0–P3 abiertos. El estado resultante es candidato local auditado.
 Samsung API 36 quedó cerrado 42/42. Android 8/API 26 quedó verde con Room
 126/126 y app 28/28; Android 13/API 33 quedó verde con Room 126/126 y app 55/55.
-El checkpoint técnico de compatibilidad es `3e0b0bc`. API 37, push, alarma
-exacta y reinicio continúan como puertas separadas.
+El checkpoint técnico de compatibilidad API 26/33 es `3e0b0bc`. Android 17/API
+37 quedó verde con Room 126/126 y app 176/176; su ajuste técnico es `0ef31e0`.
+La matriz inicial API 26/33/36/37 está completa. Push, alarma exacta, reinicio,
+tag, Release y producción continúan como puertas separadas.

@@ -1,6 +1,7 @@
 # Índice canónico de prompts — MiGuardia
 
-- Estado: activo
+- Estado: hoja de ruta inicial cerrada; índice de trazabilidad y futuras
+  autorizaciones
 - Última auditoría completa: 2026-09-03
 - Regla: un prompt sólo se ejecuta si este índice lo marca `ACTIVO` o
   `HABILITADO` y Joaquin autoriza la tarea
@@ -8,7 +9,8 @@
 ## Estado operativo actual
 
 - **PLANIFICACIÓN:** cerrada por autorización expresa de Joaquin.
-- **MAIN 2.0:** reactivada y habilitada.
+- **MAIN 2.0:** hoja de ruta inicial cerrada; conserva el rol integrador para
+  cualquier alcance futuro que Joaquin autorice expresamente.
 - **Ejecución:** guiada por los handoffs y pedidos expresos de Joaquin.
 - **Orquestación secuencial:** MAIN recibe, audita, integra y cierra un handoff
   por vez mediante `ORQUESTACION_SECUENCIAL_MAIN_2_0.md`; no crea el prompt ni
@@ -23,13 +25,16 @@
   cierres funcionales finales en `f25d097acea37fc6b4126db39e6dbdb0ad793921`;
   las correcciones de pruebas físicas quedaron en
   `d9c927eb87a50bf9d6cf6a38c7f9e5d10216309a` y el cierre técnico de
-  compatibilidad en `3e0b0bcdcd7a8dfe856f4dd786ec5e936cc4cb37`.
-  La batería fresca pasó 712/712 JVM y 351/351 tareas; una revisión independiente
-  no dejó findings P0–P3 abiertos.
+  compatibilidad API 26/33 en `3e0b0bcdcd7a8dfe856f4dd786ec5e936cc4cb37`.
+  Android 17/API 37 cerró sus ajustes en
+  `0ef31e02d3b3fb1bb93e0ac94cb04302d6de7afb`.
+  La batería fresca pasó 712/712 JVM y 351/351 tareas. La auditoría anterior no
+  dejó findings P0–P3; la revisión API 37 no encontró P0–P2 y cerró como aceptada
+  una observación P3 de higiene exclusiva del framework de pruebas.
 - **Matriz Android:** Samsung físico API 36 cerrado con 42/42 pruebas
   instrumentadas; emulador Android 8/API 26 con Room 126/126 y aplicación
-  28/28; emulador Android 13/API 33 con Room 126/126 y aplicación 55/55. API 37
-  continúa como puerta separada.
+  28/28; emulador Android 13/API 33 con Room 126/126 y aplicación 55/55; emulador
+  Android 17/API 37 con Room 126/126 y aplicación 176/176.
 - **Commits locales:** MAIN los crea automáticamente como checkpoints de
   bloques comprobados.
 - **Push puntual anterior de la rama 2.0:** ejecutado y verificado hasta
@@ -50,12 +55,11 @@
   autorización quedó consumida.
 - **Pushes posteriores, tag, Release, `main` y producción:** no autorizados.
 
-El prompt rector activo es `docs/PROMPT_MAESTRO_MAIN_2_0.md`. El mapa del
-producto está en `docs/MAPA_MAESTRO_MIGUARDIA_2_0.md`, la planificación cerrada
-en `docs/PLANIFICACION_MIGUARDIA_2_0.md` y la evidencia sectorial en
-`docs/sectores/`. Si el cuerpo de un prompt todavía describe a MAIN como
-pausada, este índice y la autorización expresa más reciente de Joaquin
-prevalecen para el estado operativo.
+El prompt MAIN y su coordinador están cerrados como fuentes de trazabilidad. El
+mapa del producto está en `docs/MAPA_MAESTRO_MIGUARDIA_2_0.md`, la planificación
+cerrada en `docs/PLANIFICACION_MIGUARDIA_2_0.md` y la evidencia sectorial en
+`docs/sectores/`. Sólo una indicación nueva de Joaquin puede habilitar otro
+alcance y su contrato correspondiente.
 
 ## Significado de los estados
 
@@ -76,8 +80,8 @@ prevalecen para el estado operativo.
 | Archivo | Estado | Uso permitido |
 |---|---|---|
 | `docs/PROMPT_MAESTRO_PLANIFICACION_2_0.md` | **CERRADO / REFERENCIA** | Conserva las decisiones que dieron forma al plan; no abre otra planificación |
-| `docs/PROMPT_MAESTRO_MAIN_2_0.md` | **ACTIVO / HABILITADO** | Integrar los handoffs indicados por Joaquin en bloques pequeños y verificables |
-| `docs/prompts/ORQUESTACION_SECUENCIAL_MAIN_2_0.md` | **ACTIVO / COORDINADOR** | Recibir un handoff por vez, auditarlo, integrarlo y esperar que Joaquin indique la tarea siguiente |
+| `docs/PROMPT_MAESTRO_MAIN_2_0.md` | **CERRADO / TRAZABILIDAD** | Conservar el método de integración; requiere una indicación nueva de Joaquin para otro alcance |
+| `docs/prompts/ORQUESTACION_SECUENCIAL_MAIN_2_0.md` | **CERRADO / TRAZABILIDAD** | Conservar el ciclo de un handoff por vez; no ordena ni habilita otra tarea |
 | `docs/PROMPT_MAESTRO_MAIN.md` | **HISTÓRICO V1** | Consultar sólo comportamiento heredado de 1.0 |
 | `docs/PROMPT_MAESTRO_PAUSA_REVISION_Y_REANUDACION.md` | **HISTÓRICO V1** | Fotografía antigua de Git; nunca reanudar desde sus SHA |
 
@@ -195,7 +199,8 @@ Joaquin indicó que quiere preparar o abrir la siguiente:
 23. **Cerrado por MAIN:** auditoría de la aplicación completa y emisión del
     candidato local; 712/712 JVM, 351/351 tareas, revisión independiente sin
     findings P0–P3, Samsung API 36 de 42/42, Android 8/API 26 con Room 126/126 y
-    aplicación 28/28, y Android 13/API 33 con Room 126/126 y aplicación 55/55.
+    aplicación 28/28, Android 13/API 33 con Room 126/126 y aplicación 55/55, y
+    Android 17/API 37 con Room 126/126 y aplicación 176/176.
 
 Cuando Joaquin pide un prompt, MAIN lo habilita en este índice después de cerrar
 su contrato y dependencias, y crea automáticamente el checkpoint documental

@@ -22,17 +22,18 @@ compilaron. Una revisión independiente final no dejó findings P0–P3 abiertos
 Las correcciones de las pruebas encontradas durante la matriz física quedaron
 confirmadas en `d9c927eb87a50bf9d6cf6a38c7f9e5d10216309a`. La matriz
 posterior de compatibilidad cerró sus correcciones técnicas en
-`3e0b0bcdcd7a8dfe856f4dd786ec5e936cc4cb37`.
-El resultado es **CANDIDATO LOCAL AUDITADO — SAMSUNG API 36, ANDROID 8/API 26
-Y ANDROID 13/API 33 VERDES**. Además de las 42/42 del Samsung, API 26 pasó
-Room 126/126 y aplicación 28/28; API 33 pasó Room 126/126 y aplicación 55/55.
-API 37 conserva una puerta separada antes de un candidato publicable.
+`3e0b0bcdcd7a8dfe856f4dd786ec5e936cc4cb37`. Android 17/API 37 cerró después
+sus ajustes en `0ef31e02d3b3fb1bb93e0ac94cb04302d6de7afb`.
+El resultado es **CANDIDATO LOCAL COMPLETO Y AUDITADO — ANDROID API 26, 33, 36
+Y 37 VERDES**. Además de las 42/42 del Samsung, API 26 pasó Room 126/126 y
+aplicación 28/28; API 33 pasó Room 126/126 y aplicación 55/55; API 37 pasó Room
+126/126 y una matriz proporcional de aplicación 176/176.
 
-MAIN 2.0 está reactivada para recibir los handoffs que Joaquin entregue,
-auditarlos, integrarlos, probarlos y cerrarlos. Joaquin decide cuándo pedir el
-prompt de una nueva tarea y cuándo abrirla; MAIN no encadena dependencias por su
-cuenta. Después de una integración verde, MAIN crea automáticamente el commit
-local que funciona como checkpoint. El push puntual autorizado el 2026-08-22 ya
+MAIN 2.0 cerró la hoja de ruta inicial y conserva el rol integrador para futuros
+alcances que Joaquin autorice expresamente. Joaquin decide cuándo pedir el prompt
+de una nueva tarea y cuándo abrirla; MAIN no encadena dependencias por su cuenta.
+Después de una integración verde, MAIN crea automáticamente el commit local que
+funciona como checkpoint. El push puntual autorizado el 2026-08-22 ya
 fijó en el remoto privado la base `836d908` de `Cargar jornadas` y quedó
 consumido. Joaquin autorizó el 2026-08-23 un único push adicional para publicar
 el checkpoint estable V2-only y esta recomendación futura. MAIN lo ejecutó y
@@ -97,6 +98,8 @@ La auditoría integral final y el estado del candidato local están registrados 
 `docs/audits/2026-09-03-auditoria-final-aplicacion-y-candidato-local-v2.md`.
 El cierre posterior de Android 8/API 26 y Android 13/API 33 está registrado en
 `docs/audits/2026-09-03-compatibilidad-api26-api33-candidato-local-v2.md`.
+El cierre de Android 17/API 37 está registrado en
+`docs/audits/2026-09-03-compatibilidad-api37-candidato-local-v2.md`.
 La separación entre continuidad de código y ausencia de migración de datos V1
 está registrada en `docs/adr/0024-continuidad-de-codigo-sin-migracion-de-datos-v1.md`
 y auditada en
@@ -1480,6 +1483,36 @@ anteriores. El Samsung conectado no fue usado y producción no fue consultada ni
 modificada. API 37, una alarma exacta real y el reinicio físico siguen siendo
 puertas separadas.
 
+## Compatibilidad Android 17/API 37 — cerrada
+
+MAIN instaló la imagen oficial Android 17/API 37.1, revisión 9, y ejecutó el
+mismo candidato en un emulador x86_64. Room V6 pasó 126/126 y la matriz
+proporcional de aplicación pasó 176/176. La batería local fresca posterior pasó
+712/712 pruebas JVM y 351/351 tareas, con lint sin errores y todos los artefactos
+compilados.
+
+La primera ejecución descubrió que Espresso 3.5.0 usaba una API interna retirada
+en Android 17. Se fijó Espresso 3.7.0 únicamente para AndroidTest; la dependencia
+no entra al APK de producción. La matriz también reprodujo una carrera real: al
+salir de un campo horario se repetía un callback y podía invalidarse una revisión
+de disponibilidad ya iniciada. El campo ahora normaliza sólo su presentación al
+perder foco y conserva un único cambio funcional por edición. La corrección pasó
+su regresión y cinco repeticiones dirigidas de disponibilidad.
+
+La revisión manual verificó la primera apertura con los cuatro rubros exactos,
+el botón Continuar deshabilitado sin selección, la entrada para restaurar una
+copia y el Calendario vacío en retrato y paisaje. Tema oscuro y zoom interno
+100 %, 150 % y 200 % quedaron cubiertos por instrumentación. Una auditoría
+independiente no encontró defectos P0–P2; registró únicamente una observación P3
+de higiene del framework de pruebas cuando API 37 deja desactualizado el estado
+interno de `ActivityScenario`. La observación fue **ACEPTADA / NO BLOQUEANTE /
+CERRADA**, sin impacto productivo ni fallo oculto.
+
+Los paquetes QA y de prueba fueron retirados, la orientación volvió a automática
+y el emulador quedó apagado. El Samsung conectado no fue usado. El checkpoint
+técnico es `0ef31e02d3b3fb1bb93e0ac94cb04302d6de7afb`. Una alarma exacta real,
+un reinicio físico, push, tag, Release y producción conservan puertas separadas.
+
 ## Flujo vigente de MAIN
 
 - Joaquin entrega un handoff o pide preparar el prompt de una nueva tarea;
@@ -1543,17 +1576,21 @@ posteriores.
 El núcleo, la segunda capa y los cambios de último momento están integrados en
 checkpoints locales. La auditoría completa terminó con 712/712 pruebas JVM,
 351/351 tareas, lint sin errores y ningún finding P0–P3 abierto. MiGuardia queda
-como **CANDIDATO LOCAL AUDITADO**.
+como **CANDIDATO LOCAL COMPLETO Y AUDITADO**.
 
 La puerta Samsung API 36 del mismo candidato quedó cerrada con 42/42 pruebas
 instrumentadas y revisión directa del ícono y del Calendario. La compatibilidad
 pendiente quedó cerrada después en Android 8/API 26 —Room 126/126 y aplicación
 28/28— y Android 13/API 33 —Room 126/126 y aplicación 55/55—, incluyendo
-Geocoder, permisos modernos e ícono monocromático. El push, el disparo de alarma
+Geocoder, permisos modernos e ícono monocromático. Android 17/API 37 cerró la
+matriz final con Room 126/126 y aplicación 176/176. El disparo de una alarma
 exacta real y el reinicio físico continúan siendo autorizaciones independientes.
 
-API 37 también conserva una puerta separada para el candidato publicable. Los
-pushes autorizados para disponibilidad, Calendario final y Resumen fueron
+Los pushes autorizados para disponibilidad, Calendario final y Resumen fueron
 ejecutados y consumidos en
 `80fe8e5`, `fd6891e` y `ad777bb`. Cualquier push posterior, tag, Release y toda
 operación sobre `main` o producción continúan prohibidos.
+
+No hay una dependencia siguiente habilitada automáticamente. La posible Agenda
+profesional permanece como propuesta futura y requiere una decisión explícita de
+Joaquin antes de preparar su contrato.

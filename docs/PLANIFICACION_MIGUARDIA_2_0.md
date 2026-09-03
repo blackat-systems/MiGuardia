@@ -593,7 +593,8 @@ continúa con:
 7. auditoría de la aplicación completa y emisión de un candidato local
    —cerrada con 712/712 JVM, 351/351 tareas, revisión independiente sin findings
    P0–P3 y matrices verdes en Samsung API 36, Android 8/API 26 y Android
-   13/API 33—.
+   13/API 33; Android 17/API 37 quedó cerrado después con Room 126/126 y
+   aplicación 176/176—.
 
 La decisión de Joaquin del 2026-08-23 reemplaza la apertura automática de esa
 cadena: MAIN recomienda el siguiente bloque, pero sólo prepara su prompt o abre
@@ -628,8 +629,12 @@ Samsung API 36 pasó 42/42. La matriz posterior cerró Android 8/API 26 con Room
 126/126 y aplicación 28/28, y Android 13/API 33 con Room 126/126 y aplicación
 55/55. La revisión real descubrió y corrigió el empaquetado del ícono base para
 API 26 y una carrera de preparación de una prueba Room. El checkpoint técnico
-es `3e0b0bcdcd7a8dfe856f4dd786ec5e936cc4cb37`. API 37, una alarma exacta real
-y el reinicio físico conservan puertas separadas.
+es `3e0b0bcdcd7a8dfe856f4dd786ec5e936cc4cb37`. Android 17/API 37 pasó después
+Room 126/126 y aplicación 176/176 sobre la imagen oficial. Espresso 3.7.0 quedó
+limitado al APK de pruebas y la ejecución cerró una carrera real del campo
+horario al perder foco. El checkpoint técnico es
+`0ef31e02d3b3fb1bb93e0ac94cb04302d6de7afb`. Una alarma exacta real y el
+reinicio físico conservan puertas separadas.
 
 ## 21. Idea futura guardada: agenda profesional
 
@@ -637,10 +642,10 @@ Joaquin pidió conservar para una etapa posterior la posibilidad de agregar un
 apartado opcional de **Agenda profesional** para Medicina y para una eventual
 incorporación de Psicología.
 
-La recomendación de orden es terminar primero la hoja de ruta vigente mediante
-la integración de Ayuda y los cambios de último momento, seguida por la
-auditoría final. Bloqueo de acceso y Copias locales seguras ya están cerrados.
-Recién después conviene diseñar e implementar esta ampliación.
+La hoja de ruta inicial, incluida Ayuda, los cambios de último momento y la
+auditoría final, ya quedó cerrada como candidato local completo. La ampliación
+puede diseñarse a partir de ahora únicamente si Joaquin decide activarla como un
+nuevo alcance.
 
 Si se aprueba, su primer alcance debería limitarse a pacientes y turnos. No
 incluiría historias clínicas, diagnósticos, tratamientos, evoluciones,

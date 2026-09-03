@@ -199,7 +199,7 @@ Compatibilidad final — Samsung API 36 (42/42), Android 8/API 26
 (Room 126/126; app 28/28) y Android 13/API 33
 (Room 126/126; app 55/55) — cerrada
         ↓
-Android API 37 — puerta separada pendiente
+Android 17/API 37 — Room 126/126 y app 176/176 — cerrada
 ```
 
 Corrección de secuencia del 2026-08-27: Joaquin indicó que el bloque siguiente
@@ -302,8 +302,14 @@ Actualización de compatibilidad del 2026-09-03: Android 8/API 26 pasó Room
 55/55. El checkpoint técnico es
 `3e0b0bcdcd7a8dfe856f4dd786ec5e936cc4cb37` y la evidencia durable quedó en
 `docs/audits/2026-09-03-compatibilidad-api26-api33-candidato-local-v2.md`.
-Android API 37, la alarma exacta real y el reinicio físico continúan como
-puertas separadas.
+Android 17/API 37 cerró después su puerta con Room 126/126 y aplicación 176/176
+sobre la imagen oficial. Espresso 3.7.0 quedó limitado a AndroidTest y no entra
+al APK productivo. La ejecución detectó y corrigió un callback redundante al
+perder foco en los campos horarios, que podía invalidar una revisión de
+disponibilidad. El checkpoint técnico es
+`0ef31e02d3b3fb1bb93e0ac94cb04302d6de7afb` y la evidencia durable quedó en
+`docs/audits/2026-09-03-compatibilidad-api37-candidato-local-v2.md`. La alarma
+exacta real y el reinicio físico continúan como puertas separadas.
 
 MAIN integra un bloque por vez. Cada bloque debe compilar, pasar sus pruebas,
 preservar el alcance ajeno y quedar documentado antes del siguiente. El mapa
@@ -317,6 +323,7 @@ tarea.
 - `docs/sectores/` conserva **la evidencia sectorial anónima**.
 - `docs/STATUS.md` indica **qué bloque está activo hoy**.
 - `docs/prompts/README.md` indica **qué prompt puede ejecutarse**.
-- `docs/PROMPT_MAESTRO_MAIN_2_0.md` gobierna **la integración activa**.
-- `docs/prompts/ORQUESTACION_SECUENCIAL_MAIN_2_0.md` gobierna **cómo MAIN recibe,
-  audita y cierra un handoff por vez, y cuándo puede preparar otra tarea**.
+- `docs/PROMPT_MAESTRO_MAIN_2_0.md` conserva **el método de integración** como
+  trazabilidad; un alcance nuevo requiere una indicación nueva de Joaquin.
+- `docs/prompts/ORQUESTACION_SECUENCIAL_MAIN_2_0.md` conserva **cómo MAIN recibe,
+  audita y cierra un handoff por vez**; no habilita otra tarea por sí solo.

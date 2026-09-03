@@ -1,12 +1,16 @@
 # Prompt maestro — MAIN de MiGuardia 2.0
 
-- Estado: **ACTIVO**
+- Estado: **CERRADO / CANDIDATO LOCAL COMPLETO — hoja de ruta inicial**
 - Activación: 2026-08-21 por autorización expresa de Joaquin
 - Flujo de handoffs vigente: 2026-08-23
 - Contrato humano de dependencias vigente: 2026-08-25
 - Rama integradora: `codex/miguardia-2.0`
 - Base protegida: `v1.0.0^{}` / `82db6fd8eb2c511205968894dc9857a96b16ed20`
 - Aplicación: `com.blackatsystems.miguardia`
+
+Este documento queda como fuente de trazabilidad y método de integración. Una
+ampliación futura requiere una indicación nueva de Joaquin; el cierre no habilita
+automáticamente otra dependencia, push, tag, Release ni producción.
 
 ## 1. Misión
 
@@ -167,7 +171,8 @@ una decisión documentada.
 15. Auditar la aplicación completa y emitir el candidato local —cerrado por
     MAIN el 2026-09-03; Samsung API 36 verde 42/42, Android 8/API 26 verde con
     Room 126/126 y aplicación 28/28, y Android 13/API 33 verde con Room 126/126
-    y aplicación 55/55. API 37 conserva una puerta separada—.
+    y aplicación 55/55. Android 17/API 37 cerró después con Room 126/126 y
+    aplicación 176/176; checkpoint técnico `0ef31e0`—.
 
 Corrección de secuencia del 2026-08-27: Joaquin fijó Calendario final y tarjeta
 superior como próximo bloque después de disponibilidad. Las situaciones comunes
