@@ -15,6 +15,6 @@ interface VacationRepository {
 
     suspend fun getById(id: UUID): Vacation?
     suspend fun insert(vacation: Vacation)
-    suspend fun update(vacation: Vacation)
-    suspend fun delete(id: UUID)
+    suspend fun update(expected: Vacation, replacement: Vacation)
+    suspend fun delete(expected: Vacation)
 }

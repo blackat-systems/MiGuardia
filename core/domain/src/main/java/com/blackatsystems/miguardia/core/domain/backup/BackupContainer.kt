@@ -204,7 +204,7 @@ object BackupContainer {
             readAuthenticatedPayload(source, payloadZip, password)
             val extracted = File(operation, "entries").also { it.mkdirs() }
             extractZip(payloadZip, extracted)
-            payloadZip.deletePrivateFileChecked("el payload temporal autenticado")
+            payloadZip.deletePrivateFileChecked("el payload temporal verificado")
 
             val manifestFile = File(extracted, MANIFEST_ENTRY)
             val sourceManifest = manifestFile.inputStream().use(BackupPayloadCodec::readManifest)
@@ -455,7 +455,10 @@ object BackupContainer {
                     try {
                         writeCiphered(rawInput, output, cipher, MiGuardiaBackupContract.MAX_CONTAINER_BYTES)
                     } catch (error: GeneralSecurityException) {
-                        throw InvalidBackupException("La copia sin contraseña fue modificada.", error)
+                        throw InvalidBackupException(
+                            "La copia sin contraseña está dañada o no coincide con su comprobación de integridad.",
+                            error,
+                        )
                     }
                 } else {
                     rawInput.copyBoundedTo(output, header.payloadBytes, MiGuardiaBackupContract.MAX_CONTAINER_BYTES)
@@ -696,7 +699,9 @@ object BackupContainer {
                 }
             } else if (passwordlessSealed) {
                 if (iterations != 0 || salt.all { it == 0.toByte() } || nonce.all { it == 0.toByte() }) {
-                    throw InvalidBackupException("Los parámetros de sellado de la copia no son válidos.")
+                    throw InvalidBackupException(
+                        "Los parámetros de comprobación de integridad de la copia no son válidos.",
+                    )
                 }
             } else if (iterations != 0 || salt.any { it != 0.toByte() } || nonce.any { it != 0.toByte() }) {
                 throw InvalidBackupException("Una copia sin cifrar declara parámetros criptográficos.")

@@ -76,7 +76,11 @@ internal class AndroidShiftAlarmScheduler(private val context: Context) {
 
         fun readIdentity(intent: Intent?): NotificationBoundaryIdentity? {
             if (intent?.action != ShiftAlarmReceiver.ACTION_DELIVER_BOUNDARY) return null
-            val parts = intent.data?.getQueryParameter(KEY_BOUNDARY)?.split('|') ?: return null
+            return decodeOpaqueKey(intent.data?.getQueryParameter(KEY_BOUNDARY))
+        }
+
+        fun decodeOpaqueKey(opaqueKey: String?): NotificationBoundaryIdentity? {
+            val parts = opaqueKey?.split('|') ?: return null
             return when {
                 parts.size == 5 && parts[0] == "v2" -> runCatching {
                     NotificationBoundaryIdentity(

@@ -35,6 +35,8 @@ internal data class ExceptionsPersistedState(
     val surface: ExceptionsSurface,
     val holidayMonth: YearMonth,
     val shiftId: UUID? = null,
+    val holidaySelectionActive: Boolean = false,
+    val holidayDraft: HolidayDraft = HolidayDraft(),
 )
 
 internal class ExceptionsCoordinator(
@@ -50,8 +52,11 @@ internal class ExceptionsCoordinator(
     private val writeMutex = Mutex()
     private val _uiState = MutableStateFlow(
         ExceptionsUiState(
-            surface = initialState.surface,
+            surface = initialState.surface.takeUnless { initialState.holidaySelectionActive }
+                ?: ExceptionsSurface.NONE,
             holidayMonth = initialState.holidayMonth,
+            holidaySelectionActive = initialState.holidaySelectionActive,
+            holidayDraft = initialState.holidayDraft,
         ),
     )
     val uiState: StateFlow<ExceptionsUiState> = _uiState.asStateFlow()
@@ -92,6 +97,7 @@ internal class ExceptionsCoordinator(
             it.copy(
                 surface = ExceptionsSurface.HOLIDAYS,
                 holidayMonth = month,
+                holidaySelectionActive = false,
                 selectedShift = null,
                 notes = emptyList(),
                 noteDraft = NoteDraft(),
@@ -104,12 +110,86 @@ internal class ExceptionsCoordinator(
         setHolidayMonth(month)
     }
 
-    fun previousHolidayMonth() {
-        if (!_uiState.value.isSaving) setHolidayMonth(_uiState.value.holidayMonth.minusMonths(1))
+    fun beginHolidaySelection(month: YearMonth = _uiState.value.holidayMonth) {
+        if (_uiState.value.isSaving) return
+        noteJob?.cancel()
+        _uiState.update {
+            it.copy(
+                surface = ExceptionsSurface.NONE,
+                holidayMonth = month,
+                holidaySelectionActive = true,
+                selectedShift = null,
+                notes = emptyList(),
+                noteDraft = NoteDraft(),
+                isLoading = true,
+                errorMessage = null,
+                infoMessage = null,
+            )
+        }
+        persistCurrentState()
+        observeHolidays(month)
     }
 
-    fun nextHolidayMonth() {
-        if (!_uiState.value.isSaving) setHolidayMonth(_uiState.value.holidayMonth.plusMonths(1))
+    fun updateHolidaySelection(month: YearMonth, dates: Set<LocalDate>) {
+        if (_uiState.value.isSaving || !_uiState.value.holidaySelectionActive) return
+        if (dates.any { YearMonth.from(it) != month }) return
+        val editing = _uiState.value.holidayDraft.editingId != null
+        if (editing && dates.size > 1) return
+        val monthChanged = _uiState.value.holidayMonth != month
+        val datesText = dates.sorted().joinToString(",")
+        _uiState.update {
+            it.copy(
+                holidayMonth = month,
+                holidayDraft = it.holidayDraft.copy(
+                    datesText = datesText,
+                    conflictDates = emptySet(),
+                    pendingPolicy = null,
+                ),
+                errorMessage = null,
+            )
+        }
+        persistCurrentState()
+        if (monthChanged) observeHolidays(month)
+    }
+
+    fun confirmHolidaySelection(month: YearMonth, dates: Set<LocalDate>) {
+        if (_uiState.value.isSaving || !_uiState.value.holidaySelectionActive) return
+        if (dates.isEmpty()) return showError("Elegí al menos una fecha en el calendario.")
+        if (dates.any { YearMonth.from(it) != month }) {
+            return showError("Elegí fechas de un mismo mes.")
+        }
+        if (_uiState.value.holidayDraft.editingId != null && dates.size != 1) {
+            return showError("La edición de un feriado admite una sola fecha.")
+        }
+        holidayJob?.cancel()
+        _uiState.update {
+            it.copy(
+                surface = ExceptionsSurface.HOLIDAYS,
+                holidayMonth = month,
+                holidaySelectionActive = false,
+                holidayDraft = it.holidayDraft.copy(
+                    datesText = dates.sorted().joinToString(","),
+                    conflictDates = emptySet(),
+                    pendingPolicy = null,
+                ),
+                isLoading = true,
+                errorMessage = null,
+            )
+        }
+        persistCurrentState()
+        observeHolidays(month)
+    }
+
+    fun cancelHolidaySelection() {
+        if (_uiState.value.isSaving || !_uiState.value.holidaySelectionActive) return
+        _uiState.update {
+            it.copy(
+                surface = ExceptionsSurface.HOLIDAYS,
+                holidaySelectionActive = false,
+                errorMessage = null,
+            )
+        }
+        persistCurrentState()
     }
 
     fun openNotes(shift: Shift) {
@@ -124,6 +204,7 @@ internal class ExceptionsCoordinator(
         _uiState.update {
             it.copy(
                 surface = ExceptionsSurface.NONE,
+                holidaySelectionActive = false,
                 selectedShift = null,
                 holidays = emptyList(),
                 notes = emptyList(),
@@ -146,12 +227,15 @@ internal class ExceptionsCoordinator(
                 errorMessage = null,
             )
         }
+        persistCurrentState()
     }
 
     fun editHoliday(holiday: Holiday) {
         if (_uiState.value.isSaving) return
         _uiState.update {
             it.copy(
+                surface = ExceptionsSurface.NONE,
+                holidaySelectionActive = true,
                 holidayDraft = HolidayDraft(
                     editingId = holiday.id,
                     datesText = holiday.date.toString(),
@@ -160,11 +244,13 @@ internal class ExceptionsCoordinator(
                 errorMessage = null,
             )
         }
+        persistCurrentState()
     }
 
     fun cancelHolidayEdit() {
         if (_uiState.value.isSaving) return
         _uiState.update { it.copy(holidayDraft = HolidayDraft(), errorMessage = null) }
+        persistCurrentState()
     }
 
     fun saveHolidays(policy: HolidayConflictPolicy? = null) {
@@ -195,6 +281,7 @@ internal class ExceptionsCoordinator(
                         ),
                     )
                 }
+                persistCurrentState()
                 return@launchWrite
             }
             val now = clock.instant()
@@ -226,6 +313,7 @@ internal class ExceptionsCoordinator(
                     infoMessage = "Feriados guardados.",
                 )
             }
+            persistCurrentState()
         }
     }
 
@@ -239,6 +327,7 @@ internal class ExceptionsCoordinator(
                 ),
             )
         }
+        persistCurrentState()
     }
 
     fun deleteHoliday(id: UUID) = launchWrite {
@@ -250,6 +339,7 @@ internal class ExceptionsCoordinator(
                 infoMessage = "Feriado eliminado.",
             )
         }
+        persistCurrentState()
     }
 
     fun updateNoteDraft(transform: (NoteDraft) -> NoteDraft) {
@@ -325,6 +415,7 @@ internal class ExceptionsCoordinator(
         _uiState.update {
             it.copy(
                 surface = ExceptionsSurface.NOTES,
+                holidaySelectionActive = false,
                 selectedShift = shift,
                 holidays = emptyList(),
                 notes = emptyList(),
@@ -430,6 +521,8 @@ internal class ExceptionsCoordinator(
                 surface = surface,
                 holidayMonth = _uiState.value.holidayMonth,
                 shiftId = shiftId,
+                holidaySelectionActive = _uiState.value.holidaySelectionActive,
+                holidayDraft = _uiState.value.holidayDraft,
             ),
         )
     }
@@ -440,6 +533,8 @@ internal class ExceptionsCoordinator(
                 surface = _uiState.value.surface,
                 holidayMonth = _uiState.value.holidayMonth,
                 shiftId = _uiState.value.selectedShift?.id,
+                holidaySelectionActive = _uiState.value.holidaySelectionActive,
+                holidayDraft = _uiState.value.holidayDraft,
             ),
         )
     }
@@ -469,10 +564,31 @@ class ExceptionsViewModel(
                 ?: YearMonth.now(clock.withZone(AppDefaults.zoneId())),
             shiftId = savedStateHandle.get<String>(SHIFT_ID_KEY)
                 ?.let { raw -> runCatching { UUID.fromString(raw) }.getOrNull() },
+            holidaySelectionActive = savedStateHandle[HOLIDAY_SELECTION_ACTIVE_KEY] ?: false,
+            holidayDraft = HolidayDraft(
+                editingId = savedStateHandle.get<String>(HOLIDAY_EDITING_ID_KEY)
+                    ?.let { raw -> runCatching { UUID.fromString(raw) }.getOrNull() },
+                datesText = savedStateHandle[HOLIDAY_DATES_KEY] ?: "",
+                name = savedStateHandle[HOLIDAY_NAME_KEY] ?: "",
+                conflictDates = savedStateHandle.get<ArrayList<String>>(HOLIDAY_CONFLICT_DATES_KEY)
+                    .orEmpty()
+                    .mapNotNull { raw -> runCatching { LocalDate.parse(raw) }.getOrNull() }
+                    .toCollection(linkedSetOf()),
+            ),
         ),
         persist = { state ->
             savedStateHandle[SURFACE_KEY] = state.surface.name
             savedStateHandle[HOLIDAY_MONTH_KEY] = state.holidayMonth.toString()
+            savedStateHandle[HOLIDAY_SELECTION_ACTIVE_KEY] = state.holidaySelectionActive
+            savedStateHandle[HOLIDAY_DATES_KEY] = state.holidayDraft.datesText
+            savedStateHandle[HOLIDAY_NAME_KEY] = state.holidayDraft.name
+            savedStateHandle[HOLIDAY_CONFLICT_DATES_KEY] =
+                ArrayList(state.holidayDraft.conflictDates.sorted().map(LocalDate::toString))
+            if (state.holidayDraft.editingId == null) {
+                savedStateHandle.remove<String>(HOLIDAY_EDITING_ID_KEY)
+            } else {
+                savedStateHandle[HOLIDAY_EDITING_ID_KEY] = state.holidayDraft.editingId.toString()
+            }
             if (state.shiftId == null) {
                 savedStateHandle.remove<String>(SHIFT_ID_KEY)
             } else {
@@ -484,8 +600,12 @@ class ExceptionsViewModel(
     val uiState: StateFlow<ExceptionsUiState> = coordinator.uiState
 
     fun openHolidays(month: YearMonth) = coordinator.openHolidays(month)
-    fun showPreviousHolidayMonth() = coordinator.previousHolidayMonth()
-    fun showNextHolidayMonth() = coordinator.nextHolidayMonth()
+    fun beginHolidaySelection(month: YearMonth) = coordinator.beginHolidaySelection(month)
+    fun updateHolidaySelection(month: YearMonth, dates: Set<LocalDate>) =
+        coordinator.updateHolidaySelection(month, dates)
+    fun confirmHolidaySelection(month: YearMonth, dates: Set<LocalDate>) =
+        coordinator.confirmHolidaySelection(month, dates)
+    fun cancelHolidaySelection() = coordinator.cancelHolidaySelection()
     fun openNotes(shift: Shift) = coordinator.openNotes(shift)
     fun close() = coordinator.close()
     fun updateHolidayDraft(transform: (HolidayDraft) -> HolidayDraft) =
@@ -528,5 +648,10 @@ class ExceptionsViewModel(
         const val SURFACE_KEY = "exceptions.surface"
         const val HOLIDAY_MONTH_KEY = "exceptions.holidayMonth"
         const val SHIFT_ID_KEY = "exceptions.shiftId"
+        const val HOLIDAY_SELECTION_ACTIVE_KEY = "exceptions.holidaySelectionActive"
+        const val HOLIDAY_EDITING_ID_KEY = "exceptions.holidayEditingId"
+        const val HOLIDAY_DATES_KEY = "exceptions.holidayDates"
+        const val HOLIDAY_NAME_KEY = "exceptions.holidayName"
+        const val HOLIDAY_CONFLICT_DATES_KEY = "exceptions.holidayConflictDates"
     }
 }

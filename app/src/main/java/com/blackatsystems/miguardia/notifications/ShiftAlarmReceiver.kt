@@ -12,35 +12,31 @@ class ShiftAlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val application = context.applicationContext as? MiGuardiaApplication ?: return
         val dismissedEventKey = readDismissedEventKey(intent)
-        if (dismissedEventKey != null) {
-            if (runCatching {
-                    application.notificationDeferredActions.enqueueDismissal(dismissedEventKey)
-                }.isFailure
-            ) {
-                return
-            }
-        }
-        if (!application.startupRecoveryGate.isReady) return
-        if (application.notificationRuntime.isPausedForRestore) return
-        val identity = if (dismissedEventKey == null) {
+        val deliveryIdentity = if (dismissedEventKey == null) {
             AndroidShiftAlarmScheduler.readIdentity(intent) ?: return
         } else {
             null
         }
+        if (
+            runCatching {
+                if (dismissedEventKey != null) {
+                    application.notificationDeferredActions.enqueueDismissal(dismissedEventKey)
+                } else {
+                    application.notificationDeferredActions.enqueueDelivery(
+                        checkNotNull(deliveryIdentity).opaqueKey,
+                    )
+                }
+            }.isFailure
+        ) {
+            return
+        }
+        if (!application.startupRecoveryGate.isReady) return
+        if (application.notificationRuntime.isPausedForRestore) return
         val pendingResult = goAsync()
         application.notificationRuntime.scope.launch {
             try {
                 withTimeoutOrNull(RECEIVER_WORK_TIMEOUT_MILLIS) {
-                    if (dismissedEventKey != null) {
-                        processQueuedDismissalsUnderMutationGate(application)
-                    } else {
-                        runNotificationOperation {
-                            application.notificationRuntime.deliverNow(checkNotNull(identity))
-                        }
-                        runNotificationOperation {
-                            application.notificationRuntime.reconcileNow()
-                        }
-                    }
+                    processQueuedNotificationActionsUnderMutationGate(application)
                 }
             } finally {
                 pendingResult.finish()
@@ -56,7 +52,9 @@ class ShiftAlarmReceiver : BroadcastReceiver() {
     }
 }
 
-internal suspend fun processQueuedDismissalsUnderMutationGate(application: MiGuardiaApplication) {
+internal suspend fun processQueuedNotificationActionsUnderMutationGate(
+    application: MiGuardiaApplication,
+) {
     application.localDataMutationGate.withExclusiveMutation {
         if (!application.startupRecoveryGate.isReady ||
             application.notificationRuntime.isPausedForRestore
@@ -66,6 +64,9 @@ internal suspend fun processQueuedDismissalsUnderMutationGate(application: MiGua
         runNotificationOperation {
             application.notificationDeferredActions.replay(application.notificationPreferences)
         }
+        application.notificationDeferredActions.replayDeliveriesWithRetry(
+            deliver = application.notificationRuntime::deliverNow,
+        )
         runNotificationOperation {
             application.notificationRuntime.reconcileNow()
         }

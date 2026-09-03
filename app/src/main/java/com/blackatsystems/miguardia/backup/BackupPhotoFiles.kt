@@ -129,7 +129,9 @@ class BackupPhotoFiles(context: Context) {
             requireMatchingFile(file, photo)
             expectedSha256ByStorageKey?.getValue(photo.storageKey)?.let { expectedHash ->
                 if (file.sha256() != expectedHash) {
-                    throw InvalidBackupException("Una fotografía restaurada no coincide con su huella autenticada.")
+                    throw InvalidBackupException(
+                        "Una fotografía restaurada no coincide con la huella incluida en la copia.",
+                    )
                 }
             }
         }

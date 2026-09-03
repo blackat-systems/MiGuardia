@@ -3,6 +3,7 @@ package com.blackatsystems.miguardia
 import android.Manifest
 import android.app.Notification
 import android.app.NotificationManager
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -35,6 +36,7 @@ import com.blackatsystems.miguardia.notifications.NotificationPrivacy
 import com.blackatsystems.miguardia.notifications.NotificationSystemAccess
 import com.blackatsystems.miguardia.notifications.ShiftAlarmReceiver
 import com.blackatsystems.miguardia.notifications.ShiftNotificationPresenter
+import com.blackatsystems.miguardia.notifications.processQueuedNotificationActionsUnderMutationGate
 import com.blackatsystems.miguardia.core.domain.work.AvailabilityLabel
 import com.blackatsystems.miguardia.core.domain.work.EffectiveRevision
 import com.blackatsystems.miguardia.core.domain.work.ResolvedWorkConfigurationRevision
@@ -92,6 +94,78 @@ class NotificationAlarmEndToEndInstrumentedTest {
         val legacy = AndroidShiftAlarmScheduler.readIdentity(boundaryIntent(legacyKey))
         assertEquals(REACTIVE_SHIFT_ID, legacy?.shiftId)
         assertEquals(NotificationBoundaryType.START, legacy?.type)
+    }
+
+    @Test
+    fun boundaryReceivedDuringStartupRecoveryIsDeliveredAfterReady() = runBlocking {
+        val application = ApplicationProvider.getApplicationContext<MiGuardiaApplication>()
+        assumeTrue(
+            "La entrega diferida instrumentada sólo puede modificar el paquete QA.",
+            application.packageName == QA_APPLICATION_ID,
+        )
+        grantPostNotificationsIfRequired(application)
+        val manager = application.getSystemService(NotificationManager::class.java)
+        val now = Instant.now()
+        val shift = futureShift(
+            id = STARTUP_RECOVERY_SHIFT_ID,
+            start = now.plus(30, ChronoUnit.MINUTES),
+            end = now.plus(90, ChronoUnit.MINUTES),
+            createdAt = now,
+        )
+        val identity = NotificationBoundaryIdentity(
+            shiftId = shift.id,
+            type = NotificationBoundaryType.REMINDER,
+            triggerAt = shift.startAt.minus(60, ChronoUnit.MINUTES),
+            leadMinutes = 60L,
+        )
+        val deferredPreferences = application.getSharedPreferences(
+            "notification_deferred_actions",
+            Context.MODE_PRIVATE,
+        )
+        try {
+            assertTrue(deferredPreferences.edit().clear().commit())
+            application.notificationPreferences.setEnabled(false)
+            application.notificationRuntime.rebuildNow()
+            application.notificationPreferences.setDisplayedEventKeys(emptySet())
+            application.notificationPreferences.setDismissedEventKeys(emptySet())
+            application.notificationPreferences.setGlobalReminderLeadMinutes(listOf(60L))
+            manager.cancelAll()
+            insertV2(application, shift)
+            application.notificationPreferences.setEnabled(true)
+            application.notificationRuntime.reconcileNow()
+            application.notificationRuntime.pauseForRestore()
+            application.startupRecoveryGate.recovering()
+
+            ShiftAlarmReceiver().onReceive(application, boundaryIntent(application, identity))
+
+            assertTrue(application.notificationDeferredActions.hasPendingActions())
+            assertTrue(manager.activeNotifications.none { it.tag == "shift:${shift.id}" })
+
+            application.startupRecoveryGate.ready()
+            application.notificationRuntime.resumeAfterRestore()
+            processQueuedNotificationActionsUnderMutationGate(application)
+            waitUntil(5_000L) {
+                manager.activeNotifications.any { it.tag == "shift:${shift.id}" }
+            }
+
+            assertFalse(application.notificationDeferredActions.hasPendingActions())
+            processQueuedNotificationActionsUnderMutationGate(application)
+            assertEquals(
+                1,
+                manager.activeNotifications.count { it.tag == "shift:${shift.id}" },
+            )
+        } finally {
+            application.startupRecoveryGate.ready()
+            if (application.notificationRuntime.isPausedForRestore) {
+                runCatching { application.notificationRuntime.resumeAfterRestore() }
+            }
+            application.notificationPreferences.setEnabled(false)
+            application.notificationPreferences.clearEventTracking("shift:${shift.id}")
+            deleteIfPresent(application, shift.id)
+            manager.cancel("shift:${shift.id}", ShiftNotificationPresenter.NOTIFICATION_ID)
+            assertTrue(deferredPreferences.edit().clear().commit())
+            application.notificationRuntime.reconcile()
+        }
     }
 
     @Test
@@ -283,7 +357,7 @@ class NotificationAlarmEndToEndInstrumentedTest {
 
             application.localDataStore.vacations.insert(vacation)
             waitUntil(5_000L) { installedFor(application, original.id).isEmpty() }
-            application.localDataStore.vacations.delete(vacation.id)
+            application.localDataStore.vacations.delete(vacation)
             waitUntil(5_000L) { installedFor(application, original.id).size == 3 }
 
             application.localDataStore.v2Shifts.deleteShift(persistedEditedWrite)
@@ -292,7 +366,7 @@ class NotificationAlarmEndToEndInstrumentedTest {
         } finally {
             application.notificationPreferences.setEnabled(false)
             application.localDataStore.shiftNotificationConfigs.clear(original.id)
-            application.localDataStore.vacations.delete(vacation.id)
+            application.localDataStore.vacations.delete(vacation)
             currentWrite?.let { deleteIfPresent(application, it.shift.id) }
             application.notificationRuntime.reconcile()
         }
@@ -661,6 +735,8 @@ class NotificationAlarmEndToEndInstrumentedTest {
         val AVAILABILITY_SEED_SHIFT_ID: UUID = UUID.fromString("00000000-0000-0000-0000-000000000807")
         val AVAILABILITY_REVISION_ID: UUID = UUID.fromString("00000000-0000-0000-0000-000000000808")
         val REBUILD_SHIFT_ID: UUID = UUID.fromString("00000000-0000-0000-0000-000000000809")
+        val STARTUP_RECOVERY_SHIFT_ID: UUID =
+            UUID.fromString("00000000-0000-0000-0000-000000000810")
     }
 
     private data class RebuildFixture(

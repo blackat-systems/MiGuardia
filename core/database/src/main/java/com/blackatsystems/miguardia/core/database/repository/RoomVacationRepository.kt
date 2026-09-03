@@ -3,6 +3,7 @@ package com.blackatsystems.miguardia.core.database.repository
 import android.database.sqlite.SQLiteConstraintException
 import androidx.room.withTransaction
 import com.blackatsystems.miguardia.core.database.MiGuardiaV2Database
+import com.blackatsystems.miguardia.core.database.entity.VacationEntity
 import com.blackatsystems.miguardia.core.database.mapping.toDomain
 import com.blackatsystems.miguardia.core.database.mapping.toEntity
 import com.blackatsystems.miguardia.core.database.validation.validateRange
@@ -51,20 +52,23 @@ internal class RoomVacationRepository(
         }
     }
 
-    override suspend fun update(vacation: Vacation) {
-        val entity = vacation.validated().toEntity()
+    override suspend fun update(expected: Vacation, replacement: Vacation) {
+        val expectedEntity = expected.validated().toEntity()
+        val replacementEntity = replacement.validated().toEntity()
+        requireCompatibleUpdate(expectedEntity, replacementEntity)
         try {
             database.withTransaction {
-                val existing = dao.getById(entity.id)
-                    ?: throw InvalidLocalDataException("No existe el período de vacaciones solicitado.")
-                if (existing.createdAtEpochMillis != entity.createdAtEpochMillis) {
-                    throw ConflictingLocalWriteException(
-                        "El período de vacaciones cambió mientras se estaba editando.",
-                    )
+                val current = dao.getById(expectedEntity.id)
+                if (current != expectedEntity) {
+                    throw staleVacationConflict()
                 }
-                ensureNoConflicts(entity.startDate, entity.endDateInclusive, excludedId = entity.id)
-                if (dao.update(entity) == 0) {
-                    throw InvalidLocalDataException("No existe el período de vacaciones solicitado.")
+                ensureNoConflicts(
+                    replacementEntity.startDate,
+                    replacementEntity.endDateInclusive,
+                    excludedId = replacementEntity.id,
+                )
+                if (dao.update(replacementEntity) != 1) {
+                    throw staleVacationConflict()
                 }
             }
         } catch (error: SQLiteConstraintException) {
@@ -72,9 +76,38 @@ internal class RoomVacationRepository(
         }
     }
 
-    override suspend fun delete(id: UUID) {
-        dao.delete(id.toString())
+    override suspend fun delete(expected: Vacation) {
+        val expectedEntity = expected.validated().toEntity()
+        database.withTransaction {
+            val current = dao.getById(expectedEntity.id)
+            if (current != expectedEntity || dao.delete(expectedEntity.id) != 1) {
+                throw staleVacationConflict()
+            }
+        }
     }
+
+    private fun requireCompatibleUpdate(
+        expected: VacationEntity,
+        replacement: VacationEntity,
+    ) {
+        if (
+            replacement.id != expected.id ||
+            replacement.createdAtEpochMillis != expected.createdAtEpochMillis
+        ) {
+            throw ConflictingLocalWriteException(
+                "La identidad del período de vacaciones cambió mientras se estaba editando.",
+            )
+        }
+        if (replacement.updatedAtEpochMillis <= expected.updatedAtEpochMillis) {
+            throw InvalidLocalDataException(
+                "La modificación de vacaciones debe ser posterior a la versión observada.",
+            )
+        }
+    }
+
+    private fun staleVacationConflict() = ConflictingLocalWriteException(
+        "El período de vacaciones cambió mientras se estaba editando.",
+    )
 
     private suspend fun ensureNoConflicts(
         startDate: String,

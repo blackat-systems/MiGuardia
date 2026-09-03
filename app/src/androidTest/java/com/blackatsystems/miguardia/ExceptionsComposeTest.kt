@@ -5,7 +5,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -15,11 +18,17 @@ import com.blackatsystems.miguardia.core.domain.model.HolidayConflictPolicy
 import com.blackatsystems.miguardia.core.domain.model.Shift
 import com.blackatsystems.miguardia.core.domain.model.ShiftNote
 import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
+import com.blackatsystems.miguardia.core.domain.calendar.projectCalendarMonth
+import com.blackatsystems.miguardia.ui.MiGuardiaApp
+import com.blackatsystems.miguardia.ui.calendar.CalendarInteractionMode
+import com.blackatsystems.miguardia.ui.calendar.CalendarLoadState
+import com.blackatsystems.miguardia.ui.calendar.CalendarUiState
 import com.blackatsystems.miguardia.ui.exceptions.ExceptionsActions
 import com.blackatsystems.miguardia.ui.exceptions.ExceptionsSurface
 import com.blackatsystems.miguardia.ui.exceptions.ExceptionsSurfaceHost
 import com.blackatsystems.miguardia.ui.exceptions.ExceptionsUiState
 import com.blackatsystems.miguardia.ui.exceptions.HolidayDraft
+import com.blackatsystems.miguardia.ui.theme.MiGuardiaTheme
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
@@ -35,7 +44,7 @@ class ExceptionsComposeTest {
     val compose = createComposeRule()
 
     @Test
-    fun holidaysKeepMonthlyMultiSelectionAndLocalEditing() {
+    fun holidaysKeepMainCalendarSelectionAndLocalEditing() {
         val holiday = Holiday(UUID(0L, 1L), LocalDate.of(2026, 8, 17), "Feriado ficticio", NOW, NOW)
         var edited: Holiday? = null
         var saves: List<HolidayConflictPolicy?> = emptyList()
@@ -44,6 +53,7 @@ class ExceptionsComposeTest {
                 surface = ExceptionsSurface.HOLIDAYS,
                 holidayMonth = YearMonth.of(2026, 8),
                 holidays = listOf(holiday),
+                holidayDraft = HolidayDraft(datesText = "2026-08-17,2026-08-18"),
             ),
         )
         compose.setContent {
@@ -61,9 +71,8 @@ class ExceptionsComposeTest {
             }
         }
 
-        compose.onNodeWithContentDescription("lunes 17 Agosto de 2026, sin seleccionar").performClick()
-        compose.onNodeWithContentDescription("martes 18 Agosto de 2026, sin seleccionar").performClick()
-        compose.onNodeWithText("2 fechas seleccionadas.").assertExists()
+        compose.onNodeWithTag("holiday-date-selector").assertDoesNotExist()
+        compose.onNodeWithText("17/08/2026, 18/08/2026").assertExists()
         compose.onNodeWithText("Nombre opcional").performTextInput("Feriado manual")
         compose.onNodeWithText("Guardar feriado(s)").performScrollTo().performClick()
         compose.onNodeWithText("Feriado ficticio").assertExists()
@@ -76,6 +85,105 @@ class ExceptionsComposeTest {
             assertEquals(holiday, edited)
         }
         compose.onNodeWithText("Novedades").assertDoesNotExist()
+    }
+
+    @Test
+    fun holidayDateSelectionUsesTheOnlyMainMonthGrid() {
+        val month = YearMonth.of(2026, 8)
+        val first = LocalDate.of(2026, 8, 17)
+        val second = first.plusDays(1)
+        var calendar by mutableStateOf(calendarState(month))
+        var exceptions by mutableStateOf(
+            ExceptionsUiState(
+                surface = ExceptionsSurface.HOLIDAYS,
+                holidayMonth = month,
+            ),
+        )
+        val actions = ExceptionsActions(
+            beginHolidaySelection = { requestedMonth ->
+                exceptions = exceptions.copy(
+                    surface = ExceptionsSurface.NONE,
+                    holidayMonth = requestedMonth,
+                    holidaySelectionActive = true,
+                )
+            },
+            updateHolidaySelection = { requestedMonth, dates ->
+                exceptions = exceptions.copy(
+                    holidayMonth = requestedMonth,
+                    holidayDraft = exceptions.holidayDraft.copy(
+                        datesText = dates.sorted().joinToString(","),
+                    ),
+                )
+            },
+            confirmHolidaySelection = { requestedMonth, dates ->
+                exceptions = exceptions.copy(
+                    surface = ExceptionsSurface.HOLIDAYS,
+                    holidayMonth = requestedMonth,
+                    holidaySelectionActive = false,
+                    holidayDraft = exceptions.holidayDraft.copy(
+                        datesText = dates.sorted().joinToString(","),
+                    ),
+                )
+            },
+            cancelHolidaySelection = {
+                exceptions = exceptions.copy(
+                    surface = ExceptionsSurface.HOLIDAYS,
+                    holidaySelectionActive = false,
+                )
+            },
+        )
+        compose.setContent {
+            MiGuardiaTheme {
+                MiGuardiaApp(
+                    calendarState = calendar,
+                    onPreviousMonth = {},
+                    onNextMonth = {},
+                    onToday = {},
+                    onSelectDate = {},
+                    onDismissDate = {},
+                    onRetry = {},
+                    onEnterCalendarEditMode = {
+                        calendar = calendar.copy(
+                            interactionMode = CalendarInteractionMode.EDIT,
+                            editSelectedDates = emptySet(),
+                        )
+                    },
+                    onEditSelectionChange = { dates -> calendar = calendar.copy(editSelectedDates = dates) },
+                    onFinishCalendarEditMode = {
+                        calendar = calendar.copy(
+                            interactionMode = CalendarInteractionMode.VIEW,
+                            editSelectedDates = emptySet(),
+                        )
+                    },
+                    exceptionsState = exceptions,
+                    exceptionsActions = actions,
+                )
+            }
+        }
+
+        compose.onNodeWithTag("holiday-date-selector").assertDoesNotExist()
+        compose.onNodeWithTag("holiday-open-calendar-selection").performClick()
+        compose.waitForIdle()
+        compose.onAllNodesWithTag("month-grid").assertCountEquals(1)
+        compose.onNodeWithTag("holiday-calendar-selection").assertExists()
+        compose.onNodeWithTag("calendar-v2-load-shifts").assertDoesNotExist()
+        compose.onNodeWithTag("calendar-v2-repeat-shifts").assertDoesNotExist()
+        compose.onNodeWithTag("calendar-work-setup-action").assertDoesNotExist()
+
+        compose.onNodeWithTag("day-$first").performScrollTo().performClick()
+        compose.onNodeWithTag("day-$second").performScrollTo().performClick()
+        compose.onNodeWithText("2 fechas seleccionadas.").assertExists()
+        compose.onNodeWithContentDescription("seleccionado como feriado", substring = true)
+            .assertExists()
+        compose.onNodeWithTag("holiday-confirm-calendar-selection").performScrollTo().performClick()
+
+        compose.onNodeWithTag("holiday-date-selector").assertDoesNotExist()
+        compose.onNodeWithText("17/08/2026, 18/08/2026").assertExists()
+        compose.runOnIdle {
+            assertEquals(setOf(first, second), exceptions.holidayDraft.selectedDates)
+            assertEquals(CalendarInteractionMode.VIEW, calendar.interactionMode)
+            assertEquals(emptySet<LocalDate>(), calendar.editSelectedDates)
+        }
     }
 
     @Test
@@ -222,6 +330,19 @@ class ExceptionsComposeTest {
             sourceObjectiveId = UUID(0L, 11L),
             createdAt = NOW,
             updatedAt = NOW,
+        )
+
+        fun calendarState(month: YearMonth): CalendarUiState = CalendarUiState(
+            visibleMonth = month,
+            referenceInstant = NOW,
+            days = projectCalendarMonth(
+                month = month,
+                shifts = emptyList(),
+                explicitDayStatuses = emptyList(),
+                medicalLeaves = emptyList(),
+                now = NOW,
+            ),
+            loadState = CalendarLoadState.CONTENT,
         )
     }
 }

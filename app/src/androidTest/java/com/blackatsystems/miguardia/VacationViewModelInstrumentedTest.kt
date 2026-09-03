@@ -5,6 +5,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.blackatsystems.miguardia.core.domain.AppDefaults
 import com.blackatsystems.miguardia.core.domain.model.Vacation
+import com.blackatsystems.miguardia.core.domain.repository.ConflictingLocalWriteException
 import com.blackatsystems.miguardia.core.domain.repository.OverlappingVacationException
 import com.blackatsystems.miguardia.core.domain.repository.VacationMedicalLeaveConflictException
 import com.blackatsystems.miguardia.core.domain.repository.VacationRepository
@@ -101,6 +102,63 @@ class VacationViewModelInstrumentedTest {
         assertEquals(null, viewModel.uiState.value.errorMessage)
     }
 
+    @Test fun restoredEditUsesTheOriginalObservedSnapshotAndAdvancesMilliseconds() {
+        val repository = RecordingVacationRepository()
+        val original = vacation(
+            id = UUID.fromString("70000000-0000-0000-0000-000000000010"),
+            start = LocalDate.of(2026, 9, 1),
+            end = LocalDate.of(2026, 9, 3),
+            updatedAt = CLOCK.instant(),
+        )
+        repository.seed(original)
+        val handle = SavedStateHandle()
+        val first = VacationViewModel(repository, CLOCK, UUIDS, handle)
+        first.edit(original)
+        first.updateEndDate(LocalDate.of(2026, 9, 4))
+
+        val restored = VacationViewModel(repository, CLOCK, UUIDS, handle)
+        assertEquals(original, restored.uiState.value.draft.observedVacation)
+        restored.save()
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+
+        val (expected, replacement) = repository.updated.single()
+        assertEquals(original, expected)
+        assertEquals(LocalDate.of(2026, 9, 4), replacement.endDateInclusive)
+        assertEquals(CLOCK.instant().plusMillis(1), replacement.updatedAt)
+    }
+
+    @Test fun staleEditAndDeleteKeepTheirDraftOrConfirmationForAConsciousRetry() {
+        val repository = RecordingVacationRepository()
+        val original = vacation(
+            id = UUID.fromString("70000000-0000-0000-0000-000000000011"),
+            start = LocalDate.of(2026, 9, 5),
+            end = LocalDate.of(2026, 9, 7),
+            updatedAt = CLOCK.instant(),
+        )
+        repository.seed(original)
+        val edit = VacationViewModel(repository, CLOCK, UUIDS, SavedStateHandle())
+        edit.edit(original)
+        edit.updateEndDate(original.endDateInclusive.plusDays(1))
+        repository.failure = ConflictingLocalWriteException("cambio concurrente")
+        edit.save()
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+
+        assertEquals(VacationSurface.EDITOR, edit.uiState.value.surface)
+        assertEquals(original, edit.uiState.value.draft.observedVacation)
+        assertTrue(edit.uiState.value.errorMessage.orEmpty().contains("cambió"))
+
+        val deleteHandle = SavedStateHandle()
+        val firstDelete = VacationViewModel(repository, CLOCK, UUIDS, deleteHandle)
+        firstDelete.requestDelete(original)
+        val restoredDelete = VacationViewModel(repository, CLOCK, UUIDS, deleteHandle)
+        assertEquals(original, restoredDelete.uiState.value.pendingDelete)
+        restoredDelete.confirmDelete()
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+
+        assertEquals(original, restoredDelete.uiState.value.pendingDelete)
+        assertTrue(restoredDelete.uiState.value.errorMessage.orEmpty().contains("cambió"))
+    }
+
     private class EmptyVacationRepository : VacationRepository {
         override fun observeOverlapping(
             startDateInclusive: LocalDate,
@@ -112,14 +170,19 @@ class VacationViewModelInstrumentedTest {
 
         override suspend fun getById(id: UUID): Vacation? = null
         override suspend fun insert(vacation: Vacation) = Unit
-        override suspend fun update(vacation: Vacation) = Unit
-        override suspend fun delete(id: UUID) = Unit
+        override suspend fun update(expected: Vacation, replacement: Vacation) = Unit
+        override suspend fun delete(expected: Vacation) = Unit
     }
 
     private class RecordingVacationRepository : VacationRepository {
         private val observed = MutableStateFlow<List<Vacation>>(emptyList())
         val inserted = mutableListOf<Vacation>()
+        val updated = mutableListOf<Pair<Vacation, Vacation>>()
         var failure: Exception? = null
+
+        fun seed(vacation: Vacation) {
+            observed.value = listOf(vacation)
+        }
 
         override fun observeOverlapping(
             startDateInclusive: LocalDate,
@@ -136,13 +199,15 @@ class VacationViewModelInstrumentedTest {
             observed.value = observed.value + vacation
         }
 
-        override suspend fun update(vacation: Vacation) {
+        override suspend fun update(expected: Vacation, replacement: Vacation) {
             failure?.let { throw it }
-            observed.value = observed.value.map { if (it.id == vacation.id) vacation else it }
+            updated += expected to replacement
+            observed.value = observed.value.map { if (it.id == replacement.id) replacement else it }
         }
 
-        override suspend fun delete(id: UUID) {
-            observed.value = observed.value.filterNot { it.id == id }
+        override suspend fun delete(expected: Vacation) {
+            failure?.let { throw it }
+            observed.value = observed.value.filterNot { it.id == expected.id }
         }
     }
 
@@ -154,5 +219,18 @@ class VacationViewModelInstrumentedTest {
         val UUIDS = VacationUuidProvider {
             UUID.fromString("70000000-0000-0000-0000-000000000001")
         }
+
+        fun vacation(
+            id: UUID,
+            start: LocalDate,
+            end: LocalDate,
+            updatedAt: Instant,
+        ) = Vacation(
+            id = id,
+            startDate = start,
+            endDateInclusive = end,
+            createdAt = CLOCK.instant(),
+            updatedAt = updatedAt,
+        )
     }
 }

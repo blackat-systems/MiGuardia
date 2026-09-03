@@ -192,6 +192,7 @@ import com.blackatsystems.miguardia.reports.ReportsViewModel
 import com.blackatsystems.miguardia.ui.summary.SummaryUiState
 import com.blackatsystems.miguardia.ui.summary.SummaryViewModel
 import com.blackatsystems.miguardia.ui.exceptions.ExceptionsActions
+import com.blackatsystems.miguardia.ui.exceptions.HolidayCalendarSelectionContent
 import com.blackatsystems.miguardia.ui.exceptions.ExceptionsSurface
 import com.blackatsystems.miguardia.ui.exceptions.ExceptionsSurfaceHost
 import com.blackatsystems.miguardia.ui.exceptions.ExceptionsUiState
@@ -680,7 +681,9 @@ fun MiGuardiaApp(
     val v2ShiftActualActive = v2ShiftActualState.isBlocking
     val hoursAndExtrasActive = hoursAndExtrasState.isBlocking
     val availabilityActive = availabilityState.isBlocking
+    val holidaySelectionActive = exceptionsState.holidaySelectionActive
     val hasExternalBlockingSurface = exceptionsState.surface != ExceptionsSurface.NONE ||
+        holidaySelectionActive ||
         vacationState.surface != VacationSurface.NONE ||
         photosState.surface != PhotosSurface.NONE ||
         notificationState.surface != NotificationSurface.NONE ||
@@ -719,7 +722,9 @@ fun MiGuardiaApp(
         }
     }
     val displayedCalendarState = if (
-        !v2ManualLoadActive && calendarState.interactionMode == CalendarInteractionMode.EDIT
+        !v2ManualLoadActive &&
+        !holidaySelectionActive &&
+        calendarState.interactionMode == CalendarInteractionMode.EDIT
     ) {
         calendarState.copy(
             interactionMode = CalendarInteractionMode.VIEW,
@@ -780,6 +785,12 @@ fun MiGuardiaApp(
             destination = MainDestination.CALENDAR
         }
     }
+    LaunchedEffect(holidaySelectionActive) {
+        if (holidaySelectionActive) {
+            drawerState.snapTo(DrawerValue.Closed)
+            destination = MainDestination.CALENDAR
+        }
+    }
     LaunchedEffect(workSetupState.rootState) {
         v2ShiftEditActions.resume(workSetupState.rootState)
         v2RecurringActions.resume(workSetupState.rootState)
@@ -801,14 +812,34 @@ fun MiGuardiaApp(
             v2ManualShiftLoadActions.discardIncompatible()
         }
     }
-    LaunchedEffect(v2ManualLoadActive, calendarState.interactionMode) {
-        if (v2ManualLoadActive && calendarState.interactionMode == CalendarInteractionMode.VIEW) {
-            onEnterCalendarEditMode(null)
-        } else if (
+    LaunchedEffect(
+        v2ManualLoadActive,
+        holidaySelectionActive,
+        calendarState.visibleMonth,
+        calendarState.interactionMode,
+        calendarState.editSelectedDates,
+    ) {
+        when {
+            v2ManualLoadActive && calendarState.interactionMode == CalendarInteractionMode.VIEW -> {
+                onEnterCalendarEditMode(null)
+            }
+            holidaySelectionActive && calendarState.interactionMode == CalendarInteractionMode.VIEW -> {
+                val restoredDates = exceptionsState.holidayDraft.selectedDates
+                    .filterTo(linkedSetOf()) { YearMonth.from(it) == calendarState.visibleMonth }
+                onEnterCalendarEditMode(null)
+                if (restoredDates.isNotEmpty()) onEditSelectionChange(restoredDates)
+            }
+            holidaySelectionActive && calendarState.interactionMode == CalendarInteractionMode.EDIT -> {
+                exceptionsActions.updateHolidaySelection(
+                    calendarState.visibleMonth,
+                    calendarState.editSelectedDates,
+                )
+            }
             !v2ManualLoadActive &&
-            calendarState.interactionMode == CalendarInteractionMode.EDIT
-        ) {
-            onFinishCalendarEditMode()
+                !holidaySelectionActive &&
+                calendarState.interactionMode == CalendarInteractionMode.EDIT -> {
+                onFinishCalendarEditMode()
+            }
         }
     }
     LaunchedEffect(v2ManualShiftLoadState.successSequence) {
@@ -1036,6 +1067,8 @@ fun MiGuardiaApp(
                     hoursAndExtrasActions = hoursAndExtrasActions,
                     availabilityState = availabilityState,
                     availabilityActions = availabilityActions,
+                    holidaySelectionState = exceptionsState.takeIf { holidaySelectionActive },
+                    holidaySelectionActions = exceptionsActions,
                     onOpenPhotos = { photosActions.open(calendarState.visibleMonth) },
                     appZoom = appZoom,
                     needsFirstWorkSet = needsFirstWorkSet,
@@ -1110,6 +1143,10 @@ fun MiGuardiaApp(
                 onResumeEditSelection()
             }
         },
+    )
+    BackHandler(
+        enabled = destination == MainDestination.CALENDAR && holidaySelectionActive,
+        onBack = exceptionsActions.cancelHolidaySelection,
     )
     BackHandler(
         enabled = destination == MainDestination.SUMMARY && summaryState.hasSubsurface,
@@ -1442,6 +1479,8 @@ private fun CalendarScreen(
     hoursAndExtrasActions: HoursAndExtrasActions,
     availabilityState: AvailabilityUiState,
     availabilityActions: AvailabilityActions,
+    holidaySelectionState: ExceptionsUiState?,
+    holidaySelectionActions: ExceptionsActions,
     appZoom: AppZoom,
     needsFirstWorkSet: Boolean,
     onOpenWorkSetup: () -> Unit,
@@ -1471,6 +1510,10 @@ private fun CalendarScreen(
     var pendingMonthChange by rememberSaveable { mutableStateOf<String?>(null) }
     var showManualLoadDiscardConfirmation by rememberSaveable { mutableStateOf(false) }
     val v2ManualLoadOpen = v2ManualShiftLoadState.isActive
+    val activeHolidaySelectionState = holidaySelectionState?.takeIf {
+        it.holidaySelectionActive
+    }
+    val holidaySelectionOpen = activeHolidaySelectionState != null
     val v2DateSelectionOpen = v2ManualLoadOpen &&
         v2ManualShiftLoadState.stage == V2ManualShiftLoadStage.SELECT_DATES
     val v2CalendarSelectionReady = state.loadState == CalendarLoadState.CONTENT &&
@@ -1480,6 +1523,22 @@ private fun CalendarScreen(
         !state.editSelectionConfirmed &&
         !v2ManualShiftLoadState.isLoading &&
         !v2ManualShiftLoadState.isSaving
+    val changeEditSelection: (Set<LocalDate>) -> Unit = { requestedDates ->
+        val selectedDates = if (
+            activeHolidaySelectionState?.holidayDraft?.editingId != null &&
+            requestedDates.size > 1
+        ) {
+            val previousDates = state.editSelectedDates
+            val addedDate = (requestedDates - previousDates).firstOrNull()
+            addedDate?.let(::setOf) ?: requestedDates.sorted().take(1).toSet()
+        } else {
+            requestedDates
+        }
+        onEditSelectionChange(selectedDates)
+        if (holidaySelectionOpen) {
+            holidaySelectionActions.updateHolidaySelection(state.visibleMonth, selectedDates)
+        }
+    }
     val requestMonthChange: (String, () -> Unit) -> Unit = { key, action ->
         if (state.interactionMode == CalendarInteractionMode.EDIT && state.editSelectedDates.isNotEmpty()) {
             pendingMonthChange = key
@@ -1538,15 +1597,22 @@ private fun CalendarScreen(
                 }
                 if (state.interactionMode == CalendarInteractionMode.EDIT) {
                     Text(
-                        text = if (v2ManualLoadOpen) "Cargando jornadas" else "Editando calendario",
+                        text = when {
+                            v2ManualLoadOpen -> "Cargando jornadas"
+                            holidaySelectionOpen -> "Eligiendo feriados"
+                            else -> "Editando calendario"
+                        },
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.vigiliaColors.active,
                         modifier = Modifier.semantics {
-                            contentDescription = if (v2ManualLoadOpen) {
-                                "Cargando jornadas. Elegí los días y revisá antes de guardar."
-                            } else {
-                                "Editando calendario. Las acciones para modificar están habilitadas."
+                            contentDescription = when {
+                                v2ManualLoadOpen ->
+                                    "Cargando jornadas. Elegí los días y revisá antes de guardar."
+                                holidaySelectionOpen ->
+                                    "Eligiendo feriados en la grilla principal del Calendario."
+                                else ->
+                                    "Editando calendario. Las acciones para modificar están habilitadas."
                             }
                         },
                     )
@@ -1613,14 +1679,14 @@ private fun CalendarScreen(
                             onSelectDate = onSelectDate,
                             interactionMode = state.interactionMode,
                             selectedDates = state.editSelectedDates,
-                            onEditSelectionChange = onEditSelectionChange,
+                            onEditSelectionChange = changeEditSelection,
                             selectionEnabled = !v2ManualLoadOpen || v2DateSelectionInteractive,
                             selectionConfirmed = state.editSelectionConfirmed,
                             monthSwipeEnabled = !v2ManualLoadOpen || v2DateSelectionInteractive,
-                            selectedDateDescription = if (v2ManualLoadOpen) {
-                                "seleccionado para cargar jornadas"
-                            } else {
-                                "seleccionado para editar"
+                            selectedDateDescription = when {
+                                v2ManualLoadOpen -> "seleccionado para cargar jornadas"
+                                holidaySelectionOpen -> "seleccionado como feriado"
+                                else -> "seleccionado para editar"
                             },
                             shiftDescription = "jornada",
                             appZoom = appZoom,
@@ -1651,10 +1717,23 @@ private fun CalendarScreen(
                                 onResumeEditSelection()
                             },
                         )
+                    } else if (activeHolidaySelectionState != null) {
+                        HolidayCalendarSelectionContent(
+                            state = activeHolidaySelectionState,
+                            selectedDates = state.editSelectedDates,
+                            onConfirm = {
+                                holidaySelectionActions.confirmHolidaySelection(
+                                    state.visibleMonth,
+                                    state.editSelectedDates,
+                                )
+                            },
+                            onCancel = holidaySelectionActions.cancelHolidaySelection,
+                        )
                     }
                 }
 
                 if (state.interactionMode == CalendarInteractionMode.EDIT) {
+                    if (!holidaySelectionOpen) {
                         OutlinedButton(
                             onClick = {
                                 if (v2ManualLoadOpen) {
@@ -1667,58 +1746,54 @@ private fun CalendarScreen(
                             modifier = Modifier.fillMaxWidth(),
                         ) {
                             Text(
-                                when {
-                                    v2ManualLoadOpen -> "Cancelar carga"
-                                    else -> "Salir de edición"
-                                },
+                                if (v2ManualLoadOpen) "Cancelar carga" else "Salir de edición",
                             )
                         }
-                    } else {
-                        if (!needsFirstWorkSet) {
-                            Column(
-                                modifier = Modifier.helpAnchor(helpAnchors, HelpAnchor.LOAD_AND_REPEAT),
-                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                    }
+                } else if (!needsFirstWorkSet) {
+                    Column(
+                        modifier = Modifier.helpAnchor(helpAnchors, HelpAnchor.LOAD_AND_REPEAT),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Button(
+                            onClick = onStartV2ManualLoad,
+                            enabled = state.loadState == CalendarLoadState.CONTENT,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 56.dp)
+                                .testTag("calendar-v2-load-shifts"),
+                        ) {
+                            Text("Cargar jornadas")
+                        }
+                        AdvancedOptionsSection(
+                            initiallyExpanded = helpTourStep == HelpTourStep.LOAD_AND_REPEAT,
+                            help = ContextHelp(
+                                title = "Otras formas de organizarte",
+                                whatItDoes = "Permite repetir automáticamente un horario y cambiar la configuración de tus objetivos.",
+                                howToUseIt = "Abrí estas opciones sólo si necesitás crear muchas jornadas iguales o modificar tu forma de trabajar.",
+                                example = "Si trabajás todos los lunes y miércoles, elegí Repetir jornadas.",
+                            ),
+                        ) {
+                            OutlinedButton(
+                                onClick = onStartV2Recurring,
+                                enabled = state.loadState == CalendarLoadState.CONTENT,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(min = 56.dp)
+                                    .testTag("calendar-v2-repeat-shifts"),
                             ) {
-                                Button(
-                                    onClick = onStartV2ManualLoad,
-                                    enabled = state.loadState == CalendarLoadState.CONTENT,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .heightIn(min = 56.dp)
-                                        .testTag("calendar-v2-load-shifts"),
-                                ) {
-                                    Text("Cargar jornadas")
-                                }
-                                AdvancedOptionsSection(
-                                    initiallyExpanded = helpTourStep == HelpTourStep.LOAD_AND_REPEAT,
-                                    help = ContextHelp(
-                                        title = "Otras formas de organizarte",
-                                        whatItDoes = "Permite repetir automáticamente un horario y cambiar la configuración de tus objetivos.",
-                                        howToUseIt = "Abrí estas opciones sólo si necesitás crear muchas jornadas iguales o modificar tu forma de trabajar.",
-                                        example = "Si trabajás todos los lunes y miércoles, elegí Repetir jornadas.",
-                                    ),
-                                ) {
-                                    OutlinedButton(
-                                        onClick = onStartV2Recurring,
-                                        enabled = state.loadState == CalendarLoadState.CONTENT,
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .heightIn(min = 56.dp)
-                                            .testTag("calendar-v2-repeat-shifts"),
-                                    ) {
-                                        Text("Repetir jornadas")
-                                    }
-                                    OutlinedButton(
-                                        onClick = onOpenWorkSetup,
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .testTag("calendar-work-setup-action"),
-                                    ) {
-                                        Text("Mi forma de trabajar")
-                                    }
-                                }
+                                Text("Repetir jornadas")
+                            }
+                            OutlinedButton(
+                                onClick = onOpenWorkSetup,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("calendar-work-setup-action"),
+                            ) {
+                                Text("Mi forma de trabajar")
                             }
                         }
+                    }
                 }
             }
         }
@@ -1731,7 +1806,7 @@ private fun CalendarScreen(
             confirmButton = {
                 TextButton(onClick = {
                     pendingMonthChange = null
-                    onEditSelectionChange(emptySet())
+                    changeEditSelection(emptySet())
                     when (requested) {
                         "previous" -> onPreviousMonth()
                         "next" -> onNextMonth()

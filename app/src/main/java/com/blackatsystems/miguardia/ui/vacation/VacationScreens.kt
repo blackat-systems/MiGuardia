@@ -51,7 +51,6 @@ import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
-import java.util.UUID
 
 data class VacationActions(
     val openList: (YearMonth) -> Unit = {},
@@ -65,7 +64,7 @@ data class VacationActions(
     val requestBack: () -> Unit = {},
     val dismissDiscard: () -> Unit = {},
     val confirmDiscard: () -> Unit = {},
-    val requestDelete: (UUID) -> Unit = {},
+    val requestDelete: (Vacation) -> Unit = {},
     val dismissDelete: () -> Unit = {},
     val confirmDelete: () -> Unit = {},
     val retry: () -> Unit = {},
@@ -146,7 +145,7 @@ fun VacationSurfaceHost(
         )
     }
 
-    if (state.pendingDeleteId != null) {
+    if (state.pendingDelete != null) {
         AlertDialog(
             onDismissRequest = actions.dismissDelete,
             title = { Text("Eliminar vacaciones") },
@@ -234,7 +233,7 @@ private fun VacationCard(vacation: Vacation, actions: VacationActions) {
                 ) { Text("Editar") }
                 DestructiveAction(
                     label = "Eliminar",
-                    onClick = { actions.requestDelete(vacation.id) },
+                    onClick = { actions.requestDelete(vacation) },
                     modifier = Modifier.semantics {
                         contentDescription = "Eliminar vacaciones desde ${vacation.startDate.displayName()}"
                     },

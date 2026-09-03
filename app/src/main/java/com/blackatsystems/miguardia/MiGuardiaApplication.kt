@@ -155,6 +155,11 @@ class MiGuardiaApplication : Application() {
                 notificationDeferredActions.replay(notificationPreferences)
                 notificationRuntime.resumeAfterRestore()
                 notificationDeferredActions.replay(notificationPreferences)
+                if (startupRecoveryGate.isReady) {
+                    notificationDeferredActions.replayDeliveriesWithRetry(
+                        deliver = notificationRuntime::deliverNow,
+                    )
+                }
                 notificationRuntime.reconcileNow()
                 widgetDeferredActions.replay(widgetRuntime)
                 widgetRuntime.resumeAfterRestore()
@@ -163,6 +168,9 @@ class MiGuardiaApplication : Application() {
                     accessLockCoordinator.initializeAfterRecovery()
                     startupRecoveryGate.ready()
                     notificationDeferredActions.replay(notificationPreferences)
+                    notificationDeferredActions.replayDeliveriesWithRetry(
+                        deliver = notificationRuntime::deliverNow,
+                    )
                     notificationRuntime.reconcileNow()
                     widgetDeferredActions.replay(widgetRuntime)
                 }
@@ -188,6 +196,9 @@ class MiGuardiaApplication : Application() {
                     accessLockCoordinator.initializeAfterRecovery()
                     startupRecoveryGate.ready()
                     notificationDeferredActions.replay(notificationPreferences)
+                    notificationDeferredActions.replayDeliveriesWithRetry(
+                        deliver = notificationRuntime::deliverNow,
+                    )
                     notificationRuntime.reconcileNow()
                     widgetDeferredActions.replay(widgetRuntime)
                 }

@@ -12,10 +12,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.material3.Button
@@ -31,8 +27,11 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.res.stringResource
@@ -42,8 +41,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.blackatsystems.miguardia.R
 import com.blackatsystems.miguardia.ui.theme.vigiliaColors
-import java.time.LocalDate
-import java.time.YearMonth
 
 object MiGuardiaSpacing {
     val extraSmall = 4.dp
@@ -66,6 +63,7 @@ fun ScreenHeading(
     ) {
         Text(
             text = title,
+            modifier = Modifier.semantics { heading() },
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
         )
@@ -96,7 +94,7 @@ fun SurfaceHeader(
     ) {
         Text(
             text = title,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(1f).semantics { heading() },
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
         )
@@ -143,109 +141,6 @@ fun MonthNavigator(
                 onClick = onNext,
                 modifier = Modifier.semantics { contentDescription = nextDescription },
             ) { Text("›", style = MaterialTheme.typography.headlineSmall) }
-        }
-    }
-}
-
-@Composable
-fun SelectableMonthCalendar(
-    month: YearMonth,
-    selectedDates: Set<LocalDate>,
-    onToggleDate: (LocalDate) -> Unit,
-    monthLabel: String,
-    modifier: Modifier = Modifier,
-    testTag: String = "month-date-selector",
-    expandedDayLabels: Boolean = false,
-) {
-    val weekdayInitials = listOf("L", "M", "X", "J", "V", "S", "D")
-    val weekdayNames = listOf("lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo")
-    val cellSize = if (expandedDayLabels) 50.dp else 42.dp
-    val leadingEmptyCells = month.atDay(1).dayOfWeek.value - 1
-    val cells = List(leadingEmptyCells) { null } +
-        (1..month.lengthOfMonth()).map(month::atDay)
-    Box(
-        modifier
-            .fillMaxWidth()
-            .then(
-                if (expandedDayLabels) {
-                    Modifier
-                } else {
-                    Modifier.horizontalScroll(rememberScrollState())
-                },
-            )
-            .testTag(testTag),
-    ) {
-        Column(
-            modifier = if (expandedDayLabels) Modifier.fillMaxWidth() else Modifier.width(322.dp),
-            verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.extraSmall),
-        ) {
-            Row(Modifier.fillMaxWidth()) {
-                weekdayInitials.forEach { label ->
-                    Text(
-                        text = label,
-                        modifier = Modifier.weight(1f),
-                        textAlign = TextAlign.Center,
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold,
-                    )
-                }
-            }
-            cells.chunked(7).forEach { week ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = if (expandedDayLabels) Arrangement.Start else Arrangement.SpaceBetween,
-                ) {
-                    week.forEach { date ->
-                        Box(
-                            modifier = if (expandedDayLabels) Modifier.weight(1f) else Modifier,
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            if (date == null) {
-                                Spacer(Modifier.size(cellSize))
-                            } else {
-                                val selected = date in selectedDates
-                                val weekdayIndex = date.dayOfWeek.value - 1
-                                Box(
-                                    modifier = Modifier
-                                        .size(cellSize)
-                                        .background(
-                                            if (selected) {
-                                                MaterialTheme.colorScheme.primaryContainer
-                                            } else {
-                                                MaterialTheme.colorScheme.surface
-                                            },
-                                            CircleShape,
-                                        )
-                                        .semantics {
-                                            contentDescription =
-                                                "${weekdayNames[weekdayIndex]} ${date.dayOfMonth} $monthLabel, ${if (selected) "seleccionado" else "sin seleccionar"}"
-                                            role = Role.Button
-                                        }
-                                        .clickable { onToggleDate(date) },
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    Text(
-                                        text = if (expandedDayLabels) {
-                                            "${date.dayOfMonth}${weekdayInitials[weekdayIndex]}"
-                                        } else {
-                                            date.dayOfMonth.toString()
-                                        },
-                                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-                                    )
-                                }
-                            }
-                        }
-                    }
-                    repeat(7 - week.size) {
-                        Box(
-                            modifier = if (expandedDayLabels) Modifier.weight(1f) else Modifier,
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Spacer(Modifier.size(cellSize))
-                        }
-                    }
-                }
-            }
         }
     }
 }
@@ -384,7 +279,9 @@ fun PersistentMessage(
     onRetry: (() -> Unit)? = null,
 ) {
     Surface(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth().semantics {
+            liveRegion = LiveRegionMode.Assertive
+        },
         color = MaterialTheme.colorScheme.errorContainer,
         contentColor = MaterialTheme.colorScheme.onErrorContainer,
         shape = MaterialTheme.shapes.medium,

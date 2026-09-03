@@ -8,10 +8,12 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.CreationExtras
 import com.blackatsystems.miguardia.core.domain.AppDefaults
 import com.blackatsystems.miguardia.core.domain.model.Vacation
+import com.blackatsystems.miguardia.core.domain.repository.ConflictingLocalWriteException
 import com.blackatsystems.miguardia.core.domain.repository.OverlappingVacationException
 import com.blackatsystems.miguardia.core.domain.repository.VacationMedicalLeaveConflictException
 import com.blackatsystems.miguardia.core.domain.repository.VacationRepository
 import java.time.Clock
+import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
 import java.util.UUID
@@ -44,15 +46,20 @@ class VacationViewModel(
         ?: VacationSurface.NONE
     private val initialDraft = VacationDraft(
         editingId = savedStateHandle.get<String>(EDITING_ID_KEY)?.let(UUID::fromString),
+        observedVacation = restoreVacation(OBSERVED_EDIT_PREFIX),
         startDate = savedStateHandle.get<String>(START_DATE_KEY)?.let(LocalDate::parse),
         endDateInclusive = savedStateHandle.get<String>(END_DATE_KEY)?.let(LocalDate::parse),
         isDirty = savedStateHandle[DIRTY_KEY] ?: false,
-    )
+    ).let { draft ->
+        if (draft.editingId == draft.observedVacation?.id) draft
+        else draft.copy(observedVacation = null)
+    }
     private val _uiState = MutableStateFlow(
         VacationUiState(
             surface = initialSurface,
             visibleMonth = initialMonth,
             draft = initialDraft,
+            pendingDelete = restoreVacation(PENDING_DELETE_PREFIX),
         ),
     )
     val uiState: StateFlow<VacationUiState> = _uiState
@@ -87,6 +94,7 @@ class VacationViewModel(
         setDraft(
             VacationDraft(
                 editingId = vacation.id,
+                observedVacation = vacation,
                 startDate = vacation.startDate,
                 endDateInclusive = vacation.endDateInclusive,
             ),
@@ -112,20 +120,21 @@ class VacationViewModel(
         if (end.isBefore(start)) {
             return showError("La fecha final no puede ser anterior a la inicial.")
         }
+        val expected = draft.observedVacation
+        if (draft.editingId != null && expected == null) {
+            return showError("No pudimos recuperar la versión que estabas editando. Volvé a abrir el período.")
+        }
         launchWrite {
-            val now = clock.instant()
-            val existing = draft.editingId?.let { repository.getById(it) }
-            if (draft.editingId != null && existing == null) {
-                return@launchWrite showError("Ese período ya no existe. Volvé a intentarlo.")
-            }
+            val now = normalizedInstant(clock.instant())
             val vacation = Vacation(
-                id = existing?.id ?: uuidProvider.newUuid(),
+                id = expected?.id ?: uuidProvider.newUuid(),
                 startDate = start,
                 endDateInclusive = end,
-                createdAt = existing?.createdAt ?: now,
-                updatedAt = now,
+                createdAt = expected?.createdAt ?: now,
+                updatedAt = expected?.let { nextUpdateInstant(it.updatedAt, now) } ?: now,
             )
-            if (existing == null) repository.insert(vacation) else repository.update(vacation)
+            if (expected == null) repository.insert(vacation)
+            else repository.update(expected, vacation)
             clearDraft()
             setSurface(VacationSurface.LIST)
             _uiState.update { it.copy(infoMessage = "Vacaciones guardadas.") }
@@ -154,15 +163,23 @@ class VacationViewModel(
         setSurface(VacationSurface.LIST)
     }
 
-    fun requestDelete(id: UUID) = _uiState.update { it.copy(pendingDeleteId = id) }
-    fun dismissDelete() = _uiState.update { it.copy(pendingDeleteId = null) }
+    fun requestDelete(vacation: Vacation) {
+        saveVacation(PENDING_DELETE_PREFIX, vacation)
+        _uiState.update { it.copy(pendingDelete = vacation) }
+    }
+
+    fun dismissDelete() {
+        clearVacation(PENDING_DELETE_PREFIX)
+        _uiState.update { it.copy(pendingDelete = null) }
+    }
 
     fun confirmDelete() {
-        val id = _uiState.value.pendingDeleteId ?: return
+        val expected = _uiState.value.pendingDelete ?: return
         launchWrite {
-            repository.delete(id)
+            repository.delete(expected)
+            clearVacation(PENDING_DELETE_PREFIX)
             _uiState.update {
-                it.copy(pendingDeleteId = null, infoMessage = "Período eliminado.")
+                it.copy(pendingDelete = null, infoMessage = "Período eliminado.")
             }
         }
     }
@@ -173,11 +190,12 @@ class VacationViewModel(
         _uiState.update {
             it.copy(
                 showDiscardConfirmation = false,
-                pendingDeleteId = null,
+                pendingDelete = null,
                 errorMessage = null,
                 infoMessage = null,
             )
         }
+        clearVacation(PENDING_DELETE_PREFIX)
     }
 
     fun retry() = observeMonth(_uiState.value.visibleMonth)
@@ -220,6 +238,10 @@ class VacationViewModel(
                     showError("Ese período se superpone con otras vacaciones existentes.")
                 } catch (_: VacationMedicalLeaveConflictException) {
                     showError("Las vacaciones no pueden superponerse con una carpeta médica.")
+                } catch (_: ConflictingLocalWriteException) {
+                    showError(
+                        "Este período cambió desde que lo abriste. No se guardó nada; volvé a abrirlo para continuar.",
+                    )
                 } catch (error: CancellationException) {
                     throw error
                 } catch (_: Exception) {
@@ -245,6 +267,8 @@ class VacationViewModel(
         savedStateHandle[START_DATE_KEY] = draft.startDate?.toString()
         savedStateHandle[END_DATE_KEY] = draft.endDateInclusive?.toString()
         savedStateHandle[DIRTY_KEY] = draft.isDirty
+        if (draft.observedVacation == null) clearVacation(OBSERVED_EDIT_PREFIX)
+        else saveVacation(OBSERVED_EDIT_PREFIX, draft.observedVacation)
         _uiState.update { it.copy(draft = draft, showDiscardConfirmation = false) }
     }
 
@@ -253,8 +277,48 @@ class VacationViewModel(
         savedStateHandle.remove<String>(START_DATE_KEY)
         savedStateHandle.remove<String>(END_DATE_KEY)
         savedStateHandle[DIRTY_KEY] = false
+        clearVacation(OBSERVED_EDIT_PREFIX)
         _uiState.update { it.copy(draft = VacationDraft(), showDiscardConfirmation = false) }
     }
+
+    private fun restoreVacation(prefix: String): Vacation? = runCatching {
+        Vacation(
+            id = UUID.fromString(savedStateHandle.get<String>("$prefix.id") ?: return null),
+            startDate = LocalDate.parse(
+                savedStateHandle.get<String>("$prefix.startDate") ?: return null,
+            ),
+            endDateInclusive = LocalDate.parse(
+                savedStateHandle.get<String>("$prefix.endDateInclusive") ?: return null,
+            ),
+            createdAt = Instant.parse(
+                savedStateHandle.get<String>("$prefix.createdAt") ?: return null,
+            ),
+            updatedAt = Instant.parse(
+                savedStateHandle.get<String>("$prefix.updatedAt") ?: return null,
+            ),
+        )
+    }.getOrNull()
+
+    private fun saveVacation(prefix: String, vacation: Vacation) {
+        savedStateHandle["$prefix.id"] = vacation.id.toString()
+        savedStateHandle["$prefix.startDate"] = vacation.startDate.toString()
+        savedStateHandle["$prefix.endDateInclusive"] = vacation.endDateInclusive.toString()
+        savedStateHandle["$prefix.createdAt"] = vacation.createdAt.toString()
+        savedStateHandle["$prefix.updatedAt"] = vacation.updatedAt.toString()
+    }
+
+    private fun clearVacation(prefix: String) {
+        savedStateHandle.remove<String>("$prefix.id")
+        savedStateHandle.remove<String>("$prefix.startDate")
+        savedStateHandle.remove<String>("$prefix.endDateInclusive")
+        savedStateHandle.remove<String>("$prefix.createdAt")
+        savedStateHandle.remove<String>("$prefix.updatedAt")
+    }
+
+    private fun normalizedInstant(value: Instant): Instant = Instant.ofEpochMilli(value.toEpochMilli())
+
+    private fun nextUpdateInstant(previous: Instant, now: Instant): Instant =
+        maxOf(now, Instant.ofEpochMilli(Math.addExact(previous.toEpochMilli(), 1L)))
 
     class Factory(
         private val repository: VacationRepository,
@@ -280,5 +344,7 @@ class VacationViewModel(
         const val START_DATE_KEY = "vacation.startDate"
         const val END_DATE_KEY = "vacation.endDate"
         const val DIRTY_KEY = "vacation.dirty"
+        const val OBSERVED_EDIT_PREFIX = "vacation.observedEdit"
+        const val PENDING_DELETE_PREFIX = "vacation.pendingDelete"
     }
 }

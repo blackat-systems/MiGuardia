@@ -10,6 +10,7 @@ enum class VacationSurface { NONE, LIST, EDITOR }
 
 data class VacationDraft(
     val editingId: UUID? = null,
+    val observedVacation: Vacation? = null,
     val startDate: LocalDate? = null,
     val endDateInclusive: LocalDate? = null,
     val isDirty: Boolean = false,
@@ -32,7 +33,7 @@ data class VacationUiState(
     val isLoading: Boolean = false,
     val isSaving: Boolean = false,
     val showDiscardConfirmation: Boolean = false,
-    val pendingDeleteId: UUID? = null,
+    val pendingDelete: Vacation? = null,
     val errorMessage: String? = null,
     val infoMessage: String? = null,
 )

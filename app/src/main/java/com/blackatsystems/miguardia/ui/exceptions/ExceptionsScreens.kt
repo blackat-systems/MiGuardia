@@ -30,6 +30,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.blackatsystems.miguardia.core.domain.model.Holiday
@@ -38,18 +39,15 @@ import com.blackatsystems.miguardia.core.domain.model.Shift
 import com.blackatsystems.miguardia.core.domain.model.ShiftNote
 import com.blackatsystems.miguardia.ui.components.DestructiveAction
 import com.blackatsystems.miguardia.ui.components.EmptyState
-import com.blackatsystems.miguardia.ui.components.MonthNavigator
 import com.blackatsystems.miguardia.ui.components.PersistentMessage
 import com.blackatsystems.miguardia.ui.components.PrimaryAction
 import com.blackatsystems.miguardia.ui.components.ScreenHeading
 import com.blackatsystems.miguardia.ui.components.SectionCard
-import com.blackatsystems.miguardia.ui.components.SelectableMonthCalendar
 import com.blackatsystems.miguardia.ui.components.SurfaceHeader
 import com.blackatsystems.miguardia.ui.components.TransientConfirmation
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
-import java.time.format.TextStyle
 import java.util.Locale
 import java.util.UUID
 
@@ -57,8 +55,10 @@ data class ExceptionsActions(
     val openHolidays: (YearMonth) -> Unit = {},
     val openNotes: (Shift) -> Unit = {},
     val close: () -> Unit = {},
-    val previousHolidayMonth: () -> Unit = {},
-    val nextHolidayMonth: () -> Unit = {},
+    val beginHolidaySelection: (YearMonth) -> Unit = {},
+    val updateHolidaySelection: (YearMonth, Set<LocalDate>) -> Unit = { _, _ -> },
+    val confirmHolidaySelection: (YearMonth, Set<LocalDate>) -> Unit = { _, _ -> },
+    val cancelHolidaySelection: () -> Unit = {},
     val updateHolidayDraft: ((HolidayDraft) -> HolidayDraft) -> Unit = {},
     val editHoliday: (Holiday) -> Unit = {},
     val cancelHolidayEdit: () -> Unit = {},
@@ -78,8 +78,10 @@ data class ExceptionsActions(
             openHolidays = viewModel::openHolidays,
             openNotes = viewModel::openNotes,
             close = viewModel::close,
-            previousHolidayMonth = viewModel::showPreviousHolidayMonth,
-            nextHolidayMonth = viewModel::showNextHolidayMonth,
+            beginHolidaySelection = viewModel::beginHolidaySelection,
+            updateHolidaySelection = viewModel::updateHolidaySelection,
+            confirmHolidaySelection = viewModel::confirmHolidaySelection,
+            cancelHolidaySelection = viewModel::cancelHolidaySelection,
             updateHolidayDraft = viewModel::updateHolidayDraft,
             editHoliday = viewModel::editHoliday,
             cancelHolidayEdit = viewModel::cancelHolidayEdit,
@@ -173,53 +175,34 @@ fun ExceptionsSurfaceHost(
 @Composable
 private fun HolidayContent(state: ExceptionsUiState, actions: ExceptionsActions) {
     var pendingDelete by rememberSaveable { mutableStateOf<String?>(null) }
-    val selectedDates = state.holidayDraft.datesText.toSelectedDates()
+    val selectedDates = state.holidayDraft.selectedDates
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        MonthNavigator(
-            monthLabel = state.holidayMonth.label(),
-            previousDescription = "Mes anterior de feriados",
-            nextDescription = "Mes siguiente de feriados",
-            onPrevious = actions.previousHolidayMonth,
-            onNext = actions.nextHolidayMonth,
-        )
         SectionCard(
-            title = if (state.holidayDraft.editingId == null) "Elegí los feriados" else "Cambiá la fecha",
-            supportingText = if (state.holidayDraft.editingId == null) {
-                "Tocá una o varias fechas del calendario."
-            } else {
-                "Al editar, solo puede quedar una fecha seleccionada."
-            },
+            title = if (state.holidayDraft.editingId == null) "Fechas del feriado" else "Fecha del feriado",
+            supportingText = "Las fechas se eligen en el Calendario principal.",
         ) {
-            SelectableMonthCalendar(
-                month = state.holidayMonth,
-                selectedDates = selectedDates,
-                onToggleDate = { date ->
-                    val updatedDates = if (state.holidayDraft.editingId != null) {
-                        if (date in selectedDates) emptySet() else setOf(date)
-                    } else if (date in selectedDates) {
-                        selectedDates - date
-                    } else {
-                        selectedDates + date
-                    }
-                    actions.updateHolidayDraft {
-                        it.copy(datesText = updatedDates.sorted().joinToString(","))
-                    }
-                },
-                monthLabel = state.holidayMonth.label(),
-                testTag = "holiday-date-selector",
-            )
             Text(
                 text = when (selectedDates.size) {
-                    0 -> "Todavía no elegiste ninguna fecha."
-                    1 -> "1 fecha seleccionada."
-                    else -> "${selectedDates.size} fechas seleccionadas."
+                    0 -> "Todavía no elegiste fechas."
+                    1 -> selectedDates.single().numericDisplayName()
+                    else -> selectedDates.sorted().joinToString { it.numericDisplayName() }
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.testTag("holiday-selected-dates-summary"),
             )
+            OutlinedButton(
+                onClick = { actions.beginHolidaySelection(state.holidayMonth) },
+                enabled = !state.isSaving,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("holiday-open-calendar-selection"),
+            ) {
+                Text(if (selectedDates.isEmpty()) "Elegir fechas en el Calendario" else "Cambiar fechas en el Calendario")
+            }
         }
         OutlinedTextField(
             value = state.holidayDraft.name,
@@ -315,6 +298,53 @@ private fun HolidayContent(state: ExceptionsUiState, actions: ExceptionsActions)
 }
 
 @Composable
+fun HolidayCalendarSelectionContent(
+    state: ExceptionsUiState,
+    selectedDates: Set<LocalDate>,
+    onConfirm: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    val editing = state.holidayDraft.editingId != null
+    state.errorMessage?.let { message ->
+        PersistentMessage(message = message)
+    }
+    SectionCard(
+        title = if (editing) "Elegí la nueva fecha" else "Elegí los feriados",
+        supportingText = if (editing) {
+            "Tocá una fecha de esta grilla. La fecha anterior queda seleccionada hasta que elijas otra."
+        } else {
+            "Tocá una o varias fechas de esta grilla mensual. Después podés agregarles un nombre."
+        },
+        modifier = Modifier.testTag("holiday-calendar-selection"),
+    ) {
+        Text(
+            text = when (selectedDates.size) {
+                0 -> "Todavía no elegiste ninguna fecha."
+                1 -> "1 fecha seleccionada."
+                else -> "${selectedDates.size} fechas seleccionadas."
+            },
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        PrimaryAction(
+            label = "Continuar",
+            onClick = onConfirm,
+            enabled = selectedDates.isNotEmpty() && !state.isSaving,
+            modifier = Modifier.testTag("holiday-confirm-calendar-selection"),
+        )
+        OutlinedButton(
+            onClick = onCancel,
+            enabled = !state.isSaving,
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag("holiday-cancel-calendar-selection"),
+        ) {
+            Text("Volver a Feriados")
+        }
+    }
+}
+
+@Composable
 private fun NotesContent(state: ExceptionsUiState, actions: ExceptionsActions) {
     val shift = state.selectedShift ?: return
     var pendingDelete by rememberSaveable { mutableStateOf<String?>(null) }
@@ -402,19 +432,6 @@ private fun ConfirmDeleteDialog(
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } },
     )
 }
-
-private fun YearMonth.label(): String {
-    val locale = Locale.forLanguageTag("es-AR")
-    val monthName = month.getDisplayName(TextStyle.FULL, locale).replaceFirstChar { it.titlecase(locale) }
-    return "$monthName de $year"
-}
-
-private fun String.toSelectedDates(): Set<LocalDate> =
-    split(',', ';', '\n')
-        .map(String::trim)
-        .filter(String::isNotEmpty)
-        .mapNotNull { runCatching { LocalDate.parse(it) }.getOrNull() }
-        .toCollection(linkedSetOf())
 
 private fun LocalDate.holidayDisplayName(): String {
     val locale = Locale.forLanguageTag("es-AR")

@@ -66,6 +66,59 @@ class ExceptionsCoordinatorTest {
     }
 
     @Test
+    fun mainCalendarSelectionAndDraftSurviveRecreationUntilSaveSucceeds() {
+        val persisted = mutableListOf<ExceptionsPersistedState>()
+        val coordinator = coordinator(persist = persisted::add)
+
+        coordinator.updateHolidayDraft { it.copy(name = "Feriado ficticio") }
+        coordinator.beginHolidaySelection(MONTH)
+        coordinator.updateHolidaySelection(MONTH, setOf(DATE, DATE.plusDays(1)))
+
+        val restored = coordinator(initial = persisted.last())
+        assertTrue(restored.uiState.value.holidaySelectionActive)
+        assertEquals(ExceptionsSurface.NONE, restored.uiState.value.surface)
+        assertEquals(setOf(DATE, DATE.plusDays(1)), restored.uiState.value.holidayDraft.selectedDates)
+        assertEquals("Feriado ficticio", restored.uiState.value.holidayDraft.name)
+
+        restored.confirmHolidaySelection(MONTH, restored.uiState.value.holidayDraft.selectedDates)
+        assertFalse(restored.uiState.value.holidaySelectionActive)
+        assertEquals(ExceptionsSurface.HOLIDAYS, restored.uiState.value.surface)
+
+        restored.saveHolidays()
+        assertEquals(HolidayDraft(), restored.uiState.value.holidayDraft)
+    }
+
+    @Test
+    fun failedSaveKeepsSelectedDatesAndNameForRetry() {
+        val holidays = FakeHolidayRepository().apply {
+            failure = IllegalStateException("Fallo ficticio")
+        }
+        val coordinator = coordinator(holidays = holidays)
+        coordinator.updateHolidayDraft {
+            it.copy(datesText = DATE.toString(), name = "Nombre conservado")
+        }
+
+        coordinator.saveHolidays()
+
+        assertEquals(setOf(DATE), coordinator.uiState.value.holidayDraft.selectedDates)
+        assertEquals("Nombre conservado", coordinator.uiState.value.holidayDraft.name)
+        assertEquals("Fallo ficticio", coordinator.uiState.value.errorMessage)
+    }
+
+    @Test
+    fun editingAHolidayReturnsToMainCalendarWithOneSelectedDate() {
+        val holiday = Holiday(uuid(1), DATE, "Existente", NOW, NOW)
+        val coordinator = coordinator(holidays = FakeHolidayRepository(listOf(holiday)))
+
+        coordinator.editHoliday(holiday)
+
+        assertTrue(coordinator.uiState.value.holidaySelectionActive)
+        assertEquals(ExceptionsSurface.NONE, coordinator.uiState.value.surface)
+        assertEquals(setOf(DATE), coordinator.uiState.value.holidayDraft.selectedDates)
+        assertEquals("Existente", coordinator.uiState.value.holidayDraft.name)
+    }
+
+    @Test
     fun suspendedBatchRejectsDoubleSaveCloseAndSurfaceReplacement() = runBlocking {
         val holidays = FakeHolidayRepository()
         val gate = CompletableDeferred<Unit>()
@@ -169,6 +222,7 @@ private class FakeHolidayRepository(initial: List<Holiday> = emptyList()) : Holi
     val mutations = mutableListOf<HolidayBatchMutation>()
     var gate: CompletableDeferred<Unit>? = null
     var applyCalls: Int = 0
+    var failure: Exception? = null
 
     override fun observeBetween(
         startDateInclusive: LocalDate,
@@ -193,6 +247,7 @@ private class FakeHolidayRepository(initial: List<Holiday> = emptyList()) : Holi
     override suspend fun applyBatch(mutation: HolidayBatchMutation) {
         applyCalls++
         gate?.await()
+        failure?.let { throw it }
         mutations += mutation
     }
 }

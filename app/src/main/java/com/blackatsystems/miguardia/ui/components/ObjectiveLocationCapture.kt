@@ -38,14 +38,14 @@ import androidx.core.location.LocationManagerCompat
 import androidx.core.net.toUri
 import java.io.IOException
 import java.util.Locale
+import java.util.concurrent.Executors
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 
 @Composable
 fun ObjectiveLocationCapture(
@@ -345,35 +345,74 @@ internal suspend fun geocodeObjectiveAddress(
     require(query.isNotEmpty())
     if (!Geocoder.isPresent()) return null
     val geocoder = Geocoder(context.applicationContext, Locale.forLanguageTag("es-AR"))
-    val addresses = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        suspendCancellableCoroutine { continuation ->
-            try {
-                geocoder.getFromLocationName(
-                    query,
-                    1,
-                    object : Geocoder.GeocodeListener {
-                        override fun onGeocode(addresses: List<Address>) {
-                            if (continuation.isActive) continuation.resume(addresses)
-                        }
-
-                        override fun onError(errorMessage: String?) {
-                            if (continuation.isActive) {
-                                continuation.resumeWithException(
-                                    IOException(errorMessage ?: "El servicio de direcciones no respondió."),
-                                )
+    val addresses = boundedObjectiveLocationLookup {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            suspendCancellableCoroutine { continuation ->
+                try {
+                    geocoder.getFromLocationName(
+                        query,
+                        1,
+                        object : Geocoder.GeocodeListener {
+                            override fun onGeocode(addresses: List<Address>) {
+                                if (continuation.isActive) continuation.resume(addresses)
                             }
-                        }
-                    },
-                )
+
+                            override fun onError(errorMessage: String?) {
+                                if (continuation.isActive) {
+                                    continuation.resumeWithException(
+                                        IOException(errorMessage ?: "El servicio de direcciones no respondió."),
+                                    )
+                                }
+                            }
+                        },
+                    )
+                } catch (error: Exception) {
+                    if (continuation.isActive) continuation.resumeWithException(error)
+                }
+            }
+        } else {
+            @Suppress("DEPRECATION")
+            boundedBlockingObjectiveLocationLookup {
+                geocoder.getFromLocationName(query, 1).orEmpty()
+            }
+        }
+    }
+    return addresses.firstNotNullOfOrNull(Address::toGeocodedObjectiveLocation)
+}
+
+internal suspend fun <T> boundedObjectiveLocationLookup(
+    timeoutMillis: Long = OBJECTIVE_LOCATION_LOOKUP_TIMEOUT_MILLIS,
+    lookup: suspend () -> T,
+): T {
+    require(timeoutMillis > 0L)
+    return withTimeoutOrNull(timeoutMillis) { lookup() }
+        ?: throw IOException("El servicio de direcciones tardó demasiado en responder.")
+}
+
+/**
+ * Keeps the legacy synchronous Geocoder call outside structured coroutine work. Some OEM Binder
+ * implementations ignore thread interruption; the caller must still regain control at the timeout.
+ */
+internal suspend fun <T> boundedBlockingObjectiveLocationLookup(
+    timeoutMillis: Long = OBJECTIVE_LOCATION_LOOKUP_TIMEOUT_MILLIS,
+    lookup: () -> T,
+): T = boundedObjectiveLocationLookup(timeoutMillis) {
+    suspendCancellableCoroutine { continuation ->
+        val task = legacyObjectiveLocationExecutor.submit {
+            try {
+                val result = lookup()
+                if (continuation.isActive) continuation.resume(result)
             } catch (error: Exception) {
                 if (continuation.isActive) continuation.resumeWithException(error)
             }
         }
-    } else {
-        @Suppress("DEPRECATION")
-        withContext(Dispatchers.IO) { geocoder.getFromLocationName(query, 1).orEmpty() }
+        continuation.invokeOnCancellation { task.cancel(true) }
     }
-    return addresses.firstNotNullOfOrNull(Address::toGeocodedObjectiveLocation)
+}
+
+private const val OBJECTIVE_LOCATION_LOOKUP_TIMEOUT_MILLIS = 10_000L
+private val legacyObjectiveLocationExecutor = Executors.newFixedThreadPool(2) { task ->
+    Thread(task, "miguardia-address-lookup").apply { isDaemon = true }
 }
 
 private fun Address.toGeocodedObjectiveLocation(): GeocodedObjectiveLocation? {

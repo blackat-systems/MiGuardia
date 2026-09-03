@@ -55,14 +55,14 @@ class VacationPersistenceInstrumentedTest {
             endDateInclusive = LocalDate.of(2026, 9, 3),
             updatedAt = NOW.plusSeconds(1),
         )
-        store.vacations.update(edited)
+        store.vacations.update(original, edited)
         assertEquals(edited, store.vacations.getById(original.id))
 
         store.close()
         openStore()
         assertEquals(edited, store.vacations.getById(original.id))
 
-        store.vacations.delete(original.id)
+        store.vacations.delete(edited)
         assertNull(store.vacations.getById(original.id))
     }
 
@@ -84,11 +84,14 @@ class VacationPersistenceInstrumentedTest {
         store.vacations.insert(second)
 
         val selfEdit = first.copy(endDateInclusive = LocalDate.of(2026, 8, 6), updatedAt = NOW.plusSeconds(1))
-        store.vacations.update(selfEdit)
+        store.vacations.update(first, selfEdit)
         assertEquals(selfEdit, store.vacations.getById(first.id))
 
         assertSuspendThrows<OverlappingVacationException> {
-            store.vacations.update(selfEdit.copy(endDateInclusive = second.startDate, updatedAt = NOW.plusSeconds(2)))
+            store.vacations.update(
+                selfEdit,
+                selfEdit.copy(endDateInclusive = second.startDate, updatedAt = NOW.plusSeconds(2)),
+            )
         }
         assertEquals(selfEdit, store.vacations.getById(first.id))
     }
@@ -106,7 +109,7 @@ class VacationPersistenceInstrumentedTest {
             ).first().isEmpty(),
         )
 
-        store.vacations.delete(vacation.id)
+        store.vacations.delete(vacation)
         val leave = leave(32, LocalDate.of(2026, 8, 20), LocalDate.of(2026, 8, 22))
         store.medicalLeaves.create(leave)
         assertSuspendThrows<VacationMedicalLeaveConflictException> {
@@ -123,6 +126,7 @@ class VacationPersistenceInstrumentedTest {
 
         assertSuspendThrows<VacationMedicalLeaveConflictException> {
             store.vacations.update(
+                vacation,
                 vacation.copy(endDateInclusive = leave.startDate, updatedAt = NOW.plusSeconds(1)),
             )
         }
@@ -145,19 +149,76 @@ class VacationPersistenceInstrumentedTest {
         assertSuspendThrows<InvalidVacationRangeException> {
             store.vacations.insert(vacation(40, LocalDate.of(2026, 8, 2), LocalDate.of(2026, 8, 1)))
         }
-        assertSuspendThrows<InvalidLocalDataException> {
+        val missing = vacation(42, LocalDate.of(2026, 8, 4), LocalDate.of(2026, 8, 5))
+        assertSuspendThrows<ConflictingLocalWriteException> {
             store.vacations.update(
-                vacation(42, LocalDate.of(2026, 8, 4), LocalDate.of(2026, 8, 5)),
+                missing,
+                missing.copy(updatedAt = NOW.plusMillis(1)),
             )
         }
         val valid = vacation(41, LocalDate.of(2026, 8, 2), LocalDate.of(2026, 8, 3))
         store.vacations.insert(valid)
         assertSuspendThrows<ConflictingLocalWriteException> {
             store.vacations.update(
+                valid,
                 valid.copy(createdAt = NOW.plusSeconds(1), updatedAt = NOW.plusSeconds(2)),
             )
         }
         assertEquals(valid, store.vacations.getById(valid.id))
+    }
+
+    @Test fun staleUpdateCannotOverwriteANewerVacationSnapshot() = runBlocking {
+        val original = vacation(50, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 3))
+        store.vacations.insert(original)
+        val winner = original.copy(
+            endDateInclusive = LocalDate.of(2026, 9, 4),
+            updatedAt = NOW.plusMillis(1),
+        )
+        store.vacations.update(original, winner)
+
+        assertSuspendThrows<ConflictingLocalWriteException> {
+            store.vacations.update(
+                original,
+                original.copy(
+                    startDate = LocalDate.of(2026, 9, 2),
+                    updatedAt = NOW.plusMillis(2),
+                ),
+            )
+        }
+
+        assertEquals(winner, store.vacations.getById(original.id))
+    }
+
+    @Test fun staleDeleteCannotRemoveANewerVacationSnapshot() = runBlocking {
+        val original = vacation(51, LocalDate.of(2026, 9, 10), LocalDate.of(2026, 9, 12))
+        store.vacations.insert(original)
+        val winner = original.copy(
+            endDateInclusive = LocalDate.of(2026, 9, 13),
+            updatedAt = NOW.plusMillis(1),
+        )
+        store.vacations.update(original, winner)
+
+        assertSuspendThrows<ConflictingLocalWriteException> {
+            store.vacations.delete(original)
+        }
+
+        assertEquals(winner, store.vacations.getById(original.id))
+        store.vacations.delete(winner)
+        assertNull(store.vacations.getById(original.id))
+    }
+
+    @Test fun updateRequiresANewMillisecondVersionWithoutPartialMutation() = runBlocking {
+        val original = vacation(52, LocalDate.of(2026, 9, 20), LocalDate.of(2026, 9, 22))
+        store.vacations.insert(original)
+
+        assertSuspendThrows<InvalidLocalDataException> {
+            store.vacations.update(
+                original,
+                original.copy(endDateInclusive = LocalDate.of(2026, 9, 23)),
+            )
+        }
+
+        assertEquals(original, store.vacations.getById(original.id))
     }
 
     private fun openStore() {

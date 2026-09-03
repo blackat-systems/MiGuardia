@@ -147,7 +147,7 @@ class VacationComposeTest {
         composeRule.onNodeWithText("Editar").performClick()
         composeRule.runOnIdle {
             assertEquals(1, edits)
-            state = state.copy(vacations = emptyList(), pendingDeleteId = vacation.id)
+            state = state.copy(vacations = emptyList(), pendingDelete = vacation)
         }
         composeRule.onNodeWithText("Eliminar vacaciones").assertExists()
         composeRule.onNodeWithText("Eliminar").performClick()

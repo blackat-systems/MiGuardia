@@ -20,7 +20,14 @@ data class HolidayDraft(
     val name: String = "",
     val conflictDates: Set<LocalDate> = emptySet(),
     val pendingPolicy: HolidayConflictPolicy? = null,
-)
+) {
+    val selectedDates: Set<LocalDate>
+        get() = datesText.split(',', ';', '\n')
+            .map(String::trim)
+            .filter(String::isNotEmpty)
+            .mapNotNull { raw -> runCatching { LocalDate.parse(raw) }.getOrNull() }
+            .toCollection(linkedSetOf())
+}
 
 data class NoteDraft(
     val editingId: UUID? = null,
@@ -30,6 +37,7 @@ data class NoteDraft(
 data class ExceptionsUiState(
     val surface: ExceptionsSurface = ExceptionsSurface.NONE,
     val holidayMonth: YearMonth = YearMonth.now(),
+    val holidaySelectionActive: Boolean = false,
     val holidays: List<Holiday> = emptyList(),
     val selectedShift: Shift? = null,
     val notes: List<ShiftNote> = emptyList(),

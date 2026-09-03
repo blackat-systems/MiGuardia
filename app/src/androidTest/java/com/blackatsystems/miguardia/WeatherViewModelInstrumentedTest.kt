@@ -269,8 +269,9 @@ class WeatherViewModelTest {
         override fun observeEndingOnOrAfter(dateInclusive: LocalDate): Flow<List<Vacation>> = emptyFlow()
         override suspend fun getById(id: UUID): Vacation? = null
         override suspend fun insert(vacation: Vacation) = error("No debe escribir")
-        override suspend fun update(vacation: Vacation) = error("No debe escribir")
-        override suspend fun delete(id: UUID) = error("No debe escribir")
+        override suspend fun update(expected: Vacation, replacement: Vacation) =
+            error("No debe escribir")
+        override suspend fun delete(expected: Vacation) = error("No debe escribir")
     }
 
     private companion object {

@@ -5,14 +5,19 @@ import android.content.Intent
 import android.net.Uri
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.blackatsystems.miguardia.core.domain.notification.NotificationBoundaryIdentity
+import com.blackatsystems.miguardia.core.domain.notification.NotificationBoundaryType
 import com.blackatsystems.miguardia.notifications.ShiftAlarmReceiver
-import com.blackatsystems.miguardia.notifications.processQueuedDismissalsUnderMutationGate
+import com.blackatsystems.miguardia.notifications.processQueuedNotificationActionsUnderMutationGate
+import java.io.IOException
+import java.time.Instant
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -78,7 +83,7 @@ class NotificationDeferredActionsInstrumentedTest {
         application.localDataMutationGate.withExclusiveMutation {
             application.notificationDeferredActions.enqueueDismissal(EVENT_KEY)
             receiverWork = async(start = CoroutineStart.UNDISPATCHED) {
-                processQueuedDismissalsUnderMutationGate(application)
+                processQueuedNotificationActionsUnderMutationGate(application)
             }
 
             assertTrue(application.notificationDeferredActions.hasPendingActions())
@@ -99,7 +104,92 @@ class NotificationDeferredActionsInstrumentedTest {
         assertFalse(application.notificationDeferredActions.hasPendingActions())
     }
 
+    @Test
+    fun deliveryDuringStartupRecoveryIsQueuedAndReplayedExactlyOnce() = runBlocking {
+        val identity = pendingDeliveryIdentity()
+
+        ShiftAlarmReceiver().onReceive(context, boundaryIntent(identity))
+
+        assertTrue(application.notificationDeferredActions.hasPendingActions())
+        assertEquals(
+            setOf(identity.opaqueKey),
+            context.getSharedPreferences("notification_deferred_actions", Context.MODE_PRIVATE)
+                .getStringSet("pending_deliveries", emptySet()),
+        )
+        val delivered = mutableListOf<NotificationBoundaryIdentity>()
+        assertTrue(
+            application.notificationDeferredActions.replayDeliveries { delivered += it },
+        )
+        assertTrue(
+            application.notificationDeferredActions.replayDeliveries { delivered += it },
+        )
+
+        assertEquals(listOf(identity), delivered)
+        assertFalse(application.notificationDeferredActions.hasPendingActions())
+    }
+
+    @Test
+    fun transientDeliveryFailureRemainsQueuedUntilAReplaySucceeds() = runBlocking {
+        val identity = pendingDeliveryIdentity()
+        application.notificationDeferredActions.enqueueDelivery(identity.opaqueKey)
+        var attempts = 0
+
+        assertFalse(
+            application.notificationDeferredActions.replayDeliveries {
+                attempts += 1
+                throw IOException("fallo transitorio ficticio")
+            },
+        )
+        assertTrue(application.notificationDeferredActions.hasPendingActions())
+        assertTrue(
+            application.notificationDeferredActions.replayDeliveries {
+                attempts += 1
+                assertEquals(identity, it)
+            },
+        )
+
+        assertEquals(2, attempts)
+        assertFalse(application.notificationDeferredActions.hasPendingActions())
+    }
+
+    @Test
+    fun boundedReplayRetriesATransientFailureAndClearsTheQueue() = runBlocking {
+        val identity = pendingDeliveryIdentity()
+        application.notificationDeferredActions.enqueueDelivery(identity.opaqueKey)
+        var attempts = 0
+
+        assertTrue(
+            application.notificationDeferredActions.replayDeliveriesWithRetry(
+                maxAttempts = 2,
+                retryDelayMillis = 0L,
+            ) {
+                attempts += 1
+                if (attempts == 1) throw IOException("fallo transitorio ficticio")
+                assertEquals(identity, it)
+            },
+        )
+
+        assertEquals(2, attempts)
+        assertFalse(application.notificationDeferredActions.hasPendingActions())
+    }
+
+    private fun pendingDeliveryIdentity() = NotificationBoundaryIdentity(
+        shiftId = DELIVERY_SHIFT_ID,
+        type = NotificationBoundaryType.START,
+        triggerAt = Instant.parse("2026-09-03T12:00:00Z"),
+    )
+
+    private fun boundaryIntent(identity: NotificationBoundaryIdentity): Intent =
+        Intent(ShiftAlarmReceiver.ACTION_DELIVER_BOUNDARY).setData(
+            Uri.Builder()
+                .scheme("miguardia")
+                .authority("shift-alarm")
+                .appendQueryParameter("boundary", identity.opaqueKey)
+                .build(),
+        )
+
     private companion object {
         const val EVENT_KEY = "shift:11111111-1111-4111-8111-111111111111"
+        val DELIVERY_SHIFT_ID = java.util.UUID.fromString("22222222-2222-4222-8222-222222222222")
     }
 }
