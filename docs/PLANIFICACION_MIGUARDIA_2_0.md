@@ -574,7 +574,7 @@ Después del checkpoint y la auditoría del núcleo laboral, la hoja de ruta
 continúa con:
 
 1. widget basado en el motor final de próximo evento —cerrado por MAIN; Samsung
-   verde, API 26/API 33 pendientes de compatibilidad—;
+   API 36, Android 8/API 26 y Android 13/API 33 verdes—;
 2. informes locales de jornadas y horas —cerrado por MAIN; batería local y
    Samsung API 36 verdes—;
 3. copias y restauración locales seguras —cerradas por MAIN; batería local y
@@ -584,14 +584,16 @@ continúa con:
 5. Ayuda y recorrido inicial reescritos para la interfaz 2.0 definitiva,
    incluidos en el candidato compartido junto con simplificación, ubicación
    puntual, clima por objetivo y Room V6 —cerrado e integrado por MAIN en
-   `95ebf531`; API 26/API 33 pendientes—;
+   `95ebf531`; incluido en el candidato cuya matriz dirigida de compatibilidad
+   API 26/API 33 se cerró posteriormente—;
 6. integración y depuración de esos cambios de último momento mediante
    `INTEGRACION_Y_DEPURACION_DE_CAMBIOS_DE_ULTIMO_MOMENTO_V2.md` —707/707 JVM,
    351/351 tareas, Room 123/123 y matriz dirigida Samsung 30/30 verdes;
    checkpoint `95ebf531`—;
 7. auditoría de la aplicación completa y emisión de un candidato local
    —cerrada con 712/712 JVM, 351/351 tareas, revisión independiente sin findings
-   P0–P3 y matriz final Samsung API 36 de 42/42; API 26/API 33 pendientes—.
+   P0–P3 y matrices verdes en Samsung API 36, Android 8/API 26 y Android
+   13/API 33—.
 
 La decisión de Joaquin del 2026-08-23 reemplaza la apertura automática de esa
 cadena: MAIN recomienda el siguiente bloque, pero sólo prepara su prompt o abre
@@ -622,8 +624,12 @@ batería final pasó 707/707 JVM, lint sin errores y 351/351 tareas. Room V6 pas
 en `95ebf531`. La auditoría final posterior cerró defectos de concurrencia,
 arranque, Calendario, accesibilidad, timeout y vocabulario, incorporó el ícono
 adaptativo y pasó 712/712 JVM y 351/351 tareas. La matriz final afectada en
-Samsung API 36 pasó 42/42; API 26 y API 33 continúan como evidencia de
-compatibilidad pendiente.
+Samsung API 36 pasó 42/42. La matriz posterior cerró Android 8/API 26 con Room
+126/126 y aplicación 28/28, y Android 13/API 33 con Room 126/126 y aplicación
+55/55. La revisión real descubrió y corrigió el empaquetado del ícono base para
+API 26 y una carrera de preparación de una prueba Room. El checkpoint técnico
+es `3e0b0bcdcd7a8dfe856f4dd786ec5e936cc4cb37`. API 37, una alarma exacta real
+y el reinicio físico conservan puertas separadas.
 
 ## 21. Idea futura guardada: agenda profesional
 

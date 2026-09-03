@@ -223,3 +223,17 @@ Samsung principal. No debe llamarse publicable hasta resolver o aceptar
 explícitamente la compatibilidad pendiente en API 26/API 33 y revisar nuevamente
 el estado Git resultante. Un eventual push, tag, Release o uso de producción
 requiere una decisión separada de Joaquin.
+
+## Cierre posterior
+
+La compatibilidad que esta auditoría dejó pendiente fue ejecutada después sobre
+el mismo candidato. Android 8/API 26 y Android 13/API 33 quedaron verdes; la
+evidencia, los defectos encontrados y sus correcciones están registrados en
+`docs/audits/2026-09-03-compatibilidad-api26-api33-candidato-local-v2.md`.
+
+La ejecución real en API 26 demostró que la intención documentada en este cierre
+no bastaba: el par adaptativo base no se resolvía y Android mostraba el ícono
+genérico. El empaquetado fue corregido y verificado en el checkpoint técnico
+`3e0b0bcdcd7a8dfe856f4dd786ec5e936cc4cb37`. El veredicto histórico de esta
+auditoría se conserva sin reescribirlo; la auditoría posterior es la fuente
+vigente para esas dos APIs.

@@ -22,11 +22,14 @@
   ícono adaptativo quedó en `381c342c630d8e5ee999ee3afadc25994f3642d8` y los
   cierres funcionales finales en `f25d097acea37fc6b4126db39e6dbdb0ad793921`;
   las correcciones de pruebas físicas quedaron en
-  `d9c927eb87a50bf9d6cf6a38c7f9e5d10216309a`.
+  `d9c927eb87a50bf9d6cf6a38c7f9e5d10216309a` y el cierre técnico de
+  compatibilidad en `3e0b0bcdcd7a8dfe856f4dd786ec5e936cc4cb37`.
   La batería fresca pasó 712/712 JVM y 351/351 tareas; una revisión independiente
   no dejó findings P0–P3 abiertos.
-- **Puerta física:** Samsung API 36 cerrado con 42/42 pruebas instrumentadas y
-  revisión directa del ícono/Calendario. API 26 y API 33 continúan pendientes.
+- **Matriz Android:** Samsung físico API 36 cerrado con 42/42 pruebas
+  instrumentadas; emulador Android 8/API 26 con Room 126/126 y aplicación
+  28/28; emulador Android 13/API 33 con Room 126/126 y aplicación 55/55. API 37
+  continúa como puerta separada.
 - **Commits locales:** MAIN los crea automáticamente como checkpoints de
   bloques comprobados.
 - **Push puntual anterior de la rama 2.0:** ejecutado y verificado hasta
@@ -100,11 +103,11 @@ prevalecen para el estado operativo.
 | `PROXIMO_EVENTO_Y_NOTIFICACIONES_V2.md` | **CERRADO** | Una sola verdad V2 para la tarjeta y los avisos de jornadas o disponibilidad, auditada y verificada por MAIN |
 | `AUDITORIA_INTEGRAL_DEL_NUCLEO_Y_COMPATIBILIDAD_ANDROID_V2.md` | **CERRADO** | El núcleo aprobó la batería, las tres barreras y la matriz Samsung API 36, Android 8/API 26 y Android 13/API 33 |
 | `PRUEBAS_CRUZADAS_DEL_NUCLEO_V2.md` | **CERRADO** | Las tres barreras quedaron auditadas: fotografía transversal, carrera CAS real y demostración de que consultar no escribe |
-| `WIDGET_DE_PROXIMO_EVENTO_V2.md` | **CERRADO** | Widget nativo auditado y verificado por MAIN en Samsung API 36; API 26/API 33 quedan como compatibilidad pendiente |
+| `WIDGET_DE_PROXIMO_EVENTO_V2.md` | **CERRADO** | Widget nativo auditado en Samsung API 36 y cubierto después por la matriz verde Android 8/API 26 y Android 13/API 33 |
 | `INFORMES_LOCALES_DE_JORNADAS_Y_HORAS_V2.md` | **CERRADO** | PDF y XLSX locales derivados de Horas/Resumen, auditados y verificados por MAIN en Samsung API 36 |
 | `COPIAS_Y_RESTAURACION_LOCALES_SEGURAS_V2.md` | **CERRADO** | Copia lógica completa, cifrado opcional, vista previa y restauración consciente auditadas por MAIN; Samsung API 36 verde dentro de la matriz autorizada |
-| `BLOQUEO_DE_ACCESO_LOCAL_V2.md` | **CERRADO** | Puerta opcional con biometría fuerte o credencial segura del teléfono, plazos conscientes y privacidad de Recientes sin PIN propio; auditada y verificada por MAIN en Samsung API 36, con API 26/API 33 y revisión visual OEM de Recientes pendientes |
-| `AYUDA_Y_RECORRIDO_INICIAL_V2.md` | **CERRADO DENTRO DEL CANDIDATO INTEGRAL** | Su implementación fue revisada junto con simplificación, ubicación, clima, Room V6 y Copias; local y Samsung API 36 verdes |
+| `BLOQUEO_DE_ACCESO_LOCAL_V2.md` | **CERRADO** | Puerta opcional con biometría fuerte o credencial segura del teléfono, plazos conscientes y privacidad de Recientes sin PIN propio; auditada en Samsung API 36 y cubierta después por la matriz API 26/API 33; revisión visual OEM de Recientes pendiente |
+| `AYUDA_Y_RECORRIDO_INICIAL_V2.md` | **CERRADO DENTRO DEL CANDIDATO INTEGRAL** | Su implementación fue revisada junto con simplificación, ubicación, clima, Room V6 y Copias; quedó incluida en el candidato cuya matriz dirigida cerró Samsung API 36 y los emuladores API 26/API 33 |
 | `INTEGRACION_Y_DEPURACION_DE_CAMBIOS_DE_ULTIMO_MOMENTO_V2.md` | **CERRADO E INTEGRADO** | MAIN cerró defectos reproducibles, obtuvo 707/707 JVM, 351/351 tareas, Room 123/123 y matriz dirigida Samsung 30/30; checkpoint `95ebf531`; no reejecutar |
 
 ## Contratos históricos de MiGuardia 1.0
@@ -173,8 +176,8 @@ Joaquin indicó que quiere preparar o abrir la siguiente:
       `AUDITORIA_INTEGRAL_DEL_NUCLEO_Y_COMPATIBILIDAD_ANDROID_V2.md` con
       veredicto `NÚCLEO APTO PARA SEGUNDA CAPA`.
 17. **Cerrado:** Widget de próximo evento mediante
-    `WIDGET_DE_PROXIMO_EVENTO_V2.md`; Samsung API 36 verde, API 26/API 33
-    pendientes de compatibilidad.
+    `WIDGET_DE_PROXIMO_EVENTO_V2.md`; Samsung API 36, Android 8/API 26 y Android
+    13/API 33 verdes.
 18. **Cerrado:** Informes locales de jornadas y horas mediante
     `INFORMES_LOCALES_DE_JORNADAS_Y_HORAS_V2.md`; local y Samsung API 36 verdes.
 19. **Cerrado:** copias y restauración locales seguras mediante
@@ -189,10 +192,10 @@ Joaquin indicó que quiere preparar o abrir la siguiente:
     depuración mediante
     `INTEGRACION_Y_DEPURACION_DE_CAMBIOS_DE_ULTIMO_MOMENTO_V2.md`; 707/707 JVM,
     351/351 tareas y Samsung API 36 verdes; checkpoint `95ebf531`.
-23. **Cerrado por MAIN en local y Samsung:** auditoría de la aplicación completa
-    y emisión del candidato local; 712/712 JVM, 351/351 tareas, revisión
-    independiente sin findings P0–P3 y matriz final Samsung API 36 de 42/42.
-    API 26 y API 33 siguen como compatibilidad pendiente.
+23. **Cerrado por MAIN:** auditoría de la aplicación completa y emisión del
+    candidato local; 712/712 JVM, 351/351 tareas, revisión independiente sin
+    findings P0–P3, Samsung API 36 de 42/42, Android 8/API 26 con Room 126/126 y
+    aplicación 28/28, y Android 13/API 33 con Room 126/126 y aplicación 55/55.
 
 Cuando Joaquin pide un prompt, MAIN lo habilita en este índice después de cerrar
 su contrato y dependencias, y crea automáticamente el checkpoint documental

@@ -20,11 +20,13 @@ global ejecutada desde cero pasó 712/712 pruebas JVM y 351/351 tareas; lint
 quedó sin errores y las variantes Debug, QA, Release y ambos AndroidTest
 compilaron. Una revisión independiente final no dejó findings P0–P3 abiertos.
 Las correcciones de las pruebas encontradas durante la matriz física quedaron
-confirmadas en `d9c927eb87a50bf9d6cf6a38c7f9e5d10216309a`.
-El resultado es **CANDIDATO LOCAL AUDITADO — SAMSUNG API 36 VERDE;
-COMPATIBILIDAD API 26/API 33 PENDIENTE**. La matriz final afectada pasó 42/42
-en el Samsung y el ícono adaptativo quedó verificado bajo One UI. API 26 y API
-33 continúan pendientes antes de un candidato publicable.
+confirmadas en `d9c927eb87a50bf9d6cf6a38c7f9e5d10216309a`. La matriz
+posterior de compatibilidad cerró sus correcciones técnicas en
+`3e0b0bcdcd7a8dfe856f4dd786ec5e936cc4cb37`.
+El resultado es **CANDIDATO LOCAL AUDITADO — SAMSUNG API 36, ANDROID 8/API 26
+Y ANDROID 13/API 33 VERDES**. Además de las 42/42 del Samsung, API 26 pasó
+Room 126/126 y aplicación 28/28; API 33 pasó Room 126/126 y aplicación 55/55.
+API 37 conserva una puerta separada antes de un candidato publicable.
 
 MAIN 2.0 está reactivada para recibir los handoffs que Joaquin entregue,
 auditarlos, integrarlos, probarlos y cerrarlos. Joaquin decide cuándo pedir el
@@ -66,8 +68,9 @@ confirmado con 27 tablas, 0 vistas, 2 consultas de preparación y migración
 explícita `5→6`; pasó 123/123 en el Samsung después del arreglo. La matriz
 dirigida posterior pasó 30/30 y el recorrido real cubrió permiso aproximado,
 Geocoder, ubicación por objetivo, Fotos, SAF, Informes, notificaciones y
-autenticación del dispositivo. API 26 y API 33 permanecen como compatibilidad
-pendiente.
+autenticación del dispositivo. La matriz posterior cerró también API 26 y API
+33 sobre el candidato integral; su evidencia se registra en la auditoría de
+compatibilidad del 2026-09-03.
 
 Decisión de producto del 2026-08-23: MiGuardia 1.0 fue una prueba interna sin
 usuarios y continúa únicamente como base de código. MiGuardia 2.0 no migra datos
@@ -92,6 +95,8 @@ está registrada en
 `docs/audits/2026-09-03-integracion-y-depuracion-cambios-ultimo-momento-v2-main.md`.
 La auditoría integral final y el estado del candidato local están registrados en
 `docs/audits/2026-09-03-auditoria-final-aplicacion-y-candidato-local-v2.md`.
+El cierre posterior de Android 8/API 26 y Android 13/API 33 está registrado en
+`docs/audits/2026-09-03-compatibilidad-api26-api33-candidato-local-v2.md`.
 La separación entre continuidad de código y ausencia de migración de datos V1
 está registrada en `docs/adr/0024-continuidad-de-codigo-sin-migracion-de-datos-v1.md`
 y auditada en
@@ -1443,6 +1448,38 @@ estado sintético resultante sin otra limpieza al cierre. Producción permaneci�
 ausente e intacta. No se disparó una alarma exacta real ni se reinició el
 Samsung.
 
+## Compatibilidad Android 8/API 26 y Android 13/API 33 — cerrada
+
+MAIN ejecutó la matriz pendiente sobre los dos emuladores autorizados, con
+paquetes QA y datos ficticios controlados, y el mismo candidato.
+Android 8/API 26 pasó Room 126/126 y una matriz de aplicación 28/28. El recorrido
+real cubrió el Geocoder legado con una dirección pública ficticia, la
+configuración inicial y el ícono de MiGuardia. La revisión detectó que Android 8
+recibía el robot genérico porque el par adaptativo base no quedaba empaquetado
+para esa API; los recursos se calificaron explícitamente en `mipmap-anydpi-v26`
+y se agregó una prueba que resuelve ambos íconos en toda API soportada.
+
+Android 13/API 33 pasó Room 126/126 y una matriz de aplicación 55/55. Se
+verificaron permiso aproximado denegado, retorno desde Ajustes, captura puntual
+de ciudad mediante proveedor de prueba del emulador, Geocoder asíncrono,
+notificaciones denegadas y concedidas, interruptor global, fallback inexacto
+sin disparar una alarma exacta y el ícono monocromático real del launcher. Una
+primera corrida Room 125/126 expuso una carrera en la preparación de una prueba;
+se reemplazó el `yield()` por una barrera de observación real, el caso pasó cinco
+veces aislado y la suite completa quedó verde.
+
+La batería local completa posterior pasó nuevamente 712/712 JVM y 351/351
+tareas, lint con 0 errores y seis avisos de actualización fuera del cambio. Una
+auditoría independiente aprobó los cambios sin findings P0–P3. El checkpoint
+técnico es `3e0b0bcdcd7a8dfe856f4dd786ec5e936cc4cb37`.
+
+Al cerrar, los paquetes QA y de prueba fueron retirados de ambos emuladores y
+las instancias quedaron apagadas. El permiso de ubicación simulada del shell,
+el acceso especial de alarmas y los íconos temáticos volvieron a sus estados
+anteriores. El Samsung conectado no fue usado y producción no fue consultada ni
+modificada. API 37, una alarma exacta real y el reinicio físico siguen siendo
+puertas separadas.
+
 ## Flujo vigente de MAIN
 
 - Joaquin entrega un handoff o pide preparar el prompt de una nueva tarea;
@@ -1484,12 +1521,12 @@ posteriores.
   diagnósticos, tratamientos ni evoluciones. Psicología requeriría aprobar por
   separado la ampliación del catálogo actual de cuatro sectores;
 - monetización y distribución;
-- segunda capa ordenada: Widget —cerrado por MAIN; Samsung verde, API 26/API 33
-  pendientes de compatibilidad—, Informes —cerrado por MAIN; local y Samsung
+- segunda capa ordenada: Widget —cerrado por MAIN; Samsung API 36, Android
+  8/API 26 y Android 13/API 33 verdes—, Informes —cerrado por MAIN; local y Samsung
   API 36 verdes—, Copias y restauración —cerrado por MAIN; local y Samsung API
   36 verdes dentro de la matriz autorizada—, Bloqueo —cerrado por MAIN; local y
   Samsung API 36 verdes— y Ayuda/últimos cambios —candidato integral verde en
-  local y Samsung API 36, con API 26/API 33 pendientes—;
+  local, Samsung API 36, Android 8/API 26 y Android 13/API 33—;
 - terminación de identidad visual y tipografías definitivas; el ícono adaptativo
   de la aplicación ya está integrado.
 
@@ -1509,11 +1546,11 @@ checkpoints locales. La auditoría completa terminó con 712/712 pruebas JVM,
 como **CANDIDATO LOCAL AUDITADO**.
 
 La puerta Samsung API 36 del mismo candidato quedó cerrada con 42/42 pruebas
-instrumentadas y revisión directa del ícono y del Calendario. Quedan API 26 para
-compatibilidad heredada del Geocoder y API 33 para permisos e ícono monocromático.
-Después corresponde decidir si esas dos puertas se ejecutan o se aceptan como
-pendientes antes de un candidato publicable. El push, el disparo de alarma exacta
-y el reinicio real continúan siendo autorizaciones independientes.
+instrumentadas y revisión directa del ícono y del Calendario. La compatibilidad
+pendiente quedó cerrada después en Android 8/API 26 —Room 126/126 y aplicación
+28/28— y Android 13/API 33 —Room 126/126 y aplicación 55/55—, incluyendo
+Geocoder, permisos modernos e ícono monocromático. El push, el disparo de alarma
+exacta real y el reinicio físico continúan siendo autorizaciones independientes.
 
 API 37 también conserva una puerta separada para el candidato publicable. Los
 pushes autorizados para disponibilidad, Calendario final y Resumen fueron

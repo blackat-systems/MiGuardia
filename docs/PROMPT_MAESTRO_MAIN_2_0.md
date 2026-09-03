@@ -165,7 +165,9 @@ una decisión documentada.
 14. Construir la segunda capa local: widget, informes, copias, bloqueo y
     Ayuda/recorrido inicial.
 15. Auditar la aplicación completa y emitir el candidato local —cerrado por
-    MAIN el 2026-09-03; Samsung API 36 verde 42/42, API 26/API 33 pendientes—.
+    MAIN el 2026-09-03; Samsung API 36 verde 42/42, Android 8/API 26 verde con
+    Room 126/126 y aplicación 28/28, y Android 13/API 33 verde con Room 126/126
+    y aplicación 55/55. API 37 conserva una puerta separada—.
 
 Corrección de secuencia del 2026-08-27: Joaquin fijó Calendario final y tarjeta
 superior como próximo bloque después de disponibilidad. Las situaciones comunes
