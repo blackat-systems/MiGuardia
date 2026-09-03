@@ -2,16 +2,20 @@ package com.blackatsystems.miguardia
 
 import android.content.Intent
 import androidx.compose.ui.test.assertTextContains
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
-import androidx.compose.ui.test.performTextClearance
-import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTextReplacement
 import androidx.test.core.app.ActivityScenario
+import androidx.lifecycle.Lifecycle
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.uiautomator.By
 import androidx.test.uiautomator.UiDevice
+import androidx.test.uiautomator.Until
 import com.blackatsystems.miguardia.core.domain.AppDefaults
 import com.blackatsystems.miguardia.core.domain.model.Shift
 import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
@@ -96,14 +100,32 @@ class AvailabilityActivityTest {
 
     @After
     fun closeActivity() {
-        scenario?.close()
+        closeScenario()
+    }
+
+    private fun closeScenario() {
+        val current = scenario ?: return
         scenario = null
+        if (current.state != Lifecycle.State.DESTROYED) {
+            current.onActivity { activity ->
+                activity.finishAndRemoveTask()
+                check(activity.isFinishing)
+            }
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+            check(
+                UiDevice.getInstance(InstrumentationRegistry.getInstrumentation()).wait(
+                    Until.gone(By.pkg(QA_APPLICATION_ID)),
+                    ACTIVITY_CLOSE_WAIT_MILLIS,
+                ),
+            ) { "La actividad QA siguió visible después de solicitar su cierre." }
+        }
+        if (current.state == Lifecycle.State.DESTROYED) current.close()
     }
 
     @Test
     fun notificationAvailabilityActionOpensItsOwnerDate() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
-        scenario?.close()
+        closeScenario()
         scenario = ActivityScenario.launch(
             Intent(context, MainActivity::class.java)
                 .setAction(MainActivity.ACTION_VIEW_DATE)
@@ -132,8 +154,9 @@ class AvailabilityActivityTest {
         waitForTag("availability-window-${created.id}")
         compose.onNodeWithTag("availability-correct-${created.id}").performScrollTo().performClick()
         waitForTag("availability-start")
-        compose.onNodeWithTag("availability-start").performTextClearance()
-        compose.onNodeWithTag("availability-start").performTextInput("09:00")
+        compose.onNodeWithTag("availability-start").performTextReplacement("09:00")
+        compose.onNodeWithTag("availability-start").assertTextContains("09:00")
+        compose.waitForIdle()
         compose.onNodeWithTag("availability-window-review").performScrollTo().performClick()
         waitForTag("availability-window-save")
         requireNotNull(scenario).recreate()
@@ -169,8 +192,11 @@ class AvailabilityActivityTest {
         compose.onNodeWithTag("main-menu-button").performClick()
         waitForTag("drawer-action-work-setup")
         compose.onNodeWithTag("drawer-action-work-setup").performScrollTo().performClick()
-        waitForTag("advanced-options-toggle")
-        compose.onNodeWithTag("advanced-options-toggle").performScrollTo().performClick()
+        waitForTag("work-setup-overview")
+        compose.onNode(
+            hasTestTag("advanced-options-toggle") and
+                hasAnyAncestor(hasTestTag("work-setup-overview")),
+        ).performScrollTo().performClick()
         waitForTag("work-setup-availability")
         compose.onNodeWithTag("work-setup-availability").performScrollTo().performClick()
         waitForTag("availability-configure")
@@ -234,5 +260,6 @@ class AvailabilityActivityTest {
     private companion object {
         const val QA_APPLICATION_ID = "com.blackatsystems.miguardia.qa"
         const val WAIT_MILLIS = 15_000L
+        const val ACTIVITY_CLOSE_WAIT_MILLIS = 5_000L
     }
 }

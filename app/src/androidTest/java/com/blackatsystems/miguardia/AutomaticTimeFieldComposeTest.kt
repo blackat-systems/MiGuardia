@@ -27,13 +27,17 @@ class AutomaticTimeFieldComposeTest {
     @Test
     fun shortHourRemainsEditableAndNormalizesVisiblyWhenFocusLeaves() {
         var value by mutableStateOf("08:30")
+        var changeCount = 0
         compose.setContent {
             val focusManager = LocalFocusManager.current
             MiGuardiaTheme {
                 Column {
                     AutomaticTimeField(
                         value = value,
-                        onValueChange = { value = it },
+                        onValueChange = {
+                            changeCount += 1
+                            value = it
+                        },
                         label = "Hora ficticia",
                         modifier = Modifier.testTag("automatic-time"),
                     )
@@ -50,9 +54,43 @@ class AutomaticTimeFieldComposeTest {
         compose.onNodeWithTag("automatic-time").performClick()
         compose.onNodeWithTag("automatic-time").performTextReplacement("8:30")
         compose.onNodeWithTag("automatic-time").assertTextContains("8:30")
-        compose.runOnIdle { assertEquals("08:30", value) }
+        compose.runOnIdle {
+            assertEquals("08:30", value)
+            assertEquals(1, changeCount)
+        }
 
         compose.onNodeWithTag("leave-time-field").performClick()
         compose.onNodeWithTag("automatic-time").assertTextContains("08:30")
+        compose.runOnIdle { assertEquals(1, changeCount) }
+    }
+
+    @Test
+    fun focusLossDoesNotRepeatAValueAlreadyDispatchedBeforeParentRecomposes() {
+        var changeCount = 0
+        compose.setContent {
+            val focusManager = LocalFocusManager.current
+            MiGuardiaTheme {
+                Column {
+                    AutomaticTimeField(
+                        value = "08:00",
+                        onValueChange = { changeCount += 1 },
+                        label = "Hora ficticia",
+                        modifier = Modifier.testTag("automatic-time"),
+                    )
+                    Button(
+                        onClick = focusManager::clearFocus,
+                        modifier = Modifier.testTag("leave-time-field"),
+                    ) {
+                        Text("Continuar")
+                    }
+                }
+            }
+        }
+
+        compose.onNodeWithTag("automatic-time").performClick()
+        compose.onNodeWithTag("automatic-time").performTextReplacement("09:00")
+        compose.onNodeWithTag("leave-time-field").performClick()
+
+        compose.runOnIdle { assertEquals(1, changeCount) }
     }
 }

@@ -332,7 +332,12 @@ private fun WorkSetupOverview(state: WorkSetupUiState, actions: WorkSetupActions
         is WorkSetupState.V2Ready -> root.configurationRevision.value.sector
         else -> null
     }
-    Column(Modifier.fillMaxSize().safeDrawingPadding()) {
+    Column(
+        Modifier
+            .fillMaxSize()
+            .safeDrawingPadding()
+            .testTag("work-setup-overview"),
+    ) {
         SurfaceHeader("Mi forma de trabajar", "Cerrar", actions.requestBack)
         HorizontalDivider()
         Column(

@@ -48,7 +48,7 @@ class BackupComposeTest {
         compose.onNodeWithTag("backup-create").assertIsEnabled()
         compose.onNodeWithText(
             "Guardá esta contraseña en un lugar seguro: si la olvidás, nadie puede recuperar el contenido de la copia.",
-        ).assertIsDisplayed()
+        ).performScrollTo().assertIsDisplayed()
     }
 
     @Test

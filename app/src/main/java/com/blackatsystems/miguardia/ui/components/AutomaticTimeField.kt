@@ -49,7 +49,6 @@ fun AutomaticTimeField(
                 if (normalized != editingValue.text) {
                     editingValue = TextFieldValue(normalized, selection = TextRange(normalized.length))
                 }
-                onValueChange(normalized)
             }
         },
         enabled = enabled,

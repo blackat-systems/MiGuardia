@@ -2,6 +2,8 @@ package com.blackatsystems.miguardia
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextContains
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -162,10 +164,18 @@ class HoursAndExtrasActivityTest {
         waitForTag("main-menu-button")
         compose.onNodeWithContentDescription("Abrir menú").performClick()
         compose.onNodeWithTag("drawer-action-work-setup").performClick()
-        waitForTag("advanced-options-toggle")
-        compose.onNodeWithTag("advanced-options-toggle").performScrollTo().performClick()
+        waitForTag("work-setup-overview")
+        compose.onNode(
+            hasTestTag("advanced-options-toggle") and
+                hasAnyAncestor(hasTestTag("work-setup-overview")),
+        ).performScrollTo().performClick()
         waitForTag("work-setup-hours-progress")
         compose.onNodeWithTag("work-setup-hours-progress").performScrollTo().performClick()
+        waitForTag("hours-progress-content")
+        compose.onNode(
+            hasTestTag("advanced-options-toggle") and
+                hasAnyAncestor(hasTestTag("hours-progress-content")),
+        ).performScrollTo().performClick()
         waitForTag("hours-reference-configure")
         compose.onNodeWithTag("hours-reference-configure").performScrollTo().performClick()
         compose.onNodeWithTag("hours-reference-fixed").performClick()

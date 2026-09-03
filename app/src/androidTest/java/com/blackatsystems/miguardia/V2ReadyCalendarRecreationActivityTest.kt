@@ -12,8 +12,11 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.core.app.ActivityScenario
+import androidx.lifecycle.Lifecycle
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.uiautomator.By
 import androidx.test.uiautomator.UiDevice
+import androidx.test.uiautomator.Until
 import com.blackatsystems.miguardia.core.domain.AppDefaults
 import com.blackatsystems.miguardia.core.domain.model.Shift
 import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
@@ -106,8 +109,26 @@ class V2ReadyCalendarRecreationActivityTest {
 
     @After
     fun closeActivity() {
-        scenario?.close()
+        closeScenario()
+    }
+
+    private fun closeScenario() {
+        val current = scenario ?: return
         scenario = null
+        if (current.state != Lifecycle.State.DESTROYED) {
+            current.onActivity { activity ->
+                activity.finishAndRemoveTask()
+                check(activity.isFinishing)
+            }
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+            check(
+                UiDevice.getInstance(InstrumentationRegistry.getInstrumentation()).wait(
+                    Until.gone(By.pkg(QA_APPLICATION_ID)),
+                    ACTIVITY_CLOSE_WAIT_MILLIS,
+                ),
+            ) { "La actividad QA siguió visible después de solicitar su cierre." }
+        }
+        if (current.state == Lifecycle.State.DESTROYED) current.close()
     }
 
     @Test
@@ -141,7 +162,7 @@ class V2ReadyCalendarRecreationActivityTest {
     @Test
     fun notificationShiftActionResolvesTheV2PairAndOpensItsOwnerDate() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
-        scenario?.close()
+        closeScenario()
         scenario = ActivityScenario.launch(
             Intent(context, MainActivity::class.java)
                 .setAction(MainActivity.ACTION_VIEW_SHIFT)
@@ -174,8 +195,7 @@ class V2ReadyCalendarRecreationActivityTest {
 
     @Test
     fun automaticGuideRunsOnceAfterSetupAndDoesNotReturnAfterCompletion() {
-        scenario?.close()
-        scenario = null
+        closeScenario()
         resetOnboardingForTest()
 
         scenario = ActivityScenario.launch(MainActivity::class.java)
@@ -203,8 +223,7 @@ class V2ReadyCalendarRecreationActivityTest {
     @Test
     fun notificationDestinationWaitsForAutomaticGuideAndOpensAfterSkip() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
-        scenario?.close()
-        scenario = null
+        closeScenario()
         resetOnboardingForTest()
 
         scenario = ActivityScenario.launch(
@@ -273,6 +292,7 @@ class V2ReadyCalendarRecreationActivityTest {
     private companion object {
         const val QA_APPLICATION_ID: String = "com.blackatsystems.miguardia.qa"
         const val WAIT_MILLIS: Long = 15_000L
+        const val ACTIVITY_CLOSE_WAIT_MILLIS: Long = 5_000L
         const val SHIFT_NAME: String = "Lugar ficticio de recreación"
         const val SHIFT_ABBREVIATION: String = "RCV"
         const val SHIFT_IDENTITY: String = "$SHIFT_NAME ($SHIFT_ABBREVIATION)"

@@ -2,6 +2,8 @@ package com.blackatsystems.miguardia
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
@@ -154,8 +156,14 @@ class V2RecurringPlanActivityTest {
             compose.onAllNodesWithText(ABBREVIATION, useUnmergedTree = true)
                 .fetchSemanticsNodes().isNotEmpty()
         }
-        compose.onNodeWithContentDescription("jornada $ABBREVIATION", substring = true)
-            .assertExists()
+        val visibleOccurrenceDate = occurrenceDates.first {
+            it.year == startDate.year && it.month == startDate.month
+        }
+        compose.onNode(
+            (hasTestTag("day-$visibleOccurrenceDate") or
+                hasTestTag("completed-day-$visibleOccurrenceDate")) and
+                hasContentDescription("jornada $ABBREVIATION", substring = true),
+        ).assertExists()
     }
 
     private fun firstWorkSet(
