@@ -1,6 +1,6 @@
 # 22 — Integración y depuración de cambios de último momento V2
 
-- Estado: **CERRADO POR MAIN — CHECKPOINT PENDIENTE / NO REEJECUTAR**
+- Estado: **CERRADO E INTEGRADO POR MAIN / NO REEJECUTAR**
 - Fecha: 2026-09-02
 - Auditoría local de MAIN: 2026-09-03
 - Proyecto obligatorio:
@@ -17,8 +17,9 @@ Resultado MAIN del 2026-09-03: la QA autorizada en Samsung API 36 detectó y
 permitió corregir la incompatibilidad de Fragment 1.2.5 con los launchers
 modernos de permisos y un mensaje de ubicación que no finalizaba. La batería
 posterior pasó 707/707 JVM y 351/351 tareas; Room pasó 123/123 y la matriz
-dirigida posterior 30/30. El bloque está cerrado funcionalmente, sin commit ni
-push. API 26/API 33 continúan como compatibilidad pendiente.
+dirigida posterior 30/30. El bloque quedó integrado en el checkpoint local
+`95ebf531d71b8b781423475a1c38d15a8bd24742`, sin push. API 26/API 33 continúan
+como compatibilidad pendiente.
 
 ## QUÉ HACE
 

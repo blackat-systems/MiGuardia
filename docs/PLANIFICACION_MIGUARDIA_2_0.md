@@ -583,12 +583,15 @@ continúa con:
    verdes—;
 5. Ayuda y recorrido inicial reescritos para la interfaz 2.0 definitiva,
    incluidos en el candidato compartido junto con simplificación, ubicación
-   puntual, clima por objetivo y Room V6 —cerrado funcionalmente por MAIN con
-   validación local y Samsung API 36 verdes; API 26/API 33 pendientes—;
+   puntual, clima por objetivo y Room V6 —cerrado e integrado por MAIN en
+   `95ebf531`; API 26/API 33 pendientes—;
 6. integración y depuración de esos cambios de último momento mediante
    `INTEGRACION_Y_DEPURACION_DE_CAMBIOS_DE_ULTIMO_MOMENTO_V2.md` —707/707 JVM,
-   351/351 tareas, Room 123/123 y matriz dirigida Samsung 30/30 verdes—;
-7. auditoría de la aplicación completa y emisión de un candidato local.
+   351/351 tareas, Room 123/123 y matriz dirigida Samsung 30/30 verdes;
+   checkpoint `95ebf531`—;
+7. auditoría de la aplicación completa y emisión de un candidato local
+   —cerrada localmente con 712/712 JVM, 351/351 tareas y revisión independiente
+   sin findings P0–P3; matriz física final pendiente—.
 
 La decisión de Joaquin del 2026-08-23 reemplaza la apertura automática de esa
 cadena: MAIN recomienda el siguiente bloque, pero sólo prepara su prompt o abre
@@ -615,9 +618,11 @@ clima por objetivo. La QA autorizada en Samsung API 36 encontró además la
 incompatibilidad entre Fragment 1.2.5 y los launchers modernos de permisos y un
 estado visual de ubicación que no finalizaba; ambos quedaron corregidos. La
 batería final pasó 707/707 JVM, lint sin errores y 351/351 tareas. Room V6 pasó
-123/123 y la matriz dirigida posterior pasó 30/30. Corresponde ahora la
-auditoría final de la aplicación y la decisión de checkpoint; API 26/API 33
-continúan como evidencia de compatibilidad pendiente.
+123/123 y la matriz dirigida posterior pasó 30/30. El resultado fue integrado
+en `95ebf531`. La auditoría final posterior cerró defectos de concurrencia,
+arranque, Calendario, accesibilidad, timeout y vocabulario, incorporó el ícono
+adaptativo y pasó 712/712 JVM y 351/351 tareas. La matriz final Samsung API 36,
+API 26 y API 33 continúa como evidencia de compatibilidad pendiente.
 
 ## 21. Idea futura guardada: agenda profesional
 

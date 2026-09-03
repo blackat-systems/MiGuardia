@@ -16,16 +16,15 @@
 - **Contrato humano:** toda dependencia nueva explica primero `QUÉ HACE` y
   `POR QUÉ EXISTE`, tanto en su prompt como en su handoff.
 - **Última dependencia cerrada:**
-  `INTEGRACION_Y_DEPURACION_DE_CAMBIOS_DE_ULTIMO_MOMENTO_V2.md`; batería local
-  y Samsung API 36 verdes.
-- **Candidato compartido actual:** Ayuda y recorrido inicial, simplificación de
-  formularios, ubicación puntual para clima, clima por objetivo, Room V6 y
-  compatibilidad de Copias fueron auditados y corregidos por MAIN como una sola
-  unidad. La batería local final pasó 707/707 pruebas JVM y 351/351 tareas;
-  Room pasó 123/123 y la matriz dirigida posterior 30/30 en Samsung API 36.
-- **Puerta pendiente:** auditoría de la aplicación completa y emisión de un
-  candidato local antes del checkpoint. API 26/API 33 continúan como matriz de
-  compatibilidad pendiente.
+  `INTEGRACION_Y_DEPURACION_DE_CAMBIOS_DE_ULTIMO_MOMENTO_V2.md`, integrada en
+  `95ebf531d71b8b781423475a1c38d15a8bd24742`.
+- **Candidato local actual:** la aplicación completa fue auditada por MAIN. El
+  ícono adaptativo quedó en `381c342c630d8e5ee999ee3afadc25994f3642d8` y los
+  cierres funcionales finales en `f25d097acea37fc6b4126db39e6dbdb0ad793921`.
+  La batería fresca pasó 712/712 JVM y 351/351 tareas; una revisión independiente
+  no dejó findings P0–P3 abiertos.
+- **Puerta pendiente:** matriz física final en Samsung API 36, API 26 y API 33.
+  AndroidTest está compilado, no ejecutado sobre los cambios finales.
 - **Commits locales:** MAIN los crea automáticamente como checkpoints de
   bloques comprobados.
 - **Push puntual anterior de la rama 2.0:** ejecutado y verificado hasta
@@ -104,7 +103,7 @@ prevalecen para el estado operativo.
 | `COPIAS_Y_RESTAURACION_LOCALES_SEGURAS_V2.md` | **CERRADO** | Copia lógica completa, cifrado opcional, vista previa y restauración consciente auditadas por MAIN; Samsung API 36 verde dentro de la matriz autorizada |
 | `BLOQUEO_DE_ACCESO_LOCAL_V2.md` | **CERRADO** | Puerta opcional con biometría fuerte o credencial segura del teléfono, plazos conscientes y privacidad de Recientes sin PIN propio; auditada y verificada por MAIN en Samsung API 36, con API 26/API 33 y revisión visual OEM de Recientes pendientes |
 | `AYUDA_Y_RECORRIDO_INICIAL_V2.md` | **CERRADO DENTRO DEL CANDIDATO INTEGRAL** | Su implementación fue revisada junto con simplificación, ubicación, clima, Room V6 y Copias; local y Samsung API 36 verdes |
-| `INTEGRACION_Y_DEPURACION_DE_CAMBIOS_DE_ULTIMO_MOMENTO_V2.md` | **CERRADO POR MAIN — CHECKPOINT PENDIENTE** | MAIN cerró defectos reproducibles y obtuvo 707/707 JVM, 351/351 tareas, Room 123/123 y matriz dirigida Samsung 30/30; no reejecutar |
+| `INTEGRACION_Y_DEPURACION_DE_CAMBIOS_DE_ULTIMO_MOMENTO_V2.md` | **CERRADO E INTEGRADO** | MAIN cerró defectos reproducibles, obtuvo 707/707 JVM, 351/351 tareas, Room 123/123 y matriz dirigida Samsung 30/30; checkpoint `95ebf531`; no reejecutar |
 
 ## Contratos históricos de MiGuardia 1.0
 
@@ -184,12 +183,13 @@ Joaquin indicó que quiere preparar o abrir la siguiente:
 21. **Cerrado dentro del candidato integral:** Ayuda y recorrido
     inicial 2.0 mediante `AYUDA_Y_RECORRIDO_INICIAL_V2.md`, junto con la
     simplificación, ubicación puntual, clima por objetivo y Room V6.
-22. **Cerrado por MAIN — checkpoint pendiente:** integración y
+22. **Cerrado e integrado por MAIN:** integración y
     depuración mediante
     `INTEGRACION_Y_DEPURACION_DE_CAMBIOS_DE_ULTIMO_MOMENTO_V2.md`; 707/707 JVM,
-    351/351 tareas y Samsung API 36 verdes, sin commit.
-23. **Pendiente:** auditoría de la aplicación completa y candidato local,
-    después de cerrar la puerta física anterior.
+    351/351 tareas y Samsung API 36 verdes; checkpoint `95ebf531`.
+23. **Cerrado localmente por MAIN:** auditoría de la aplicación completa y
+    emisión del candidato local; 712/712 JVM, 351/351 tareas y revisión
+    independiente sin findings P0–P3. La matriz física final sigue pendiente.
 
 Cuando Joaquin pide un prompt, MAIN lo habilita en este índice después de cerrar
 su contrato y dependencias, y crea automáticamente el checkpoint documental

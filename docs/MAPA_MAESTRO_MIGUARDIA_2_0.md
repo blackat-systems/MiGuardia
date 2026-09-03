@@ -177,7 +177,7 @@ Auditoría integral del núcleo y compatibilidad Android — parcial histórica
         ↓
 Pruebas cruzadas del núcleo V2 — cerradas
         ↓
-Matriz Android 36/26/33 — cerrada
+Matriz Android 36/26/33 del núcleo — cerrada
         ↓
 Repetición de auditoría integral — NÚCLEO APTO PARA SEGUNDA CAPA
         ↓
@@ -189,11 +189,13 @@ Copias y restauración locales — cerradas; local y Samsung API 36 verdes
         ↓
 Bloqueo de acceso local — cerrado; local y Samsung API 36 (31/31) verdes
         ↓
-Ayuda + simplificación + ubicación/clima por objetivo — cerrado funcionalmente
+Ayuda + simplificación + ubicación/clima por objetivo — cerrado e integrado en 95ebf531
         ↓
-Integración y depuración de cambios de último momento — 707/707 JVM, Room 123/123 y Samsung dirigido 30/30
+Integración y depuración de cambios de último momento — cerrada en 95ebf531
         ↓
-Auditoría de la aplicación completa y candidato local
+Auditoría completa — CANDIDATO LOCAL AUDITADO; 712/712 JVM y 351/351 tareas
+        ↓
+Matriz física final Samsung API 36 / API 26 / API 33 — pendiente
 ```
 
 Corrección de secuencia del 2026-08-27: Joaquin indicó que el bloque siguiente
@@ -281,10 +283,15 @@ descubrió una incompatibilidad real de Fragment 1.2.5 con los launchers moderno
 de permisos y un mensaje de ubicación que no finalizaba; ambos defectos quedaron
 corregidos y cubiertos. La batería final posterior pasó 707/707 pruebas JVM,
 lint sin errores y 351/351 tareas. Room V6 pasó 123/123 y la matriz dirigida de
-permisos, configuración y clima pasó 30/30 en el Samsung. El bloque queda
-funcionalmente cerrado, sin commit, y la puerta siguiente es la auditoría de la
-aplicación completa para emitir el candidato local. API 26/API 33 permanecen
-pendientes de compatibilidad.
+permisos, configuración y clima pasó 30/30 en el Samsung. El bloque quedó
+integrado en `95ebf531`.
+
+Actualización de auditoría final del 2026-09-03: MAIN revisó la aplicación
+completa, cerró defectos de concurrencia, arranque, Calendario, accesibilidad,
+timeout y vocabulario, e integró un ícono adaptativo. La batería fresca pasó
+712/712 JVM y 351/351 tareas; la revisión independiente no dejó findings P0–P3.
+El resultado es un candidato local auditado. Samsung API 36, API 26 y API 33
+permanecen pendientes como matriz física final.
 
 MAIN integra un bloque por vez. Cada bloque debe compilar, pasar sus pruebas,
 preservar el alcance ajeno y quedar documentado antes del siguiente. El mapa

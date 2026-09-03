@@ -1,7 +1,9 @@
 # Auditoría MAIN — Integración y depuración de cambios de último momento V2
 
 - Fecha: 2026-09-03
-- Veredicto: **CANDIDATO INTEGRAL VERDE — CHECKPOINT PENDIENTE**
+- Veredicto de la corrida: **CANDIDATO INTEGRAL VERDE**
+- Integración posterior: checkpoint local
+  `95ebf531d71b8b781423475a1c38d15a8bd24742`
 - Ruta: `C:\Users\Joaquin\Desktop\chatgptprojects\MiGuardia-2.0`
 - Rama: `codex/miguardia-2.0`
 - HEAD preservado: `f8ddbe2754bad62df43d1cef3e1f0c6b3bcb2352`
@@ -205,13 +207,21 @@ P0–P2, contradicciones ni cambios fuera de alcance y emitió el veredicto
 `APROBADA — LISTA PARA CHECKPOINT LOCAL`. Su único P3 —el estado antiguo de
 ADR 0038— fue corregido antes de este cierre.
 
-## Estado y puerta siguiente
+## Estado al terminar esta auditoría
 
-El candidato continúa deliberadamente sin staging ni commit. La QA física
+Al terminar esta corrida, el candidato continuaba deliberadamente sin staging
+ni commit. La QA física
 obligatoria en el Samsung principal fue ejecutada y cerró dos defectos reales.
 La batería local posterior quedó verde y no existen findings P0–P2 abiertos.
 El bloque queda funcionalmente cerrado y listo para una auditoría integral
 final de sólo lectura antes del checkpoint local.
 
-Commit, push, tag, Release, `main` y producción continúan como puertas
-separadas. No existe autorización vigente para ninguna de esas acciones.
+En ese momento, commit, push, tag, Release, `main` y producción continuaban como
+puertas separadas.
+
+## Cierre posterior de MAIN
+
+Después de esta auditoría y de su QA física, MAIN confirmó el candidato completo
+en `95ebf531d71b8b781423475a1c38d15a8bd24742`. No hubo push, tag, Release ni
+operación sobre `main` o producción. La auditoría integral posterior está en
+`docs/audits/2026-09-03-auditoria-final-aplicacion-y-candidato-local-v2.md`.

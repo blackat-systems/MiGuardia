@@ -164,7 +164,8 @@ una decisión documentada.
 13. Ejecutar auditoría integral y compatibilidad Android.
 14. Construir la segunda capa local: widget, informes, copias, bloqueo y
     Ayuda/recorrido inicial.
-15. Auditar la aplicación completa y emitir el candidato local.
+15. Auditar la aplicación completa y emitir el candidato local —cerrado
+    localmente por MAIN el 2026-09-03; matriz física final pendiente—.
 
 Corrección de secuencia del 2026-08-27: Joaquin fijó Calendario final y tarjeta
 superior como próximo bloque después de disponibilidad. Las situaciones comunes
@@ -299,7 +300,7 @@ mayor al planificado.
 - API 26 valida el piso cuando cierre un bloque transversal.
 - API 33 cubre permisos modernos de notificaciones.
 - Samsung `SM-S938B` API 36 es el dispositivo físico principal.
-- API 37 se verifica antes del candidato final.
+- API 37 se verifica antes de declarar un candidato publicable.
 - Se recorren tema claro/oscuro y zoom interno 100 %, 150 % y 200 %.
 - No se consulta ni modifica `font_scale`, densidad o tamaño visual del sistema.
 - Sólo se usa el paquete QA y datos ficticios en instrumentación física salvo

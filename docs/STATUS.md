@@ -6,20 +6,22 @@ PLANIFICACIÓN quedó cerrada por autorización expresa de Joaquin. Las decision
 funcionales reunidas constituyen la base vigente para avanzar; cerrar esta etapa
 no significa que exista ya una implementación nueva.
 
-El núcleo laboral V2 quedó aprobado por MAIN. La segunda capa está
-desbloqueada. **Widget de próximo evento**, **Informes locales de jornadas y
-horas**, **Copias y restauración locales seguras** y **Bloqueo de acceso local**
-quedaron cerrados. El candidato combinado de **Ayuda y recorrido inicial 2.0**,
-simplificación de formularios, ubicación puntual, clima por objetivo, Room V6 y
-compatibilidad de Copias fue auditado y corregido localmente por MAIN. La
-batería final posterior a los arreglos pasó 707/707 pruebas JVM y 351/351
-tareas. La QA autorizada en Samsung API 36 detectó y permitió cerrar dos
-defectos reales: la incompatibilidad de Fragment 1.2.5 con el launcher moderno
-de permisos y un mensaje de ubicación que quedaba guardando indefinidamente.
-Room volvió a pasar 123/123 y la matriz dirigida posterior pasó 30/30. El
-candidato continúa sin commit; Ayuda y su DataStore pasaron además 9/9 al
-cierre. El bloque quedó funcionalmente cerrado y listo para la auditoría
-integral final.
+El núcleo laboral V2 y la segunda capa prevista quedaron integrados localmente.
+**Widget de próximo evento**, **Informes locales de jornadas y horas**, **Copias
+y restauración locales seguras**, **Bloqueo de acceso local**, **Ayuda y
+recorrido inicial 2.0** y los cambios de simplificación, ubicación y clima por
+objetivo están cerrados. El candidato combinado quedó confirmado en
+`95ebf531d71b8b781423475a1c38d15a8bd24742`.
+
+MAIN completó además la auditoría integral de la aplicación, incorporó el ícono
+adaptativo de MiGuardia en `381c342c630d8e5ee999ee3afadc25994f3642d8` y cerró
+los defectos finales en `f25d097acea37fc6b4126db39e6dbdb0ad793921`. La batería
+global ejecutada desde cero pasó 712/712 pruebas JVM y 351/351 tareas; lint
+quedó sin errores y las variantes Debug, QA, Release y ambos AndroidTest
+compilaron. Una revisión independiente final no dejó findings P0–P3 abiertos.
+El resultado es **CANDIDATO LOCAL AUDITADO — MATRIZ FINAL DE COMPATIBILIDAD
+PENDIENTE**: estas correcciones finales y el ícono todavía requieren Samsung
+API 36, API 26 y API 33 antes de un candidato publicable.
 
 MAIN 2.0 está reactivada para recibir los handoffs que Joaquin entregue,
 auditarlos, integrarlos, probarlos y cerrarlos. Joaquin decide cuándo pedir el
@@ -85,6 +87,8 @@ El flujo vigente de handoffs y checkpoints está registrado en
 La auditoría local del candidato combinado de Ayuda y cambios de último momento
 está registrada en
 `docs/audits/2026-09-03-integracion-y-depuracion-cambios-ultimo-momento-v2-main.md`.
+La auditoría integral final y el estado del candidato local están registrados en
+`docs/audits/2026-09-03-auditoria-final-aplicacion-y-candidato-local-v2.md`.
 La separación entre continuidad de código y ausencia de migración de datos V1
 está registrada en `docs/adr/0024-continuidad-de-codigo-sin-migracion-de-datos-v1.md`
 y auditada en
@@ -1360,15 +1364,15 @@ continúa siendo una puerta separada. La evidencia durable está en
 `docs/audits/2026-09-01-bloqueo-de-acceso-local-v2-main.md`. No existe una
 autorización vigente de push.
 
-## Ayuda, simplificación, ubicación y clima — candidato integral verde
+## Ayuda, simplificación, ubicación y clima — cerrado e integrado
 
 Joaquin recibió un candidato de Ayuda y después incorporó cambios de último
 momento para simplificar el uso cotidiano y definir la ubicación meteorológica.
-El checkout actual conserva ambas entregas juntas. MAIN ya las auditó, corrigió
-y verificó como una sola unidad, incluida la QA física autorizada en Samsung
-API 36. El bloque quedó funcionalmente cerrado, pero todavía no fue confirmado
-en Git. `docs/prompts/AYUDA_Y_RECORRIDO_INICIAL_V2.md` queda como contrato de
-origen cerrado y no reejecutable.
+MAIN auditó, corrigió y verificó ambas entregas como una sola unidad, incluida
+la QA física autorizada en Samsung API 36. El bloque quedó confirmado en el
+checkpoint local `95ebf531d71b8b781423475a1c38d15a8bd24742`.
+`docs/prompts/AYUDA_Y_RECORRIDO_INICIAL_V2.md` queda como contrato de origen
+cerrado y no reejecutable.
 
 El contrato conserva este orden:
 
@@ -1396,12 +1400,30 @@ convierte conscientemente mediante el `Geocoder` de Android y, cuando falta, la
 persona puede pedir una sola captura aproximada de su ciudad actual. No se
 autoriza ubicación precisa, en segundo plano ni seguimiento.
 
-Base funcional del candidato:
+La base funcional de entrada fue
 `f8ddbe2754bad62df43d1cef3e1f0c6b3bcb2352`. MAIN repitió la auditoría hunk por
 hunk, incorporó correcciones acotadas y obtuvo 707/707 JVM, lint sin errores y
 351/351 tareas. En Samsung API 36, Room pasó 123/123 y la matriz dirigida
-posterior a las correcciones pasó 30/30. No existe autorización vigente de
-commit ni de push.
+posterior a las correcciones pasó 30/30. El checkpoint `95ebf531` integra ese
+resultado. No existe autorización vigente de push.
+
+## Auditoría integral de la aplicación — candidato local auditado
+
+La revisión final posterior encontró y cerró condiciones de carrera en
+Vacaciones y avisos durante arranque frío, retiró el segundo calendario de
+Feriados, agregó semántica de encabezados y mensajes urgentes, volvió estricto
+el timeout del Geocoder legado y corrigió el texto de integridad de Copias.
+También integró un ícono adaptativo con variante monocromática.
+
+La batería global fresca pasó 712/712 pruebas JVM y 351/351 tareas. Después del
+ajuste final de recursos se recompilaron lint, Debug, QA, Release y AndroidTest
+de aplicación; lint conserva sólo seis avisos de actualización en configuración
+existente. Room continúa en V6, con 27 entidades y esquemas intactos. La revisión
+independiente final no dejó findings P0–P3 abiertos.
+
+Este veredicto es local. Los AndroidTest del estado final fueron compilados, no
+ejecutados en esta auditoría. La evidencia Samsung anterior se conserva como
+heredada, pero no reemplaza la matriz física de los cambios finales.
 
 ## Flujo vigente de MAIN
 
@@ -1450,7 +1472,8 @@ posteriores.
   36 verdes dentro de la matriz autorizada—, Bloqueo —cerrado por MAIN; local y
   Samsung API 36 verdes— y Ayuda/últimos cambios —candidato integral verde en
   local y Samsung API 36, con API 26/API 33 pendientes—;
-- logo y tipografías definitivas.
+- terminación de identidad visual y tipografías definitivas; el ícono adaptativo
+  de la aplicación ya está integrado.
 
 ## Todavía no implementado
 
@@ -1462,18 +1485,20 @@ posteriores.
 
 ## Próximo paso
 
-El núcleo quedó aprobado y la segunda capa está desbloqueada. **Widget de
-próximo evento**, **Informes locales**, **Copias y restauración locales
-seguras** y **Bloqueo de acceso local** están cerrados. **Integración y
-depuración de cambios de último momento V2** quedó funcionalmente cerrada por
-MAIN: 707/707 JVM, lint sin errores, 351/351 tareas, Room 123/123 y matriz
-dirigida 30/30 en Samsung API 36, sin findings P0–P2 abiertos. La puerta
-inmediata es la auditoría completa de la aplicación para emitir el candidato
-local y decidir el checkpoint. API 26/API 33 de Widget, Copias, Bloqueo y este
-bloque continúan pendientes para la matriz de compatibilidad posterior.
+El núcleo, la segunda capa y los cambios de último momento están integrados en
+checkpoints locales. La auditoría completa terminó con 712/712 pruebas JVM,
+351/351 tareas, lint sin errores y ningún finding P0–P3 abierto. MiGuardia queda
+como **CANDIDATO LOCAL AUDITADO**.
 
-El disparo físico de una alarma exacta, un reinicio real del Samsung y API 37
-conservan puertas separadas para el candidato final. Los pushes autorizados para
-disponibilidad, Calendario final y Resumen fueron ejecutados y consumidos en
+La puerta inmediata es la matriz física final del mismo candidato: Samsung API
+36 para los recorridos y recursos finales, API 26 para compatibilidad heredada
+del Geocoder y API 33 para permisos e ícono monocromático. Después corresponde
+repetir el cierre Git y decidir, por separado, si se autoriza un push o se abre
+trabajo futuro. El disparo de alarma exacta y el reinicio real continúan siendo
+autorizaciones independientes.
+
+API 37 también conserva una puerta separada para el candidato publicable. Los
+pushes autorizados para disponibilidad, Calendario final y Resumen fueron
+ejecutados y consumidos en
 `80fe8e5`, `fd6891e` y `ad777bb`. Cualquier push posterior, tag, Release y toda
 operación sobre `main` o producción continúan prohibidos.
