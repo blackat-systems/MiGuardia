@@ -5,8 +5,8 @@
 - Bloque autorizado: HIGIENE_PREVIA_MIGUARDIA_3
 - Estado: CERRADO
 - Contrato: docs/prompts/HIGIENE_PREVIA_MIGUARDIA_3.md
-- Base verificada: a771d78e3ec33bd2d3ef02bd1ae310514359e004
-- Procedencia: snapshot 3.0 previo a separar el historial del repositorio 2.x.
+- Base verificada: 3f1365259e15292a2f24e3361acd523213b49fad
+- Procedencia: snapshot funcional `a771d78e3ec33bd2d3ef02bd1ae310514359e004` del repositorio 2.x, importado como raíz nueva sin arrastrar su historial.
 - Actualización: 2026-09-12
 
 ## Producto de referencia
@@ -33,6 +33,7 @@ La auditoría vigente de la publicación es `docs/audits/2026-09-10-franco-arras
 
 - Fuente del proyecto ChatGPT/Codex: `C:\Users\Joaquin\Desktop\chatgptprojects\MiGuardiaContainer`.
 - Checkout activo 3.0: `MiGuardia-3.0/`, repositorio independiente y rama `codex/miguardia-3.0`.
+- Remoto 3.0: `https://github.com/blackat-systems/MiGuardia.git`; `main` conserva la raíz inicial `3f1365259e15292a2f24e3361acd523213b49fad`.
 - Referencia estable: `MiGuardia-2.0/`, perteneciente al repositorio 2.x archivado; sólo lectura salvo corrección 2.x autorizada.
 - Administración histórica: `Repositorio-Git/` pertenece al repositorio 2.x archivado; no comparte objetos ni referencias con 3.0 y no debe usarse como directorio ordinario de desarrollo.
 - Rescates históricos: `Archivo-recuperacion/`; sólo lectura.
