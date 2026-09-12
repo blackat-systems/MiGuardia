@@ -1,0 +1,1785 @@
+{
+  "version": 1,
+  "reviewed": "2026-09-09",
+  "notes": [
+    "Catalog covers test classes and shared fixture hashes; updating source requires explicit classification review.",
+    "Fresh process isolation does not clear persisted residues, databases or preferences.",
+    "No group is a data-preservation certification. Omitted tests and unmatched assumptions remain pending.",
+    "Supervised marker-based harnesses are plan-only; they cannot be silently added to an unattended group."
+  ],
+  "groups": {
+    "app-rendering": {
+      "module": "app",
+      "process": "fresh-per-invocation",
+      "fixture_state": "No beta fixture activated by these test classes; Compose/fake repositories. Existing QA may be started.",
+      "hazards": [
+        "QA process stop/restart; test UI and isolated preferences may change."
+      ],
+      "requires": [
+        "qa-mutations"
+      ],
+      "instrument_args": {},
+      "invocations": [
+        "com.blackatsystems.miguardia.AppearanceComposeTest",
+        "com.blackatsystems.miguardia.AutomaticTimeFieldComposeTest",
+        "com.blackatsystems.miguardia.AvailabilityComposeTest",
+        "com.blackatsystems.miguardia.CalendarAdaptiveLayoutComposeTest",
+        "com.blackatsystems.miguardia.CalendarCommonV2ComposeTest",
+        "com.blackatsystems.miguardia.CalendarComposeTest",
+        "com.blackatsystems.miguardia.ContextualLayoutComposeTest",
+        "com.blackatsystems.miguardia.ExceptionsComposeTest",
+        "com.blackatsystems.miguardia.HelpComposeTest",
+        "com.blackatsystems.miguardia.HoursAndExtrasComposeTest",
+        "com.blackatsystems.miguardia.NavigationDrawerComposeTest",
+        "com.blackatsystems.miguardia.NextEventComposeTest",
+        "com.blackatsystems.miguardia.OpenMeteoClientInstrumentedTest",
+        "com.blackatsystems.miguardia.ProgressiveDisclosureComposeTest",
+        "com.blackatsystems.miguardia.reports.ReportsComposeTest",
+        "com.blackatsystems.miguardia.RgbColorPickerComposeTest",
+        "com.blackatsystems.miguardia.security.AccessLockComposeTest",
+        "com.blackatsystems.miguardia.SummaryComposeTest",
+        "com.blackatsystems.miguardia.SupportMenuComposeTest",
+        "com.blackatsystems.miguardia.TransientConfirmationComposeTest",
+        "com.blackatsystems.miguardia.updates.UpdatesScreenTest",
+        "com.blackatsystems.miguardia.UpdatesMenuComposeTest",
+        "com.blackatsystems.miguardia.UpdatesReturnComposeTest",
+        "com.blackatsystems.miguardia.V2ManualShiftLoadComposeTest",
+        "com.blackatsystems.miguardia.V2RecurringPlanComposeTest",
+        "com.blackatsystems.miguardia.V2ShiftActualComposeTest",
+        "com.blackatsystems.miguardia.V2ShiftEditComposeTest",
+        "com.blackatsystems.miguardia.VacationComposeTest",
+        "com.blackatsystems.miguardia.VacationViewModelInstrumentedTest",
+        "com.blackatsystems.miguardia.VigiliaThemeComposeTest",
+        "com.blackatsystems.miguardia.VisualSystemComposeTest",
+        "com.blackatsystems.miguardia.WeatherComposeTest",
+        "com.blackatsystems.miguardia.ui.weather.WeatherViewModelTest",
+        "com.blackatsystems.miguardia.WorkSetupComposeTest"
+      ]
+    },
+    "app-storage": {
+      "module": "app",
+      "process": "fresh-per-invocation",
+      "fixture_state": "Disposable QA context; test databases, files and preferences are created/deleted.",
+      "hazards": [
+        "Test data/files/preferences are mutated; review fixtures before using a populated QA."
+      ],
+      "requires": [
+        "qa-mutations",
+        "disposable-data"
+      ],
+      "instrument_args": {},
+      "invocations": [
+        "com.blackatsystems.miguardia.CalendarMonthObserverInstrumentedTest",
+        "com.blackatsystems.miguardia.FrancoFlowInstrumentedTest",
+        "com.blackatsystems.miguardia.GuardProfilePreferencesInstrumentedTest",
+        "com.blackatsystems.miguardia.MiGuardiaAppTest",
+        "com.blackatsystems.miguardia.NextEventObserverInstrumentedTest",
+        "com.blackatsystems.miguardia.NotificationPreferencesInstrumentedTest",
+        "com.blackatsystems.miguardia.OnboardingPreferencesInstrumentedTest",
+        "com.blackatsystems.miguardia.PhotosComposeTest",
+        "com.blackatsystems.miguardia.SchedulePhotoBitmapDecoderInstrumentedTest",
+        "com.blackatsystems.miguardia.SchedulePhotoFileStoreInstrumentedTest",
+        "com.blackatsystems.miguardia.V2ReadOnlySurfacesInstrumentedTest",
+        "com.blackatsystems.miguardia.WidgetPreferencesInstrumentedTest",
+        "com.blackatsystems.miguardia.reports.PdfReportWriterInstrumentedTest",
+        "com.blackatsystems.miguardia.reports.ReportArtifactStoreInstrumentedTest",
+        "com.blackatsystems.miguardia.reports.ReportDestinationWriterInstrumentedTest",
+        "com.blackatsystems.miguardia.reports.ReportFileProviderInstrumentedTest",
+        "com.blackatsystems.miguardia.reports.ReportPhotoStagerInstrumentedTest",
+        "com.blackatsystems.miguardia.reports.ReportsViewModelInstrumentedTest"
+      ]
+    },
+    "app-backup": {
+      "module": "app",
+      "process": "fresh-per-invocation",
+      "fixture_state": "Isolated backup, files and portable preference fixtures.",
+      "hazards": [
+        "Restore/recovery and filesystem mutations inside test fixtures; never a preservation run on personal QA."
+      ],
+      "requires": [
+        "qa-mutations",
+        "disposable-data",
+        "backup-restore"
+      ],
+      "instrument_args": {},
+      "invocations": [
+        "com.blackatsystems.miguardia.backup.BackupComposeTest",
+        "com.blackatsystems.miguardia.backup.BackupDocumentPublicationInstrumentedTest",
+        "com.blackatsystems.miguardia.backup.BackupPhotoFilesInstrumentedTest",
+        "com.blackatsystems.miguardia.backup.BackupPhotoMutationGateInstrumentedTest",
+        "com.blackatsystems.miguardia.backup.BackupRecoveryInstrumentedTest",
+        "com.blackatsystems.miguardia.backup.PortablePreferencesGatewayInstrumentedTest"
+      ]
+    },
+    "app-system": {
+      "module": "app",
+      "process": "fresh-per-invocation",
+      "fixture_state": "Existing QA and controlled widget/weather/notification objects.",
+      "hazards": [
+        "System-facing widget, scheduler, permission or notification APIs; QA state can change."
+      ],
+      "requires": [
+        "qa-mutations",
+        "system-effects"
+      ],
+      "instrument_args": {},
+      "invocations": [
+        "com.blackatsystems.miguardia.AppIconInstrumentedTest",
+        "com.blackatsystems.miguardia.NotificationComposeTest",
+        "com.blackatsystems.miguardia.security.AccessLockManifestInstrumentedTest",
+        "com.blackatsystems.miguardia.SupportLinkInstrumentedTest",
+        "com.blackatsystems.miguardia.WeatherInfrastructureInstrumentedTest",
+        "com.blackatsystems.miguardia.WidgetBoundarySchedulerInstrumentedTest",
+        "com.blackatsystems.miguardia.WidgetComposeTest",
+        "com.blackatsystems.miguardia.WidgetManifestInstrumentedTest",
+        "com.blackatsystems.miguardia.WidgetRemoteViewsInstrumentedTest"
+      ]
+    },
+    "database": {
+      "module": "database",
+      "process": "fresh-per-invocation",
+      "fixture_state": "Separate database.test package; synthetic Room databases.",
+      "hazards": [
+        "Creates, migrates, replaces and deletes test databases; not the application database."
+      ],
+      "requires": [
+        "disposable-data",
+        "backup-restore"
+      ],
+      "instrument_args": {},
+      "invocations": [
+        "com.blackatsystems.miguardia.core.database.AvailabilityWindowPersistenceInstrumentedTest",
+        "com.blackatsystems.miguardia.core.database.BackupDatabaseGatewayInstrumentedTest",
+        "com.blackatsystems.miguardia.core.database.DayOffPersistenceInstrumentedTest",
+        "com.blackatsystems.miguardia.core.database.IndependentExtraWorkPersistenceInstrumentedTest",
+        "com.blackatsystems.miguardia.core.database.LocalDataStoreInstrumentedTest",
+        "com.blackatsystems.miguardia.core.database.MonthlyReportSnapshotInstrumentedTest",
+        "com.blackatsystems.miguardia.core.database.NextEventQueriesInstrumentedTest",
+        "com.blackatsystems.miguardia.core.database.RecurringPlanPersistenceInstrumentedTest",
+        "com.blackatsystems.miguardia.core.database.SchedulePhotoPersistenceInstrumentedTest",
+        "com.blackatsystems.miguardia.core.database.ShiftActualPersistenceInstrumentedTest",
+        "com.blackatsystems.miguardia.core.database.ShiftNotificationPersistenceInstrumentedTest",
+        "com.blackatsystems.miguardia.core.database.V2DatabaseMigrationInstrumentedTest",
+        "com.blackatsystems.miguardia.core.database.V2ShiftPersistenceInstrumentedTest",
+        "com.blackatsystems.miguardia.core.database.VacationPersistenceInstrumentedTest",
+        "com.blackatsystems.miguardia.core.database.WorkCatalogPersistenceInstrumentedTest",
+        "com.blackatsystems.miguardia.core.database.WorkConfigurationPersistenceInstrumentedTest"
+      ]
+    },
+    "beta-isolated": {
+      "module": "app",
+      "process": "fresh-per-invocation",
+      "fixture_state": "Private synthetic beta stores/keys, not a public server.",
+      "hazards": [
+        "Creates and removes isolated beta/backup test files and Keystore aliases."
+      ],
+      "requires": [
+        "qa-mutations",
+        "disposable-data",
+        "backup-restore"
+      ],
+      "instrument_args": {},
+      "invocations": [
+        "com.blackatsystems.miguardia.beta.BetaComposeTest",
+        "com.blackatsystems.miguardia.beta.BetaInstrumentedTest"
+      ]
+    },
+    "beta-cold-process": {
+      "module": "app",
+      "process": "fresh-per-invocation",
+      "fixture_state": "Two ordered methods in independent processes: prepare durable synthetic pending feedback, then reopen.",
+      "hazards": [
+        "Creates synthetic files and Keystore identity; second method cleans its own fixture; interruption can leave fixture data."
+      ],
+      "requires": [
+        "qa-mutations",
+        "disposable-data"
+      ],
+      "instrument_args": {},
+      "invocations": [
+        "com.blackatsystems.miguardia.beta.BetaColdProcessTest#prepareDurablePendingOperationForProcessDeath",
+        "com.blackatsystems.miguardia.beta.BetaColdProcessTest#reopenAfterProcessDeathVerifiesOfflineAndRetransmitsExactlyOnce"
+      ]
+    },
+    "existing-session": {
+      "module": "app",
+      "process": "fresh-per-invocation",
+      "fixture_state": "Preserve owner session; open and closed cases may skip depending on current state.",
+      "hazards": [
+        "Starts/recreates QA activities; no automatic session creation; skips remain pending."
+      ],
+      "requires": [
+        "qa-mutations",
+        "existing-session"
+      ],
+      "instrument_args": {},
+      "invocations": [
+        "com.blackatsystems.miguardia.UpdatesActivityTest"
+      ]
+    },
+    "notifications-alarm": {
+      "module": "app",
+      "process": "fresh-per-invocation",
+      "fixture_state": "Public root, disposable QA; exact alarms require specific device/real-alarm authorization.",
+      "hazards": [
+        "Before each method clears QA data; may emit real exact alarms and notifications; requires separate specific alarm authorization. No permission is granted by runner."
+      ],
+      "requires": [
+        "qa-mutations",
+        "disposable-data",
+        "system-effects",
+        "real-alarms"
+      ],
+      "instrument_args": {},
+      "invocations": [
+        "com.blackatsystems.miguardia.NotificationAlarmEndToEndInstrumentedTest"
+      ]
+    },
+    "updates-signed-fixture": {
+      "module": "app",
+      "process": "fresh-per-invocation",
+      "fixture_state": "Previously supplied, explicitly authorized signed APK fixture at updates28-fixtures.",
+      "hazards": [
+        "Reads supplied fixture, creates/deletes isolated temporary files; runner does not upload fixtures."
+      ],
+      "requires": [
+        "qa-mutations",
+        "signed-fixtures"
+      ],
+      "instrument_args": {
+        "updates28FixtureDirectory": "updates28-fixtures"
+      },
+      "invocations": [
+        "com.blackatsystems.miguardia.updates.UpdateAndroidIoTest"
+      ]
+    },
+    "updates-temporary-session": {
+      "module": "app",
+      "process": "fresh-per-invocation",
+      "fixture_state": "Existing public QA work/onboarding session, owner lock open; no beta activation, file or identity mutation. Restores previous runtime pause state.",
+      "hazards": [
+        "Starts/recreates activities, pauses and restores local runtimes, writes safe QA-only evidence; preserves labor/preferences."
+      ],
+      "requires": [
+        "qa-mutations",
+        "temporary-session",
+        "system-effects",
+        "existing-session"
+      ],
+      "instrument_args": {
+        "updates28TemporarySession": "authorized"
+      },
+      "invocations": [
+        "com.blackatsystems.miguardia.UpdatesSupervisedActivityTest"
+      ],
+      "manual_only": "Requires operator-approved existing QA session and private preservation/evidence review; no automatic fixture repair."
+    },
+    "support-browser-supervised": {
+      "module": "app",
+      "process": "fresh-per-invocation",
+      "fixture_state": "Includes closed/existing cases plus temporary session for real browser review.",
+      "hazards": [
+        "Real external browser and Activity navigation; operator reviews return and supplies continuation marker. No beta activation or identity changes."
+      ],
+      "requires": [
+        "qa-mutations",
+        "temporary-session",
+        "system-effects",
+        "existing-session"
+      ],
+      "instrument_args": {
+        "support27TemporarySession": "authorized"
+      },
+      "invocations": [
+        "com.blackatsystems.miguardia.SupportMenuActivityTest"
+      ],
+      "manual_only": "SupportMenuActivityTest waits for an operator marker during real browser review. Use its explicitly authorized supervised procedure; this runner does not write private continuation files or claim human review."
+    },
+    "credits-supervised": {
+      "module": "app",
+      "process": "fresh-per-invocation",
+      "fixture_state": "Public root; existing QA preserved, synthetic presenter events and supervised Main navigation; requires existing completed setup/onboarding and owner-unlocked access.",
+      "hazards": [
+        "Requires no active QA Activities/widgets/notifications and compatible channels; preserves owner data, including existing beta residue files.",
+        "MAIN must verify cleanup-complete and stop QA before leaving the device; do not remove beta residue files."
+      ],
+      "requires": [
+        "qa-mutations",
+        "temporary-session",
+        "system-effects"
+      ],
+      "instrument_args": {
+        "creditsTemporarySession": "authorized"
+      },
+      "invocations": [
+        "com.blackatsystems.miguardia.WeatherCreditsSessionInstrumentedTest"
+      ],
+      "manual_only": "Supervised preservation, cleanup-complete verification and final QA stop are mandatory; not an unattended fixture. No beta-file cleanup is permitted."
+    },
+    "updates-oem-supervised": {
+      "module": "app",
+      "process": "fresh-per-invocation",
+      "fixture_state": "Public root; synthetic writer-only bytes through actual OEM SAF, not PackageManager validation. QA public incompatibility checked separately.",
+      "hazards": [
+        "Operator creates a NEW disposable external document and records exact provider/path; private fixture source/delegate restored by test, external cleanup explicit."
+      ],
+      "requires": [
+        "qa-mutations",
+        "temporary-session",
+        "existing-session",
+        "system-effects"
+      ],
+      "instrument_args": {
+        "updatesPublicSaf": "authorized"
+      },
+      "invocations": [
+        "com.blackatsystems.miguardia.UpdatesOemSafActivityTest"
+      ],
+      "manual_only": "UpdatesOemSafActivityTest requires an operator save marker and OEM UI review. This runner does not automate private markers or human save/cleanup decisions."
+    },
+    "app-public-fixtures": {
+      "module": "app",
+      "process": "fresh-per-invocation",
+      "fixture_state": "Public application root; disposable labor/onboarding/widget fixtures, no beta activation.",
+      "hazards": [
+        "May clear QA tables and change preferences/widget/notification state; disposable authorization remains mandatory."
+      ],
+      "requires": [
+        "qa-mutations",
+        "disposable-data",
+        "system-effects"
+      ],
+      "instrument_args": {},
+      "invocations": [
+        "com.blackatsystems.miguardia.AvailabilityActivityTest",
+        "com.blackatsystems.miguardia.HoursAndExtrasActivityTest",
+        "com.blackatsystems.miguardia.NotificationDeferredActionsInstrumentedTest",
+        "com.blackatsystems.miguardia.ShiftNotificationPresenterInstrumentedTest",
+        "com.blackatsystems.miguardia.SummaryActivityTest",
+        "com.blackatsystems.miguardia.V2ManualShiftLoadActivityTest",
+        "com.blackatsystems.miguardia.V2ReadyCalendarRecreationActivityTest",
+        "com.blackatsystems.miguardia.V2RecurringPlanActivityTest",
+        "com.blackatsystems.miguardia.V2ShiftActualActivityTest",
+        "com.blackatsystems.miguardia.V2ShiftEditActivityTest",
+        "com.blackatsystems.miguardia.WidgetConfigurationActivityTest"
+      ]
+    },
+    "public-root": {
+      "module": "app",
+      "process": "fresh-per-invocation",
+      "fixture_state": "Real public root and recreation; preserved beta residues do not grant or deny access.",
+      "hazards": [
+        "Starts/recreates QA activities and local runtimes; no beta records/identity created or erased."
+      ],
+      "requires": [
+        "qa-mutations",
+        "system-effects"
+      ],
+      "instrument_args": {},
+      "invocations": [
+        "com.blackatsystems.miguardia.beta.BetaClosedRootTest"
+      ]
+    },
+    "hours-restoration-race": {
+      "module": "app",
+      "process": "fresh-per-invocation",
+      "fixture_state": "Real Main/ViewModel with in-memory repositories; explicit QA emulator opt-in. No Activity or database fixture.",
+      "hazards": ["QA Application starts normally; use the authorized disposable emulator only."],
+      "requires": ["qa-mutations", "disposable-data"],
+      "instrument_args": {"hoursReviewRace": "ALLOW_ISOLATED_REPOSITORIES"},
+      "invocations": ["com.blackatsystems.miguardia.HoursExtraRestorationRaceInstrumentedTest"]
+    },
+    "upgrade-backup-preparation": {
+      "module": "app",
+      "process": "fresh-per-invocation",
+      "fixture_state": "Opt-in synthetic full V6 backup export and isolated restore, only the exact authorized disposable API33 AVD. No Release sandbox writes.",
+      "hazards": [
+        "Creates two isolated QA databases, synthetic photo and preferences; retains only a private backup and hash/count evidence.",
+        "Requires operator identity/date arguments and strict live QA file preservation. Never restore this backup after the installed upgrade baseline."
+      ],
+      "requires": ["qa-mutations", "disposable-data", "backup-restore"],
+      "instrument_args": {},
+      "invocations": ["com.blackatsystems.miguardia.upgrade.PublicUpgradeBackupFixtureTest"],
+      "manual_only": "Verify the named API33 AVD and runtime identity, supply explicit fixture consent/date, inspect successful isolated round-trip and live QA preservation before exporting. No automatic data preparation or signed-app mutation."
+    },
+    "public-cold-root": {
+      "module": "app",
+      "process": "fresh-per-invocation",
+      "fixture_state": "Prepare exactly one residual state in fresh disposable QA, then verifyAfterExplicitProcessDeath in another process. Signed test receipts are inert; no Application beta activation.",
+      "hazards": [
+        "Writes historical beta preference fixture and hash-only cache evidence; requires fresh disposable data for each state.",
+        "Explicit force-stop between selected methods; preserves residues for inspection. No device operation performed by catalog check."
+      ],
+      "requires": [
+        "qa-mutations",
+        "disposable-data",
+        "beta-fixture"
+      ],
+      "instrument_args": {
+        "publicColdRoot": "authorized"
+      },
+      "invocations": [
+        "com.blackatsystems.miguardia.beta.PublicColdRootTest"
+      ],
+      "manual_only": "Select exactly one prepare method, stop QA explicitly, then verify method. Never execute the whole class."
+    }
+  },
+  "classes": {
+    "com.blackatsystems.miguardia.HoursExtraRestorationRaceInstrumentedTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/HoursExtraRestorationRaceInstrumentedTest.kt",
+      "sha256": "53860b49dbfffdd78ddd4bd0f6a35d73335d273c80afa0c3c00fcf9a6f987c0b",
+      "methods": ["completedRestorationThenCorrectionPersistsLatestPosition", "lateRestorationCannotReplaceAReviewedCorrectionBeforeSave"]
+    },
+    "com.blackatsystems.miguardia.upgrade.PublicUpgradeBackupFixtureTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/upgrade/PublicUpgradeBackupFixtureTest.kt",
+      "sha256": "2cae1acb66f683b0b5e8d3e1d1df1f869aec50b249126f7654a6a51a75d0567a",
+      "methods": ["preparesCompleteSyntheticBackupForExplicitDisposableUpgradeRehearsal"]
+    },
+    "com.blackatsystems.miguardia.AppearanceComposeTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/AppearanceComposeTest.kt",
+      "sha256": "811dd4242b53aaf324b265ef2199b62cee3ba391353b595d36ea0e7d46435549",
+      "methods": [
+        "appearanceOffersStandardLargeAndExtraLargeInternalZoom",
+        "appearanceOffersCompactLightDarkToggleAndSystemOption"
+      ]
+    },
+    "com.blackatsystems.miguardia.AppIconInstrumentedTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/AppIconInstrumentedTest.kt",
+      "sha256": "9963da878c0cf81b0362b846bfb8a3f67ef93183854343ea229e43f18d854d74",
+      "methods": [
+        "launcherAndRoundIconsResolveOnEverySupportedApi"
+      ]
+    },
+    "com.blackatsystems.miguardia.AutomaticTimeFieldComposeTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/AutomaticTimeFieldComposeTest.kt",
+      "sha256": "4e421f3d2f03c24efb75927bd0e138a6d1a6a63cd8ef848d81fb672a488f8689",
+      "methods": [
+        "shortHourRemainsEditableAndNormalizesVisiblyWhenFocusLeaves",
+        "focusLossDoesNotRepeatAValueAlreadyDispatchedBeforeParentRecomposes"
+      ]
+    },
+    "com.blackatsystems.miguardia.AvailabilityActivityTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/AvailabilityActivityTest.kt",
+      "sha256": "d565beb75d7a90294ce3149c174b6e4fe30fc3beda7e8e6fc013efbf69c2b426",
+      "methods": [
+        "notificationAvailabilityActionOpensItsOwnerDate",
+        "createRecreateCorrectAndDeleteReturnsToSameCalendarDetail",
+        "configurationDraftAndReviewSurviveRecreationWithoutChangingHoursReference"
+      ]
+    },
+    "com.blackatsystems.miguardia.AvailabilityComposeTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/AvailabilityComposeTest.kt",
+      "sha256": "5fb6406eb07845efc06c9bcf3ade4fbcc2c48609826ed4934580dc5438abd69d",
+      "methods": [
+        "configurationShowsThreeExactNamesNoUseDateAndReviewBeforeSave",
+        "dayUsesCalendarDateHidesCreateWhenDisabledAndShowsTextualAccessibleIndicatorWhenEnabled",
+        "hoursShowsAvailabilitySeparatelyWithoutCallingItWorkedTime",
+        "monthlyGridAnnouncesAvailabilityWithTextIndependentFromColor",
+        "loadingErrorAndRetryRemainDistinctFromEmptyContent",
+        "editorRemainsReachableInLandscapeSizedViewportAtTwoHundredPercentZoom",
+        "discardAndObservationErrorKeepTheUserInControlWithoutHidingSavedWindows"
+      ]
+    },
+    "com.blackatsystems.miguardia.backup.BackupComposeTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/backup/BackupComposeTest.kt",
+      "sha256": "655b740cf44a65b07ea4649d298895ee1b3292b55fc5d4bd2d43feff5cf0a5d5",
+      "methods": [
+        "creationStartsEncryptedAndRequiresMatchingPasswords",
+        "unencryptedCreationNeedsAnExplicitReadableFileWarning",
+        "differentTimelineBlocksMergeButKeepsConsciousReplacementAvailable",
+        "excessiveMergeComplexityKeepsOnlyConsciousReplacementAvailable",
+        "conflictDefaultsToKeepingCurrentAndCannotInventKeepBoth",
+        "compatibleDistinctIdentitiesOfferAnExplicitKeepBothChoice",
+        "replaceNeedsTheExactSecondConfirmation",
+        "replacementDescribesNetLossInsteadOfCountingIdenticalRowsAsDeleted",
+        "pendingRecoveryBlocksLeavingTheProtectiveSurface",
+        "safePreparationCanBeCancelledButApplyingCannot"
+      ]
+    },
+    "com.blackatsystems.miguardia.backup.BackupDocumentPublicationInstrumentedTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/backup/BackupDocumentPublicationInstrumentedTest.kt",
+      "sha256": "3bbeb44c36a2be3065b59524977c1623d9894c730ffd0eb5cd5fd2dfb7a4dd7f",
+      "methods": [
+        "completeDocumentIsPublishedByteForByteOnlyAfterItsPayloadIsDurable",
+        "completePasswordlessDocumentOpensWithoutPasswordButItsPayloadIsSealed",
+        "processDeathBeforeFinalHeaderLeavesOnlyAnInvalidSealedPayloadWithoutPassword",
+        "ordinaryPublicationFailureDeletesOrDurablyEmptiesTheIncompleteDocument"
+      ]
+    },
+    "com.blackatsystems.miguardia.backup.BackupPhotoFilesInstrumentedTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/backup/BackupPhotoFilesInstrumentedTest.kt",
+      "sha256": "0342a055cad033de9ff76d451b2088f36394bdcd6a4de6e275770427dba04695",
+      "methods": [
+        "resolvedRowAlsoControlsThePhotoBytesWithoutSilentOverwrite",
+        "finalVerificationRejectsDifferentBytesWithTheSameSizeAndDimensions",
+        "interruptedDirectorySwapKeepsExactlyTheCommittedPhotoSet"
+      ]
+    },
+    "com.blackatsystems.miguardia.backup.BackupPhotoMutationGateInstrumentedTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/backup/BackupPhotoMutationGateInstrumentedTest.kt",
+      "sha256": "82b51ad2f199c89edea1514a2393c979c5ea1e151acb9e66412b923251192b0d",
+      "methods": [
+        "restoreGatePreventsPhotoFileAndRoomRowFromBeingSplit"
+      ]
+    },
+    "com.blackatsystems.miguardia.backup.BackupRecoveryInstrumentedTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/backup/BackupRecoveryInstrumentedTest.kt",
+      "sha256": "83d3daef0b52e0bbb0fabe8310a374dbce2a9ff5967928604e58d5f250b60bd4",
+      "methods": [
+        "preparedBackupUsesTheExactExtensionAndADataFreeSuggestedName",
+        "concurrentPreferenceMutationRetriesThenAbortsWithoutACompletedArtifact",
+        "mergeAppliesRoomPreferencesAndPhotosAndIsIdempotentWithAFreshSession",
+        "replaceAllWithWrongConfirmationLeavesRoomPreferencesAndPhotosUntouched",
+        "committedCleanupFailureDoesNotResumeRuntimesAndPartialResumeIsPausedAgain",
+        "everyJournalCheckpointRecoversExactlyTheOldOrTheNewAggregate",
+        "ordinaryFailureAtEveryCheckpointRollsBackUnlessAlreadyCommitted",
+        "partiallyDeletedCommittedTombstoneIsSweptWithoutRollingBackTheVerifiedState",
+        "failedJournalDeletionRemainsDurablyPendingUntilTheNextSuccessfulSweep",
+        "startupRecoveryFailsClosedWhenPrivateBackupStagingCannotBeRemoved"
+      ]
+    },
+    "com.blackatsystems.miguardia.backup.PortablePreferencesGatewayInstrumentedTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/backup/PortablePreferencesGatewayInstrumentedTest.kt",
+      "sha256": "adbba310b6831a906786642ee82eb1bd19d91e934deb1d7917db752b7fc13f32",
+      "methods": [
+        "backupReadsPropagateDataStoreIoFailuresInsteadOfUsingDefaults",
+        "restoreMovesOnlySemanticPreferencesAndKeepsDeviceBookkeepingOut"
+      ]
+    },
+    "com.blackatsystems.miguardia.beta.BetaClosedRootTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/beta/BetaClosedRootTest.kt",
+      "sha256": "74f13a520a6da0dc238424dd63eb9aa498e11579c1b4cf99187a1b6f5689547c",
+      "methods": [
+        "publicRootAndRecreationDoNotCreateOrChangeResidualBetaFiles"
+      ]
+    },
+    "com.blackatsystems.miguardia.beta.BetaColdProcessTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/beta/BetaColdProcessTest.kt",
+      "sha256": "ff5a5d1cee1f15879afbf45b4f99e5df1c2072e992c8eacfe65a56788db1fabd",
+      "methods": [
+        "prepareDurablePendingOperationForProcessDeath",
+        "reopenAfterProcessDeathVerifiesOfflineAndRetransmitsExactlyOnce"
+      ]
+    },
+    "com.blackatsystems.miguardia.beta.BetaComposeTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/beta/BetaComposeTest.kt",
+      "sha256": "7f657f599e33967a833e8f58efd2805dad194b78a43f0710b1093cf24ba401e9",
+      "methods": [
+        "overdueOpinionKeepsPendingOperationHostThroughSavedStateRestoreUntilSafePoint",
+        "sharedMainAndWidgetBackHandlerCancelsCanjeBeforeClosing",
+        "activationOpinionConsentQueueAndReceiptHaveDistinctAccessibleStatesAcrossInternalZooms"
+      ]
+    },
+    "com.blackatsystems.miguardia.beta.BetaInstrumentedTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/beta/BetaInstrumentedTest.kt",
+      "sha256": "493f810b15b3f4b6f0b9bef76dbe1ac708cface688277a222c4f13b5dd6fef4c",
+      "methods": [
+        "keystoreAndDurableQueueReopenOfflineThenAcknowledgeTheSameOperation",
+        "unavailableTrustDoesNotCreateAnIdentityOrTouchWorkingData"
+      ]
+    },
+    "com.blackatsystems.miguardia.beta.PublicColdRootTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/beta/PublicColdRootTest.kt",
+      "sha256": "4acb32b4dd02e79e5e9e0881056941cd4eefeacdc98821f4a1d8d95707ab01de",
+      "methods": [
+        "prepareAbsent",
+        "prepareValidTestReceipt",
+        "prepareCorrupt",
+        "prepareIncompatible",
+        "prepareExpired",
+        "prepareQueued",
+        "verifyAfterExplicitProcessDeath"
+      ]
+    },
+    "com.blackatsystems.miguardia.CalendarAdaptiveLayoutComposeTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/CalendarAdaptiveLayoutComposeTest.kt",
+      "sha256": "53d084da12c1d54024620e97c7230ac62c11930fe2e95fdbff992dd0631e9bd4",
+      "methods": [
+        "standardZoomPhysicalViewportKeepsWholeHierarchyReachable",
+        "shortViewportKeepsPersistentScrollbarVisibleAfterThemeChange",
+        "fixedPhysicalViewportKeepsCalendarReachableAtEveryInternalZoom",
+        "shiftDetailKeepsItsParticularNotificationSettingsReachable"
+      ]
+    },
+    "com.blackatsystems.miguardia.CalendarCommonV2ComposeTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/CalendarCommonV2ComposeTest.kt",
+      "sha256": "615567ac2a2ee723566f946d39bf46a893d18c084d1137592a93c2c1416d1b0e",
+      "methods": [
+        "commonCalendarMarkersAndDayDetailsRemainAvailableInV2",
+        "upcomingV2ShiftKeepsItsWeatherBrief",
+        "cancelledAndAbsentShiftsKeepTheirCellStateAndSingleDayDetail",
+        "shiftExtraAvailabilityAndCommonMarkersCoexistInOneCellAndSemantics",
+        "multipleAvailabilityUsesAQuantityAndKeepsEveryLabelInSemantics",
+        "partialExtraAndAvailabilityErrorsKeepTheirLastMarkersAndExposeRetry",
+        "transientAvailabilityMessageClearsTheVisibleSourceWhenHoursHasAPersistentError"
+      ]
+    },
+    "com.blackatsystems.miguardia.CalendarComposeTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/CalendarComposeTest.kt",
+      "sha256": "0c08eba77dd07ab53a4a16da5cd46e520ee23a58eb1181eff5724ae3dc155fd6",
+      "methods": [
+        "controlsAndHorizontalGestureKeepCalendarNavigation",
+        "loadingAndRecoverableErrorRemainBlockingAndHonest",
+        "v2ReadyKeepsManualLoadPrimaryAndSecondaryActionsAdvanced",
+        "v2DayDetailKeepsNotesAndExactEditEntry",
+        "openingNotesReplacesTheDaySheetInsteadOfLeavingItOnTop",
+        "openingWeatherReplacesTheDaySheetInsteadOfLeavingItOnTop"
+      ]
+    },
+    "com.blackatsystems.miguardia.CalendarMonthObserverInstrumentedTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/CalendarMonthObserverInstrumentedTest.kt",
+      "sha256": "17394bb8b1f6b0a38f980182144eaec53abcdd0fe0f1b8288721cca9012ab8f9",
+      "methods": [
+        "combinesRoomFlowsAndSwitchesInclusiveMonthLimits"
+      ]
+    },
+    "com.blackatsystems.miguardia.ContextualLayoutComposeTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/ContextualLayoutComposeTest.kt",
+      "sha256": "cc4c3e79f5923ad2f9d6d5868714a5601007638887f1e2d852be1469d7c3455e",
+      "methods": [
+        "advancedLabelsKeepWholeWordsAndHelpAtEveryInternalZoom",
+        "openHelpSurvivesReflowAndSavedStateRestoration",
+        "bothTemplateFormsKeepColorLabelsWholeAndPickerReachable",
+        "calendarConfirmationStartsBelowTheRealToolbarWithoutDoublePadding",
+        "confirmationConsumesExplicitScaffoldInsetsExactlyOnce"
+      ]
+    },
+    "com.blackatsystems.miguardia.ExceptionsComposeTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/ExceptionsComposeTest.kt",
+      "sha256": "10210d37d762f0a4ae7fe25bf5d41893a88500b2a37c98e1f363a6bc91e6b6a7",
+      "methods": [
+        "holidaysKeepMainCalendarSelectionAndLocalEditing",
+        "holidayDateSelectionUsesTheOnlyMainMonthGrid",
+        "holidayConflictsExposeReplaceKeepAndCancelPolicies",
+        "closingWithAHolidayDraftRequiresExplicitDiscard",
+        "notesRemainPrivateAndDeletionRequiresConfirmation",
+        "noteDraftUsesOnlyTheSelectedV2Shift"
+      ]
+    },
+    "com.blackatsystems.miguardia.FrancoFlowInstrumentedTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/FrancoFlowInstrumentedTest.kt",
+      "sha256": "6096b099ef838ed6c20d7db9ef664b67d7ad8c32d7e45209c8c6bfe784801cec",
+      "methods": [
+        "realLoadConfirmationPersistsObservedFrancosThenRemovesWithoutCatalog",
+        "realOccupiedBatchRejectsEveryMarkAndKeepsTheStoredShift"
+      ]
+    },
+    "com.blackatsystems.miguardia.GuardProfilePreferencesInstrumentedTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/GuardProfilePreferencesInstrumentedTest.kt",
+      "sha256": "c1e1302f24f650b4bec8bfc3c6a7bd2d3c2ae4952b0ed836d4b86b52d969fb57",
+      "methods": [
+        "optionalDisplayNamePersistsAndCanBeRemoved"
+      ]
+    },
+    "com.blackatsystems.miguardia.HelpComposeTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/HelpComposeTest.kt",
+      "sha256": "41a1cc30c3f3a8209ae74dd1836daf4f47ecb278b92dc9aa80f22c312cfde80f",
+      "methods": [
+        "automaticIntroductionHasProgressBackNextAndSkip",
+        "replayIntroductionNeverOffersSkipAndClosesToHelp",
+        "V2ReadyPendingBlocksCalendarButCompletionKeepsItsRealActions",
+        "HelpLivesOnceInApplicationAndAllTopicsAreReachable",
+        "firstWorkSetHelpExplainsNextStepAndDisablesReplay",
+        "HelpScreenDoesNotInvokeReplayWhenDisabled",
+        "contextualTourVisitsAllRealSurfacesWithoutCallingMutationCallbacks"
+      ]
+    },
+    "com.blackatsystems.miguardia.HoursAndExtrasActivityTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/HoursAndExtrasActivityTest.kt",
+      "sha256": "4889ffd975a96efe9fd2f6b014fbd26268a475f94347d8abfc800ee5d8f073f5",
+      "methods": [
+        "createRecreateCorrectAndDeleteReturnsToTheSameCalendarDetail",
+        "reviewedReferenceDraftSurvivesRecreationAndPersistsTheChosenFutureRestart"
+      ]
+    },
+    "com.blackatsystems.miguardia.HoursAndExtrasComposeTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/HoursAndExtrasComposeTest.kt",
+      "sha256": "883cd8e2bbf452203874640deefb4573a33d6f21765a488196d03c008f80a939",
+      "methods": [
+        "progressDistinguishesLoadingErrorAndKnownContentWithoutFalseZero",
+        "referenceEditorExposesEveryExplicitChoiceAndNoSectorDefault",
+        "exactReferenceReviewShowsPeriodAmountAndConfirmationsAfterReview",
+        "independentExtraCardIsTextualAndKeepsCorrectionAndDeletionSeparate",
+        "perPeriodMissingValueHasAnExplicitEditorAndCorrectionHasAConfirmation",
+        "progressPrimaryActionStaysReachableInBothThemesAndEveryInternalZoom"
+      ]
+    },
+    "com.blackatsystems.miguardia.MiGuardiaAppTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/MiGuardiaAppTest.kt",
+      "sha256": "4eb81c6edd81c73bc655d568a2574defe92fea01a35baf4836fdae734b8e391e",
+      "methods": [
+        "freshV2InstallShowsExactlyTheFourAuthorizedSectors",
+        "freshV2SelectionRemainsBlockingAfterActivityRecreation"
+      ]
+    },
+    "com.blackatsystems.miguardia.NavigationDrawerComposeTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/NavigationDrawerComposeTest.kt",
+      "sha256": "74da7fff91d2026463240c6a8c0e8877dc65d3e42d7c9d098afb2609c799e95e",
+      "methods": [
+        "bottomBarIsAbsentAndDrawerContainsTheFullUniqueHierarchyWithSelectionState",
+        "selectingEachMainDestinationClosesDrawerAndShowsItsScreen",
+        "everyDirectEntryClosesDrawerBeforeInvokingItsExistingOwner",
+        "horizontalMonthGestureChangesMonthWithoutOpeningDrawer",
+        "calendarNavigationRequestClosesDrawerAndShowsRequestedDay",
+        "everyBlockingSurfaceAndDraftKeepsDrawerClosed",
+        "drawerRemainsUsableAcrossThemesZoomsPortraitAndLandscape"
+      ]
+    },
+    "com.blackatsystems.miguardia.NextEventComposeTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/NextEventComposeTest.kt",
+      "sha256": "0c0cc89a3558dbf2ba8366ef048cac80ce8024e13f5a6cc222d64c95e8835f18",
+      "methods": [
+        "loadingAndRecoverableErrorExposeRetryWithoutHidingLastValidResult",
+        "activeOvernightStartedYesterdayIsTheClosedPrimaryWithoutPrivateContent",
+        "activeAvailabilityKeepsItsHistoricalLabelAndDoesNotBecomeAShift",
+        "simultaneousUpcomingShiftAndAvailabilityRemainVisibleWithoutChangingShiftCount",
+        "availabilityRemainsReadableInLightDarkAndEveryInternalZoom",
+        "sameTimeUpcomingShiftsStayDifferentiatedAndExpandInStableOrder",
+        "completedOnlySummaryExpandsAndCanCloseWithoutLosingItsData",
+        "oneHistoricalTodayRecordStillOffersItsFullExpandableDetail",
+        "expansionResetsWhenTheCivilDateChanges",
+        "restoredExpansionStaysBoundToTheCivilDateThatWasSaved",
+        "expandedListIncludesCancelledAbsentAndProtectedTodayShifts",
+        "expandedMixedListPreservesEveryTodayStateAndPlannedSnapshots",
+        "actualTimeAndProtectionStayVisibleWithoutLeakingReasonsOrMedicalNotes",
+        "futureShiftExplicitDayOffAndHonestEmptyStateAreDistinct",
+        "protectedFutureProducesAnHonestEmptyStateWithoutAnnouncingWork",
+        "exactTemporalTransitionsUpdateUpcomingToOngoingAndThenCompleted",
+        "changingVisibleMonthDoesNotCreateASecondTopCardSourceOfTruth",
+        "engineErrorKeepsCalendarUsableAcrossThemeAndInternalZoom",
+        "todayCardRemainsReadableInLandscapeAndRestoresOrientation"
+      ]
+    },
+    "com.blackatsystems.miguardia.NextEventObserverInstrumentedTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/NextEventObserverInstrumentedTest.kt",
+      "sha256": "343cdc50a81cfdf6c70f176ce88f976575b50954b7035992cab6bcffcfd8f866",
+      "methods": [
+        "roomChangesReactivelyReprojectShiftDayOffMedicalLeaveAndVacation",
+        "shiftEditAndDeletionReactivelyReplaceTheCurrentV2Projection",
+        "actualTimeUpdateReactivelyRemovesThePlannedShiftFromFutureEvents",
+        "availabilitySourceUpdateUsesTheSameReactiveProjectionAsTheCard",
+        "exactAvailabilityEndTriggersTemporalReprojectionWithHalfOpenBounds",
+        "viewModelExposesRecoverableErrorAndRetryStartsAFreshV2Observation",
+        "viewModelKeepsTheExactLastValidSameDayProjectionWhenASourceFailsLater",
+        "stoppingObservationCancelsItsV2SourceGraph",
+        "localMidnightRestartsSourcesAndInjectedZoneOwnsTheCivilDate",
+        "everyV2WorkSourceObservesEverySectorPresentInConfigurationHistory"
+      ]
+    },
+    "com.blackatsystems.miguardia.NotificationAlarmEndToEndInstrumentedTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/NotificationAlarmEndToEndInstrumentedTest.kt",
+      "sha256": "c45cb9b6116da884099dffb839cc44ca1c759f0975bd03f049a2ca04224106c1",
+      "methods": [
+        "typedAndLegacyAlarmPayloadsRemainReconstructible",
+        "boundaryReceivedDuringStartupRecoveryIsDeliveredAfterReady",
+        "rebuildRestoresCurrentBoundaries",
+        "qaPlanReactsToEditOwnDisableGlobalRestoreVacationAndDeletion",
+        "staleEndBoundaryDoesNotCancelEditedShiftNotification",
+        "dismissedShiftRejectsStartBoundaryAndCanBeRestoredSilently",
+        "availabilityStartBoundaryReadsThePersistedV2WindowAndPostsItsHistoricalLabel",
+        "realQaAlarmsDeliverReminderUpdateAtStartAndCancelAtEnd"
+      ]
+    },
+    "com.blackatsystems.miguardia.NotificationComposeTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/NotificationComposeTest.kt",
+      "sha256": "bee31643f6814198f9325b47b09be620e0ab3b54d396d2234a01f5e2d1ef8eca",
+      "methods": [
+        "globalSettingsOffersPreviewRhythmsAndAttentionBeforeAdvancedChoices",
+        "deniedPermissionKeepsTheSetupFocusedOnTheFirstStep",
+        "grantedRuntimePermissionAndBlockedAppNotificationsStayDistinct",
+        "notificationSurfaceRemainsReachableInLightDarkAndEveryInternalZoom",
+        "oneHourReminderUsesSingularCopy",
+        "customHiddenPreferencesAreNamedPersonalizedAndPreviewLeaksNoFixtureDetails",
+        "disabledShiftOffersSimpleRestoreAndPersonalizeActions",
+        "hiddenNotificationsOfferIndividualAndBatchRestore"
+      ]
+    },
+    "com.blackatsystems.miguardia.NotificationDeferredActionsInstrumentedTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/NotificationDeferredActionsInstrumentedTest.kt",
+      "sha256": "215aaea80d7306a7092febcac07bd66b78a270668293f2a83890f33da976f23c",
+      "methods": [
+        "rebuildReceiverRecordsBeforeAnyCancelableReplayJob",
+        "rebuildDuringRecoveryRemainsDurableUntilSuccessfulReplay",
+        "dismissalDuringStartupRecoveryIsReplayedExactlyOnce",
+        "dismissalReplayWaitsForRestoreMutationAndCannotBeOverwritten",
+        "deliveryDuringStartupRecoveryIsQueuedAndReplayedExactlyOnce",
+        "transientDeliveryFailureRemainsQueuedUntilAReplaySucceeds",
+        "boundedReplayRetriesATransientFailureAndClearsTheQueue"
+      ]
+    },
+    "com.blackatsystems.miguardia.NotificationPreferencesInstrumentedTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/NotificationPreferencesInstrumentedTest.kt",
+      "sha256": "eaef617e4a77255a086f39af868dde28b4a9a4f3015140e198eb4421ca94c7cb",
+      "methods": [
+        "defaultsAreDisabledWithTwelveHourReminder",
+        "preferencesPersistInTheirExclusiveDataStoreFile",
+        "applyingRhythmIsAtomicAndDoesNotEraseNotificationTracking",
+        "customChangesAreDerivedAndDismissedShiftCannotBeMarkedDisplayed"
+      ]
+    },
+    "com.blackatsystems.miguardia.OnboardingPreferencesInstrumentedTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/OnboardingPreferencesInstrumentedTest.kt",
+      "sha256": "82318652603cae7c1a57eb41741eb1638d1ab2f4d17dd7368548f6bc7159c785",
+      "methods": [
+        "isolatedFilePersistsCurrentAndKeepsFutureVersion",
+        "corruptIsolatedFileIsNotTreatedAsCompleted"
+      ]
+    },
+    "com.blackatsystems.miguardia.OpenMeteoClientInstrumentedTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/OpenMeteoClientInstrumentedTest.kt",
+      "sha256": "489bc8c5000d849c2edc9082a0aaf81012d13cf16a494c8afa7747d43e298d0f",
+      "methods": [
+        "valid200ParsesCanonicalForecast",
+        "rateLimitPreservesRetryAfter",
+        "redirectsAndServerErrorsAreTypedWithoutFollowingThem",
+        "htmlAndOversizedBodiesAreRejected",
+        "socketTimeoutIsTypedAsOfflineWithoutRetryLoop"
+      ]
+    },
+    "com.blackatsystems.miguardia.PhotosComposeTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/PhotosComposeTest.kt",
+      "sha256": "8dce0a19a09d89fc96cfc1b831d0d289ff6cc025b872fb9f41df6ead7e0ad27d",
+      "methods": [
+        "emptyMonthShowsActionAndExplanation",
+        "listHasNoBulkDeleteOrRedundantOpenButton",
+        "emptyListIsUsableInLandscapeAndLightTheme",
+        "individualMenuOffersEveryActiveObjective",
+        "viewerAcceptsPinchAndPanGestures",
+        "thumbnailAndViewerRenderTheSameExifOrientation",
+        "replacementAndReopenKeepTheExifCorrection",
+        "viewerDoesNotSubstituteAnotherPhotoWhenSelectionIsMissing"
+      ]
+    },
+    "com.blackatsystems.miguardia.ProgressiveDisclosureComposeTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/ProgressiveDisclosureComposeTest.kt",
+      "sha256": "3bc166809a3227fef3225fb75f73b461f1a7c076afb7cf482cb6206bbad8d243",
+      "methods": [
+        "advancedContentStartsHiddenAndHelpExplainsWhatHowAndExample"
+      ]
+    },
+    "com.blackatsystems.miguardia.reports.PdfReportWriterInstrumentedTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/reports/PdfReportWriterInstrumentedTest.kt",
+      "sha256": "d9c1c753fd01924c7a366fa30687f3112db5bb1ec22a9578f3ff892ef9839c8d",
+      "methods": [
+        "everyGeneratedPageOpensAndRendersWithoutAccidentalBlankPages",
+        "anOptedInPhotoIsDecodedOnceFromTheFrozenCopyAndItsBytesRemainUntouched",
+        "oversizedRowsSubsectionsAndPhotoCaptionsArePaginatedWithoutLosingRenderability",
+        "internalContributionMetadataIsNeverWrittenIntoPdfBytes"
+      ]
+    },
+    "com.blackatsystems.miguardia.reports.ReportArtifactStoreInstrumentedTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/reports/ReportArtifactStoreInstrumentedTest.kt",
+      "sha256": "8e49a691a4807caae0002bbdf9540d33fa12a0d5e3fdfa1e20c64acbb003b604",
+      "methods": [
+        "xlsxArtifactHasTheExactZipSignatureWellFormedOoxmlAndNoForbiddenParts",
+        "cleanupKeepsAtMostThreeRecentArtifactsAndProtectsTheCurrentSession",
+        "failedValidationRemovesTheTemporaryAndPreservesThePreviousValidArtifact"
+      ]
+    },
+    "com.blackatsystems.miguardia.reports.ReportDestinationWriterInstrumentedTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/reports/ReportDestinationWriterInstrumentedTest.kt",
+      "sha256": "3ac0d2e3ccafb0907b8f8362c6880aea4594d2e84524ccab4e0efcdb6dd7bf70",
+      "methods": [
+        "saveCopiesTheCompleteArtifactToTheChosenDocument",
+        "failedDestinationNeverDeletesOrChangesTheValidPrivateArtifact",
+        "discardRemovesALateEmptyDestination",
+        "discardNeverDeletesANonEmptyDocument",
+        "directFileUriCannotBeWrittenOrDeleted"
+      ]
+    },
+    "com.blackatsystems.miguardia.reports.ReportFileProviderInstrumentedTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/reports/ReportFileProviderInstrumentedTest.kt",
+      "sha256": "7a736671776051d62cd6c23f2528cfc7acf1db87a8a9d3d580b09916459c861c",
+      "methods": [
+        "providerIsPrivateGrantsTemporaryReadAndSharesOnlyTheExactReportMime",
+        "providerRejectsDatabasePhotoStagingAndEveryOtherPrivatePath"
+      ]
+    },
+    "com.blackatsystems.miguardia.reports.ReportPhotoStagerInstrumentedTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/reports/ReportPhotoStagerInstrumentedTest.kt",
+      "sha256": "d24fa8f6b6e6420adef9f5dd4f982c9cfa79b71e31101c0760b76a3c1e2fa253",
+      "methods": [
+        "freezeCopiesAndValidatesAnOpaquePrivateAssetThenReleaseRemovesIt",
+        "aMissingOrChangedOriginalAbortsWithoutLeavingAStagingSession",
+        "aNewFreezePrunesOnlyExpiredValidOrphansAndKeepsActiveSessions"
+      ]
+    },
+    "com.blackatsystems.miguardia.reports.ReportsComposeTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/reports/ReportsComposeTest.kt",
+      "sha256": "4cc7bf788a2128bfdd8f67c01d2ba82527447786d4778a866de7755ad388a417",
+      "methods": [
+        "everyPrivateInclusionStartsOffAndXlsxExplainsThatPhotosArePdfOnly",
+        "medicalNoteRequiresASecondExplicitConfirmation",
+        "loadingEmptyGeneratingSavingSharingAndErrorRemainDistinctAndActionable",
+        "surfaceRemainsReachableInLightDarkAndEveryInternalZoom"
+      ]
+    },
+    "com.blackatsystems.miguardia.reports.ReportsViewModelInstrumentedTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/reports/ReportsViewModelInstrumentedTest.kt",
+      "sha256": "a6906c61a1ebab7323524e22212f16de21a724456e88b5228d9c64fc688157f7",
+      "methods": [
+        "sameSessionRestoresDraftButOpeningANewSessionResetsEveryPrivateOption",
+        "everyRestoredBusyStageReturnsToDraftAndNeverPretendsTheArtifactCompleted",
+        "doubleTapProducesOneArtifactAndSaveShareCancellationReuseIt",
+        "restoredMissingPhotoRemainsVisibleUntilTheUserExplicitlyUnchecksIt",
+        "changingAwayFromPdfClearsPhotoConsentBeforeReturningToPdf",
+        "lateSaveResultAfterRecreationDiscardsTheEmptyDestinationAndReportsInterruption"
+      ]
+    },
+    "com.blackatsystems.miguardia.RgbColorPickerComposeTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/RgbColorPickerComposeTest.kt",
+      "sha256": "d6a058acb2e7aaf1b1007404118f76b23b189a61a42f03e118fb57610ea70e48",
+      "methods": [
+        "pickerChangesBothAxesAndPropagatesArgbToTheVisibleWorkDraftAtTwoHundredPercent",
+        "pickerKeepsTenCommonColorsAtTheBottomAndAppliesTheChosenOne"
+      ]
+    },
+    "com.blackatsystems.miguardia.SchedulePhotoBitmapDecoderInstrumentedTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/SchedulePhotoBitmapDecoderInstrumentedTest.kt",
+      "sha256": "634569b01b601aea59fbe0dc490d340e8613ea66fd2d81d40b51be8a57b928cc",
+      "methods": [
+        "normalOrientationPreservesDimensionsAndContent",
+        "rotationsShowTheExpectedVisualOrientation",
+        "mirroredOrientationsShowTheExpectedVisualOrientation",
+        "horizontalPixelsWithPortraitExifBecomeVisuallyVertical",
+        "samplingUsesTheLargestVisualSideBeforeTransforming",
+        "decodingLeavesThePrivateFileByteForByteUnchanged",
+        "metadataFailureFallsBackToNormalBitmapDecoding",
+        "unknownOrientationFallsBackToNormalBitmapDecoding",
+        "reopeningAnExistingExifPhotoKeepsTheCorrection"
+      ]
+    },
+    "com.blackatsystems.miguardia.SchedulePhotoFileStoreInstrumentedTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/SchedulePhotoFileStoreInstrumentedTest.kt",
+      "sha256": "0a177847533a6c4a6a8642d33b8f75ece7b7e0743a04d696948ff0ecc958c47b",
+      "methods": [
+        "reconciliationKeepsOnlyTheExactVersionReferencedByMetadata",
+        "reconciliationRestoresTrashWhenMetadataStillReferencesIt",
+        "failedMetadataDeletionRestoresTheOriginalFile"
+      ]
+    },
+    "com.blackatsystems.miguardia.security.AccessLockComposeTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/security/AccessLockComposeTest.kt",
+      "sha256": "1ebf8bcc89694d1aded15274208f7dec0576064ff29347f2e7117f8152754e77",
+      "methods": [
+        "closedGateDoesNotComposeSensitiveContentAndReturnsToItAfterSuccess",
+        "storeErrorStaysGenericAndRepairRequiresSecureDeviceCapability",
+        "settingsExposeFourExactTimeoutsAndProtectActivationAndChanges",
+        "unlockRestoresTheExistingSaveableSurfaceAndDraftWithinTheLiveProcess"
+      ]
+    },
+    "com.blackatsystems.miguardia.security.AccessLockManifestInstrumentedTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/security/AccessLockManifestInstrumentedTest.kt",
+      "sha256": "b20f50b955aba948335a37922fb44f7abc752a6dd5dd76480bccbfe036fadac2",
+      "methods": [
+        "biometricPermissionIsNormalAndNoComponentWasAddedForTheLock",
+        "accessLockStoreLivesInsideTheCurrentVariantSandboxAndPersistsNoSession",
+        "activityResultPermissionLauncherCompletesWithoutLegacyRequestCodeCrash"
+      ]
+    },
+    "com.blackatsystems.miguardia.ShiftNotificationPresenterInstrumentedTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/ShiftNotificationPresenterInstrumentedTest.kt",
+      "sha256": "5199a269da7654584c76611710ec2e69a8f9267345ca48ef50bcf186fdc78e77",
+      "methods": [
+        "recoveryCoverPreservesExactDestinationsAndDismissalsWithoutPrivateContent",
+        "completeReminderUsesStableUuidIdentityHistoricalContentAndTwoActions",
+        "ongoingReducedAndHiddenVersionsProtectLockscreenContent",
+        "weatherAppearsOnlyInCompletePrivacyAndSilentRefreshDoesNotAlertAgain",
+        "longWeatherKeepsSeparateCreditAndHiddenRefreshRemovesIt",
+        "syntheticWeatherPreviewDoesNotClaimOpenMeteoData",
+        "availabilityUsesItsHistoricalLabelOnlyAndOpensOneDetailAction",
+        "shiftAndAvailabilityWithTheSameUuidKeepDifferentNotificationIdentities",
+        "simultaneousGuardsStaySeparateAndAttentionModesOwnOneVersionedChannel",
+        "hiddenGroupSummaryDoesNotExposeCountOrLaborContextInEitherVersion",
+        "testNotificationUsesReservedIdentityNoShiftActionsAndExpiresAlone"
+      ]
+    },
+    "com.blackatsystems.miguardia.SummaryActivityTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/SummaryActivityTest.kt",
+      "sha256": "4fb75749f171755049a909ece180d8a9ee0aef7d61dd1454290630913bca7acb",
+      "methods": [
+        "detailMonthAndPersonalizationSurviveRecreationAndBackReturnsToCalendar"
+      ]
+    },
+    "com.blackatsystems.miguardia.SummaryComposeTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/SummaryComposeTest.kt",
+      "sha256": "c686b888f40cb82b5fe43fd044433aacbe511175d5661cabbb8bdbe7c580c54a",
+      "methods": [
+        "loadingEmptyAndErrorAreDistinctAndRetryIsExplicit",
+        "introAndThreeDotMenuOpenPersonalizationWithoutChangingProjection",
+        "visibleSummaryOffersTheReportEntryAndCallsTheDedicatedAction",
+        "hiddenEmptyAndOrderedFamiliesFollowPreferences",
+        "metricDetailUsesTheExactRowsAndNeverDisplaysPrivateFields",
+        "personalizationHasAccessibleVisibilityAndBoundaryMoveControls",
+        "restoredDetailAndPersonalizationWaitForRealDataAndExposeRetryOnFailure",
+        "preferenceWriteFailureIsRecoverableWithoutClosingTheSurface",
+        "eachHistoricallySimilarLabelOpensItsOwnMetricDetail",
+        "returningFromDetailRestoresTheOverviewScrollPosition",
+        "surfaceRendersAtEveryInternalZoomInLightAndDarkThemes"
+      ]
+    },
+    "com.blackatsystems.miguardia.SupportLinkInstrumentedTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/SupportLinkInstrumentedTest.kt",
+      "sha256": "687188410a89790c95eafd6dc59ad30dc1d24d7bf28f117a88677ea0c65e8381",
+      "methods": [
+        "exactFreshIntentHasNoPrivatePayloadOrBrowserBinding",
+        "missingHandlerIsRecoverableAndNeverRetriesAutomatically",
+        "securityRejectionIsRecoverableAndNeverRetriesAutomatically"
+      ]
+    },
+    "com.blackatsystems.miguardia.SupportMenuActivityTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/SupportMenuActivityTest.kt",
+      "sha256": "0e76038855f5a7c092d783e7448e07c2c251785780b21e4fcebb69489c65315c",
+      "methods": [
+        "closedRootNeverExposesOrReplaysSupportAcrossRecreation",
+        "existingAuthorizedSessionPreservesDataAndDestinationWithExactInterceptedIntent",
+        "authorizedTemporarySessionOpensRealBrowserAndPreservesOwnerData"
+      ]
+    },
+    "com.blackatsystems.miguardia.SupportMenuComposeTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/SupportMenuComposeTest.kt",
+      "sha256": "1368f5ee6d153290d8e3beee6c4a7f619ecf9ea2c712641bfd67cda90db0fb01",
+      "methods": [
+        "oneVisibleAccessibleActionBelongsToApplication",
+        "realDrawerFinishesItsAnimationBeforeCallbackAndIgnoresSecondTap",
+        "actualMenuDoubleTapClosesOnceAndPreservesDestinationAcrossRecreation",
+        "changingWorkSurfaceDuringCloseCancelsAndDoesNotReplay",
+        "closingAccessDuringAnimationCancelsAndUnlockDoesNotReplay",
+        "leavingAndResumingDuringCloseCancelsTheOriginalTap",
+        "freshSetupAndInitialHelpNeverExposeTheAction",
+        "monthIsUnchangedAfterOpeningAndRecomposing",
+        "textAndActionRemainReachableInBothThemesOrientationsAndInternalZooms"
+      ]
+    },
+    "com.blackatsystems.miguardia.TransientConfirmationComposeTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/TransientConfirmationComposeTest.kt",
+      "sha256": "45c238b0b9dc1dee3311fe545f64a51389bff7dff1e8b53964ea457a849b81b4",
+      "methods": [
+        "confirmationFloatsAndDisappearsAfterTwoAndAHalfSeconds"
+      ]
+    },
+    "com.blackatsystems.miguardia.updates.UpdateAndroidIoTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/updates/UpdateAndroidIoTest.kt",
+      "sha256": "1aba4ab7ac687675cc9562709b5f8dd0aaaebd573f8c2d2fec104bc9b311d3b7",
+      "methods": [
+        "createDocumentIsSaveOnlyAndNeverLaunchesAnInstaller",
+        "realAndroidParserReadsSignedApkEvenBeforePartRenameAndRejectsSplitContainers",
+        "documentsProviderStreamsReReadsAndNeverDeletesOnFailure",
+        "foreignAndNonDocumentUrisAreNeverOpenedOrDeleted"
+      ]
+    },
+    "com.blackatsystems.miguardia.updates.UpdatesScreenTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/updates/UpdatesScreenTest.kt",
+      "sha256": "1f2475287da2915f6d86013e85a30cec3eea2426927427efc1d609e2ec464eb7",
+      "methods": [
+        "statesActionsAndFullTextRemainReachableInBothThemesOrientationsAndAllInternalZooms"
+      ]
+    },
+    "com.blackatsystems.miguardia.UpdatesActivityTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/UpdatesActivityTest.kt",
+      "sha256": "763438b2219f8e159f249f46f988be37c8bc028a99799e89d9fe17a7782d72cb",
+      "methods": [
+        "closedRootCannotExposeUpdatesAndRecreationDoesNotMutateExistingTablesOrBeta",
+        "activityRestoresTheProducerSequenceBeforeIssuingAnotherCalendarRequest",
+        "authorizedRootReturnsToHelpAndPreservesAll27TablesAndPrivatePreferencesWithoutStartingASearch"
+      ]
+    },
+    "com.blackatsystems.miguardia.UpdatesMenuComposeTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/UpdatesMenuComposeTest.kt",
+      "sha256": "7f6dd5f54a5ac3eebcb272175894b2e2234f50844da694b3b4f7305f997b8b82",
+      "methods": [
+        "oneVisibleAccessibleActionBelongsToApplication",
+        "realDrawerFinishesItsAnimationBeforeCallbackAndIgnoresSecondTap",
+        "actualMenuDoubleTapClosesOnceAndPreservesDestinationAcrossRecreation",
+        "changingWorkSurfaceDuringCloseCancelsAndDoesNotReplay",
+        "closingAccessDuringAnimationCancelsAndUnlockDoesNotReplay",
+        "leavingAndResumingDuringCloseCancelsTheOriginalTap",
+        "freshSetupAndInitialHelpNeverExposeTheAction",
+        "monthIsUnchangedAfterOpeningAndRecomposing",
+        "textAndActionRemainReachableInBothThemesOrientationsAndInternalZooms"
+      ]
+    },
+    "com.blackatsystems.miguardia.UpdatesOemSafActivityTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/UpdatesOemSafActivityTest.kt",
+      "sha256": "c3215cc8bc128509e918a7d63a9f7a87d161bc5e21189cfbd9f7c91f10e1936d",
+      "methods": [
+        "supervisedOemWriterCancelSaveAndReturnUsesNoPublicationAuthority",
+        "qaInstallationIsExplicitlyIncompatibleWithPublicRelease"
+      ]
+    },
+    "com.blackatsystems.miguardia.UpdatesReturnComposeTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/UpdatesReturnComposeTest.kt",
+      "sha256": "0474023c4bfae7b94c750ca9034168c402e8c88d7d3155338da46483a75164ab",
+      "methods": [
+        "consumedExternalRequestPreservesHelpAcrossUpdatesAndSavedStateRestore",
+        "consumedExternalRequestPreservesSummaryAcrossUpdatesAndSavedStateRestore",
+        "newRequestDuringUpdatesWaitsForReturnAndAllLocalGatesThenConsumesOnce"
+      ]
+    },
+    "com.blackatsystems.miguardia.UpdatesSupervisedActivityTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/UpdatesSupervisedActivityTest.kt",
+      "sha256": "a9ec8fdd7fc40f396606b47a4ed798cfde55530a5caf8e8bfb88c751c3fe275f",
+      "methods": [
+        "authorizedTemporarySessionPreservesHelpAndSummaryAfterRealUpdatesRecreation"
+      ]
+    },
+    "com.blackatsystems.miguardia.V2ManualShiftLoadActivityTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/V2ManualShiftLoadActivityTest.kt",
+      "sha256": "480065e95a51ce3b24e9b6143bbde6c09aab27617cb0eabaf7585a018a2fd34e",
+      "methods": [
+        "draftSurvivesRecreationAndShiftSnapshotSurviveReopen",
+        "contextualPlaceAndTemplateSurviveRecreationThenConfirmExactPairs",
+        "contextualExistingPlaceDefersExternalDateUntilLoadConfirmation",
+        "cancellingContextualTemplateKeepsSavedPlaceAndOriginalConfirmedLoad"
+      ]
+    },
+    "com.blackatsystems.miguardia.V2ManualShiftLoadComposeTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/V2ManualShiftLoadComposeTest.kt",
+      "sha256": "1da9654deb5d2e5f830d84df9a3c5ee95bbada0803f7518e37f69b62226c6a38",
+      "methods": [
+        "v2ReadyKeepsLoadPrimaryAndWorkSetupInsideAdvancedOptions",
+        "v2ManualSelectionUsesTheExistingMonthGridWithoutLegacyEditTools",
+        "confirmedOrBusyLoadLocksTheGridMonthAndExit",
+        "cancelLoadRequiresConfirmationBeforeDiscardingTheDraft",
+        "loadingOrErrorCalendarCannotConfirmRestoredDatesOrStartAnotherLoad",
+        "successfulSaveFinishesTheV2CalendarModeExactlyOnce",
+        "restoredCompatibleDraftReopensTheCalendarEditMode",
+        "restoredTimelineMismatchIsDiscardedBeforeItCanBlockTheCalendar",
+        "sameScheduleOptionsStayDistinctAndPrimarySaveDoesNotRequireOpeningThePreview",
+        "reviewShowsExactDatesSnapshotOvernightAndOnlyPlannedCount",
+        "consciousBackfillExplainsDatesBeforeExtending",
+        "occupiedDialogOffersKeepExistingDatesWithoutImplicitReplacement",
+        "singleOccupiedDateOffersOnlyReplaceSecondShiftOrCancel",
+        "warningDialogRequiresAnExplicitAcknowledgement",
+        "recoverableErrorKeepsTheDraftAndRetryIsExplicit",
+        "v2CalendarUsesNeutralJornadaVocabulary",
+        "directSaveActionRemainsReachableAcrossThemesAndInternalZooms",
+        "emptySelectorOffersBothContextualActionsAndBlocksRepeatedLaunch",
+        "contextualButtonsStayReachableForEverySectorThemeAndInternalZoom",
+        "archivingLastTemplateKeepsSameTimelineLoadAndConfirmedCalendarSelection",
+        "dayOffSelectionNeedsDatesButNeverNeedsAPlaceOrTemplate",
+        "dayOffConfirmationAndCancellationAreExplicitForExactDates",
+        "removingDayOffExplainsPreservationAndUsesTheRemoveAction",
+        "dayOffErrorIsVisibleAndSavingDisablesConfirmationAndCancellation",
+        "dayOffActionsRemainReachableAcrossThemesAndInternalZoomsWithoutCatalog",
+        "needsFirstWorkSetStillOffersDayOffLoading",
+        "dayDetailStartsLoadWithOnlyItsExactDate"
+      ]
+    },
+    "com.blackatsystems.miguardia.V2ReadOnlySurfacesInstrumentedTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/V2ReadOnlySurfacesInstrumentedTest.kt",
+      "sha256": "8c87bf96dad3b985032978630ea1c76a52526e34657e873ccc2b0cd5eec04c83",
+      "methods": [
+        "calendarSummaryTodayCardAndWidgetQueriesLeaveAllApplicationTablesUnchanged"
+      ]
+    },
+    "com.blackatsystems.miguardia.V2ReadyCalendarRecreationActivityTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/V2ReadyCalendarRecreationActivityTest.kt",
+      "sha256": "aaaafd7db550c952a2fdb4dae66005cd6bf2182fba9d156729e8ce366ee3bd65",
+      "methods": [
+        "recreationKeepsTheVisibleMonthAndOpenDayDetailInV2Ready",
+        "notificationShiftActionResolvesTheV2PairAndOpensItsOwnerDate",
+        "directionsRequireConsciousConfirmationAndNeverSendForInvalidOrMissingId",
+        "replayFromHelpKeepsItsStepAcrossActivityRecreationAndReturnsToHelp",
+        "automaticGuideRunsOnceAfterSetupAndDoesNotReturnAfterCompletion",
+        "notificationDestinationWaitsForAutomaticGuideAndOpensAfterSkip"
+      ]
+    },
+    "com.blackatsystems.miguardia.V2RecurringPlanActivityTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/V2RecurringPlanActivityTest.kt",
+      "sha256": "fec088c4b98b46464472a3f0179c567367cce116750642a03c1d76f3e5c631ad",
+      "methods": [
+        "draftSurvivesRecreationAndMultiMonthPlanReturnsReactivelyToCalendar"
+      ]
+    },
+    "com.blackatsystems.miguardia.V2RecurringPlanComposeTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/V2RecurringPlanComposeTest.kt",
+      "sha256": "8116c341d3d4147e19614a6148a3b6b90525b2968c1e65c2dbb5b68cabb11901",
+      "methods": [
+        "normalFormShowsWeekdaysAndKeepsPatternsAndConflictsInAdvancedOptions",
+        "invalidIntervalRemainsExplainedAfterAdvancedOptionsAreCollapsed",
+        "weekdaysExposeCheckboxSemanticsBecauseTheyAllowMultipleSelections",
+        "dateFieldsAddSlashesWhileThePersonTypesOnlyNumbers",
+        "changeKeepsCutDateImmutableAndNamesTemplateTimeColorPositionAndWarningsInText",
+        "previewKeepsEveryExactDateScrollableAtTwoHundredPercentAndConfirmsOnlyOnce",
+        "emptyListIsExplicit",
+        "listErrorOffersRetryWithoutPretendingThatTheListWasReadAsEmpty",
+        "planDetailKeepsTechnicalOccurrenceStatesInAdvancedOptions",
+        "discardStatesExplicitlyThatNoJourneyWasWritten",
+        "primaryReviewStaysReachableInBothThemesOrientationsAndEveryInternalZoom"
+      ]
+    },
+    "com.blackatsystems.miguardia.V2ShiftActualActivityTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/V2ShiftActualActivityTest.kt",
+      "sha256": "69e8f84e6e2191c630dc7e3b63e1902b38f366c16b934271cf62c1c46ff92b34",
+      "methods": [
+        "registerRecreatePersistReopenAndReturnToPlannedEndToEnd"
+      ]
+    },
+    "com.blackatsystems.miguardia.V2ShiftActualComposeTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/V2ShiftActualComposeTest.kt",
+      "sha256": "e02e9ef0a1cdadffc286a1a520649207c693d79216d062e39a47ddf2d355a4c7",
+      "methods": [
+        "detailShowsNeutralErrorRetryBoundaryActionAndStableIdentity",
+        "summaryShowsPlannedRealRegularTwoExtrasAndTotalWithDates",
+        "catalogStartsBothAnswersEmptyAndSaveOnlyEnablesAfterExplicitYesNo",
+        "editorPrimaryActionRemainsReachableInBothThemesAndEveryInternalZoom",
+        "changingLocalTimeClearsHistoricalOffsetBeforeResolution",
+        "repeatedClockTimeOffersTwoExplicitChoicesOnlyWhenNeeded",
+        "sourceConflictOffersRefreshAndDirtyDraftOffersConsciousDiscard",
+        "unavailableRestoredDraftOffersOnlyRetryOrExplicitDiscard",
+        "classLoadErrorAndRetryAreVisibleAndSelectionFreezesVersion"
+      ]
+    },
+    "com.blackatsystems.miguardia.V2ShiftEditActivityTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/V2ShiftEditActivityTest.kt",
+      "sha256": "cd2ec2c6dcba165ba2f4b44e4235535a4f1ad602c45ebca8881ad332cb0e445f",
+      "methods": [
+        "editRecreateChangeTemplateCancelDeleteAndDeleteOneJourneyEndToEnd"
+      ]
+    },
+    "com.blackatsystems.miguardia.V2ShiftEditComposeTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/V2ShiftEditComposeTest.kt",
+      "sha256": "148c6b00050fa3a890201e8474a0b454228c6039d261da99961fed46eba36edb",
+      "methods": [
+        "dayIdentificationShowsNeutralWaitErrorRetryAndConsciousEntry",
+        "calendarDetailUsesEditarEsteDiaWithoutEnteringBulkEditMode",
+        "needsFirstWorkSetNeverMountsOrOffersTheV2Editor",
+        "visuallyEqualV2RowsStayDistinctByOrdinalUuidAndAvailableActions",
+        "formKeepsDateReadOnlyAndEnablesReviewOnlyAfterARealChange",
+        "structuralEditorOffersConsciousDirectActionsWhenActualTimeExists",
+        "appOpensActualFlowBeforeDiscardingStructuralEditor",
+        "appKeepsStructuralEditorWhenActualFlowCannotOpen",
+        "updatedActiveTemplateWithTheSameIdIsSeparateFromTheHistoricalChoice",
+        "warningsReviewDeleteAndDiscardExposeExactConsciousActions",
+        "recurrentFutureDialogsExposeOnlyThisDateOrTheWholeFutureWithExactHandoffs",
+        "primaryActionStaysReachableInBothThemesAndAllInternalZooms"
+      ]
+    },
+    "com.blackatsystems.miguardia.VacationComposeTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/VacationComposeTest.kt",
+      "sha256": "d9b5e42e5bddf1ab8abea2eba01bc61b9b1193461420bdef6124cfccc9712234",
+      "methods": [
+        "drawerOffersVacationsForVisibleMonth",
+        "editorShowsInclusivePreviewAndSaves",
+        "singleDayPreviewUsesSingularWording",
+        "listSupportsEmptyErrorEditAndConfirmedDeleteStates",
+        "discardConfirmationProtectsUnsavedDraft",
+        "calendarShowsVacationWithShiftAndExplainsExcludedHoursInDetail",
+        "calendarVacationMarkerIsOnlyVWhileCoincidentDataRemainsAccessible"
+      ]
+    },
+    "com.blackatsystems.miguardia.VacationViewModelInstrumentedTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/VacationViewModelInstrumentedTest.kt",
+      "sha256": "c3a90315bf27238477c3c3e1032ee8d1968bfaa24bb8f70cae585000a810bd3a",
+      "methods": [
+        "savedStateRestoresSurfaceMonthAndUnsavedDraft",
+        "singleDayAndYearSpanningRangesAreSavedWithDeterministicIdentityAndInstants",
+        "overlapAndMedicalConflictsRemainRecoverableInTheEditor",
+        "restoredEditUsesTheOriginalObservedSnapshotAndAdvancesMilliseconds",
+        "staleEditAndDeleteKeepTheirDraftOrConfirmationForAConsciousRetry"
+      ]
+    },
+    "com.blackatsystems.miguardia.VigiliaThemeComposeTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/VigiliaThemeComposeTest.kt",
+      "sha256": "1a9ef25eb18c85bf23f90389f19d87643286745d8cea3f6b609715bc103c05af",
+      "methods": [
+        "darkThemeExposesApprovedVigiliaRolesAndContrast",
+        "lightThemeExposesApprovedVigiliaRolesAndContrast"
+      ]
+    },
+    "com.blackatsystems.miguardia.VisualSystemComposeTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/VisualSystemComposeTest.kt",
+      "sha256": "709d4be1206d754e9b3bddb4fe65acfc0b06ebce79759418e55a186496fb6a0c",
+      "methods": [
+        "headingsAndPersistentErrorsExposeTheirMeaningToAccessibilityServices"
+      ]
+    },
+    "com.blackatsystems.miguardia.WeatherComposeTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/WeatherComposeTest.kt",
+      "sha256": "fa97f74a17d96f1767a9cb6c0a892cccc019f1df07d15f7946a00b1f4ed25073",
+      "methods": [
+        "creditsRemainReadableInBothThemesAndEveryInternalZoom",
+        "creditsOpenOnlyTheSelectedHttpsLinkAndKeepTheReturnAction",
+        "missingBrowserReportsFailureAndAllowsReturn",
+        "blockedBrowserReportsFailureAndAllowsReturn",
+        "briefCreditsAppearOnceOnlyWithVisibleDataAndUseTheExistingDetailAction",
+        "drawerGroupsWeatherWithNotificationsAndOffersAppearance",
+        "disabledWeatherExplainsPerObjectivePrivacyBeforeConsciousActivation",
+        "successfulRefreshConfirmationIsVisibleInsideTheWeatherDialog",
+        "globalWeatherConfirmsClearingCachesForEveryObjective",
+        "shiftEntryAlsoRequiresTheFullFirstActivationExplanation",
+        "shiftWithoutObjectiveLocationExplainsHowToEnableItAndCannotRefresh",
+        "shiftDetailShowsCompleteOvernightSummaryHoursAndAttribution"
+      ]
+    },
+    "com.blackatsystems.miguardia.WeatherCreditsSessionInstrumentedTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/WeatherCreditsSessionInstrumentedTest.kt",
+      "sha256": "da8b18a3fe60c4493df9385deedfc9893b37019fd3e17177376596a0fb8004cc",
+      "methods": [
+        "authorizedPresenterSessionPreservesOwnerStateAndRestoresClosedAccess"
+      ]
+    },
+    "com.blackatsystems.miguardia.WeatherInfrastructureInstrumentedTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/WeatherInfrastructureInstrumentedTest.kt",
+      "sha256": "28531a238d3211f25d12e41ff12208f4bccfdeb304b0d300031bfb1cd7b69ead",
+      "methods": [
+        "manifestAllowsOnlyApproximateObjectiveLocationAndRejectsCleartext",
+        "qaWeatherFilesArePhysicallyUnderQaApplicationId",
+        "parserAcceptsCanonicalResponseAndKeepsUnknownCode",
+        "parserKeepsOptionalNullsInsteadOfInventingZeros",
+        "parserRejectsMisalignedArrays",
+        "parserRejectsUnexpectedUnits",
+        "parserRejectsNonHourlyTimestamps",
+        "parserRejectsHtml",
+        "preferencesUseUniquePrivateFileAndPersistExplicitChoices"
+      ]
+    },
+    "com.blackatsystems.miguardia.ui.weather.WeatherViewModelTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/WeatherViewModelInstrumentedTest.kt",
+      "sha256": "644879a67df085a7970eda4cba8bdbb81bbb1d96e1bb15356c1c33c8402b5e30",
+      "methods": [
+        "openingShiftBWithoutCacheNeverRetainsForecastOrFreshnessFromShiftA",
+        "invalidatingOneObjectiveNeverDropsOrRepopulatesAnotherObjectivesBrief"
+      ]
+    },
+    "com.blackatsystems.miguardia.WidgetBoundarySchedulerInstrumentedTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/WidgetBoundarySchedulerInstrumentedTest.kt",
+      "sha256": "1a450932455d0f1f0a10671eaf168e687973ef9a84eb0695cb02647c997acd48",
+      "methods": [
+        "oneShotBoundaryUsesAnImmutableExplicitBroadcastAndCanBeFullyCancelled"
+      ]
+    },
+    "com.blackatsystems.miguardia.WidgetComposeTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/WidgetComposeTest.kt",
+      "sha256": "3f6918d7eab800cbe98e1575eaed4f2f703253b4b38100e7d5a4ed1d72bb7f3c",
+      "methods": [
+        "configurationSelectsAllFieldsAndKeepsSaveSeparateFromCancel",
+        "configurationRemainsUsableAtEveryInternalZoom",
+        "configurationDraftSurvivesActivityStateRestoration",
+        "inFlightSaveDoesNotSurviveActivityStateRestoration",
+        "internalManagementNamesInstancesWithoutShowingTechnicalIds",
+        "internalManagementExposesLoadingErrorRetryAndEmptyStates"
+      ]
+    },
+    "com.blackatsystems.miguardia.WidgetConfigurationActivityTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/WidgetConfigurationActivityTest.kt",
+      "sha256": "453c6252fb6c8ea66a91bb00173deaa460da902cb2e5774f6212cc2f5cbd7f66",
+      "methods": [
+        "pendingStartupRecoveryBlocksWidgetPreferencesAndConfiguration",
+        "enabledAccessLockBlocksExportedWidgetConfigurationBeforeReadingOrWritingItsInstance",
+        "restoredWidgetIdsWaitDurablyUntilStartupRecoveryIsReady",
+        "initialConfigurationRestoresTheDraftAndSavesTheExactInstance",
+        "cancellingReconfigurationLeavesThePreviousPreferencesUntouched"
+      ]
+    },
+    "com.blackatsystems.miguardia.WidgetManifestInstrumentedTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/WidgetManifestInstrumentedTest.kt",
+      "sha256": "7e2e5a02f185f9245b1d885a1d8dbc8a8fa46d649bbed4f2038f594100ed28d9",
+      "methods": [
+        "providerAndConfigurationActivityHaveTheMinimumExpectedExposure",
+        "configurationChangeUsesTheRuntimeReceiverAndNotTheManifest"
+      ]
+    },
+    "com.blackatsystems.miguardia.WidgetPreferencesInstrumentedTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/WidgetPreferencesInstrumentedTest.kt",
+      "sha256": "abb9be7b8edc369ff8962c13800d28615806031b8a92fbde5124ff692c68c41a",
+      "methods": [
+        "independentInstancesPersistRemapAndDeleteWithoutTouchingTheirNeighbor"
+      ]
+    },
+    "com.blackatsystems.miguardia.WidgetRemoteViewsInstrumentedTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/WidgetRemoteViewsInstrumentedTest.kt",
+      "sha256": "8056842cc7ba010e704551a869b4ffe4dc8bf4cd838646246982219affeb4a4e",
+      "methods": [
+        "initialLayoutIsSafeAndNeverReusesTheFictitiousPreviewContent",
+        "previewLayoutUsesOnlyRemoteViewsSupportedClasses",
+        "compactAndExpandedRenderChronometerRowsAndFreshWeatherAtMonotonicBase",
+        "lateCountdownBoundaryIsHiddenInsteadOfRunningAtZero",
+        "hiddenRemoteViewsContainNoForbiddenLaborTextOrCountdown",
+        "longForecastKeepsItsCreditOutsideEllipsizedTextWithinTheSameTouchArea",
+        "absentWeatherReducedPrivacyAndNonShiftEventsHaveNoCredits",
+        "navigationConfigurationAndWeatherPendingIntentsAreImmutableAndInstanceScoped",
+        "collidingUuidHashesStillProduceDistinctShiftPendingIntents"
+      ]
+    },
+    "com.blackatsystems.miguardia.WorkSetupComposeTest": {
+      "module": "app",
+      "source": "app/src/androidTest/java/com/blackatsystems/miguardia/WorkSetupComposeTest.kt",
+      "sha256": "1e05417310e5bdc3e81b037230c0209f0bc4c37c320204462777c9b11863c4c9",
+      "methods": [
+        "overviewKeepsHoursProgressAndAvailabilityInsideAdvancedOptions",
+        "loadingAndErrorNeverExposeCalendarOrFreshSelector",
+        "freshInstallShowsExactlyFourIndependentSectorsAndRequiresSelection",
+        "v2WithoutFirstSetShowsCalendarGuideAndNeverOffersLegacyLoad",
+        "v2DayDetailDoesNotExposeTheLegacyEditAction",
+        "v2DrawerContainsWorkSetupAndNoRemovedV1Destinations",
+        "workSetupOffersRecurringPlansOnlyAfterTheFirstWorkSetIsReady",
+        "firstSetKeepsTwoShortStepsAndExplainsTwentyFourHours",
+        "firstSetUsesTheSelectedSectorVocabularyInsteadOfCallingEveryPlaceObjective",
+        "firstSetExplainsAnIncompleteNightRuleOutsideCollapsedAdvancedOptions",
+        "firstSetExplainsAMissingWorkNameOutsideCollapsedAdvancedOptions",
+        "timeFieldsInsertTheSeparatorWithoutAskingForPunctuation",
+        "objectiveLocationOffersAddressOrActivateWhenThereAndCanBeRemoved",
+        "completionOffersExactlyTheThreeAgreedActions",
+        "dirtyDraftBackRequiresAConsciousDiscardDecision",
+        "sectorSelectionRemainsReachableInBothThemesOrientationsAndAllZooms"
+      ]
+    },
+    "com.blackatsystems.miguardia.core.database.AvailabilityWindowPersistenceInstrumentedTest": {
+      "module": "database",
+      "source": "core/database/src/androidTest/java/com/blackatsystems/miguardia/core/database/AvailabilityWindowPersistenceInstrumentedTest.kt",
+      "sha256": "1bb43c558e8fdb05accaffd629d6f38b4c2ccb8e8c6dda97b50e7cd25f4f558b",
+      "methods": [
+        "createCorrectDeleteAndReopenPreserveExactHistoricalLabel",
+        "overlapIsRejectedContiguousWindowIsAcceptedAndDoubleTouchConflicts",
+        "changingProtectionAfterReviewInvalidatesCompleteCasAndRollsBack",
+        "changingConfigurationAfterReviewReturnsConflictInsteadOfAStorageError",
+        "labelMutationPreservesHoursFieldsAndCanDisableFutureLoads",
+        "staleCorrectionDeletionAndWrongOwnerContextAreRejectedConsciously",
+        "multidayReviewTracksProtectionThatChangesForAnOverlappingShiftOwnerDate"
+      ]
+    },
+    "com.blackatsystems.miguardia.core.database.BackupDatabaseGatewayInstrumentedTest": {
+      "module": "database",
+      "source": "core/database/src/androidTest/java/com/blackatsystems/miguardia/core/database/BackupDatabaseGatewayInstrumentedTest.kt",
+      "sha256": "1831d07b810ad051070dd7c9da7e6ca149e666ad5c604386fc02aaf57f5cef5c",
+      "methods": [
+        "capturesAndReopensExactlyTheTwentySevenLogicalTablesIncludingWeatherLocation",
+        "roomFiveBackupUpgradesIntoRoomSixWithNullWeatherLocationAndReopens",
+        "roomCaptureUsesTheSharedDecodedMemoryEstimateAtTheExactBoundary",
+        "failedReplacementRollsBackTheWholeRoomTransaction",
+        "invalidSemanticDateIsRejectedBeforeCommit",
+        "extremeIsoDatesRoundTripAndInvalidUuidOrEnumNeverCommit",
+        "overlappingMedicalLeaveAndVacationAreRejectedInTheIsolatedCandidate",
+        "openingTheLiveGatewaySweepsOnlyOrphanedCandidateDatabasesAndSidecars",
+        "restoreWriteBarrierMakesAConcurrentRoomMutationWaitInsteadOfLosingIt"
+      ]
+    },
+    "com.blackatsystems.miguardia.core.database.DayOffPersistenceInstrumentedTest": {
+      "module": "database",
+      "source": "core/database/src/androidTest/java/com/blackatsystems/miguardia/core/database/DayOffPersistenceInstrumentedTest.kt",
+      "sha256": "0ea8968c0a2f6a1bc35e5a127d6a7a88a51011c01a0c7630505446a13d8971ff",
+      "methods": [
+        "multipleDaysRoundTripIsIdempotentAndSurvivesReopen",
+        "removePreservesUndefinedAndUnselectedDayOff",
+        "changedTimelineRejectsMarkAndRemoveWithoutWrites",
+        "oneOccupiedDateRejectsWholeBatchWithoutChangingShiftOrUndefined",
+        "overnightShiftEndingAtSevenAllowsFollowingFrancoWithoutChangingShift",
+        "exactMidnightEndDoesNotOccupyFollowingDate",
+        "noCatalogOrTemplateIsRequiredAfterConfiguration"
+      ]
+    },
+    "com.blackatsystems.miguardia.core.database.IndependentExtraWorkPersistenceInstrumentedTest": {
+      "module": "database",
+      "source": "core/database/src/androidTest/java/com/blackatsystems/miguardia/core/database/IndependentExtraWorkPersistenceInstrumentedTest.kt",
+      "sha256": "de0de493d34a69d7708793f7c84c138ba591819173ce24eaf128e92975a31e4f",
+      "methods": [
+        "createCorrectDeleteAndReopenPreserveExactSnapshotsAndReactiveRows",
+        "staleDoubleTouchReturnsConflictWithoutPartialRows",
+        "overlapRequiresExplicitConfirmationAndRollbackLeavesSecondIdAbsent",
+        "forgedFutureIntervalIsRejectedByPersistenceBoundary",
+        "multidayIntervalFinishedAtTheCurrentMinutePersistsExactly",
+        "multidayIntervalDetectsProtectionOnItsLastWorkedDate",
+        "foreignKeysRejectCrossSectorRowsAndIntegrityRejectsInvalidIntervals",
+        "oneContinuousFlowEmitsCreateAndDeleteWithoutProjectingAnErrorAsEmpty",
+        "retroactiveReferenceRestartDoesNotRewriteOrInvalidateStoredWorkSnapshots"
+      ]
+    },
+    "com.blackatsystems.miguardia.core.database.LocalDataStoreInstrumentedTest": {
+      "module": "database",
+      "source": "core/database/src/androidTest/java/com/blackatsystems/miguardia/core/database/LocalDataStoreInstrumentedTest.kt",
+      "sha256": "3495e3083ddacaf61b4fbc8b9ca701fb132f2ffcf20d14be2826d3f815f5c076",
+      "methods": [
+        "v2DatabaseStartsAtVersionSixWithTheExactTwentySevenTables",
+        "removedV1ColumnsAreAbsentAndSourceObjectiveIsRequired",
+        "newV2DatabaseStartsWithoutApplicationRowsOrImplicitDefaults",
+        "exportedV2SchemasKeepVersionsOneToFiveAndMatchVersionSix",
+        "instrumentationResetIsRejectedOutsideTheQaApplication",
+        "openingV2UsesAnotherFileAndDoesNotTransformTheLegacyDatabase"
+      ]
+    },
+    "com.blackatsystems.miguardia.core.database.MonthlyReportSnapshotInstrumentedTest": {
+      "module": "database",
+      "source": "core/database/src/androidTest/java/com/blackatsystems/miguardia/core/database/MonthlyReportSnapshotInstrumentedTest.kt",
+      "sha256": "69f15dac73a03e1507517fce8f2a60d264601ca1ee41117e26970ebf76da9993",
+      "methods": [
+        "captureReadsTheMonthInsideOneTransactionWithoutChangingAnyOfTheTwentySevenTables",
+        "concurrentTwoTableWriteCanOnlyProduceTheCompletePreviousOrCompleteNextState",
+        "missingSelectedPhotoFailsWithoutRowsOrChangesAndTheDatabaseCanBeReopened",
+        "reportMonthAvailabilityKeepsActiveWorkThatStartedInThePreviousMonth",
+        "extendedComplianceRangeNeverCapturesPrivateNotesFromNeighboringMonths"
+      ]
+    },
+    "com.blackatsystems.miguardia.core.database.NextEventQueriesInstrumentedTest": {
+      "module": "database",
+      "source": "core/database/src/androidTest/java/com/blackatsystems/miguardia/core/database/NextEventQueriesInstrumentedTest.kt",
+      "sha256": "d1c62d45cfeb88ea529d33e1d1302c326d68c8b133e4ff0044b5e9bcbf47eab0",
+      "methods": [
+        "endingAfterIsExclusiveStableAndContainsOnlyPairedV2Shifts",
+        "explicitStatusesFromDateAreInclusiveAndOrdered",
+        "vacationsEndingOnOrAfterDateAreInclusiveAndOrdered",
+        "commonQueriesSurviveReopenInTheV2Database"
+      ]
+    },
+    "com.blackatsystems.miguardia.core.database.RecurringPlanPersistenceInstrumentedTest": {
+      "module": "database",
+      "source": "core/database/src/androidTest/java/com/blackatsystems/miguardia/core/database/RecurringPlanPersistenceInstrumentedTest.kt",
+      "sha256": "9738b0ab6e793b4d5d7db39f0b8c9b7ea751d5126570e766caf322ce3e2ea677",
+      "methods": [
+        "planRevisionOccurrencesAndPairsAreAtomicAndSurviveReopen",
+        "savingActualHoursKeepsTheRecurringOccurrenceAutomatic",
+        "failureAfterRevisionInsertRollsBackPlanOccurrencesAndPairs",
+        "individualEditCustomizesAndIndividualDeleteKeepsExclusion",
+        "manualReplacementLeavesOldOccurrenceExcludedAndNewShiftManual",
+        "changedProtectionRejectsFinalizationWithoutPartialMutation",
+        "automaticReplacementAcrossPlansRetiresOldOwnerWithoutOrphans",
+        "futureRevisionPreservesCustomizedAndExcludedAndRetiresOnlyAutomaticIntact",
+        "occurrenceForeignKeysAndUniqueShiftOwnerRejectInvalidSecondPlanAtomically",
+        "writerRejectsEmptyPlanPastRevisionAndOutOfPatternOccurrence",
+        "writerRejectsManualShiftMutationAndRevisionPhotoMismatch",
+        "revisionCannotSilentlyLeaveAnIntactAutomaticOccurrenceUnchanged",
+        "protectionAndDeletionAreChunkedBeyondSqliteBindLimit"
+      ]
+    },
+    "com.blackatsystems.miguardia.core.database.SchedulePhotoPersistenceInstrumentedTest": {
+      "module": "database",
+      "source": "core/database/src/androidTest/java/com/blackatsystems/miguardia/core/database/SchedulePhotoPersistenceInstrumentedTest.kt",
+      "sha256": "2c02447e6ea891d64edabaaf8ad1aa19e6c6ac67cd4e093d46b12d660abbbce9",
+      "methods": [
+        "crudOrderMonthsAndReopen",
+        "storageKeyIsUnique",
+        "photoAndSnapshotsSurviveObjectiveDeletion"
+      ]
+    },
+    "com.blackatsystems.miguardia.core.database.ShiftActualPersistenceInstrumentedTest": {
+      "module": "database",
+      "source": "core/database/src/androidTest/java/com/blackatsystems/miguardia/core/database/ShiftActualPersistenceInstrumentedTest.kt",
+      "sha256": "94351349cd951aa88e2574ba55ed2ad42a849d2d46374216365a138c314f8a03",
+      "methods": [
+        "aggregateSupportsExtraCorrectionRegularReturnAndReopen",
+        "twoFragmentsKeepHistoricalSnapshotAfterCatalogRenameArchiveAndReactivate",
+        "inlineDuplicateRollsBackClassAndAggregateAndClassCasRejectsStaleSelection",
+        "forgedSnapshotsAndVersionTimestampsAreRejectedWithoutPartialWrites",
+        "inlineClassCreationRollsBackWhenActualRecordInsertFails",
+        "expectationFlowReactsAndStructuralWritersRequireExactActualEvidence",
+        "foreignKeysRejectOrphansAndRawInvalidAggregateIsRejectedWithoutSilentFallback"
+      ]
+    },
+    "com.blackatsystems.miguardia.core.database.ShiftNotificationPersistenceInstrumentedTest": {
+      "module": "database",
+      "source": "core/database/src/androidTest/java/com/blackatsystems/miguardia/core/database/ShiftNotificationPersistenceInstrumentedTest.kt",
+      "sha256": "991fd3c29b8e48c113ef5c4fdb610fbd2fd6bde3f2596bf1e46fe4116678ea9a",
+      "methods": [
+        "overrideRoundTripsReplacesClearsAndSurvivesReopen",
+        "deletingTheV2PairCascadesConfigAndReminders",
+        "anOverrideCannotReferenceAMissingShift"
+      ]
+    },
+    "com.blackatsystems.miguardia.core.database.V2DatabaseMigrationInstrumentedTest": {
+      "module": "database",
+      "source": "core/database/src/androidTest/java/com/blackatsystems/miguardia/core/database/V2DatabaseMigrationInstrumentedTest.kt",
+      "sha256": "667aa1c836550a128bd97bcb895c0062778997f285a61e134ec7b676c30ba3a7",
+      "methods": [
+        "migrationOneToTwoPreservesEveryV2TableAndStartsRecurringTablesEmpty",
+        "migrationTwoToThreePreservesAllTwentyTwoPopulatedTablesAndCreatesExactEmptySchema",
+        "migrationThreeToFourPreservesTwentyFiveTablesBackfillsReferenceStartsAndCreatesEmptyExtras",
+        "migrationFourToFivePreservesAllTwentySixPopulatedTablesAndCreatesExactEmptyAvailability",
+        "migrationFiveToSixPreservesObjectivesAndStartsTheirWeatherLocationEmpty",
+        "migrationChainOneToTwoToThreeToFourToFiveToSixPreservesVersionOneData"
+      ]
+    },
+    "com.blackatsystems.miguardia.core.database.V2ShiftPersistenceInstrumentedTest": {
+      "module": "database",
+      "source": "core/database/src/androidTest/java/com/blackatsystems/miguardia/core/database/V2ShiftPersistenceInstrumentedTest.kt",
+      "sha256": "d80cef78516963055658924a2dbe1031da71312c0b460d89a2a00995d94ccd9e",
+      "methods": [
+        "pairedShiftInsertUpdateReopenAndDeleteRoundTrip",
+        "batchWritesOnlyCompletePairsAndClearsOnlyCoveredStatus",
+        "staleOccupancyRejectsTheWholeBatch",
+        "fullPairCasRejectsAConcurrentPositionChangeHiddenFromOccupancy",
+        "fullPairCasRejectsAConcurrentSnapshotChangeHiddenFromOccupancy",
+        "exactDeleteRejectsAChangedPairAndPreservesIt",
+        "exactDeleteRejectsATargetThatAlreadyDisappeared",
+        "databaseFailureRollsBackDeletedAndInsertedPairs",
+        "exactDeleteCascadesOnlyTargetDependenciesAndPreservesSharedCatalog",
+        "anOrphanShiftProducesAControlledInvalidDataError",
+        "anOrphanSnapshotProducesAControlledInvalidDataError",
+        "archivedSourcesStillAllowAnExactPositionOnlyUpdate",
+        "archivedPositionOnlyUpdateRollsBackWhenTheSnapshotWriteFails",
+        "corruptSnapshotCodeProducesAControlledInvalidDataError",
+        "corruptAuditTimestampsProduceAControlledInvalidDataError",
+        "corruptDerivedInstantsProduceAControlledInvalidDataError",
+        "laterIntermediateRevisionDoesNotRewriteStoredConfigurationSnapshot",
+        "concurrentWritersFromOneSnapshotProduceOneWinnerOneConflictAndNoPartialRows"
+      ]
+    },
+    "com.blackatsystems.miguardia.core.database.VacationPersistenceInstrumentedTest": {
+      "module": "database",
+      "source": "core/database/src/androidTest/java/com/blackatsystems/miguardia/core/database/VacationPersistenceInstrumentedTest.kt",
+      "sha256": "ec257bfdeb2b27b2a2d798bb0a4bbd03a9fcde7df98730f8a4d897941c5b23a3",
+      "methods": [
+        "crudFlowIntersectionAndReopenPreserveVacation",
+        "overlappingRangesAreRejectedButContiguousRangesAreAllowed",
+        "editingExcludesItselfButRejectsAnotherPeriodAndPreservesOriginalOnFailure",
+        "vacationAndMedicalLeaveConflictIsRejectedInBothWriteDirections",
+        "editingEitherPeriodIntoAConflictRollsBackTheExistingData",
+        "invalidRangeAndChangedCreatedAtAreRejectedWithoutMutation",
+        "staleUpdateCannotOverwriteANewerVacationSnapshot",
+        "staleDeleteCannotRemoveANewerVacationSnapshot",
+        "updateRequiresANewMillisecondVersionWithoutPartialMutation"
+      ]
+    },
+    "com.blackatsystems.miguardia.core.database.WorkCatalogPersistenceInstrumentedTest": {
+      "module": "database",
+      "source": "core/database/src/androidTest/java/com/blackatsystems/miguardia/core/database/WorkCatalogPersistenceInstrumentedTest.kt",
+      "sha256": "c67aa42e6db894e9efc306e35dcf86e4c668849016c0657d9eb4f827950701b1",
+      "methods": [
+        "firstV2WorkSetIsAtomicAndRoundTripsAcrossReopen",
+        "failedFirstWorkSetRollsBackEveryCatalogRow",
+        "duplicateTypeAndTemplateAreRejectedWithoutChangingTheCatalog",
+        "retroactiveRuleIsRejectedWithoutPersistingIt",
+        "ruleLookupUsesExactEffectiveBoundaries",
+        "overnightShiftKeepsRuleCoverageAcrossAnEffectiveBoundary",
+        "consciousBackfillExtendsConfigurationAndRulesTogether",
+        "failedBackfillRollsBackConfigurationAndRulesTogether",
+        "unknownRuleCodeProducesAControlledInvalidDataError",
+        "orphanCatalogRowProducesAControlledInvalidDataError",
+        "placeWithoutAnyRuleCoverageProducesAControlledInvalidDataError",
+        "nonNormalizedObjectiveProducesAControlledInvalidDataError",
+        "recentTemplatesAreGroupedOrderedLimitedReopenedAndFilteredWhenArchived"
+      ]
+    },
+    "com.blackatsystems.miguardia.core.database.WorkConfigurationPersistenceInstrumentedTest": {
+      "module": "database",
+      "source": "core/database/src/androidTest/java/com/blackatsystems/miguardia/core/database/WorkConfigurationPersistenceInstrumentedTest.kt",
+      "sha256": "326760fd329400ac12b490361f523e5ba876b1beeaec5cbcd49d2535d4161976",
+      "methods": [
+        "v2HistoryRoundTripsAndReopensWithoutAnOriginFlag",
+        "onlyOneNonEmptyTimelineCanExist",
+        "multipleStoredRootsProduceAControlledInvalidDataError",
+        "orphanDefinitionProducesAControlledInvalidDataError",
+        "unknownHoursReferenceCodeProducesAControlledInvalidDataError",
+        "unknownSectorCodeProducesAControlledInvalidDataError",
+        "failedInitialCreationRollsBackRootDefinitionAndRevision",
+        "perPeriodValueCreatesUpdatesAndReopensAtomically",
+        "invalidRevisionLeavesTheStoredHistoryUnchanged",
+        "atomicReferenceMutationPersistsResetMarkerAndDetectsStaleHistory",
+        "referenceMutationRollsBackCompletelyWhenTheRevisionInsertFails",
+        "atomicPerPeriodReferenceCreatesDefinitionRevisionAndFirstValueTogether",
+        "sameDateReferenceReplacementIsAtomicAndRemovesObsoletePerPeriodValues",
+        "retroactiveRestartPropagatesThroughUnrelatedRevisionsButStopsAtALaterRestart"
+      ]
+    }
+  },
+  "support_sources": {
+    "app/src/androidTest/java/com/blackatsystems/miguardia/beta/BetaBackupFixture.kt": "ee246c27f0eab713b9e39d4a5a4f37ac2aabe84c2beb3623880405fb0f2a36f4",
+    "app/src/androidTest/java/com/blackatsystems/miguardia/beta/BetaDeviceFixture.kt": "5bd60fd07405d6af7caa1aba6b5343d0fbd9863bb728a82a2c8fde222e6630df",
+    "app/src/androidTest/java/com/blackatsystems/miguardia/OnboardingTestFixtures.kt": "083caee71cdde1b2ba59628bb7b1f8951a30a9bd6dcd8e303b487d74508e3895",
+    "app/src/androidTest/java/com/blackatsystems/miguardia/reports/ReportAndroidTestFixture.kt": "21fd64cd35caf5986b8fecd0094eb06942e94514cb3ac124492fcdae30fad7e0",
+    "app/src/androidTest/java/com/blackatsystems/miguardia/V2AppTestFixture.kt": "68ce13471058b63860eae0cce98b359585c9e6e62bfd611d510a8353817c8081",
+    "core/database/src/androidTest/java/com/blackatsystems/miguardia/core/database/V2DatabaseTestFixture.kt": "c4f5ad969807279729e6cb3f954ceaecd91e3c28dc206f68bdc1453b8c081d7a",
+    "app/src/testSupport/java/com/blackatsystems/miguardia/beta/BetaClient.kt": "c124ccfb9eb0b7395a182101b989d229ec03b1d9f31f3fafde91bc2194559c74",
+    "app/src/testSupport/java/com/blackatsystems/miguardia/beta/BetaCoordinator.kt": "cf4aa7105b9de9433b70d0efd4ce3cffe6ce15396a5d80ae7d26ed933ccd54d5",
+    "app/src/testSupport/java/com/blackatsystems/miguardia/beta/BetaExposure.kt": "fc7dc47251b2fdb4fb4983bc3a8e01575787d53431367266d1b3238f379177c2",
+    "app/src/testSupport/java/com/blackatsystems/miguardia/beta/BetaIdentity.kt": "f318834afa70c73e21c08664625f1e6386dddae7ffedcc049511a7c7479a3e23",
+    "app/src/testSupport/java/com/blackatsystems/miguardia/beta/BetaJson.kt": "8eafdadea6096d7c07c2064854120a80f7f1efb88385986a0d1518ebbc81b5d8",
+    "app/src/testSupport/java/com/blackatsystems/miguardia/beta/BetaProtocol.kt": "1b273afd14053252f2cba64ded94a76cc2b82c23520321a471081fcf1d124250",
+    "app/src/testSupport/java/com/blackatsystems/miguardia/beta/BetaScreens.kt": "12bf60ada93a01ae90a27639309ff40b443822149cc0d6df3f0179ef6ddaee75",
+    "app/src/testSupport/java/com/blackatsystems/miguardia/beta/BetaStore.kt": "0113a97df3086d69d56a5af1e0ac70d00395e15714d4e1eb4809b63464d26f0e",
+    "app/src/testSupport/java/com/blackatsystems/miguardia/beta/BetaUpdateAccess.kt": "99bff1f6b7013e43a9492412efe7e932eecdc89be472718c4d2047c9772bfe86",
+    "app/src/testSupport/java/com/blackatsystems/miguardia/beta/BetaVariant.kt": "6e3b9c289793d51f70b75b2228995e213ab31d97f849228f1754f752593d39a1"
+  },
+  "source_hash_normalization": "UTF-8/LF/no-BOM"
+}

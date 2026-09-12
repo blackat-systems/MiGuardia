@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<lint>
+    <!--
+      The explicit v26 pair is required so the base adaptive icons and the v33
+      monochrome variants coexist in the packaged APK. Android 8 runtime QA
+      demonstrated that merging the base pair from mipmap-anydpi omitted it.
+    -->
+    <issue id="ObsoleteSdkInt">
+        <ignore path="src/main/res/mipmap-anydpi-v26" />
+    </issue>
+</lint>

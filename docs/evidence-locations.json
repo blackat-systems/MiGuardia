@@ -1,0 +1,27 @@
+{
+  "kind": "local_evidence_location_index_no_personal_contents",
+  "date": "2026-09-06",
+  "locations": [
+    {
+      "former_prefix": "app/build/beta-evidence",
+      "durable_prefix": ".local-evidence/legacy/2026-09-06/beta-evidence",
+      "method": "moved",
+      "files_preserved": 13,
+      "byte_preservation_verified": true
+    },
+    {
+      "former_prefix": "app/build/updates28",
+      "durable_prefix": ".local-evidence/legacy/2026-09-06/updates28",
+      "method": "copied_original_retained",
+      "files_preserved": 274,
+      "byte_preservation_verified": true
+    },
+    {
+      "former_prefix": "build/support27",
+      "durable_prefix": ".local-evidence/legacy/2026-09-06/support27",
+      "method": "copied_original_retained",
+      "files_preserved": 37,
+      "byte_preservation_verified": true
+    }
+  ]
+}

@@ -1,0 +1,185 @@
+package com.blackatsystems.miguardia
+
+import com.blackatsystems.miguardia.ui.help.HelpReadState
+import com.blackatsystems.miguardia.ui.help.HelpUiState
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Test
+
+class PendingMainDestinationTest {
+    @Test
+    fun `external directions retain only the request and identifier without authority to send`() {
+        for (id in listOf("11111111-1111-4111-8111-111111111111", "invalid", "deleted-id", null)) {
+            val result = requireNotNull(PendingMainDestination.from(MainActivity.ACTION_DIRECTIONS, id, "2030-01-02"))
+            assertEquals(MainActivity.ACTION_DIRECTIONS, result.action)
+            assertEquals(id, result.shiftId)
+            assertNull(result.ownerLocalDate)
+        }
+    }
+
+    @Test
+    fun `external directions cancelled during lookup are navigation only on retry and duplicate delivery`() = runBlocking {
+        val coordinator = PendingMainDestinationCoordinator()
+        val request = coordinator.capture(requireNotNull(PendingMainDestination.from(MainActivity.ACTION_DIRECTIONS, "id")))
+        val started = CompletableDeferred<Unit>()
+        val blocked = CompletableDeferred<Unit>()
+        val job = launch { coordinator.consume(request) { started.complete(Unit); blocked.await() } }
+        started.await(); job.cancelAndJoin()
+        var navigations = 0
+        repeat(2) { coordinator.consume(request) { assertEquals(MainActivity.ACTION_DIRECTIONS, it.action); navigations++ } }
+        assertEquals(1, navigations)
+    }
+    @Test
+    fun `weather credits discard labor identifiers and resume once after a closed gate`() = runBlocking {
+        val destination = requireNotNull(PendingMainDestination.from(
+            action = MainActivity.ACTION_OPEN_WEATHER,
+            shiftId = "must-not-survive",
+            ownerLocalDate = "2030-01-02",
+        ))
+        assertNull(destination.shiftId)
+        assertNull(destination.ownerLocalDate)
+        val coordinator = PendingMainDestinationCoordinator()
+        val request = coordinator.capture(destination)
+        try {
+            coordinator.consume(request) { throw CancellationException("gate closed") }
+        } catch (_: CancellationException) {
+            // The existing host retries this destination only after its gates open.
+        }
+        assertEquals(request, coordinator.state.value)
+        var opens = 0
+        coordinator.consume(request) { opens++ }
+        coordinator.consume(request) { opens++ }
+        assertEquals(1, opens)
+        assertNull(coordinator.state.value)
+    }
+
+    @Test
+    fun `incoming destination keeps only the minimal identifier for its action`() {
+        val shift = PendingMainDestination.from(
+            action = MainActivity.ACTION_VIEW_SHIFT,
+            shiftId = "shift-id",
+            ownerLocalDate = "2030-01-02",
+        )
+        val date = PendingMainDestination.from(
+            action = MainActivity.ACTION_VIEW_DATE,
+            shiftId = "must-not-survive",
+            ownerLocalDate = "2030-01-02",
+        )
+        val calendar = PendingMainDestination.from(
+            action = MainActivity.ACTION_OPEN_CALENDAR,
+            shiftId = "must-not-survive",
+        )
+
+        assertEquals("shift-id", shift!!.shiftId)
+        assertNull(shift.ownerLocalDate)
+        assertEquals("2030-01-02", date!!.ownerLocalDate)
+        assertNull(date.shiftId)
+        assertNull(calendar!!.shiftId)
+        assertNull(calendar.ownerLocalDate)
+    }
+
+    @Test
+    fun `unknown intent is not retained`() {
+        assertNull(PendingMainDestination.from(action = "external.unknown"))
+    }
+
+    @Test
+    fun `cancelled resolution keeps the sanitized destination for the recreated host`() = runBlocking {
+        val coordinator = PendingMainDestinationCoordinator()
+        val request = coordinator.capture(
+            PendingMainDestination(MainActivity.ACTION_VIEW_SHIFT, shiftId = "shift-id"),
+        )
+        val started = CompletableDeferred<Unit>()
+        val release = CompletableDeferred<Unit>()
+        val firstHost = launch {
+            coordinator.consume(request) {
+                started.complete(Unit)
+                release.await()
+            }
+        }
+        started.await()
+
+        firstHost.cancelAndJoin()
+
+        assertEquals(request, coordinator.state.value)
+        var terminalExecutions = 0
+        assertEquals(
+            true,
+            coordinator.consume(request) { terminalExecutions++ },
+        )
+        assertEquals(1, terminalExecutions)
+        assertNull(coordinator.state.value)
+    }
+
+    @Test
+    fun `older resolution never clears a newer incoming destination`() = runBlocking {
+        val coordinator = PendingMainDestinationCoordinator()
+        val first = coordinator.capture(
+            PendingMainDestination(MainActivity.ACTION_VIEW_SHIFT, shiftId = "first"),
+        )
+        val secondDestination = PendingMainDestination(
+            MainActivity.ACTION_VIEW_DATE,
+            ownerLocalDate = "2030-01-03",
+        )
+
+        assertEquals(
+            false,
+            coordinator.consume(first) { coordinator.capture(secondDestination) },
+        )
+        val second = coordinator.state.value
+        assertEquals(secondDestination, second?.destination)
+        assertEquals(true, coordinator.consume(requireNotNull(second)) {})
+        assertNull(coordinator.state.value)
+    }
+
+    @Test
+    fun `gate closing before resolution keeps the destination pending`() = runBlocking {
+        val coordinator = PendingMainDestinationCoordinator()
+        val request = coordinator.capture(
+            PendingMainDestination(MainActivity.ACTION_VIEW_SHIFT, shiftId = "shift-id"),
+        )
+
+        try {
+            coordinator.consume(request) {
+                throw CancellationException("access lock closed")
+            }
+        } catch (_: CancellationException) {
+            // The Activity effect is cancelled and retries the same request after unlocking.
+        }
+
+        assertEquals(request, coordinator.state.value)
+    }
+
+    @Test
+    fun `onboarding gate retains destination then consumes it exactly once`() = runBlocking {
+        val coordinator = PendingMainDestinationCoordinator()
+        val request = coordinator.capture(
+            PendingMainDestination(MainActivity.ACTION_OPEN_CALENDAR),
+        )
+        var executions = 0
+        val pendingHelp = HelpUiState(
+            readState = HelpReadState.Ready(0),
+            workSetupResolved = true,
+            rootIsV2Ready = true,
+        )
+        if (pendingHelp.canConsumePendingDestination) {
+            coordinator.consume(request) { executions++ }
+        }
+        assertEquals(request, coordinator.state.value)
+        assertEquals(0, executions)
+
+        val completedHelp = pendingHelp.copy(readState = HelpReadState.Ready(1))
+        if (completedHelp.canConsumePendingDestination) {
+            coordinator.consume(request) { executions++ }
+        }
+        coordinator.consume(request) { executions++ }
+
+        assertEquals(1, executions)
+        assertNull(coordinator.state.value)
+    }
+}
