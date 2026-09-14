@@ -950,14 +950,12 @@ private fun DayCell(
         availabilityCount,
         availabilityLabel,
     )
-    val isCompletedDay = day.vacation == null &&
-        day.shifts.isNotEmpty() &&
-        day.shifts.all { it.temporalStatus == ShiftTemporalStatus.COMPLETED }
+    val isCompletedDay = day.isFullyCompleted
     val vigilia = MaterialTheme.vigiliaColors
     val background = when {
         isSelected -> vigilia.active.copy(alpha = if (vigilia.isDark) 0.30f else 0.18f)
         day.vacation != null -> vigilia.vacation.copy(alpha = if (vigilia.isDark) 0.20f else 0.12f)
-        isCompletedDay -> MaterialTheme.colorScheme.surfaceVariant
+        isCompletedDay -> if (vigilia.isDark) Color(0xFF173B2A) else Color(0xFFE2F4E8)
         isToday -> MaterialTheme.colorScheme.primaryContainer
         else -> MaterialTheme.colorScheme.surfaceContainerHigh
     }
@@ -1002,6 +1000,15 @@ private fun DayCell(
             style = MaterialTheme.typography.labelMedium,
             fontWeight = if (isToday) FontWeight.Bold else FontWeight.Medium,
         )
+        if (isCompletedDay) {
+            Text(
+                text = "✓",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = if (vigilia.isDark) Color(0xFF9DDBB1) else Color(0xFF23663A),
+                modifier = Modifier.clearAndSetSemantics { },
+            )
+        }
         if (day.vacation != null) {
             Text(
                 text = "V",
@@ -1179,6 +1186,7 @@ private fun CalendarDay.accessibilityDescription(
 ): String {
     val parts = mutableListOf(date.fullDisplayName())
     if (isToday) parts += "hoy"
+    if (isFullyCompleted) parts += "día completado, todas las jornadas activas están completadas"
     if (shifts.size > 1) parts += "${shifts.size} turnos"
     shifts.forEach { calendarShift ->
         parts += buildString {

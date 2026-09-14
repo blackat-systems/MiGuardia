@@ -32,6 +32,18 @@ data class CalendarDay(
     val holiday: Holiday? = null,
     val vacation: Vacation? = null,
 ) {
+    val isFullyCompleted: Boolean
+        get() {
+            val activeShifts = shifts.filter { calendarShift ->
+                calendarShift.temporalStatus !in setOf(
+                    ShiftTemporalStatus.CANCELLED,
+                    ShiftTemporalStatus.ABSENT,
+                )
+            }
+            return activeShifts.isNotEmpty() &&
+                activeShifts.all { it.temporalStatus == ShiftTemporalStatus.COMPLETED }
+        }
+
     val isImplicitlyUndefined: Boolean
         get() = shifts.isEmpty() && explicitStatus == null && !hasMedicalLeave
 }

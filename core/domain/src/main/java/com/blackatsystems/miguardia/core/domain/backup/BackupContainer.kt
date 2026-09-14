@@ -60,6 +60,9 @@ class ExtractedBackup internal constructor(
     }
 }
 
+private fun BackupDatabaseSnapshot.imageMetadataTables(): List<BackupTable> =
+    tables.filter { it.name == "schedule_photos" || it.name == "shift_note_attachments" }
+
 private fun File.deletePrivateFileChecked(label: String) {
     if (exists() && !delete()) throw IOException("No se pudo retirar $label.")
 }
@@ -88,7 +91,7 @@ object BackupContainer {
     ): BackupManifest {
         rejectEmptyPassword(password)
         try {
-            MiGuardiaBackupSchemaV6.requireValid(database)
+            MiGuardiaBackupSchemaV7.requireValid(database)
             require(createdAtEpochMillis > 0L)
             require(photoAssets.size <= MiGuardiaBackupContract.MAX_PHOTO_COUNT)
             if (photoMode == BackupPhotoMode.OMITTED && photoAssets.isNotEmpty()) {
@@ -240,24 +243,28 @@ object BackupContainer {
         database: BackupDatabaseSnapshot,
         assets: List<BackupPhotoAsset>,
     ): List<BackupPhotoAsset> {
-        val photoTable = database.table("schedule_photos")
+        val photoTables = database.imageMetadataTables()
         if (photoMode == BackupPhotoMode.OMITTED) {
-            if (photoTable.records.isNotEmpty()) {
+            if (photoTables.any { it.records.isNotEmpty() }) {
                 throw InvalidBackupException("La copia sin fotos todavía contiene metadatos de fotos.")
             }
             return emptyList()
         }
-        val columns = photoTable.columns
-        val rowsByStorageKey = photoTable.records.associateBy { record ->
-            (record.values[columns.indexOf("storageKey")] as? BackupValue.Text)?.value
-                ?: throw InvalidBackupException("Una foto no tiene una referencia de archivo válida.")
-        }
-        if (rowsByStorageKey.size != photoTable.records.size || assets.size != rowsByStorageKey.size) {
+        val rowsByStorageKey = photoTables.flatMap { table ->
+            val columns = table.columns
+            table.records.map { record ->
+                val key = (record.values[columns.indexOf("storageKey")] as? BackupValue.Text)?.value
+                    ?: throw InvalidBackupException("Una imagen no tiene una referencia de archivo válida.")
+                key to (record to columns)
+            }
+        }.toMap()
+        val rowCount = photoTables.sumOf { it.records.size }
+        if (rowsByStorageKey.size != rowCount || assets.size != rowsByStorageKey.size) {
             throw InvalidBackupException("Los registros y archivos de fotos no coinciden.")
         }
         var totalBytes = 0L
         return assets.sortedBy { it.metadata.storageKey }.map { asset ->
-            val row = rowsByStorageKey[asset.metadata.storageKey]
+            val (row, columns) = rowsByStorageKey[asset.metadata.storageKey]
                 ?: throw InvalidBackupException("Falta el registro lógico de una fotografía.")
             if (!asset.file.isFile) throw InvalidBackupException("Falta el archivo privado de una fotografía.")
             val actualSize = asset.file.length()
@@ -300,20 +307,23 @@ object BackupContainer {
                 throw InvalidBackupException("La entrada ${entry.name} no supera la verificación de integridad.")
             }
         }
-        val photoTable = payload.database.table("schedule_photos")
+        val photoTables = payload.database.imageMetadataTables()
         if (payload.photoMode == BackupPhotoMode.OMITTED) {
-            if (payload.photos.isNotEmpty() || photoTable.records.isNotEmpty() ||
+            if (payload.photos.isNotEmpty() || photoTables.any { it.records.isNotEmpty() } ||
                 actualNames.any { it.startsWith(PHOTO_PREFIX) }
             ) {
                 throw InvalidBackupException("Una copia declarada sin fotos contiene datos de fotografías.")
             }
             return
         }
-        val columns = photoTable.columns
-        val rowsByStorageKey = photoTable.records.associateBy { row ->
-            (row.values[columns.indexOf("storageKey")] as? BackupValue.Text)?.value
-                ?: throw InvalidBackupException("Una foto no tiene una referencia válida.")
-        }
+        val rowsByStorageKey = photoTables.flatMap { table ->
+            val columns = table.columns
+            table.records.map { row ->
+                val key = (row.values[columns.indexOf("storageKey")] as? BackupValue.Text)?.value
+                    ?: throw InvalidBackupException("Una imagen no tiene una referencia válida.")
+                key to (row to columns)
+            }
+        }.toMap()
         if (rowsByStorageKey.size != payload.photos.size) {
             throw InvalidBackupException("Los metadatos y registros de fotografías no coinciden.")
         }
@@ -325,7 +335,7 @@ object BackupContainer {
         }
         var totalBytes = 0L
         payload.photos.forEach { photo ->
-            val row = rowsByStorageKey[photo.storageKey]
+            val (row, columns) = rowsByStorageKey[photo.storageKey]
                 ?: throw InvalidBackupException("Falta el registro de una fotografía.")
             requirePhotoMatchesRow(photo, row, columns)
             val file = safeEntryFile(extracted, "$PHOTO_PREFIX${photo.storageKey}")
@@ -861,7 +871,7 @@ object BackupContainer {
         "MiGuardia backup passwordless transport seal v1".toByteArray(Charsets.US_ASCII)
     private const val MAX_METADATA_BYTES = 4L * 1024L * 1024L
     private const val ZIP_EPOCH_MILLIS = 0L
-    private val SAFE_STORAGE_KEY = Regex("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?:_[0-9a-f]{8})?\\.(?:jpg|jpeg|png|webp)")
+    private val SAFE_STORAGE_KEY = Regex("(?:note_)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?:_[0-9a-f]{8})?\\.(?:jpg|jpeg|png|webp)")
     private val PNG_SIGNATURE = byteArrayOf(
         0x89.toByte(), 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,
     )

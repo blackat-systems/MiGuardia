@@ -67,7 +67,7 @@ class MonthlyReportSnapshotInstrumentedTest {
     }
 
     @Test
-    fun captureReadsTheMonthInsideOneTransactionWithoutChangingAnyOfTheTwentySevenTables() = runBlocking {
+    fun captureReadsTheMonthInsideOneTransactionWithoutChangingAnyOfTheTwentyEightTables() = runBlocking {
         val fixture = store.seedV2Catalog()
         val write = store.buildTestV2Write(fixture, V2TestIds.uuid(18_001), V2TestIds.SHIFT_DATE)
         store.v2Shifts.insert(write)
@@ -80,7 +80,7 @@ class MonthlyReportSnapshotInstrumentedTest {
         assertEquals(listOf(write.shift.id), snapshot.summaryInput.shifts.map { it.shift.id })
         assertTrue(V2TestIds.SHIFT_DATE in snapshot.captureRange)
         assertEquals(beforeCounts, tableCounts())
-        assertEquals(27, beforeCounts.size)
+        assertEquals(28, beforeCounts.size)
         assertEquals(beforeChanges, totalChanges())
     }
 

@@ -17,6 +17,7 @@ import com.blackatsystems.miguardia.core.database.dao.SchedulePhotoDao
 import com.blackatsystems.miguardia.core.database.dao.ShiftActualDao
 import com.blackatsystems.miguardia.core.database.dao.ShiftDao
 import com.blackatsystems.miguardia.core.database.dao.ShiftNoteDao
+import com.blackatsystems.miguardia.core.database.dao.ShiftNoteAttachmentDao
 import com.blackatsystems.miguardia.core.database.dao.ShiftNotificationConfigDao
 import com.blackatsystems.miguardia.core.database.dao.V2ShiftDao
 import com.blackatsystems.miguardia.core.database.dao.VacationDao
@@ -39,6 +40,7 @@ import com.blackatsystems.miguardia.core.database.entity.ShiftEntity
 import com.blackatsystems.miguardia.core.database.entity.ShiftActualRecordEntity
 import com.blackatsystems.miguardia.core.database.entity.ShiftExtraIntervalEntity
 import com.blackatsystems.miguardia.core.database.entity.ShiftNoteEntity
+import com.blackatsystems.miguardia.core.database.entity.ShiftNoteAttachmentEntity
 import com.blackatsystems.miguardia.core.database.entity.ShiftNotificationConfigEntity
 import com.blackatsystems.miguardia.core.database.entity.ShiftNotificationReminderEntity
 import com.blackatsystems.miguardia.core.database.entity.ShiftWorkSnapshotEntity
@@ -59,6 +61,7 @@ import com.blackatsystems.miguardia.core.database.entity.WorkplaceRuleRevisionEn
         MedicalLeaveEntity::class,
         HolidayEntity::class,
         ShiftNoteEntity::class,
+        ShiftNoteAttachmentEntity::class,
         VacationEntity::class,
         SchedulePhotoEntity::class,
         ShiftNotificationConfigEntity::class,
@@ -80,7 +83,7 @@ import com.blackatsystems.miguardia.core.database.entity.WorkplaceRuleRevisionEn
         IndependentExtraWorkRecordEntity::class,
         AvailabilityWindowEntity::class,
     ],
-    version = 6,
+    version = 7,
     exportSchema = true,
 )
 internal abstract class MiGuardiaV2Database : RoomDatabase() {
@@ -90,6 +93,7 @@ internal abstract class MiGuardiaV2Database : RoomDatabase() {
     internal abstract fun medicalLeaveDao(): MedicalLeaveDao
     internal abstract fun holidayDao(): HolidayDao
     internal abstract fun shiftNoteDao(): ShiftNoteDao
+    internal abstract fun shiftNoteAttachmentDao(): ShiftNoteAttachmentDao
     internal abstract fun vacationDao(): VacationDao
     internal abstract fun schedulePhotoDao(): SchedulePhotoDao
     internal abstract fun shiftNotificationConfigDao(): ShiftNotificationConfigDao
@@ -111,7 +115,14 @@ internal abstract class MiGuardiaV2Database : RoomDatabase() {
             context.applicationContext,
             MiGuardiaV2Database::class.java,
             databaseName,
-        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6).build()
+        ).addMigrations(
+            MIGRATION_1_2,
+            MIGRATION_2_3,
+            MIGRATION_3_4,
+            MIGRATION_4_5,
+            MIGRATION_5_6,
+            MIGRATION_6_7,
+        ).build()
 
         internal val MIGRATION_1_2: Migration = object : Migration(1, 2) {
             override fun migrate(db: SupportSQLiteDatabase) {
@@ -457,6 +468,40 @@ internal abstract class MiGuardiaV2Database : RoomDatabase() {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE `objectives` ADD COLUMN `weatherLatitude` REAL")
                 db.execSQL("ALTER TABLE `objectives` ADD COLUMN `weatherLongitude` REAL")
+            }
+        }
+
+        internal val MIGRATION_6_7: Migration = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """CREATE TABLE IF NOT EXISTS `shift_note_attachments` (
+                        `id` TEXT NOT NULL,
+                        `noteId` TEXT NOT NULL,
+                        `storageKey` TEXT NOT NULL,
+                        `mimeType` TEXT NOT NULL,
+                        `byteSize` INTEGER NOT NULL,
+                        `pixelWidth` INTEGER NOT NULL,
+                        `pixelHeight` INTEGER NOT NULL,
+                        `position` INTEGER NOT NULL,
+                        `createdAtEpochMillis` INTEGER NOT NULL,
+                        `updatedAtEpochMillis` INTEGER NOT NULL,
+                        PRIMARY KEY(`id`),
+                        FOREIGN KEY(`noteId`) REFERENCES `shift_notes`(`id`)
+                            ON UPDATE NO ACTION ON DELETE CASCADE
+                    )""".trimIndent(),
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_shift_note_attachments_noteId` " +
+                        "ON `shift_note_attachments` (`noteId`)",
+                )
+                db.execSQL(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS `index_shift_note_attachments_noteId_position` " +
+                        "ON `shift_note_attachments` (`noteId`, `position`)",
+                )
+                db.execSQL(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS `index_shift_note_attachments_storageKey` " +
+                        "ON `shift_note_attachments` (`storageKey`)",
+                )
             }
         }
 

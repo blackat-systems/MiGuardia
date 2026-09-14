@@ -11,7 +11,7 @@ import com.blackatsystems.miguardia.core.domain.backup.BackupValue
 import com.blackatsystems.miguardia.core.domain.backup.InvalidBackupException
 import com.blackatsystems.miguardia.core.domain.backup.MiGuardiaBackupContract
 import com.blackatsystems.miguardia.core.domain.backup.MiGuardiaBackupSchemaV5
-import com.blackatsystems.miguardia.core.domain.backup.MiGuardiaBackupSchemaV6
+import com.blackatsystems.miguardia.core.domain.backup.MiGuardiaBackupSchemaV7
 import com.blackatsystems.miguardia.core.domain.backup.estimateDecodedDatabaseBytes
 import com.blackatsystems.miguardia.core.domain.backup.upgradeSupportedBackupSchema
 import java.time.Instant
@@ -49,7 +49,7 @@ class BackupDatabaseGatewayInstrumentedTest {
     }
 
     @Test
-    fun capturesAndReopensExactlyTheTwentySevenLogicalTablesIncludingWeatherLocation() = runBlocking {
+    fun capturesAndReopensExactlyTheTwentyEightLogicalTablesIncludingNoteAttachments() = runBlocking {
         val expected = fullSnapshot()
 
         store.backups.validateCandidate(expected)
@@ -57,12 +57,12 @@ class BackupDatabaseGatewayInstrumentedTest {
 
         assertEquals(expected, store.backups.capture())
         store.backups.verifyLiveAfterReopen(expected)
-        assertEquals(27, expected.tables.size)
+        assertEquals(28, expected.tables.size)
         assertTrue(expected.tables.all { it.records.size == 1 })
     }
 
     @Test
-    fun roomFiveBackupUpgradesIntoRoomSixWithNullWeatherLocationAndReopens() = runBlocking {
+    fun roomFiveBackupUpgradesIntoRoomSevenWithNullWeatherLocationAndEmptyAttachments() = runBlocking {
         val current = fullSnapshot()
         val legacy = current.copy(
             roomVersion = MiGuardiaBackupContract.LEGACY_ROOM_VERSION_V5,
@@ -267,7 +267,7 @@ class BackupDatabaseGatewayInstrumentedTest {
 
     private fun emptySnapshot(): BackupDatabaseSnapshot = BackupDatabaseSnapshot(
         timelineId = null,
-        tables = MiGuardiaBackupSchemaV6.tables.map { spec ->
+        tables = MiGuardiaBackupSchemaV7.tables.map { spec ->
             BackupTable(spec.name, spec.columns, spec.primaryKey, emptyList())
         },
     )
@@ -356,6 +356,10 @@ class BackupDatabaseGatewayInstrumentedTest {
             "shift_notes" to row(
                 text(NOTE_ID), text(SHIFT_ID), text("Nota ficticia"), integer(CREATED_AT), integer(CREATED_AT),
             ),
+            "shift_note_attachments" to row(
+                text(NOTE_ATTACHMENT_ID), text(NOTE_ID), text(NOTE_ATTACHMENT_STORAGE_KEY), text("image/png"),
+                integer(67), integer(1), integer(1), integer(0), integer(CREATED_AT), integer(CREATED_AT),
+            ),
             "shift_notification_configs" to row(text(SHIFT_ID)),
             "shift_notification_reminders" to row(text(SHIFT_ID), integer(60)),
             "recurring_plan_revisions" to row(
@@ -395,7 +399,7 @@ class BackupDatabaseGatewayInstrumentedTest {
         )
         return BackupDatabaseSnapshot(
             timelineId = TIMELINE_ID,
-            tables = MiGuardiaBackupSchemaV6.tables.map { spec ->
+            tables = MiGuardiaBackupSchemaV7.tables.map { spec ->
                 BackupTable(spec.name, spec.columns, spec.primaryKey, listOf(requireNotNull(rows[spec.name])))
             },
         )
@@ -454,6 +458,8 @@ class BackupDatabaseGatewayInstrumentedTest {
         const val RULE_ID = "30000000-0000-4000-8000-000000000008"
         const val SHIFT_ID = "30000000-0000-4000-8000-000000000009"
         const val NOTE_ID = "30000000-0000-4000-8000-000000000010"
+        const val NOTE_ATTACHMENT_ID = "30000000-0000-4000-8000-000000000021"
+        const val NOTE_ATTACHMENT_STORAGE_KEY = "note_30000000-0000-4000-8000-000000000021.png"
         const val MEDICAL_ID = "30000000-0000-4000-8000-000000000011"
         const val HOLIDAY_ID = "30000000-0000-4000-8000-000000000012"
         const val VACATION_ID = "30000000-0000-4000-8000-000000000013"

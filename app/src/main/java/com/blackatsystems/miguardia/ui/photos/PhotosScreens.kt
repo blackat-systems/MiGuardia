@@ -37,7 +37,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -412,9 +411,6 @@ private fun PhotoImage(
         }
     }
     val loadedBitmap = bitmap
-    DisposableEffect(loadedBitmap) {
-        onDispose { loadedBitmap?.recycle() }
-    }
     if (loadedBitmap != null) {
         Image(
             bitmap = loadedBitmap.asImageBitmap(),

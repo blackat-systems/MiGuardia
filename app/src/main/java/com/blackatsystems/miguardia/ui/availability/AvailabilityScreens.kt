@@ -51,6 +51,7 @@ data class AvailabilityActions(
     val backConfiguration: () -> Unit = {},
     val saveConfiguration: () -> Unit = {},
     val openCreate: (LocalDate) -> Unit = {},
+    val openRetainer: (LocalDate) -> Unit = {},
     val openCorrect: (AvailabilityWindowRecord) -> Unit = {},
     val updateWindow: (AvailabilityWindowDraftState) -> Unit = {},
     val reviewWindow: () -> Unit = {},
@@ -74,6 +75,7 @@ data class AvailabilityActions(
             backConfiguration = viewModel::backConfiguration,
             saveConfiguration = viewModel::saveConfiguration,
             openCreate = viewModel::openCreate,
+            openRetainer = viewModel::openRetainer,
             openCorrect = viewModel::openCorrect,
             updateWindow = viewModel::updateWindowDraft,
             reviewWindow = viewModel::reviewWindow,
@@ -225,7 +227,10 @@ private fun WindowEditor(state: AvailabilityUiState, actions: AvailabilityAction
     AvailabilityBody(state, actions) {
         val draft = state.windowDraft ?: return@AvailabilityBody
         SectionCard(
-            title = "Fecha ${draft.ownerDate ?: ""}",
+            title = buildString {
+                draft.labelOverride?.let { append(it.displayName).append(" · ") }
+                append("Fecha ${draft.ownerDate ?: ""}")
+            },
             supportingText = "La fecha dueña no cambia al corregir. Para moverla, eliminá y creá otra ventana.",
         ) { }
         AutomaticTimeField(

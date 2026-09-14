@@ -13,7 +13,9 @@ MAIN despacha según `docs/ORQUESTACION_MAIN.md` y el cursor de STATUS. Los núm
 | `docs/prompts/CREAR_DESDE_LA_CARGA_V2.md` | CERRADO; creación contextual y terminación visual integradas |
 | `docs/prompts/DISTRIBUCION_PUBLICA_Y_SEGURIDAD_V2.md` | CERRADO en distribución code4; límites y seguimiento en STATUS |
 | `docs/prompts/CORRECCION_FRANCOS_DESDE_CALENDARIO.md` | CERRADO / PUBLICADO en 2.0.2; evidencia y límites en STATUS |
-| `docs/prompts/HIGIENE_PREVIA_MIGUARDIA_3.md` | AUTORIZADO / CERRADO; saneamiento estructural sin cambios de producto, evidencia y límites en STATUS |
+| `docs/prompts/HIGIENE_PREVIA_MIGUARDIA_3.md` | CERRADO; saneamiento estructural sin cambios de producto, evidencia y límites en STATUS |
+| `docs/prompts/STAGE_1_DETALLE_EDICION_Y_COMPOSICION_DEL_DIA_3_0.md` | AUTORIZADO / CERRADO / ACEPTADO; integrado como base de MiGuardia 3.0, límites en STATUS |
+| `docs/prompts/STAGE_2_SITUACIONES_LABORALES_Y_ESTADOS_DEL_DIA_3_0.md` | PROPUESTO / LISTO PARA DECIDIR; no autorizado para implementar |
 | `docs/prompts/DISTRIBUCION_PUBLICA_WEB_Y_CONTRATO_V2.md` | CERRADO localmente; contrato/API aceptados, no distribución |
 | `docs/prompts/CIERRE_ANDROID_PUBLICO_SEGURIDAD_Y_ENTREGA_V2.md` | CERRADO localmente en 19; reutilizable para firma/QA 20–21 sólo con insumos y recursos definidos en STATUS |
 | `docs/prompts/TEMPLATE.md` | PLANTILLA; no ejecutable |

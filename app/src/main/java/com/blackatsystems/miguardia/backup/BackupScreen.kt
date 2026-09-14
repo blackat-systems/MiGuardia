@@ -188,7 +188,7 @@ fun BackupSurfaceHost(
 private fun BackupHome(state: BackupUiState, actions: BackupActions) {
     SectionCard("Crear una copia completa", modifier = Modifier.testTag("backup-create-card")) {
         SettingToggle(
-            title = "Incluir fotos del cronograma",
+            title = "Incluir fotos e imágenes de Notas",
             detail = "Suma los archivos privados y sus metadatos verificados.",
             checked = state.includePhotos,
             onChecked = actions.setIncludePhotos,
@@ -322,13 +322,13 @@ private fun BackupPreviewContent(state: BackupUiState, actions: BackupActions) {
         )
         Text(
             "Actual: ${preview.currentCounts.values.sum()} registros · " +
-                "Copia: ${preview.incomingCounts.values.sum()} registros lógicos en 27 tablas",
+                "Copia: ${preview.incomingCounts.values.sum()} registros lógicos en ${preview.incomingCounts.size} tablas",
         )
         Text(
             if (preview.manifest.photoMode == BackupPhotoMode.OMITTED) {
-                "La copia fue creada sin fotos"
+                "La copia fue creada sin imágenes"
             } else {
-                "${preview.photosInBackup} fotos incluidas"
+                "${preview.photosInBackup} imágenes incluidas"
             },
         )
         Text("${preview.newRecords} nuevos · ${preview.identicalRecords} idénticos · ${preview.conflicts.size} conflictos")
@@ -348,7 +348,7 @@ private fun BackupPreviewContent(state: BackupUiState, actions: BackupActions) {
             )
         }
         if (preview.photosMissingFromBackup > 0) {
-            Text("La copia no incluye ${preview.photosMissingFromBackup} fotos que hoy existen en este dispositivo.")
+            Text("La copia no incluye ${preview.photosMissingFromBackup} imágenes que hoy existen en este dispositivo.")
         }
     }
     Button(
@@ -481,9 +481,9 @@ private fun ReadyToApply(state: BackupUiState, actions: BackupActions) {
             if (preview.photosMissingFromBackup > 0) {
                 Text(
                     if (preview.manifest.photoMode == BackupPhotoMode.OMITTED) {
-                        "También desaparecerán ${preview.photosMissingFromBackup} fotos: la copia fue creada sin fotos."
+                        "También desaparecerán ${preview.photosMissingFromBackup} imágenes: la copia fue creada sin imágenes."
                     } else {
-                        "También desaparecerán ${preview.photosMissingFromBackup} fotos que no están en la copia."
+                        "También desaparecerán ${preview.photosMissingFromBackup} imágenes que no están en la copia."
                     },
                 )
             }

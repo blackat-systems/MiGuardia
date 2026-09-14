@@ -1269,7 +1269,7 @@ fun MiGuardiaApp(
     }
 
     if (exceptionsState.surface != ExceptionsSurface.NONE) {
-        ExceptionsSurfaceHost(exceptionsState, exceptionsActions)
+        ExceptionsSurfaceHost(exceptionsState, exceptionsActions, photosViewModel?.fileStore)
     }
     if (vacationState.surface != VacationSurface.NONE) {
         VacationSurfaceHost(vacationState, vacationActions)
@@ -1360,6 +1360,25 @@ fun MiGuardiaApp(
                     } else {
                         v2ShiftEditActions.reportActualHandoffUnavailable()
                     }
+                },
+                addShift = { date ->
+                    v2ShiftEditActions.cancelToDetail()
+                    onDismissDate()
+                    v2ManualShiftLoadActions.start(workSetupState.rootState)
+                    onEnterCalendarEditMode(date)
+                    v2ManualShiftLoadActions.confirmDates(setOf(date))
+                },
+                markDayOff = { date ->
+                    v2ShiftEditActions.cancelToDetail()
+                    onDismissDate()
+                    v2ManualShiftLoadActions.start(workSetupState.rootState)
+                    onEnterCalendarEditMode(date)
+                    v2ManualShiftLoadActions.requestDayOff(setOf(date), true)
+                },
+                markRetainer = { date ->
+                    v2ShiftEditActions.cancelToDetail()
+                    onDismissDate()
+                    availabilityActions.openRetainer(date)
                 },
             ),
         )

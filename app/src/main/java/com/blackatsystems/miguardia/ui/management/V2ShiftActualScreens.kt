@@ -147,9 +147,6 @@ fun V2ShiftActualDetailCard(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text("Planificado / Real", fontWeight = FontWeight.Bold)
-            Text("Planificado: ${shift.startAt.visibleAt(shift.zoneId)} – ${shift.endAt.visibleAt(shift.zoneId)}")
-            Text("Zona: ${shift.zoneId.id}", style = MaterialTheme.typography.bodySmall)
             when (rowState) {
                 null,
                 V2ShiftActualRowState.Loading,
@@ -171,20 +168,34 @@ fun V2ShiftActualDetailCard(
                 is V2ShiftActualRowState.Content -> {
                     val actual = rowState.expectation.previousActual
                     if (actual == null) {
-                        Text("Todavía no hay un horario real guardado.")
+                        Text(
+                            if (rowState.canRegister) "Horario trabajado" else "Horario estipulado",
+                            fontWeight = FontWeight.Bold,
+                        )
+                        Text(shift.timeOnlyRange())
                         rowState.unavailableMessage?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
                         if (rowState.canRegister) {
                             Button(
                                 onClick = { actions.begin(shift.id, ordinal, count, ownerDate) },
                                 modifier = Modifier.fillMaxWidth().testTag("$tagPrefix-register"),
-                            ) { Text("Registrar horario real") }
+                            ) { Text("Registrar cambio en el horario estipulado") }
+                            Text(
+                                "Registrá si te fuiste antes o te quedaste un rato más",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
                         }
                     } else {
-                        ActualSummary(actual, shift.zoneId)
+                        ActualSummary(shift, actual)
                         Button(
                             onClick = { actions.begin(shift.id, ordinal, count, ownerDate) },
                             modifier = Modifier.fillMaxWidth().testTag("$tagPrefix-correct"),
-                        ) { Text("Corregir horario real") }
+                        ) { Text("Registrar cambio en el horario estipulado") }
+                        Text(
+                            "Registrá si te fuiste antes o te quedaste un rato más",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                         OutlinedButton(
                             onClick = { actions.requestReturnToPlanned(shift.id) },
                             modifier = Modifier.fillMaxWidth().testTag("$tagPrefix-return-planned"),
@@ -197,20 +208,62 @@ fun V2ShiftActualDetailCard(
 }
 
 @Composable
-private fun ActualSummary(actual: ShiftActualAggregate, zoneId: ZoneId) {
-    Text("Real: ${actual.record.actualStart.visibleAt(zoneId)} – ${actual.record.actualEnd.visibleAt(zoneId)}")
-    Text("Motivo: ${actual.record.differenceReason}")
-    actual.record.explanation?.let { Text("Explicación: $it") }
+private fun ActualSummary(shift: Shift, actual: ShiftActualAggregate) {
+    Text("Horario estipulado", fontWeight = FontWeight.Bold)
+    Text(shift.timeOnlyRange())
+    Text("Horario realmente cumplido", fontWeight = FontWeight.Bold)
+    Text("${actual.record.actualStart.timeAt(shift.zoneId)} – ${actual.record.actualEnd.timeAt(shift.zoneId)}")
+    Text(
+        shift.humanActualDifference(actual),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    actual.record.explanation?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
     Text("Horas trabajadas sin extras: ${actual.regularMinutes.asHoursAndMinutes()}")
     actual.extraIntervals.forEachIndexed { index, fragment ->
         Text(
             "Extra ${index + 1}: ${fragment.classNameSnapshot} · " +
-                "${fragment.start.visibleAt(zoneId)} – ${fragment.end.visibleAt(zoneId)} · " +
+                "${fragment.start.visibleAt(shift.zoneId)} – ${fragment.end.visibleAt(shift.zoneId)} · " +
                 fragment.durationMinutes.asHoursAndMinutes(),
         )
     }
     Text("Total real: ${actual.totalMinutes.asHoursAndMinutes()}", fontWeight = FontWeight.SemiBold)
 }
+
+internal fun Shift.humanActualDifference(actual: ShiftActualAggregate): String {
+    val startDifference = java.time.Duration.between(startAt, actual.record.actualStart).toMinutes()
+    val endDifference = java.time.Duration.between(endAt, actual.record.actualEnd).toMinutes()
+    val plannedMinutes = java.time.Duration.between(startAt, endAt).toMinutes()
+    val netDifference = actual.totalMinutes - plannedMinutes
+    return when {
+        startDifference == 0L && endDifference > 0L ->
+            "Trabajaste ${endDifference.humanDuration()} más de lo planeado."
+        startDifference == 0L && endDifference < 0L ->
+            "Te fuiste ${(-endDifference).humanDuration()} antes."
+        endDifference == 0L && startDifference > 0L ->
+            "Entraste ${startDifference.humanDuration()} más tarde."
+        endDifference == 0L && startDifference < 0L ->
+            "Entraste ${(-startDifference).humanDuration()} antes."
+        netDifference > 0L -> "Trabajaste ${netDifference.humanDuration()} más de lo planeado."
+        netDifference < 0L -> "Trabajaste ${(-netDifference).humanDuration()} menos de lo planeado."
+        else -> "Cumpliste la misma cantidad de horas con otro horario."
+    }
+}
+
+private fun Long.humanDuration(): String {
+    val hours = this / 60
+    val minutes = this % 60
+    return buildList {
+        if (hours > 0) add(if (hours == 1L) "1 hora" else "$hours horas")
+        if (minutes > 0) add(if (minutes == 1L) "1 minuto" else "$minutes minutos")
+    }.joinToString(" y ")
+}
+
+private fun Shift.timeOnlyRange(): String =
+    "${startAt.timeAt(zoneId)} – ${endAt.timeAt(zoneId)}"
+
+private fun Instant.timeAt(zoneId: ZoneId): String =
+    TIME_ONLY.format(atZone(zoneId))
 
 @Composable
 fun V2ShiftActualSurfaceHost(
@@ -739,7 +792,7 @@ private fun ReviewStage(editor: V2ShiftActualEditorState) {
         Text("Jornada ${editor.ordinal} de ${editor.count} · ${shift.id}")
         Text("Fecha dueña: ${editor.ownerDate}")
         Text("Planificado: ${shift.startAt.visibleAt(shift.zoneId)} – ${shift.endAt.visibleAt(shift.zoneId)}")
-        ActualSummary(mutation.replacement, shift.zoneId)
+        ActualSummary(shift, mutation.replacement)
         mutation.classToCreate?.let { newClass ->
             Text("Se creará el tipo de horas extra: ${newClass.name}", fontWeight = FontWeight.SemiBold)
         }
@@ -899,3 +952,4 @@ private fun Long.asHoursAndMinutes(): String =
     "${this / 60} h ${this % 60} min"
 
 private val VISIBLE_DATE_TIME: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm XXX")
+private val TIME_ONLY: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")

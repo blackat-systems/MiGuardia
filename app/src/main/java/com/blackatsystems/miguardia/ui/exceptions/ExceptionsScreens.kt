@@ -1,6 +1,12 @@
 package com.blackatsystems.miguardia.ui.exceptions
 
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts.PickMultipleVisualMedia
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -8,8 +14,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -28,15 +36,19 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.blackatsystems.miguardia.core.domain.model.Holiday
 import com.blackatsystems.miguardia.core.domain.model.HolidayConflictPolicy
 import com.blackatsystems.miguardia.core.domain.model.Shift
-import com.blackatsystems.miguardia.core.domain.model.ShiftNote
+import com.blackatsystems.miguardia.core.domain.model.ShiftNoteAttachment
+import com.blackatsystems.miguardia.core.domain.model.ShiftNoteWithAttachments
 import com.blackatsystems.miguardia.ui.components.DestructiveAction
 import com.blackatsystems.miguardia.ui.components.EmptyState
 import com.blackatsystems.miguardia.ui.components.PersistentMessage
@@ -45,11 +57,17 @@ import com.blackatsystems.miguardia.ui.components.ScreenHeading
 import com.blackatsystems.miguardia.ui.components.SectionCard
 import com.blackatsystems.miguardia.ui.components.SurfaceHeader
 import com.blackatsystems.miguardia.ui.components.TransientConfirmation
+import com.blackatsystems.miguardia.ui.photos.SchedulePhotoBitmapDecoder
+import com.blackatsystems.miguardia.ui.photos.SchedulePhotoFileStore
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.util.UUID
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
+private val noteBitmapDecoder = SchedulePhotoBitmapDecoder()
 
 data class ExceptionsActions(
     val openHolidays: (YearMonth) -> Unit = {},
@@ -66,7 +84,9 @@ data class ExceptionsActions(
     val cancelHolidayConflict: () -> Unit = {},
     val deleteHoliday: (UUID) -> Unit = {},
     val updateNoteDraft: ((NoteDraft) -> NoteDraft) -> Unit = {},
-    val editNote: (ShiftNote) -> Unit = {},
+    val editNote: (ShiftNoteWithAttachments) -> Unit = {},
+    val addNoteImages: (List<android.net.Uri>) -> Unit = {},
+    val removeNoteImage: (UUID) -> Unit = {},
     val cancelNoteEdit: () -> Unit = {},
     val saveNote: () -> Unit = {},
     val deleteNote: (UUID) -> Unit = {},
@@ -90,6 +110,8 @@ data class ExceptionsActions(
             deleteHoliday = viewModel::deleteHoliday,
             updateNoteDraft = viewModel::updateNoteDraft,
             editNote = viewModel::editNote,
+            addNoteImages = viewModel::addNoteImages,
+            removeNoteImage = viewModel::removeNoteImage,
             cancelNoteEdit = viewModel::cancelNoteEdit,
             saveNote = viewModel::saveNote,
             deleteNote = viewModel::deleteNote,
@@ -103,6 +125,7 @@ data class ExceptionsActions(
 fun ExceptionsSurfaceHost(
     state: ExceptionsUiState,
     actions: ExceptionsActions,
+    imageStore: SchedulePhotoFileStore? = null,
 ) {
     if (state.surface == ExceptionsSurface.NONE) return
     var confirmDiscard by rememberSaveable { mutableStateOf(false) }
@@ -110,7 +133,8 @@ fun ExceptionsSurfaceHost(
         ExceptionsSurface.HOLIDAYS -> state.holidayDraft.editingId != null ||
             state.holidayDraft.datesText.isNotBlank() ||
             state.holidayDraft.name.isNotBlank()
-        ExceptionsSurface.NOTES -> state.noteDraft.editingId != null || state.noteDraft.body.isNotBlank()
+        ExceptionsSurface.NOTES -> state.noteDraft.editingId != null || state.noteDraft.body.isNotBlank() ||
+            state.noteDraft.attachments.isNotEmpty()
         ExceptionsSurface.NONE -> false
     }
     val requestClose = {
@@ -138,7 +162,7 @@ fun ExceptionsSurfaceHost(
                 }
                 when (state.surface) {
                     ExceptionsSurface.HOLIDAYS -> HolidayContent(state, actions)
-                    ExceptionsSurface.NOTES -> NotesContent(state, actions)
+                    ExceptionsSurface.NOTES -> NotesContent(state, actions, imageStore)
                     ExceptionsSurface.NONE -> Unit
                 }
             }
@@ -345,9 +369,18 @@ fun HolidayCalendarSelectionContent(
 }
 
 @Composable
-private fun NotesContent(state: ExceptionsUiState, actions: ExceptionsActions) {
+private fun NotesContent(
+    state: ExceptionsUiState,
+    actions: ExceptionsActions,
+    imageStore: SchedulePhotoFileStore?,
+) {
     val shift = state.selectedShift ?: return
     var pendingDelete by rememberSaveable { mutableStateOf<String?>(null) }
+    var pendingAttachmentDelete by rememberSaveable { mutableStateOf<String?>(null) }
+    var viewingStorageKey by rememberSaveable { mutableStateOf<String?>(null) }
+    val picker = rememberLauncherForActivityResult(PickMultipleVisualMedia(maxItems = 30)) { uris ->
+        actions.addNoteImages(uris)
+    }
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -367,9 +400,35 @@ private fun NotesContent(state: ExceptionsUiState, actions: ExceptionsActions) {
                 enabled = !state.isSaving,
                 modifier = Modifier.fillMaxWidth(),
             )
+            OutlinedButton(
+                onClick = { picker.launch(PickVisualMediaRequest(androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+                enabled = !state.isSaving && imageStore != null,
+                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+            ) { Text("Agregar imágenes") }
+            if (state.noteDraft.attachments.isNotEmpty() && imageStore != null) {
+                state.noteDraft.attachments.forEachIndexed { index, attachment ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        NoteImage(
+                            attachment = attachment,
+                            imageStore = imageStore,
+                            modifier = Modifier.size(88.dp).clickable { viewingStorageKey = attachment.storageKey },
+                        )
+                        Text("Imagen ${index + 1}", modifier = Modifier.weight(1f))
+                        TextButton(
+                            onClick = { pendingAttachmentDelete = attachment.id.toString() },
+                            enabled = !state.isSaving,
+                        ) { Text("Quitar") }
+                    }
+                }
+            }
             Button(
                 onClick = actions.saveNote,
-                enabled = !state.isSaving,
+                enabled = !state.isSaving &&
+                    (state.noteDraft.body.isNotBlank() || state.noteDraft.attachments.isNotEmpty()),
                 modifier = Modifier.fillMaxWidth(),
             ) { Text("Guardar nota") }
             if (state.noteDraft.editingId != null) {
@@ -382,20 +441,39 @@ private fun NotesContent(state: ExceptionsUiState, actions: ExceptionsActions) {
         }
         if (state.isLoading) {
             CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
-        } else if (state.notes.isEmpty()) {
+        } else if (state.noteItems.isEmpty() && state.notes.isEmpty()) {
             Text("Todavía no hay notas para esta jornada.")
         } else {
-            state.notes.forEach { note ->
-                SectionCard(title = "Nota", supportingText = note.body) {
+            val items = if (state.noteItems.isNotEmpty()) state.noteItems else {
+                state.notes.map { ShiftNoteWithAttachments(it, emptyList()) }
+            }
+            items.forEach { item ->
+                val supporting = item.note.body.ifBlank {
+                    "${item.attachments.size} ${if (item.attachments.size == 1) "imagen" else "imágenes"}"
+                }
+                SectionCard(title = "Nota", supportingText = supporting) {
+                    if (imageStore != null && item.attachments.isNotEmpty()) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            item.attachments.take(3).forEach { attachment ->
+                                NoteImage(
+                                    attachment = attachment,
+                                    imageStore = imageStore,
+                                    modifier = Modifier.size(76.dp).clickable {
+                                        viewingStorageKey = attachment.storageKey
+                                    },
+                                )
+                            }
+                        }
+                    }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedButton(
-                            onClick = { actions.editNote(note) },
+                            onClick = { actions.editNote(item) },
                             enabled = !state.isSaving,
                             modifier = Modifier.weight(1f),
                         ) { Text("Editar") }
                         DestructiveAction(
                             label = "Eliminar",
-                            onClick = { pendingDelete = note.id.toString() },
+                            onClick = { pendingDelete = item.note.id.toString() },
                             enabled = !state.isSaving,
                             modifier = Modifier.weight(1f),
                         )
@@ -413,6 +491,64 @@ private fun NotesContent(state: ExceptionsUiState, actions: ExceptionsActions) {
                 pendingDelete = null
             },
             onDismiss = { pendingDelete = null },
+        )
+    }
+    pendingAttachmentDelete?.let { raw ->
+        ConfirmDeleteDialog(
+            title = "Quitar imagen",
+            text = "La imagen dejará de formar parte de esta nota.",
+            onConfirm = {
+                actions.removeNoteImage(UUID.fromString(raw))
+                pendingAttachmentDelete = null
+            },
+            onDismiss = { pendingAttachmentDelete = null },
+        )
+    }
+    if (viewingStorageKey != null && imageStore != null) {
+        AlertDialog(
+            onDismissRequest = { viewingStorageKey = null },
+            title = { Text("Imagen de la nota") },
+            text = {
+                NoteImage(
+                    storageKey = requireNotNull(viewingStorageKey),
+                    imageStore = imageStore,
+                    modifier = Modifier.fillMaxWidth().height(420.dp),
+                    maxDimension = 1600,
+                )
+            },
+            confirmButton = { TextButton(onClick = { viewingStorageKey = null }) { Text("Cerrar") } },
+        )
+    }
+}
+
+@Composable
+private fun NoteImage(
+    attachment: ShiftNoteAttachment,
+    imageStore: SchedulePhotoFileStore,
+    modifier: Modifier,
+) = NoteImage(attachment.storageKey, imageStore, modifier, 384)
+
+@Composable
+private fun NoteImage(
+    storageKey: String,
+    imageStore: SchedulePhotoFileStore,
+    modifier: Modifier,
+    maxDimension: Int,
+) {
+    val bitmap by produceState<android.graphics.Bitmap?>(null, storageKey, maxDimension) {
+        value = withContext(Dispatchers.IO) {
+            noteBitmapDecoder.decode(imageStore.file(storageKey), maxDimension)?.bitmap
+        }
+    }
+    val loaded = bitmap
+    if (loaded == null) {
+        Box(modifier, contentAlignment = Alignment.Center) { Text("Imagen no disponible") }
+    } else {
+        Image(
+            bitmap = loaded.asImageBitmap(),
+            contentDescription = "Imagen adjunta a la nota",
+            modifier = modifier,
+            contentScale = ContentScale.Crop,
         )
     }
 }

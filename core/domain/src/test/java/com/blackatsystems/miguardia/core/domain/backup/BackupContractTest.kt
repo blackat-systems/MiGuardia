@@ -29,8 +29,8 @@ class BackupContractTest {
         assertEquals("application/vnd.blackatsystems.miguardia.backup", MiGuardiaBackupContract.MIME_TYPE)
         assertEquals(1, MiGuardiaBackupContract.FORMAT_VERSION)
         assertEquals(1, MiGuardiaBackupContract.MIN_READER_VERSION)
-        assertEquals(6, MiGuardiaBackupContract.ROOM_VERSION)
-        assertEquals("7eb39f6fab5a44e69350e206716554be", MiGuardiaBackupContract.ROOM_IDENTITY_HASH)
+        assertEquals(7, MiGuardiaBackupContract.ROOM_VERSION)
+        assertEquals("e2bdce73ce37f7bd36110ce338fa2f90", MiGuardiaBackupContract.ROOM_IDENTITY_HASH)
         assertEquals(310_000, MiGuardiaBackupContract.PBKDF2_ITERATIONS)
         assertEquals(256, MiGuardiaBackupContract.AES_KEY_BITS)
         assertEquals(128, MiGuardiaBackupContract.GCM_TAG_BITS)
@@ -47,7 +47,7 @@ class BackupContractTest {
                 "weatherLatitude",
                 "weatherLongitude",
             ),
-            MiGuardiaBackupSchemaV6.byName.getValue("objectives").columns,
+            MiGuardiaBackupSchemaV7.byName.getValue("objectives").columns,
         )
     }
 
@@ -64,7 +64,7 @@ class BackupContractTest {
 
         assertTrue(first.contentEquals(second))
         assertEquals(snapshot, BackupPayloadCodec.readDatabase(ByteArrayInputStream(first)))
-        assertEquals(27, snapshot.tables.size)
+        assertEquals(28, snapshot.tables.size)
     }
 
     @Test
@@ -86,11 +86,11 @@ class BackupContractTest {
         val upgradedObjectives = upgraded.table("objectives")
         assertEquals(listOf("weatherLatitude", "weatherLongitude"), upgradedObjectives.columns.takeLast(2))
         assertEquals(listOf(BackupValue.Null, BackupValue.Null), upgradedObjectives.records.single().values.takeLast(2))
-        MiGuardiaBackupSchemaV6.requireValid(upgraded)
+        MiGuardiaBackupSchemaV7.requireValid(upgraded)
     }
 
     @Test
-    fun roomFiveContainerPreservesItsSourceVersionWhileAdaptingThePayloadToRoomSix() {
+    fun roomFiveContainerPreservesItsSourceVersionWhileAdaptingThePayloadToRoomSeven() {
         val current = File(temporary.root, "room-six-source.miguardia-backup")
         createPlaintext(
             current,
@@ -262,6 +262,47 @@ class BackupContractTest {
             assertTrue(extracted.payload.photos.single().sha256 != "0".repeat(64))
             assertTrue(
                 File(extracted.photoDirectory, PHOTO_STORAGE_KEY).readBytes().contentEquals(png),
+            )
+        }
+    }
+
+    @Test
+    fun plaintextContainerRoundTripsANoteAttachmentWithItsOwnLogicalRow() {
+        val png = Base64.getDecoder().decode(ONE_PIXEL_PNG_BASE64)
+        val imageFile = File(temporary.root, NOTE_IMAGE_STORAGE_KEY).also { it.writeBytes(png) }
+        val snapshot = emptySnapshot()
+            .withShifts(listOf(shift(SHIFT_ID, 1_000L, 2_000L)))
+            .withShiftNote(NOTE_ID, SHIFT_ID)
+            .withNoteAttachment(png.size.toLong())
+        val metadata = BackupPhotoMetadata(
+            recordId = NOTE_IMAGE_ID,
+            storageKey = NOTE_IMAGE_STORAGE_KEY,
+            mimeType = "image/png",
+            byteSize = png.size.toLong(),
+            pixelWidth = 1,
+            pixelHeight = 1,
+            sha256 = "0".repeat(64),
+        )
+        val target = File(temporary.root, "with-note-image.miguardia-backup")
+
+        BackupContainer.create(
+            target = target,
+            workingDirectory = temporary.newFolder("note-image-work"),
+            backupId = UUID.fromString(BACKUP_ID),
+            createdAtEpochMillis = CREATED_AT,
+            zoneId = ZoneId.of("America/Argentina/Buenos_Aires"),
+            database = snapshot,
+            preferences = emptyList(),
+            photoMode = BackupPhotoMode.INCLUDED,
+            photoAssets = listOf(BackupPhotoAsset(metadata, imageFile)),
+            password = null,
+        )
+
+        BackupContainer.extract(target, temporary.newFolder("note-image-read"), null).use { extracted ->
+            assertEquals(snapshot, extracted.payload.database)
+            assertEquals(NOTE_IMAGE_STORAGE_KEY, extracted.payload.photos.single().storageKey)
+            assertTrue(
+                File(extracted.photoDirectory, NOTE_IMAGE_STORAGE_KEY).readBytes().contentEquals(png),
             )
         }
     }
@@ -1040,7 +1081,7 @@ class BackupContractTest {
             },
         )
 
-        assertFails<InvalidBackupException> { MiGuardiaBackupSchemaV6.requireValid(duplicate) }
+        assertFails<InvalidBackupException> { MiGuardiaBackupSchemaV7.requireValid(duplicate) }
     }
 
     @Test
@@ -1050,11 +1091,29 @@ class BackupContractTest {
         val canonical = emptySnapshot().withRecords("objectives", listOf(first, second))
         val reversed = emptySnapshot().withRecords("objectives", listOf(second, first))
 
-        MiGuardiaBackupSchemaV6.requireValid(canonical)
-        assertFails<InvalidBackupException> { MiGuardiaBackupSchemaV6.requireValid(reversed) }
+        MiGuardiaBackupSchemaV7.requireValid(canonical)
+        assertFails<InvalidBackupException> { MiGuardiaBackupSchemaV7.requireValid(reversed) }
         assertFails<InvalidBackupException> {
             BackupPayloadCodec.writeDatabase(reversed, ByteArrayOutputStream())
         }
+    }
+
+    @Test
+    fun noteAttachmentsMustUseContinuousPositions() {
+        val invalid = emptySnapshot()
+            .withShiftNote(NOTE_ID, SHIFT_ID)
+            .withNoteAttachments(listOf(1L))
+
+        assertFails<InvalidBackupException> { MiGuardiaBackupSchemaV7.requireValid(invalid) }
+    }
+
+    @Test
+    fun imageOnlyNoteMustKeepAtLeastOneAttachment() {
+        val invalid = emptySnapshot().withShiftNote(NOTE_ID, SHIFT_ID, body = "   ")
+        val valid = invalid.withNoteAttachment(byteSize = 1)
+
+        assertFails<InvalidBackupException> { MiGuardiaBackupSchemaV7.requireValid(invalid) }
+        MiGuardiaBackupSchemaV7.requireValid(valid)
     }
 
     @Test
@@ -1089,7 +1148,7 @@ class BackupContractTest {
         assertFails<UnresolvedBackupConflictException> {
             BackupComparator.mergeDatabase(current, incoming, comparison.conflicts, emptyList())
         }
-        MiGuardiaBackupSchemaV6.requireValid(incoming)
+        MiGuardiaBackupSchemaV7.requireValid(incoming)
     }
 
     @Test
@@ -1163,7 +1222,7 @@ class BackupContractTest {
 
     private fun emptySnapshot(): BackupDatabaseSnapshot = BackupDatabaseSnapshot(
         timelineId = null,
-        tables = MiGuardiaBackupSchemaV6.tables.map { spec ->
+        tables = MiGuardiaBackupSchemaV7.tables.map { spec ->
             BackupTable(spec.name, spec.columns, spec.primaryKey, emptyList())
         },
     )
@@ -1185,7 +1244,7 @@ class BackupContractTest {
     )
 
     private fun record(tableName: String, vararg values: Pair<String, BackupValue>): BackupRecord {
-        val spec = MiGuardiaBackupSchemaV6.byName.getValue(tableName)
+        val spec = MiGuardiaBackupSchemaV7.byName.getValue(tableName)
         val byName = values.toMap()
         return BackupRecord(spec.columns.map { column -> byName[column] ?: BackupValue.Null })
     }
@@ -1318,7 +1377,7 @@ class BackupContractTest {
     private fun BackupDatabaseSnapshot.asLegacyRoomFiveSnapshot(): BackupDatabaseSnapshot = copy(
         roomVersion = MiGuardiaBackupContract.LEGACY_ROOM_VERSION_V5,
         roomIdentityHash = MiGuardiaBackupContract.LEGACY_ROOM_IDENTITY_HASH_V5,
-        tables = tables.map { table ->
+        tables = tables.filterNot { it.name == "shift_note_attachments" }.map { table ->
             if (table.name == "objectives") {
                 table.copy(
                     columns = table.columns.dropLast(2),
@@ -1433,7 +1492,11 @@ class BackupContractTest {
         tables = tables.map { table -> if (table.name == "shifts") table.copy(records = records) else table },
     )
 
-    private fun BackupDatabaseSnapshot.withShiftNote(id: String, shiftId: String): BackupDatabaseSnapshot = copy(
+    private fun BackupDatabaseSnapshot.withShiftNote(
+        id: String,
+        shiftId: String,
+        body: String = "Nota ficticia",
+    ): BackupDatabaseSnapshot = copy(
         tables = tables.map { table ->
             if (table.name == "shift_notes") {
                 table.copy(
@@ -1442,12 +1505,49 @@ class BackupContractTest {
                             listOf(
                                 BackupValue.Text(id),
                                 BackupValue.Text(shiftId),
-                                BackupValue.Text("Nota ficticia"),
+                                BackupValue.Text(body),
                                 BackupValue.Integer(CREATED_AT),
                                 BackupValue.Integer(CREATED_AT),
                             ),
                         ),
                     ),
+                )
+            } else {
+                table
+            }
+        },
+    )
+
+    private fun BackupDatabaseSnapshot.withNoteAttachment(byteSize: Long): BackupDatabaseSnapshot =
+        withNoteAttachments(listOf(0L), byteSize)
+
+    private fun BackupDatabaseSnapshot.withNoteAttachments(
+        positions: List<Long>,
+        byteSize: Long = 1,
+    ): BackupDatabaseSnapshot = copy(
+        tables = tables.map { table ->
+            if (table.name == "shift_note_attachments") {
+                table.copy(
+                    records = positions.mapIndexed { index, position ->
+                        BackupRecord(
+                            listOf(
+                                BackupValue.Text(
+                                    if (index == 0) NOTE_IMAGE_ID else UUID(0L, index.toLong()).toString(),
+                                ),
+                                BackupValue.Text(NOTE_ID),
+                                BackupValue.Text(
+                                    if (index == 0) NOTE_IMAGE_STORAGE_KEY else "note_${UUID(0L, index.toLong())}.png",
+                                ),
+                                BackupValue.Text("image/png"),
+                                BackupValue.Integer(byteSize),
+                                BackupValue.Integer(1),
+                                BackupValue.Integer(1),
+                                BackupValue.Integer(position),
+                                BackupValue.Integer(CREATED_AT),
+                                BackupValue.Integer(CREATED_AT),
+                            ),
+                        )
+                    },
                 )
             } else {
                 table
@@ -1672,6 +1772,8 @@ class BackupContractTest {
         const val OTHER_TIMELINE_ID = "33333333-3333-4333-8333-333333333333"
         const val PHOTO_ID = "44444444-4444-4444-8444-444444444444"
         const val PHOTO_STORAGE_KEY = "55555555-5555-4555-8555-555555555555.png"
+        const val NOTE_IMAGE_ID = "66666666-6666-4666-8666-666666666666"
+        const val NOTE_IMAGE_STORAGE_KEY = "note_66666666-6666-4666-8666-666666666666.png"
         const val ONE_PIXEL_PNG_BASE64 =
             "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl2ZQAAAABJRU5ErkJggg=="
         val MAGIC = "MIGUARDIA-BACKUP".toByteArray(Charsets.US_ASCII)

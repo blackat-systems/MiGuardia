@@ -189,7 +189,7 @@ class BackupMemoryBudgetTest {
 
     private fun emptySnapshot(): BackupDatabaseSnapshot = BackupDatabaseSnapshot(
         timelineId = null,
-        tables = MiGuardiaBackupSchemaV6.tables.map { spec ->
+        tables = MiGuardiaBackupSchemaV7.tables.map { spec ->
             BackupTable(spec.name, spec.columns, spec.primaryKey, emptyList())
         },
     )

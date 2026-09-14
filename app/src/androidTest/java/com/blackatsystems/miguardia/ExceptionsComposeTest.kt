@@ -1,11 +1,14 @@
 package com.blackatsystems.miguardia
 
+import android.content.Context
+import android.graphics.Bitmap
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -14,10 +17,12 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
+import androidx.test.core.app.ApplicationProvider
 import com.blackatsystems.miguardia.core.domain.model.Holiday
 import com.blackatsystems.miguardia.core.domain.model.HolidayConflictPolicy
 import com.blackatsystems.miguardia.core.domain.model.Shift
 import com.blackatsystems.miguardia.core.domain.model.ShiftNote
+import com.blackatsystems.miguardia.core.domain.model.ShiftNoteAttachment
 import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
 import com.blackatsystems.miguardia.core.domain.calendar.projectCalendarMonth
 import com.blackatsystems.miguardia.ui.MiGuardiaApp
@@ -29,6 +34,8 @@ import com.blackatsystems.miguardia.ui.exceptions.ExceptionsSurface
 import com.blackatsystems.miguardia.ui.exceptions.ExceptionsSurfaceHost
 import com.blackatsystems.miguardia.ui.exceptions.ExceptionsUiState
 import com.blackatsystems.miguardia.ui.exceptions.HolidayDraft
+import com.blackatsystems.miguardia.ui.exceptions.NoteDraft
+import com.blackatsystems.miguardia.ui.photos.SchedulePhotoFileStore
 import com.blackatsystems.miguardia.ui.theme.MiGuardiaTheme
 import java.time.Instant
 import java.time.LocalDate
@@ -311,7 +318,72 @@ class ExceptionsComposeTest {
         }
     }
 
+    @Test
+    fun noteAttachmentCanBeReplacedWithoutRecyclingTheBitmapStillBeingDrawn() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val imageStore = SchedulePhotoFileStore(context)
+        val noteId = UUID(0L, 40L)
+        val first = noteAttachment(noteId, UUID(0L, 41L), "note_${noteId}_0000000a.png")
+        val second = noteAttachment(noteId, UUID(0L, 42L), "note_${noteId}_0000000b.png")
+        listOf(first, second).forEachIndexed { index, attachment ->
+            val file = imageStore.file(attachment.storageKey)
+            check(file.parentFile?.exists() == true || file.parentFile?.mkdirs() == true)
+            Bitmap.createBitmap(96, 64, Bitmap.Config.ARGB_8888).also { bitmap ->
+                bitmap.eraseColor(if (index == 0) 0xFF336699.toInt() else 0xFF993366.toInt())
+                file.outputStream().use { output ->
+                    check(bitmap.compress(Bitmap.CompressFormat.PNG, 100, output))
+                }
+                bitmap.recycle()
+            }
+        }
+        var state by mutableStateOf(
+            ExceptionsUiState(
+                surface = ExceptionsSurface.NOTES,
+                selectedShift = SHIFT,
+                noteDraft = NoteDraft(attachments = listOf(first)),
+            ),
+        )
+        compose.setContent {
+            MaterialTheme {
+                ExceptionsSurfaceHost(state, ExceptionsActions(), imageStore)
+            }
+        }
+
+        try {
+            repeat(6) { index ->
+                compose.waitUntil(5_000) {
+                    compose.onAllNodesWithContentDescription("Imagen adjunta a la nota")
+                        .fetchSemanticsNodes().isNotEmpty()
+                }
+                compose.onNodeWithContentDescription("Imagen adjunta a la nota").captureToImage()
+                compose.runOnIdle {
+                    state = state.copy(
+                        noteDraft = NoteDraft(attachments = listOf(if (index % 2 == 0) second else first)),
+                    )
+                }
+            }
+            compose.waitForIdle()
+            compose.onNodeWithContentDescription("Imagen adjunta a la nota").captureToImage()
+        } finally {
+            imageStore.file(first.storageKey).delete()
+            imageStore.file(second.storageKey).delete()
+        }
+    }
+
     private companion object {
+        fun noteAttachment(noteId: UUID, id: UUID, storageKey: String) = ShiftNoteAttachment(
+            id = id,
+            noteId = noteId,
+            storageKey = storageKey,
+            mimeType = "image/png",
+            byteSize = 1,
+            pixelWidth = 96,
+            pixelHeight = 64,
+            position = 0,
+            createdAt = NOW,
+            updatedAt = NOW,
+        )
+
         val NOW: Instant = Instant.parse("2026-08-13T12:00:00Z")
         val ZONE: ZoneId = ZoneId.of("America/Argentina/Cordoba")
         val SHIFT = Shift(

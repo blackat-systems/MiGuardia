@@ -27,7 +27,7 @@ import com.blackatsystems.miguardia.core.domain.backup.BackupDatabaseSnapshot
 import com.blackatsystems.miguardia.core.domain.backup.BackupRecord
 import com.blackatsystems.miguardia.core.domain.backup.BackupTable
 import com.blackatsystems.miguardia.core.domain.backup.BackupValue
-import com.blackatsystems.miguardia.core.domain.backup.MiGuardiaBackupSchemaV6
+import com.blackatsystems.miguardia.core.domain.backup.MiGuardiaBackupSchemaV7
 import com.blackatsystems.miguardia.core.domain.backup.backupKey
 import com.blackatsystems.miguardia.notifications.NotificationPreferencesStore
 import com.blackatsystems.miguardia.profile.GuardProfileStore
@@ -113,9 +113,10 @@ class PublicUpgradeBackupFixtureTest {
         try {
             val photo = createSyntheticPhoto(sourceContext)
             val expected = fullSnapshot(day, photo.length())
-            MiGuardiaBackupSchemaV6.requireValid(expected)
-            assertEquals(27, expected.tables.size)
-            assertTrue(expected.tables.all { it.records.isNotEmpty() })
+            MiGuardiaBackupSchemaV7.requireValid(expected)
+            assertEquals(28, expected.tables.size)
+            assertTrue(expected.tables.filterNot { it.name == "shift_note_attachments" }.all { it.records.isNotEmpty() })
+            assertTrue(expected.table("shift_note_attachments").records.isEmpty())
             val sourceStore = LocalDataStore.create(sourceContext, "fixture.db")
             source = sourceStore
             sourceStore.backups.validateCandidate(expected)
@@ -484,15 +485,19 @@ class PublicUpgradeBackupFixtureTest {
         )
         return BackupDatabaseSnapshot(
             timelineId = TIMELINE_ID,
-            tables = MiGuardiaBackupSchemaV6.tables.map { spec ->
-                val first = requireNotNull(rows[spec.name])
-                val records = when (spec.name) {
+            tables = MiGuardiaBackupSchemaV7.tables.map { spec ->
+                val first = rows[spec.name]
+                val records = when {
+                    spec.name == "shift_note_attachments" -> emptyList()
+                    first == null -> error("Falta la fixture de ${spec.name}")
+                    else -> when (spec.name) {
                     "shifts" -> listOf(first, automaticShift)
                     "shift_work_snapshots" -> listOf(first, automaticSnapshot)
                     "work_configuration_revisions" -> listOf(first, historicalConfiguration)
                     "shift_notification_configs", "shift_notification_reminders" ->
                         listOf(first, replacing(first, 0 to text(AUTOMATIC_SHIFT_ID)))
                     else -> listOf(first)
+                    }
                 }
                 // Every multi-row fixture table differs first by a fixed-length UUID.
                 // The public stable key orders these exact records; the production

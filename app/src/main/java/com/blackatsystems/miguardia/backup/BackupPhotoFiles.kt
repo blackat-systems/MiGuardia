@@ -155,19 +155,26 @@ class BackupPhotoFiles(context: Context) {
     }
 
     private fun BackupDatabaseSnapshot.photoRows(): List<BackupPhotoMetadata> {
-        val table = table("schedule_photos")
-        return table.records.map { row -> row.toPhotoMetadata(table.columns) }.sortedBy {
-            it.storageKey
-        }
+        return PHOTO_METADATA_TABLES.flatMap { tableName ->
+            val table = table(tableName)
+            table.records.map { row -> row.toPhotoMetadata(table.columns) }
+        }.sortedBy(BackupPhotoMetadata::storageKey)
     }
 
     private fun BackupDatabaseSnapshot.photoRecordsByStorageKey(): Map<String, BackupRecord> {
-        val table = table("schedule_photos")
-        val storageKeyIndex = table.columns.indexOf("storageKey")
-        return table.records.associateBy { record ->
-            (record.values[storageKeyIndex] as? BackupValue.Text)?.value
-                ?: throw InvalidBackupException("Un registro de fotografía no tiene storageKey.")
+        val pairs = PHOTO_METADATA_TABLES.flatMap { tableName ->
+            val table = table(tableName)
+            val storageKeyIndex = table.columns.indexOf("storageKey")
+            table.records.map { record ->
+                val key = (record.values[storageKeyIndex] as? BackupValue.Text)?.value
+                    ?: throw InvalidBackupException("Un registro de imagen no tiene storageKey.")
+                key to record
+            }
         }
+        if (pairs.map(Pair<String, BackupRecord>::first).distinct().size != pairs.size) {
+            throw InvalidBackupException("Dos imágenes privadas comparten la misma referencia de archivo.")
+        }
+        return pairs.toMap()
     }
 
     private fun BackupRecord.toPhotoMetadata(columns: List<String>): BackupPhotoMetadata {
@@ -264,10 +271,11 @@ class BackupPhotoFiles(context: Context) {
 
     private companion object {
         const val PHOTO_DIRECTORY = "schedule_photos"
+        val PHOTO_METADATA_TABLES = listOf("schedule_photos", "shift_note_attachments")
         const val SPACE_MARGIN_BYTES = 8L * 1024L * 1024L
         val ZERO_SHA256 = "0".repeat(64)
         val SAFE_STORAGE_KEY = Regex(
-            "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}" +
+            "(?:note_)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}" +
                 "(?:_[0-9a-f]{8})?\\.(?:jpg|jpeg|png|webp)",
         )
     }

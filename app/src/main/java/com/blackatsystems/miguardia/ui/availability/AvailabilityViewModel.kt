@@ -77,6 +77,19 @@ data class AvailabilityWindowDraftState(
     val startTime: String = "",
     val endDate: String = "",
     val endTime: String = "",
+    val labelOverride: AvailabilityLabel? = null,
+)
+
+internal fun retainerWindowDraft(
+    recordId: UUID,
+    ownerDate: LocalDate,
+): AvailabilityWindowDraftState = AvailabilityWindowDraftState(
+    recordId = recordId,
+    ownerDate = ownerDate,
+    startTime = "08:00",
+    endDate = ownerDate.toString(),
+    endTime = "12:00",
+    labelOverride = AvailabilityLabel.ON_CALL_RETAINER,
 )
 
 data class AvailabilityWindowReview(
@@ -305,6 +318,14 @@ class AvailabilityViewModel(
         setSurface(AvailabilitySurface.WINDOW_EDITOR)
     }
 
+    fun openRetainer(ownerDate: LocalDate) {
+        if (_uiState.value.isSaving) return
+        if (_uiState.value.loadState != AvailabilityLoadState.CONTENT) return
+        savedStateHandle[KEY_WINDOW_ORIGINAL] = NEW_WINDOW
+        updateWindowDraft(retainerWindowDraft(uuidProvider(), ownerDate))
+        setSurface(AvailabilitySurface.WINDOW_EDITOR)
+    }
+
     fun openCorrect(record: AvailabilityWindowRecord) {
         if (_uiState.value.isSaving) return
         savedStateHandle[KEY_WINDOW_ORIGINAL] = record.editFingerprint()
@@ -328,6 +349,7 @@ class AvailabilityViewModel(
         savedStateHandle[KEY_WINDOW_START] = draft.startTime
         savedStateHandle[KEY_WINDOW_END_DATE] = draft.endDate
         savedStateHandle[KEY_WINDOW_END] = draft.endTime
+        savedStateHandle[KEY_WINDOW_LABEL_OVERRIDE] = draft.labelOverride?.name ?: NONE_LABEL
         savedStateHandle.remove<String>(KEY_WINDOW_EXPECTATION)
     }
 
@@ -514,7 +536,14 @@ class AvailabilityViewModel(
             windowEnd = observedEnd,
         )
         val record = buildAvailabilityWindowRecord(
-            draft = AvailabilityWindowDraft(draft.recordId, ownerDate, zoneId, start, end),
+            draft = AvailabilityWindowDraft(
+                id = draft.recordId,
+                ownerLocalDate = ownerDate,
+                zoneId = zoneId,
+                start = start,
+                end = end,
+                labelOverride = draft.labelOverride,
+            ),
             configuration = configuration,
             timestamp = nextVersionTimestamp(previous),
             previous = previous,
@@ -858,6 +887,9 @@ class AvailabilityViewModel(
             startTime = savedStateHandle.get<String>(KEY_WINDOW_START).orEmpty(),
             endDate = savedStateHandle.get<String>(KEY_WINDOW_END_DATE).orEmpty(),
             endTime = savedStateHandle.get<String>(KEY_WINDOW_END).orEmpty(),
+            labelOverride = savedStateHandle.get<String>(KEY_WINDOW_LABEL_OVERRIDE)
+                ?.takeUnless { it == NONE_LABEL }
+                ?.let { runCatching { AvailabilityLabel.valueOf(it) }.getOrNull() },
         )
     }
 
@@ -874,6 +906,7 @@ class AvailabilityViewModel(
         savedStateHandle.remove<String>(KEY_WINDOW_START)
         savedStateHandle.remove<String>(KEY_WINDOW_END_DATE)
         savedStateHandle.remove<String>(KEY_WINDOW_END)
+        savedStateHandle.remove<String>(KEY_WINDOW_LABEL_OVERRIDE)
         savedStateHandle.remove<String>(KEY_WINDOW_EXPECTATION)
         savedStateHandle.remove<String>(KEY_WINDOW_ORIGINAL)
     }
@@ -979,6 +1012,7 @@ class AvailabilityViewModel(
         const val KEY_WINDOW_START = "availability.window.start"
         const val KEY_WINDOW_END_DATE = "availability.window.endDate"
         const val KEY_WINDOW_END = "availability.window.end"
+        const val KEY_WINDOW_LABEL_OVERRIDE = "availability.window.labelOverride"
         const val KEY_WINDOW_EXPECTATION = "availability.window.expectation"
         const val KEY_WINDOW_ORIGINAL = "availability.window.original"
         const val KEY_DELETING_ID = "availability.deleting"

@@ -321,8 +321,7 @@ internal class V2ShiftEditCoordinator(
         val state = _uiState.value
         if (
             state.isBlocking ||
-            state.inspectionState != V2ShiftDayInspectionState.CONTENT ||
-            !state.hasEditableRows
+            state.inspectionState != V2ShiftDayInspectionState.CONTENT
         ) {
             return
         }
@@ -1239,6 +1238,7 @@ internal class V2ShiftEditCoordinator(
         val templates = catalog.workTemplates.filter { template ->
             template.isActive &&
                 places[template.workPlaceId] != null &&
+                places[template.workPlaceId]?.objectiveId == write.snapshot.objectiveId &&
                 types[template.workTypeId] != null &&
                 catalog.ruleRevisionAt(template.workPlaceId, write.shift.localStartDate) != null
         }

@@ -390,6 +390,56 @@ class AvailabilityWindowTest {
     }
 
     @Test
+    fun contextualRetainerUsesWindowLabelWithoutMutatingOrDependingOnConfiguredLabel() {
+        val disabledConfiguration = configuration(null)
+        val draft = AvailabilityWindowDraft(
+            ID,
+            DATE,
+            ZONE,
+            instant(8),
+            instant(12),
+            labelOverride = AvailabilityLabel.ON_CALL_RETAINER,
+        )
+
+        val created = buildAvailabilityWindowRecord(draft, disabledConfiguration, instant(20))
+
+        assertEquals(AvailabilityLabel.ON_CALL_RETAINER.displayName, created.labelSnapshot)
+        assertEquals(null, disabledConfiguration.revision.value.availabilityLabel)
+    }
+
+    @Test
+    fun correctionCannotReplaceHistoricalWindowLabelThroughOverride() {
+        val original = buildAvailabilityWindowRecord(
+            AvailabilityWindowDraft(
+                ID,
+                DATE,
+                ZONE,
+                instant(8),
+                instant(12),
+                labelOverride = AvailabilityLabel.ON_CALL_RETAINER,
+            ),
+            configuration(null),
+            instant(20),
+        )
+
+        assertThrows(IllegalArgumentException::class.java) {
+            buildAvailabilityWindowRecord(
+                AvailabilityWindowDraft(
+                    ID,
+                    DATE,
+                    ZONE,
+                    instant(9),
+                    instant(13),
+                    labelOverride = AvailabilityLabel.PASSIVE_GUARD,
+                ),
+                configuration(AvailabilityLabel.PASSIVE_GUARD),
+                instant(21),
+                previous = original,
+            )
+        }
+    }
+
+    @Test
     fun expectationCapturesWindowsActiveSourcesAndProtectionForCompleteCas() {
         val expectation = AvailabilityWindowExpectation.capture(
             previous = null,

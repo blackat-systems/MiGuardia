@@ -63,7 +63,7 @@ class LocalDataStore internal constructor(
     val medicalLeaves: MedicalLeaveRepository =
         RoomMedicalLeaveRepository(database)
     val holidays: HolidayRepository = RoomHolidayRepository(database)
-    val shiftNotes: ShiftNoteRepository = RoomShiftNoteRepository(database.shiftNoteDao())
+    val shiftNotes: ShiftNoteRepository = RoomShiftNoteRepository(database)
     val vacations: VacationRepository = RoomVacationRepository(database)
     val schedulePhotos: SchedulePhotoRepository = RoomSchedulePhotoRepository(database.schedulePhotoDao())
     val shiftNotificationConfigs: ShiftNotificationConfigRepository =

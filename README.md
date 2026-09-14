@@ -6,6 +6,7 @@ Este repositorio inicia la evolución hacia MiGuardia 3.0 desde la base estable 
 
 ## Entrar al proyecto
 
+- Inicialización de MAIN 3.0: `docs/HANDOFF_A_MAIN_3_0.md`.
 - Estado actual, autorización y pendientes: `docs/STATUS.md`.
 - Orden obligatorio de MAIN y flowchart: [ruta de orquestación](docs/ORQUESTACION_MAIN.md); STATUS indica el punto de continuación.
 - Reglas estables: `AGENTS.md`; lecturas adicionales: `docs/LECTURAS_POR_TAREA.md`.

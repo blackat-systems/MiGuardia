@@ -1,6 +1,12 @@
 package com.blackatsystems.miguardia.ui
 
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,6 +17,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
@@ -18,6 +25,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -25,6 +33,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.blackatsystems.miguardia.R
@@ -126,6 +137,14 @@ internal fun DayDetailSheet(
                 actions = v2ShiftActualActions,
             )
         }
+        if (v2ShiftEditState != null && onEditDay != null) {
+            V2DayEditEntry(
+                state = v2ShiftEditState,
+                date = day.date,
+                onBegin = onEditDay,
+                onRetry = onRetryV2Inspection,
+            )
+        }
         independentExtras.forEach { record ->
             HorizontalDivider()
             IndependentExtraDetailCard(
@@ -159,14 +178,6 @@ internal fun DayDetailSheet(
                 fontWeight = FontWeight.SemiBold,
             )
         }
-        if (v2ShiftEditState != null && onEditDay != null) {
-            V2DayEditEntry(
-                state = v2ShiftEditState,
-                date = day.date,
-                onBegin = onEditDay,
-                onRetry = onRetryV2Inspection,
-            )
-        }
         if (canRegisterIndependentExtra) {
             OutlinedButton(
                 onClick = onRegisterIndependentExtra,
@@ -198,13 +209,15 @@ private fun ShiftDetail(
     weatherLoading: Boolean = false,
 ) {
     val shift = calendarShift.shift
-    Row(verticalAlignment = Alignment.CenterVertically) {
+    val context = LocalContext.current
+    Row(verticalAlignment = Alignment.Top) {
         Box(
             modifier = Modifier
-                .width(6.dp)
-                .height(48.dp)
-                .clip(MaterialTheme.shapes.extraSmall)
-                .background(Color(shift.colorArgbSnapshot)),
+                .padding(top = 5.dp)
+                .size(14.dp)
+                .clip(CircleShape)
+                .background(Color(shift.colorArgbSnapshot))
+                .semantics { contentDescription = "Color de la jornada ${shift.objectiveAbbreviationSnapshot}" },
         )
         Spacer(modifier = Modifier.width(12.dp))
         Column(verticalArrangement = Arrangement.spacedBy(3.dp), modifier = Modifier.weight(1f)) {
@@ -213,25 +226,37 @@ private fun ShiftDetail(
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
             )
+            shift.objectiveAddressSnapshot?.takeIf { it.isNotBlank() }?.let { address ->
+                Text(
+                    text = address,
+                    color = MaterialTheme.colorScheme.primary,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 48.dp)
+                        .clickable { context.openAddressInMaps(address) }
+                        .semantics { contentDescription = "Abrir en Google Maps: $address" }
+                        .padding(vertical = 12.dp),
+                )
+            }
             Text(shift.timeRange())
             Text(calendarShift.temporalStatus.displayLabel(), fontWeight = FontWeight.Medium)
             shift.position?.takeIf { it.isNotBlank() }?.let { position ->
                 Text(stringResource(R.string.position_value, position))
             }
-            shift.objectiveAddressSnapshot?.takeIf { it.isNotBlank() }?.let { address ->
-                Text(address)
-            }
-            OutlinedButton(onClick = { onOpenNotes(shift) }, modifier = Modifier.fillMaxWidth()) {
-                Text("Notas")
-            }
-            OutlinedButton(
+            CompactShiftAction(
+                symbol = "✎",
+                label = "Notas",
+                description = "Abrir notas de ${shift.objectiveAbbreviationSnapshot}",
+                onClick = { onOpenNotes(shift) },
+            )
+            CompactShiftAction(
+                symbol = "◷",
+                label = "Avisos de esta jornada",
+                description = "Abrir avisos de ${shift.objectiveAbbreviationSnapshot}",
                 onClick = { onOpenNotifications(shift) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("shift-notifications-${shift.id}"),
-            ) {
-                Text("Avisos de esta jornada")
-            }
+                modifier = Modifier.testTag("shift-notifications-${shift.id}"),
+            )
             if (onOpenWeather != null) {
                 ShiftWeatherBriefCard(
                     enabled = weatherEnabled,
@@ -249,6 +274,48 @@ private fun ShiftDetail(
             }
         }
     }
+}
+
+@Composable
+private fun CompactShiftAction(
+    symbol: String,
+    label: String,
+    description: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        onClick = onClick,
+        modifier = modifier
+            .fillMaxWidth()
+            .heightIn(min = 48.dp)
+            .semantics { contentDescription = description },
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        shape = MaterialTheme.shapes.small,
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(symbol, fontWeight = FontWeight.Bold)
+            Text(label, fontWeight = FontWeight.Medium)
+        }
+    }
+}
+
+internal fun Context.openAddressInMaps(address: String): Boolean {
+    val encoded = Uri.encode(address)
+    val candidates = listOf(
+        Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=$encoded")).setPackage("com.google.android.apps.maps"),
+        Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=$encoded")),
+        Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/maps/search/?api=1&query=$encoded")),
+    )
+    candidates.forEach { intent ->
+        if (runCatching { startActivity(intent) }.isSuccess) return true
+    }
+    Toast.makeText(this, "No hay una aplicación disponible para abrir la dirección.", Toast.LENGTH_LONG).show()
+    return false
 }
 
 @Composable

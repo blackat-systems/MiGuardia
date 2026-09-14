@@ -81,7 +81,7 @@ class BackupComposeTest {
         compose.onNodeWithTag("backup-choose-merge").performScrollTo().assertIsNotEnabled()
         compose.onNodeWithTag("backup-choose-replace").assertIsEnabled()
         compose.onNodeWithText("La línea temporal es distinta: combinar está bloqueado.").assertIsDisplayed()
-        compose.onNodeWithText("Formato de copia V1 · datos internos Room V6").assertIsDisplayed()
+        compose.onNodeWithText("Formato de copia V1 · datos internos Room V7").assertIsDisplayed()
     }
 
     @Test
@@ -174,7 +174,7 @@ class BackupComposeTest {
         compose.onNodeWithTag("backup-apply-replace").performScrollTo().assertIsNotEnabled()
         compose.onNodeWithTag("backup-replace-confirmation").performTextInput("Reemplazar todo")
         compose.onNodeWithTag("backup-apply-replace").assertIsEnabled()
-        compose.onNodeWithText("También desaparecerán 3 fotos: la copia fue creada sin fotos.")
+        compose.onNodeWithText("También desaparecerán 3 imágenes: la copia fue creada sin imágenes.")
             .assertIsDisplayed()
         compose.onNodeWithText(
             "Datos actuales que desaparecerán o serán reemplazados: 2 registros y 2 ajustes. " +

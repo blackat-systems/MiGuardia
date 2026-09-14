@@ -66,6 +66,9 @@ data class V2ShiftEditActions(
     val beginDayEditing: () -> Unit = {},
     val editShift: (UUID) -> Unit = {},
     val requestDelete: (UUID) -> Unit = {},
+    val addShift: (LocalDate) -> Unit = {},
+    val markDayOff: (LocalDate) -> Unit = {},
+    val markRetainer: (LocalDate) -> Unit = {},
     val editOnlyThisOccurrence: () -> Unit = {},
     val deleteOnlyThisOccurrence: () -> Unit = {},
     val cancelScopeChoice: () -> Unit = {},
@@ -159,22 +162,16 @@ fun V2DayEditEntry(
             )
         }
 
-        V2ShiftDayInspectionState.CONTENT -> if (state.hasEditableRows) {
-            Button(
+        V2ShiftDayInspectionState.CONTENT -> {
+            OutlinedButton(
                 onClick = onBegin,
                 modifier = modifier
                     .fillMaxWidth()
-                    .heightIn(min = 56.dp)
+                    .heightIn(min = 48.dp)
                     .testTag("v2-edit-day-action"),
             ) {
                 Text("Editar este día")
             }
-        } else {
-            Text(
-                text = "Este día no contiene jornadas V2 editables.",
-                modifier = modifier.testTag("v2-no-editable-shifts"),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
         }
     }
 }
@@ -306,7 +303,11 @@ private fun DayActionsStep(state: V2ShiftEditUiState, actions: V2ShiftEditAction
         modifier = Modifier.testTag("v2-shift-day-actions-date"),
     )
     Text(
-        "Elegí exactamente cuál jornada querés corregir o eliminar.",
+        if (state.dayRows.isEmpty()) {
+            "Todavía no hay jornadas. Podés agregar una o registrar el estado de este día."
+        } else {
+            "Cada acción de edición o eliminación afecta únicamente a la jornada indicada."
+        },
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
     state.dayRows.forEach { row ->
@@ -316,6 +317,23 @@ private fun DayActionsStep(state: V2ShiftEditUiState, actions: V2ShiftEditAction
             onEdit = { actions.editShift(row.shift.id) },
             onDelete = { actions.requestDelete(row.shift.id) },
         )
+    }
+    state.date?.let { date ->
+        OutlinedButton(
+            onClick = { actions.addShift(date) },
+            enabled = state.stage == V2ShiftEditStage.DAY_ACTIONS && !state.isLoading && !state.isSaving,
+            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("v2-add-shift"),
+        ) { Text("Agregar jornada") }
+        OutlinedButton(
+            onClick = { actions.markDayOff(date) },
+            enabled = state.stage == V2ShiftEditStage.DAY_ACTIONS && !state.isLoading && !state.isSaving,
+            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("v2-mark-day-off"),
+        ) { Text("Marcar este día como franco") }
+        OutlinedButton(
+            onClick = { actions.markRetainer(date) },
+            enabled = state.stage == V2ShiftEditStage.DAY_ACTIONS && !state.isLoading && !state.isSaving,
+            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("v2-mark-retainer"),
+        ) { Text("Marcar este día como retén") }
     }
     OutlinedButton(
         onClick = actions.cancelToDetail,
@@ -524,7 +542,6 @@ private fun TemplateOption(
     enabled: Boolean,
     onClick: () -> Unit,
 ) {
-    val colorHex = option.template.colorHex()
     SelectableTemplateSurface(
         selected = selected,
         enabled = enabled,
@@ -544,8 +561,7 @@ private fun TemplateOption(
             append(option.template.startTime.format(TIME_FORMATTER))
             append(" a ")
             append(option.template.endTime.format(TIME_FORMATTER))
-            append(", color #")
-            append(colorHex)
+            append(", color de jornada")
             append(if (selected) ", seleccionado" else ", sin seleccionar")
         },
         testTag = "v2-shift-template-${option.template.id}",
@@ -553,9 +569,9 @@ private fun TemplateOption(
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(
                 Modifier
-                    .width(7.dp)
-                    .height(52.dp)
-                    .background(Color(option.template.colorArgb), MaterialTheme.shapes.extraSmall),
+                    .size(14.dp)
+                    .background(Color(option.template.colorArgb), androidx.compose.foundation.shape.CircleShape)
+                    .semantics { contentDescription = "Color de la jornada" },
             )
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
@@ -565,7 +581,6 @@ private fun TemplateOption(
                 option.objective.address?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
                 Text(option.workType.name, fontWeight = FontWeight.SemiBold)
                 Text("${option.template.startTime.format(TIME_FORMATTER)}–${option.template.endTime.format(TIME_FORMATTER)}")
-                Text("Color #$colorHex", style = MaterialTheme.typography.bodySmall)
                 if (selected) Text("Seleccionada", color = MaterialTheme.vigiliaColors.active)
             }
         }
@@ -621,13 +636,13 @@ private fun ReviewStep(state: V2ShiftEditUiState, actions: V2ShiftEditActions) {
             )
             Text("Tipo: ${original.snapshot.workTypeNameSnapshot}")
             Text("Horario: ${original.shift.timeRange()}")
-            Text("Color: #${original.shift.colorArgbSnapshot.colorHex()}")
+            ShiftColorIndicator(original.shift.colorArgbSnapshot)
             original.shift.objectiveAddressSnapshot?.let { Text("Dirección: $it") }
         } else {
             Text("Lugar: ${option.objective.fullName} (${option.objective.abbreviation})")
             Text("Tipo: ${option.workType.name}")
             Text("Horario: ${option.template.startTime.format(TIME_FORMATTER)}–${option.template.endTime.format(TIME_FORMATTER)}")
-            Text("Color: #${option.template.colorHex()}")
+            ShiftColorIndicator(option.template.colorArgb)
             option.objective.address?.let { Text("Dirección: $it") }
         }
         Text("Puesto o función: ${normalizeOptionalWorkText(state.position) ?: "Sin puesto"}")
@@ -689,7 +704,7 @@ private fun HistoricalSummary(write: V2ShiftWrite?) {
     write.shift.objectiveAddressSnapshot?.let { Text("Dirección: $it") }
     Text("Tipo: ${write.snapshot.workTypeNameSnapshot}")
     Text("Horario: ${write.shift.timeRange()}")
-    Text("Color: #${write.shift.colorArgbSnapshot.colorHex()}")
+    ShiftColorIndicator(write.shift.colorArgbSnapshot)
     write.shift.position?.let { Text("Puesto o función: $it") }
 }
 
@@ -918,12 +933,21 @@ private fun Shift.timeRange(): String =
 
 private fun LocalDate.fullDate(): String = format(FULL_DATE_FORMATTER)
 
-private fun Int.colorHex(): String = (this and 0x00FFFFFF)
-    .toString(16)
-    .padStart(6, '0')
-    .uppercase(Locale.ROOT)
-
-private fun com.blackatsystems.miguardia.core.domain.work.WorkTemplate.colorHex(): String = colorArgb.colorHex()
+@Composable
+private fun ShiftColorIndicator(colorArgb: Int) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.semantics { contentDescription = "Color de la jornada" },
+    ) {
+        Box(
+            Modifier
+                .size(14.dp)
+                .background(Color(colorArgb), androidx.compose.foundation.shape.CircleShape),
+        )
+        Text("Color de la jornada", style = MaterialTheme.typography.bodySmall)
+    }
+}
 
 private val FULL_DATE_FORMATTER: DateTimeFormatter =
     DateTimeFormatter.ofPattern("EEEE d 'de' MMMM 'de' uuuu", Locale.forLanguageTag("es-AR"))

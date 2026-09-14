@@ -1,5 +1,6 @@
 package com.blackatsystems.miguardia.ui.exceptions
 
+import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -12,10 +13,13 @@ import com.blackatsystems.miguardia.core.domain.model.HolidayBatchMutation
 import com.blackatsystems.miguardia.core.domain.model.HolidayConflictPolicy
 import com.blackatsystems.miguardia.core.domain.model.Shift
 import com.blackatsystems.miguardia.core.domain.model.ShiftNote
+import com.blackatsystems.miguardia.core.domain.model.ShiftNoteAttachment
+import com.blackatsystems.miguardia.core.domain.model.ShiftNoteWithAttachments
 import com.blackatsystems.miguardia.core.domain.repository.HolidayRepository
 import com.blackatsystems.miguardia.core.domain.repository.LocalDataException
 import com.blackatsystems.miguardia.core.domain.repository.ShiftNoteRepository
 import com.blackatsystems.miguardia.core.domain.repository.ShiftRepository
+import com.blackatsystems.miguardia.ui.photos.SchedulePhotoFileStore
 import java.time.Clock
 import java.time.LocalDate
 import java.time.YearMonth
@@ -37,7 +41,41 @@ internal data class ExceptionsPersistedState(
     val shiftId: UUID? = null,
     val holidaySelectionActive: Boolean = false,
     val holidayDraft: HolidayDraft = HolidayDraft(),
+    val noteDraft: NoteDraft = NoteDraft(),
 )
+
+private const val MAX_NOTE_IMAGES = 30
+private const val ATTACHMENT_FIELD_SEPARATOR = "|"
+
+private fun ShiftNoteAttachment.encodeForSavedState(): String = listOf(
+    id,
+    noteId,
+    storageKey,
+    mimeType,
+    byteSize,
+    pixelWidth,
+    pixelHeight,
+    position,
+    createdAt.toEpochMilli(),
+    updatedAt.toEpochMilli(),
+).joinToString(ATTACHMENT_FIELD_SEPARATOR)
+
+private fun decodeSavedAttachment(raw: String): ShiftNoteAttachment? = runCatching {
+    val fields = raw.split(ATTACHMENT_FIELD_SEPARATOR)
+    require(fields.size == 10)
+    ShiftNoteAttachment(
+        id = UUID.fromString(fields[0]),
+        noteId = UUID.fromString(fields[1]),
+        storageKey = fields[2],
+        mimeType = fields[3],
+        byteSize = fields[4].toLong(),
+        pixelWidth = fields[5].toInt(),
+        pixelHeight = fields[6].toInt(),
+        position = fields[7].toInt(),
+        createdAt = java.time.Instant.ofEpochMilli(fields[8].toLong()),
+        updatedAt = java.time.Instant.ofEpochMilli(fields[9].toLong()),
+    )
+}.getOrNull()
 
 internal class ExceptionsCoordinator(
     private val holidays: HolidayRepository,
@@ -45,8 +83,9 @@ internal class ExceptionsCoordinator(
     private val shifts: ShiftRepository,
     private val clock: Clock,
     private val uuidProvider: () -> UUID,
+    private val imageStore: SchedulePhotoFileStore? = null,
     private val scope: CoroutineScope,
-    initialState: ExceptionsPersistedState,
+    private val initialState: ExceptionsPersistedState,
     private val persist: (ExceptionsPersistedState) -> Unit,
 ) {
     private val writeMutex = Mutex()
@@ -65,6 +104,12 @@ internal class ExceptionsCoordinator(
     private var noteJob: Job? = null
 
     init {
+        scope.launch {
+            val draftKeys = initialState.noteDraft.attachments.mapTo(linkedSetOf(), ShiftNoteAttachment::storageKey)
+            runCatching {
+                imageStore?.reconcileNoteAttachments(notes.allAttachmentStorageKeys() + draftKeys)
+            }
+        }
         when {
             initialState.surface == ExceptionsSurface.NOTES && initialState.shiftId != null -> {
                 scope.launch {
@@ -73,7 +118,7 @@ internal class ExceptionsCoordinator(
                         if (restoredShift == null) {
                             setSurface(ExceptionsSurface.NONE, null)
                         } else {
-                            activateNotes(restoredShift)
+                            activateNotes(restoredShift, restoreDraft = true)
                         }
                     } catch (error: CancellationException) {
                         throw error
@@ -92,6 +137,7 @@ internal class ExceptionsCoordinator(
 
     fun openHolidays(month: YearMonth = _uiState.value.holidayMonth) {
         if (_uiState.value.isSaving) return
+        discardNewDraftFiles(_uiState.value.noteDraft)
         noteJob?.cancel()
         _uiState.update {
             it.copy(
@@ -100,6 +146,7 @@ internal class ExceptionsCoordinator(
                 holidaySelectionActive = false,
                 selectedShift = null,
                 notes = emptyList(),
+                noteItems = emptyList(),
                 noteDraft = NoteDraft(),
                 isLoading = true,
                 errorMessage = null,
@@ -112,6 +159,7 @@ internal class ExceptionsCoordinator(
 
     fun beginHolidaySelection(month: YearMonth = _uiState.value.holidayMonth) {
         if (_uiState.value.isSaving) return
+        discardNewDraftFiles(_uiState.value.noteDraft)
         noteJob?.cancel()
         _uiState.update {
             it.copy(
@@ -120,6 +168,7 @@ internal class ExceptionsCoordinator(
                 holidaySelectionActive = true,
                 selectedShift = null,
                 notes = emptyList(),
+                noteItems = emptyList(),
                 noteDraft = NoteDraft(),
                 isLoading = true,
                 errorMessage = null,
@@ -194,11 +243,12 @@ internal class ExceptionsCoordinator(
 
     fun openNotes(shift: Shift) {
         if (_uiState.value.isSaving) return
-        activateNotes(shift)
+        activateNotes(shift, restoreDraft = false)
     }
 
     fun close() {
         if (_uiState.value.isSaving) return
+        discardNewDraftFiles(_uiState.value.noteDraft)
         holidayJob?.cancel()
         noteJob?.cancel()
         _uiState.update {
@@ -208,6 +258,7 @@ internal class ExceptionsCoordinator(
                 selectedShift = null,
                 holidays = emptyList(),
                 notes = emptyList(),
+                noteItems = emptyList(),
                 holidayDraft = HolidayDraft(),
                 noteDraft = NoteDraft(),
                 isLoading = false,
@@ -345,48 +396,135 @@ internal class ExceptionsCoordinator(
     fun updateNoteDraft(transform: (NoteDraft) -> NoteDraft) {
         if (_uiState.value.isSaving) return
         _uiState.update { it.copy(noteDraft = transform(it.noteDraft), errorMessage = null) }
+        persistCurrentState()
     }
 
-    fun editNote(note: ShiftNote) {
+    fun editNote(item: ShiftNoteWithAttachments) {
         if (_uiState.value.isSaving) return
         _uiState.update {
             it.copy(
-                noteDraft = NoteDraft(editingId = note.id, body = note.body),
+                noteDraft = NoteDraft(
+                    editingId = item.note.id,
+                    body = item.note.body,
+                    attachments = item.attachments,
+                    originalAttachmentIds = item.attachments.mapTo(linkedSetOf(), ShiftNoteAttachment::id),
+                ),
                 errorMessage = null,
             )
+        }
+        persistCurrentState()
+    }
+
+    fun addNoteImages(uris: List<Uri>) {
+        if (uris.isEmpty() || _uiState.value.isSaving) return
+        val store = imageStore ?: return showError("No pudimos preparar el almacenamiento de imágenes.")
+        val available = (MAX_NOTE_IMAGES - _uiState.value.noteDraft.attachments.size).coerceAtLeast(0)
+        val accepted = uris.take(available)
+        if (accepted.isEmpty()) return showError("Esta nota ya tiene el máximo de 30 imágenes.")
+        launchWrite {
+            val imported = mutableListOf<ShiftNoteAttachment>()
+            val noteId = _uiState.value.noteDraft.editingId ?: pendingNoteId()
+            try {
+                accepted.forEach { uri ->
+                    val attachmentId = uuidProvider()
+                    val stored = store.import(
+                        uri = uri,
+                        ownerId = attachmentId,
+                        namespace = SchedulePhotoFileStore.NOTE_NAMESPACE,
+                    )
+                    val now = clock.instant()
+                    imported += ShiftNoteAttachment(
+                        id = attachmentId,
+                        noteId = noteId,
+                        storageKey = stored.storageKey,
+                        mimeType = stored.mimeType,
+                        byteSize = stored.byteSize,
+                        pixelWidth = stored.width,
+                        pixelHeight = stored.height,
+                        position = _uiState.value.noteDraft.attachments.size + imported.size,
+                        createdAt = now,
+                        updatedAt = now,
+                    )
+                }
+                _uiState.update { state ->
+                    val current = state.noteDraft
+                    state.copy(
+                        noteDraft = current.copy(attachments = current.attachments + imported),
+                        infoMessage = if (uris.size > accepted.size) {
+                            "Se agregaron ${accepted.size} imágenes. Se rechazó el excedente del máximo de 30."
+                        } else null,
+                    )
+                }
+                persistCurrentState()
+            } catch (error: Exception) {
+                imported.forEach { runCatching { store.discardUnreferenced(it.storageKey) } }
+                throw error
+            }
+        }
+    }
+
+    fun removeNoteImage(id: UUID) {
+        if (_uiState.value.isSaving) return
+        val draft = _uiState.value.noteDraft
+        val target = draft.attachments.firstOrNull { it.id == id } ?: return
+        val updated = draft.attachments.filterNot { it.id == id }.mapIndexed { index, item ->
+            item.copy(position = index)
+        }
+        _uiState.update { it.copy(noteDraft = draft.copy(attachments = updated), errorMessage = null) }
+        persistCurrentState()
+        if (id !in draft.originalAttachmentIds) {
+            scope.launch { runCatching { imageStore?.discardUnreferenced(target.storageKey) } }
         }
     }
 
     fun cancelNoteEdit() {
         if (_uiState.value.isSaving) return
+        discardNewDraftFiles(_uiState.value.noteDraft)
         _uiState.update { it.copy(noteDraft = NoteDraft(), errorMessage = null) }
+        persistCurrentState()
     }
 
     fun saveNote() {
         val shift = _uiState.value.selectedShift ?: return
         val draft = _uiState.value.noteDraft
         launchWrite {
-            val existing = draft.editingId?.let { notes.getById(it) }
+            val noteId = draft.editingId ?: pendingNoteId()
+            val existing = draft.editingId?.let { notes.getWithAttachments(it) }
             if (draft.editingId != null && existing == null) {
                 throw IllegalStateException("La nota ya no existe.")
             }
             val now = clock.instant()
             val note = ShiftNote(
-                id = existing?.id ?: uuidProvider(),
+                id = noteId,
                 shiftId = shift.id,
                 body = draft.body,
-                createdAt = existing?.createdAt ?: now,
+                createdAt = existing?.note?.createdAt ?: now,
                 updatedAt = now,
             )
-            if (existing == null) notes.insert(note) else notes.update(note)
+            if (note.body.isBlank() && draft.attachments.isEmpty()) {
+                throw IllegalArgumentException("Escribí una nota o agregá al menos una imagen.")
+            }
+            val attachments = draft.attachments.mapIndexed { index, item ->
+                item.copy(noteId = noteId, position = index, updatedAt = now)
+            }
+            notes.saveWithAttachments(note, attachments)
+            val retainedIds = attachments.mapTo(hashSetOf(), ShiftNoteAttachment::id)
+            existing?.attachments.orEmpty().filter { it.id !in retainedIds }.forEach { removed ->
+                runCatching { imageStore?.discardUnreferenced(removed.storageKey) }
+            }
             _uiState.update {
                 it.copy(noteDraft = NoteDraft(), infoMessage = "Nota guardada.")
             }
+            persistCurrentState()
         }
     }
 
     fun deleteNote(id: UUID) = launchWrite {
+        val existing = notes.getWithAttachments(id)
         notes.delete(id)
+        existing?.attachments.orEmpty().forEach { attachment ->
+            runCatching { imageStore?.discardUnreferenced(attachment.storageKey) }
+        }
         _uiState.update {
             it.copy(
                 noteDraft = it.noteDraft.takeUnless { draft -> draft.editingId == id }
@@ -410,7 +548,8 @@ internal class ExceptionsCoordinator(
         _uiState.update { it.copy(errorMessage = null, infoMessage = null) }
     }
 
-    private fun activateNotes(shift: Shift) {
+    private fun activateNotes(shift: Shift, restoreDraft: Boolean) {
+        if (!restoreDraft) discardNewDraftFiles(_uiState.value.noteDraft)
         holidayJob?.cancel()
         _uiState.update {
             it.copy(
@@ -419,7 +558,9 @@ internal class ExceptionsCoordinator(
                 selectedShift = shift,
                 holidays = emptyList(),
                 notes = emptyList(),
+                noteItems = emptyList(),
                 holidayDraft = HolidayDraft(),
+                noteDraft = if (restoreDraft) initialState.noteDraft else NoteDraft(),
                 isLoading = true,
                 errorMessage = null,
                 infoMessage = null,
@@ -460,7 +601,7 @@ internal class ExceptionsCoordinator(
     private fun observeNotes(shiftId: UUID) {
         noteJob?.cancel()
         noteJob = scope.launch {
-            notes.observeForShift(shiftId)
+            notes.observeWithAttachmentsForShift(shiftId)
                 .catch {
                     _uiState.update {
                         it.copy(
@@ -472,7 +613,12 @@ internal class ExceptionsCoordinator(
                 .collect { rows ->
                     if (_uiState.value.selectedShift?.id == shiftId) {
                         _uiState.update {
-                            it.copy(notes = rows, isLoading = false, errorMessage = null)
+                            it.copy(
+                                notes = rows.map(ShiftNoteWithAttachments::note),
+                                noteItems = rows,
+                                isLoading = false,
+                                errorMessage = null,
+                            )
                         }
                     }
                 }
@@ -514,6 +660,20 @@ internal class ExceptionsCoordinator(
         _uiState.update { it.copy(errorMessage = message, infoMessage = null) }
     }
 
+    private fun pendingNoteId(): UUID {
+        val existing = _uiState.value.noteDraft.attachments.firstOrNull()?.noteId
+        return existing ?: uuidProvider()
+    }
+
+    private fun discardNewDraftFiles(draft: NoteDraft) {
+        val keys = draft.attachments
+            .filter { it.id !in draft.originalAttachmentIds }
+            .map(ShiftNoteAttachment::storageKey)
+        if (keys.isNotEmpty()) scope.launch {
+            keys.forEach { runCatching { imageStore?.discardUnreferenced(it) } }
+        }
+    }
+
     private fun setSurface(surface: ExceptionsSurface, shiftId: UUID?) {
         _uiState.update { it.copy(surface = surface) }
         persist(
@@ -523,6 +683,7 @@ internal class ExceptionsCoordinator(
                 shiftId = shiftId,
                 holidaySelectionActive = _uiState.value.holidaySelectionActive,
                 holidayDraft = _uiState.value.holidayDraft,
+                noteDraft = _uiState.value.noteDraft,
             ),
         )
     }
@@ -535,6 +696,7 @@ internal class ExceptionsCoordinator(
                 shiftId = _uiState.value.selectedShift?.id,
                 holidaySelectionActive = _uiState.value.holidaySelectionActive,
                 holidayDraft = _uiState.value.holidayDraft,
+                noteDraft = _uiState.value.noteDraft,
             ),
         )
     }
@@ -546,6 +708,7 @@ class ExceptionsViewModel(
     shifts: ShiftRepository,
     clock: Clock,
     uuidProvider: () -> UUID,
+    imageStore: SchedulePhotoFileStore,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
     private val coordinator = ExceptionsCoordinator(
@@ -554,6 +717,7 @@ class ExceptionsViewModel(
         shifts = shifts,
         clock = clock,
         uuidProvider = uuidProvider,
+        imageStore = imageStore,
         scope = viewModelScope,
         initialState = ExceptionsPersistedState(
             surface = savedStateHandle.get<String>(SURFACE_KEY)
@@ -575,6 +739,19 @@ class ExceptionsViewModel(
                     .mapNotNull { raw -> runCatching { LocalDate.parse(raw) }.getOrNull() }
                     .toCollection(linkedSetOf()),
             ),
+            noteDraft = NoteDraft(
+                editingId = savedStateHandle.get<String>(NOTE_EDITING_ID_KEY)
+                    ?.let { raw -> runCatching { UUID.fromString(raw) }.getOrNull() },
+                body = savedStateHandle[NOTE_BODY_KEY] ?: "",
+                attachments = savedStateHandle.get<ArrayList<String>>(NOTE_ATTACHMENTS_KEY)
+                    .orEmpty()
+                    .mapNotNull(::decodeSavedAttachment)
+                    .sortedBy(ShiftNoteAttachment::position),
+                originalAttachmentIds = savedStateHandle.get<ArrayList<String>>(NOTE_ORIGINAL_IDS_KEY)
+                    .orEmpty()
+                    .mapNotNull { raw -> runCatching { UUID.fromString(raw) }.getOrNull() }
+                    .toSet(),
+            ),
         ),
         persist = { state ->
             savedStateHandle[SURFACE_KEY] = state.surface.name
@@ -584,6 +761,16 @@ class ExceptionsViewModel(
             savedStateHandle[HOLIDAY_NAME_KEY] = state.holidayDraft.name
             savedStateHandle[HOLIDAY_CONFLICT_DATES_KEY] =
                 ArrayList(state.holidayDraft.conflictDates.sorted().map(LocalDate::toString))
+            savedStateHandle[NOTE_BODY_KEY] = state.noteDraft.body
+            savedStateHandle[NOTE_ATTACHMENTS_KEY] =
+                ArrayList(state.noteDraft.attachments.map(ShiftNoteAttachment::encodeForSavedState))
+            savedStateHandle[NOTE_ORIGINAL_IDS_KEY] =
+                ArrayList(state.noteDraft.originalAttachmentIds.map(UUID::toString))
+            if (state.noteDraft.editingId == null) {
+                savedStateHandle.remove<String>(NOTE_EDITING_ID_KEY)
+            } else {
+                savedStateHandle[NOTE_EDITING_ID_KEY] = state.noteDraft.editingId.toString()
+            }
             if (state.holidayDraft.editingId == null) {
                 savedStateHandle.remove<String>(HOLIDAY_EDITING_ID_KEY)
             } else {
@@ -616,7 +803,9 @@ class ExceptionsViewModel(
     fun cancelHolidayConflict() = coordinator.cancelHolidayConflict()
     fun deleteHoliday(id: UUID) = coordinator.deleteHoliday(id)
     fun updateNoteDraft(transform: (NoteDraft) -> NoteDraft) = coordinator.updateNoteDraft(transform)
-    fun editNote(note: ShiftNote) = coordinator.editNote(note)
+    fun editNote(note: ShiftNoteWithAttachments) = coordinator.editNote(note)
+    fun addNoteImages(uris: List<Uri>) = coordinator.addNoteImages(uris)
+    fun removeNoteImage(id: UUID) = coordinator.removeNoteImage(id)
     fun cancelNoteEdit() = coordinator.cancelNoteEdit()
     fun saveNote() = coordinator.saveNote()
     fun deleteNote(id: UUID) = coordinator.deleteNote(id)
@@ -627,6 +816,7 @@ class ExceptionsViewModel(
         private val holidays: HolidayRepository,
         private val notes: ShiftNoteRepository,
         private val shifts: ShiftRepository,
+        private val imageStore: SchedulePhotoFileStore,
         private val clock: Clock = Clock.system(AppDefaults.zoneId()),
         private val uuidProvider: () -> UUID = UUID::randomUUID,
     ) : ViewModelProvider.Factory {
@@ -639,6 +829,7 @@ class ExceptionsViewModel(
                 shifts = shifts,
                 clock = clock,
                 uuidProvider = uuidProvider,
+                imageStore = imageStore,
                 savedStateHandle = extras.createSavedStateHandle(),
             ) as T
         }
@@ -653,5 +844,9 @@ class ExceptionsViewModel(
         const val HOLIDAY_DATES_KEY = "exceptions.holidayDates"
         const val HOLIDAY_NAME_KEY = "exceptions.holidayName"
         const val HOLIDAY_CONFLICT_DATES_KEY = "exceptions.holidayConflictDates"
+        const val NOTE_EDITING_ID_KEY = "exceptions.noteEditingId"
+        const val NOTE_BODY_KEY = "exceptions.noteBody"
+        const val NOTE_ATTACHMENTS_KEY = "exceptions.noteAttachments"
+        const val NOTE_ORIGINAL_IDS_KEY = "exceptions.noteOriginalIds"
     }
 }

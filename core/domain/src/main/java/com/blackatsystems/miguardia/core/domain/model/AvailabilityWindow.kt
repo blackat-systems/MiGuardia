@@ -54,6 +54,7 @@ data class AvailabilityWindowDraft(
     val zoneId: ZoneId,
     val start: Instant,
     val end: Instant,
+    val labelOverride: AvailabilityLabel? = null,
 )
 
 fun buildAvailabilityWindowRecord(
@@ -71,9 +72,11 @@ fun buildAvailabilityWindowRecord(
     require(configuration.referenceDate == draft.ownerLocalDate) {
         "La configuración debe resolverse para la fecha dueña exacta de la disponibilidad"
     }
-    val label = configuration.revision.value.availabilityLabel
+    val configuredLabel = configuration.revision.value.availabilityLabel
     if (previous == null) {
-        requireNotNull(label) { "La disponibilidad no está habilitada para la fecha elegida" }
+        requireNotNull(draft.labelOverride ?: configuredLabel) {
+            "La disponibilidad no está habilitada para la fecha elegida"
+        }
     }
     previous?.let { stored ->
         require(stored.id == draft.id) { "Corregir una disponibilidad no puede cambiar su identidad" }
@@ -82,6 +85,9 @@ fun buildAvailabilityWindowRecord(
         }
         require(stored.timelineId == configuration.timelineId && stored.sector == configuration.revision.value.sector) {
             "La disponibilidad corregida debe conservar su línea temporal y sector"
+        }
+        require(draft.labelOverride == null || draft.labelOverride.displayName == stored.labelSnapshot) {
+            "Corregir una disponibilidad no puede cambiar su nombre histórico"
         }
     }
     val normalizedTimestamp = timestamp.normalizedToMilliseconds()
@@ -99,7 +105,8 @@ fun buildAvailabilityWindowRecord(
         zoneId = draft.zoneId,
         start = draft.start,
         end = draft.end,
-        labelSnapshot = previous?.labelSnapshot ?: requireNotNull(label).displayName,
+        labelSnapshot = previous?.labelSnapshot
+            ?: requireNotNull(draft.labelOverride ?: configuredLabel).displayName,
         createdAt = previous?.createdAt ?: normalizedTimestamp,
         updatedAt = normalizedTimestamp,
     )

@@ -2,12 +2,12 @@
 
 <!-- Fuente operativa única. El historial y la evidencia fechada viven en docs/audits/. -->
 
-- Bloque autorizado: HIGIENE_PREVIA_MIGUARDIA_3
+- Bloque autorizado: STAGE_1_DETALLE_EDICION_Y_COMPOSICION_DEL_DIA_3_0
 - Estado: CERRADO
-- Contrato: docs/prompts/HIGIENE_PREVIA_MIGUARDIA_3.md
-- Base verificada: 3f1365259e15292a2f24e3361acd523213b49fad
+- Contrato: docs/prompts/STAGE_1_DETALLE_EDICION_Y_COMPOSICION_DEL_DIA_3_0.md
+- Base verificada: cb83d85552683a0f47f0f4f14f4f43a326fa76a1
 - Procedencia: snapshot funcional `a771d78e3ec33bd2d3ef02bd1ae310514359e004` del repositorio 2.x, importado como raíz nueva sin arrastrar su historial.
-- Actualización: 2026-09-12
+- Actualización: 2026-09-14
 
 ## Producto de referencia
 
@@ -15,6 +15,7 @@
 - Distribución: APK firmada desde `blackatsystems.com/miguardia`; publicación Sites v15 y descarga remota verificadas en el cierre de 2.0.2.
 - Modelo: Android local-first, sin cuenta laboral, nube laboral, analítica, telemetría ni activación beta.
 - Datos: Room V6, 27 tablas y seis esquemas preservados; Copias mantiene 17 preferencias portables.
+- Candidato 3.0: Room V7, 28 tablas y siete esquemas; agrega adjuntos privados de Notas y eleva Copias a V7 sin retirar lectura V5/V6.
 - Actualizaciones: consulta pública consciente, verificación de APK y guardado manual mediante SAF.
 - Firma: clave permanente y respaldo fuera de Git; no regenerar. Cada nueva versión requiere firma y QA de actualización proporcionales.
 - Soporte y privacidad: `blackat.systems@gmail.com`.
@@ -23,10 +24,15 @@ La auditoría vigente de la publicación es `docs/audits/2026-09-10-franco-arras
 
 ## Cursor de MAIN
 
-- Etapa alcanzada: 0 — workspace de MiGuardia 3.0 creado desde la base estable y saneada de 2.0.
-- Siguiente etapa: descubrimiento de MiGuardia 3.0.
-- Bloque funcional 3.0 autorizado: ninguno todavía.
-- Próxima tarea: inventariar capacidades vigentes, necesidades no implementadas y cambios deseados; decidir alcance y contratos antes de modificar producto, versionado o arquitectura.
+- Etapa alcanzada: Stage 1 aceptado e integrado como base funcional de MiGuardia 3.0.
+- Corrección aceptada: Retén contextual conserva etiqueta por ventana y no
+  modifica la configuración laboral presente ni futura; sin nueva tabla Room.
+- Siguiente etapa propuesta: Stage 2 — situaciones laborales y estados del día.
+- Bloque funcional 3.0 autorizado: ninguno.
+- Próxima tarea: Joaquín revisa y, si corresponde, autoriza
+  `docs/prompts/STAGE_2_SITUACIONES_LABORALES_Y_ESTADOS_DEL_DIA_3_0.md`.
+- Handoff de inicialización: `docs/HANDOFF_A_MAIN_3_0.md`.
+- Cierre local del candidato: `docs/audits/2026-09-12-stage-1-detalle-edicion-dia.md`.
 - Ruta de orquestación: `docs/ORQUESTACION_MAIN.md`.
 
 ## Workspace
@@ -51,6 +57,20 @@ La auditoría vigente de la publicación es `docs/audits/2026-09-10-franco-arras
 
 - La creación del workspace no cambia código productivo, `versionName`, `versionCode`, Room, Copias, permisos, firma ni publicación.
 - Las validaciones de este bloque son locales: no constituyen instrumentación, instalación, firma ni publicación nuevas.
-- Samsung, emuladores, producción, servicios remotos y claves quedaron fuera del alcance.
-- Commit, push, tag, firma y publicación requieren autorización específica para su próximo alcance.
+- Samsung `SM-S938B`/API 36 autorizado: variante QA y runners técnicos
+  instalados; 108 pruebas dirigidas pasaron con datos sintéticos. El paquete
+  público permaneció instalado y fuera de instrumentación.
+- Un nuevo commit, push, tag, firma o publicación requiere autorización específica
+  para su próximo alcance. El cierre autorizado de Stage 1 no habilita Stage 2.
+- Stage 1 tiene evidencia JVM/build local, instrumentación real QA y recorrido
+  manual de Photo Picker, Maps, Retén y temas/zoom. Un crash de miniatura
+  reciclada hallado en esa sesión fue corregido y regresionado; las clases
+  afectadas pasaron 15/15.
+- TalkBack se habilitó temporalmente con autorización. Se verificaron el servicio,
+  la semántica y actividad real del canal TTS de accesibilidad con MiGuardia QA
+  en primer plano; la frase exacta escuchada no es observable remotamente. La
+  configuración previa de accesibilidad y Alarmy se restauró y los paquetes QA
+  se desinstalaron. Sólo permanece el paquete público, sin modificar.
+- La evidencia no acredita actualización del paquete público desde 2.0.2 ni
+  restauración de una copia personal.
 - ADR y contratos históricos siguen como antecedentes; no reemplazan este estado ni autorizan reabrir el piloto beta retirado por ADR 0041.

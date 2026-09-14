@@ -59,6 +59,17 @@ class AvailabilityCoordinatorTest {
         assertEquals("2026-08-28", draft.endDate)
     }
 
+    @Test
+    fun contextualRetainerDraftUsesItsOwnLabelWithoutChangingConfiguration() {
+        val draft = retainerWindowDraft(UUID.randomUUID(), LocalDate.of(2026, 9, 2))
+
+        assertEquals(LocalDate.of(2026, 9, 2), draft.ownerDate)
+        assertEquals(AvailabilityLabel.ON_CALL_RETAINER, draft.labelOverride)
+        assertEquals("08:00", draft.startTime)
+        assertEquals("12:00", draft.endTime)
+        assertFalse(state().canCreateOn(LocalDate.of(2026, 9, 2)))
+    }
+
     private fun state(): AvailabilityUiState = AvailabilityUiState(
         loadState = AvailabilityLoadState.CONTENT,
         source = source(listOf(record(UUID.randomUUID(), "2026-08-26T08:00:00Z", "2026-08-26T12:00:00Z"))),

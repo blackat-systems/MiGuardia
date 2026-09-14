@@ -274,6 +274,38 @@ class CalendarProjectionTest {
         assertEquals(null, days[2].vacation)
     }
 
+    @Test
+    fun dayIsFullyCompletedOnlyWhenEveryActiveShiftIsCompleted() {
+        val base = shift(
+            id = UUID.fromString("00000000-0000-0000-0000-000000000092"),
+            localDate = LocalDate.of(2026, 8, 13),
+            startTime = LocalTime.of(8, 0),
+            endTime = LocalTime.of(12, 0),
+        )
+        fun day(vararg statuses: ShiftTemporalStatus) = CalendarDay(
+            date = base.localStartDate,
+            shifts = statuses.mapIndexed { index, status ->
+                CalendarShift(base.copy(id = UUID(0L, 100L + index)), status)
+            },
+            explicitStatus = null,
+            hasMedicalLeave = false,
+        )
+
+        assertTrue(day(ShiftTemporalStatus.COMPLETED).isFullyCompleted)
+        assertTrue(
+            day(
+                ShiftTemporalStatus.COMPLETED,
+                ShiftTemporalStatus.CANCELLED,
+                ShiftTemporalStatus.ABSENT,
+            ).isFullyCompleted,
+        )
+        assertFalse(
+            day(ShiftTemporalStatus.COMPLETED, ShiftTemporalStatus.UPCOMING).isFullyCompleted,
+        )
+        assertFalse(day(ShiftTemporalStatus.CANCELLED, ShiftTemporalStatus.ABSENT).isFullyCompleted)
+        assertFalse(day().isFullyCompleted)
+    }
+
     private fun shift(
         id: UUID,
         localDate: LocalDate,

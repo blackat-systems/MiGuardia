@@ -5,6 +5,8 @@ import com.blackatsystems.miguardia.core.domain.model.HolidayBatchMutation
 import com.blackatsystems.miguardia.core.domain.model.HolidayConflictPolicy
 import com.blackatsystems.miguardia.core.domain.model.Shift
 import com.blackatsystems.miguardia.core.domain.model.ShiftNote
+import com.blackatsystems.miguardia.core.domain.model.ShiftNoteAttachment
+import com.blackatsystems.miguardia.core.domain.model.ShiftNoteWithAttachments
 import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
 import com.blackatsystems.miguardia.core.domain.repository.HolidayRepository
 import com.blackatsystems.miguardia.core.domain.repository.ShiftNoteRepository
@@ -24,6 +26,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -164,6 +167,41 @@ class ExceptionsCoordinatorTest {
         assertNull(persisted.last().shiftId)
     }
 
+    @Test
+    fun restoredImageOnlyDraftCanBeSavedAsAnAtomicNoteAggregate() {
+        val noteId = uuid(20)
+        val attachment = ShiftNoteAttachment(
+            id = uuid(21),
+            noteId = noteId,
+            storageKey = "note_00000000-0000-0000-0000-000000000021.jpg",
+            mimeType = "image/jpeg",
+            byteSize = 123L,
+            pixelWidth = 20,
+            pixelHeight = 10,
+            position = 0,
+            createdAt = NOW,
+            updatedAt = NOW,
+        )
+        val notes = FakeNoteRepository()
+        val coordinator = coordinator(
+            notes = notes,
+            initial = ExceptionsPersistedState(
+                surface = ExceptionsSurface.NOTES,
+                holidayMonth = MONTH,
+                shiftId = SHIFT.id,
+                noteDraft = NoteDraft(attachments = listOf(attachment)),
+            ),
+        )
+
+        coordinator.saveNote()
+
+        val saved = requireNotNull(notes.saved)
+        assertEquals(noteId, saved.note.id)
+        assertEquals("", saved.note.body)
+        assertEquals(listOf(attachment.id), saved.attachments.map(ShiftNoteAttachment::id))
+        assertEquals(NoteDraft(), coordinator.uiState.value.noteDraft)
+    }
+
     private fun coordinator(
         holidays: FakeHolidayRepository = FakeHolidayRepository(),
         notes: FakeNoteRepository = FakeNoteRepository(),
@@ -253,21 +291,36 @@ private class FakeHolidayRepository(initial: List<Holiday> = emptyList()) : Holi
 }
 
 private class FakeNoteRepository : ShiftNoteRepository {
-    private val rows = MutableStateFlow<List<ShiftNote>>(emptyList())
+    private val aggregates = MutableStateFlow<List<ShiftNoteWithAttachments>>(emptyList())
+    var saved: ShiftNoteWithAttachments? = null
 
-    override fun observeForShift(shiftId: UUID): Flow<List<ShiftNote>> = rows
-    override suspend fun getById(id: UUID): ShiftNote? = rows.value.firstOrNull { it.id == id }
+    override fun observeForShift(shiftId: UUID): Flow<List<ShiftNote>> =
+        aggregates.map { rows -> rows.filter { it.note.shiftId == shiftId }.map(ShiftNoteWithAttachments::note) }
+    override fun observeWithAttachmentsForShift(shiftId: UUID): Flow<List<ShiftNoteWithAttachments>> =
+        aggregates.map { rows -> rows.filter { it.note.shiftId == shiftId } }
+    override suspend fun getById(id: UUID): ShiftNote? =
+        aggregates.value.firstOrNull { it.note.id == id }?.note
+    override suspend fun getWithAttachments(id: UUID): ShiftNoteWithAttachments? =
+        aggregates.value.firstOrNull { it.note.id == id }
 
     override suspend fun insert(note: ShiftNote) {
-        rows.value = rows.value + note
+        aggregates.value = aggregates.value + ShiftNoteWithAttachments(note, emptyList())
     }
 
     override suspend fun update(note: ShiftNote) {
-        rows.value = rows.value.map { if (it.id == note.id) note else it }
+        aggregates.value = aggregates.value.map { row ->
+            if (row.note.id == note.id) row.copy(note = note) else row
+        }
+    }
+
+    override suspend fun saveWithAttachments(note: ShiftNote, attachments: List<ShiftNoteAttachment>) {
+        val aggregate = ShiftNoteWithAttachments(note, attachments)
+        saved = aggregate
+        aggregates.value = aggregates.value.filterNot { it.note.id == note.id } + aggregate
     }
 
     override suspend fun delete(id: UUID) {
-        rows.value = rows.value.filterNot { it.id == id }
+        aggregates.value = aggregates.value.filterNot { it.note.id == id }
     }
 }
 

@@ -84,11 +84,90 @@ object MiGuardiaBackupSchemaV6 {
     fun requireValid(snapshot: BackupDatabaseSnapshot) {
         requireValidBackupSnapshot(
             snapshot = snapshot,
+            expectedRoomVersion = MiGuardiaBackupContract.LEGACY_ROOM_VERSION_V6,
+            expectedIdentityHash = MiGuardiaBackupContract.LEGACY_ROOM_IDENTITY_HASH_V6,
+            expectedTables = tables,
+        )
+    }
+}
+
+/** Current V7 allowlist. Note attachments are metadata only; binary inclusion follows photoMode. */
+object MiGuardiaBackupSchemaV7 {
+    val tables: List<BackupTableSpec> = MiGuardiaBackupSchemaV6.tables + spec(
+        "shift_note_attachments",
+        "id",
+        "noteId",
+        "storageKey",
+        "mimeType",
+        "byteSize",
+        "pixelWidth",
+        "pixelHeight",
+        "position",
+        "createdAtEpochMillis",
+        "updatedAtEpochMillis",
+        pk = listOf("id"),
+    )
+
+    val byName: Map<String, BackupTableSpec> = tables.associateBy(BackupTableSpec::name)
+
+    init {
+        check(tables.size == 28)
+        check(byName.size == tables.size)
+    }
+
+    fun requireValid(snapshot: BackupDatabaseSnapshot) {
+        requireValidBackupSnapshot(
+            snapshot = snapshot,
             expectedRoomVersion = MiGuardiaBackupContract.ROOM_VERSION,
             expectedIdentityHash = MiGuardiaBackupContract.ROOM_IDENTITY_HASH,
             expectedTables = tables,
         )
+        requireValidNoteAttachments(snapshot)
     }
+
+    private fun requireValidNoteAttachments(snapshot: BackupDatabaseSnapshot) {
+        val notes = snapshot.table("shift_notes")
+        val noteIdIndex = notes.columns.indexOf("id")
+        val noteBodyIndex = notes.columns.indexOf("body")
+        val noteBodies = notes.records.associate { record ->
+            val id = (record.values[noteIdIndex] as? BackupValue.Text)?.value
+                ?: throw InvalidBackupException("Una nota de la copia tiene una identidad inválida.")
+            val body = (record.values[noteBodyIndex] as? BackupValue.Text)?.value
+                ?: throw InvalidBackupException("Una nota de la copia tiene un contenido inválido.")
+            id to body
+        }
+
+        val attachments = snapshot.table("shift_note_attachments")
+        val attachmentNoteIdIndex = attachments.columns.indexOf("noteId")
+        val positionIndex = attachments.columns.indexOf("position")
+        val positionsByNote = attachments.records.groupBy { record ->
+            (record.values[attachmentNoteIdIndex] as? BackupValue.Text)?.value
+                ?: throw InvalidBackupException("Un adjunto de nota tiene una referencia inválida.")
+        }.mapValues { (noteId, records) ->
+            if (noteId !in noteBodies) {
+                throw InvalidBackupException("Un adjunto de nota no pertenece a una nota de la copia.")
+            }
+            records.map { record ->
+                (record.values[positionIndex] as? BackupValue.Integer)?.value
+                    ?: throw InvalidBackupException("Un adjunto de nota tiene una posición inválida.")
+            }.sorted()
+        }
+
+        positionsByNote.forEach { (_, positions) ->
+            val expected = positions.indices.map(Int::toLong)
+            if (positions != expected || positions.size > 30) {
+                throw InvalidBackupException("Los adjuntos de una nota no conservan un orden continuo válido.")
+            }
+        }
+        noteBodies.forEach { (noteId, body) ->
+            if (body.isBlank() && positionsByNote[noteId].isNullOrEmpty()) {
+                throw InvalidBackupException("La copia contiene una nota vacía sin imágenes.")
+            }
+        }
+    }
+
+    private fun spec(name: String, vararg columns: String, pk: List<String>) =
+        BackupTableSpec(name, columns.toList(), pk)
 }
 
 fun BackupRecord.backupKey(spec: BackupTableSpec): BackupRecordKey = BackupRecordKey(
@@ -122,7 +201,8 @@ private fun compareBackupValues(first: BackupValue, second: BackupValue): Int {
 
 internal fun requireSupportedBackupSchema(snapshot: BackupDatabaseSnapshot) {
     when (snapshot.roomVersion) {
-        MiGuardiaBackupContract.ROOM_VERSION -> MiGuardiaBackupSchemaV6.requireValid(snapshot)
+        MiGuardiaBackupContract.ROOM_VERSION -> MiGuardiaBackupSchemaV7.requireValid(snapshot)
+        MiGuardiaBackupContract.LEGACY_ROOM_VERSION_V6 -> MiGuardiaBackupSchemaV6.requireValid(snapshot)
         MiGuardiaBackupContract.LEGACY_ROOM_VERSION_V5 -> MiGuardiaBackupSchemaV5.requireValid(snapshot)
         else -> throw InvalidBackupException("La copia usa una versión de datos no compatible.")
     }
@@ -131,10 +211,11 @@ internal fun requireSupportedBackupSchema(snapshot: BackupDatabaseSnapshot) {
 fun upgradeSupportedBackupSchema(snapshot: BackupDatabaseSnapshot): BackupDatabaseSnapshot {
     requireSupportedBackupSchema(snapshot)
     if (snapshot.roomVersion == MiGuardiaBackupContract.ROOM_VERSION) return snapshot
-    val upgraded = snapshot.copy(
-        roomVersion = MiGuardiaBackupContract.ROOM_VERSION,
-        roomIdentityHash = MiGuardiaBackupContract.ROOM_IDENTITY_HASH,
-        tables = snapshot.tables.map { table ->
+    val v6 = if (snapshot.roomVersion == MiGuardiaBackupContract.LEGACY_ROOM_VERSION_V5) {
+        snapshot.copy(
+            roomVersion = MiGuardiaBackupContract.LEGACY_ROOM_VERSION_V6,
+            roomIdentityHash = MiGuardiaBackupContract.LEGACY_ROOM_IDENTITY_HASH_V6,
+            tables = snapshot.tables.map { table ->
             if (table.name == "objectives") {
                 table.copy(
                     columns = table.columns + listOf("weatherLatitude", "weatherLongitude"),
@@ -146,8 +227,22 @@ fun upgradeSupportedBackupSchema(snapshot: BackupDatabaseSnapshot): BackupDataba
                 table
             }
         },
+        )
+    } else {
+        snapshot
+    }
+    MiGuardiaBackupSchemaV6.requireValid(v6)
+    val upgraded = v6.copy(
+        roomVersion = MiGuardiaBackupContract.ROOM_VERSION,
+        roomIdentityHash = MiGuardiaBackupContract.ROOM_IDENTITY_HASH,
+        tables = v6.tables + BackupTable(
+            name = "shift_note_attachments",
+            columns = MiGuardiaBackupSchemaV7.byName.getValue("shift_note_attachments").columns,
+            primaryKey = listOf("id"),
+            records = emptyList(),
+        ),
     )
-    MiGuardiaBackupSchemaV6.requireValid(upgraded)
+    MiGuardiaBackupSchemaV7.requireValid(upgraded)
     return upgraded
 }
 
@@ -164,7 +259,7 @@ private fun requireValidBackupSnapshot(
         throw InvalidBackupException("La identidad Room de la copia no coincide con MiGuardia 2.0.")
     }
     if (snapshot.tables.map(BackupTable::name) != expectedTables.map(BackupTableSpec::name)) {
-        throw InvalidBackupException("La copia no contiene exactamente las 27 tablas esperadas.")
+        throw InvalidBackupException("La copia no contiene exactamente las tablas esperadas.")
     }
     var total = 0
     snapshot.tables.zip(expectedTables).forEach { (table, expected) ->

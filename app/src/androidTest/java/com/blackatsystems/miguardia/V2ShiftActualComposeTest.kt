@@ -101,7 +101,7 @@ class V2ShiftActualComposeTest {
     }
 
     @Test
-    fun summaryShowsPlannedRealRegularTwoExtrasAndTotalWithDates() {
+    fun summaryShowsHumanTimeRangesRegularTwoExtrasAndTotal() {
         val expected = expectationWithTwoExtras()
         compose.setContent {
             MiGuardiaTheme {
@@ -116,8 +116,11 @@ class V2ShiftActualComposeTest {
             }
         }
 
-        compose.onNodeWithText("Planificado: 2026-08-25 08:00", substring = true).assertIsDisplayed()
-        compose.onNodeWithText("Real: 2026-08-25 07:30", substring = true).assertIsDisplayed()
+        compose.onNodeWithText("Horario estipulado").assertIsDisplayed()
+        compose.onNodeWithText("08:00 – 16:00").assertIsDisplayed()
+        compose.onNodeWithText("Horario realmente cumplido").assertIsDisplayed()
+        compose.onNodeWithText("07:30 – 16:30").assertIsDisplayed()
+        compose.onNodeWithText("Trabajaste 1 hora más de lo planeado.").assertIsDisplayed()
         compose.onNodeWithText("Horas trabajadas sin extras: 8 h 0 min").assertIsDisplayed()
         compose.onNodeWithText("Extra 1: Horas extras", substring = true).assertIsDisplayed()
         compose.onNodeWithText("Extra 2: Horas extras", substring = true).assertIsDisplayed()

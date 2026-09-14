@@ -307,6 +307,7 @@ class MainActivity : FragmentActivity() {
             holidays = dataStore.holidays,
             notes = dataStore.shiftNotes,
             shifts = dataStore.shifts,
+            imageStore = SchedulePhotoFileStore(applicationContext),
         )
     }
 

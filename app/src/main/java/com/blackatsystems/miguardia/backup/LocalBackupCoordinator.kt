@@ -19,11 +19,12 @@ import com.blackatsystems.miguardia.core.domain.backup.BackupPhotoMode
 import com.blackatsystems.miguardia.core.domain.backup.BackupPayloadCodec
 import com.blackatsystems.miguardia.core.domain.backup.BackupPreference
 import com.blackatsystems.miguardia.core.domain.backup.BackupPreview
+import com.blackatsystems.miguardia.core.domain.backup.BackupRecord
 import com.blackatsystems.miguardia.core.domain.backup.BackupValue
 import com.blackatsystems.miguardia.core.domain.backup.ExtractedBackup
 import com.blackatsystems.miguardia.core.domain.backup.InvalidBackupException
 import com.blackatsystems.miguardia.core.domain.backup.MiGuardiaBackupContract
-import com.blackatsystems.miguardia.core.domain.backup.MiGuardiaBackupSchemaV6
+import com.blackatsystems.miguardia.core.domain.backup.MiGuardiaBackupSchemaV7
 import com.blackatsystems.miguardia.core.domain.backup.ResolvedBackupConflict
 import com.blackatsystems.miguardia.core.domain.backup.backupKey
 import com.blackatsystems.miguardia.reports.ReportArtifactStore
@@ -449,8 +450,8 @@ class LocalBackupCoordinator(
                     currentPreferences,
                     incomingPreferences,
                 )
-                val currentPhotoRecords = currentDatabase.table("schedule_photos").records
-                val incomingPhotoRecords = extracted.payload.database.table("schedule_photos").records
+                val currentPhotoRecords = currentDatabase.imageMetadataRecords()
+                val incomingPhotoRecords = extracted.payload.database.imageMetadataRecords()
                 val incomingPhotos = incomingPhotoRecords.size
                 val incomingPhotoSet = incomingPhotoRecords.toSet()
                 val photosMissingFromBackup = currentPhotoRecords.count { it !in incomingPhotoSet }
@@ -899,16 +900,21 @@ class LocalBackupCoordinator(
     }
 
     private fun photoBytes(snapshot: BackupDatabaseSnapshot): Long {
-        val table = snapshot.table("schedule_photos")
-        val byteSizeIndex = table.columns.indexOf("byteSize")
-        return table.records.sumOf { record ->
-            (record.values[byteSizeIndex] as? BackupValue.Integer)?.value
-                ?: throw InvalidBackupException("Una fotografía no declara un tamaño válido.")
+        return IMAGE_METADATA_TABLES.sumOf { tableName ->
+            val table = snapshot.table(tableName)
+            val byteSizeIndex = table.columns.indexOf("byteSize")
+            table.records.sumOf { record ->
+                (record.values[byteSizeIndex] as? BackupValue.Integer)?.value
+                    ?: throw InvalidBackupException("Una imagen no declara un tamaño válido.")
+            }
         }
     }
 
+    private fun BackupDatabaseSnapshot.imageMetadataRecords(): List<BackupRecord> =
+        IMAGE_METADATA_TABLES.flatMap { table(it).records }
+
     private fun BackupDatabaseSnapshot.withPhotoChoice(includePhotos: Boolean): BackupDatabaseSnapshot =
-        if (includePhotos) this else localDataStore.backups.withoutSchedulePhotos(this)
+        if (includePhotos) this else localDataStore.backups.withoutPrivateImages(this)
 
     private fun historicalSectors(snapshot: BackupDatabaseSnapshot): List<String> = snapshot.tables
         .flatMap { table ->
@@ -922,7 +928,7 @@ class LocalBackupCoordinator(
 
     private fun BackupDatabaseSnapshot.recordsMissingOrChangedIn(
         replacement: BackupDatabaseSnapshot,
-    ): Int = MiGuardiaBackupSchemaV6.tables.sumOf { spec ->
+    ): Int = MiGuardiaBackupSchemaV7.tables.sumOf { spec ->
         val replacementByKey = replacement.table(spec.name).records.associateBy { record ->
             record.backupKey(spec)
         }
@@ -986,6 +992,7 @@ class LocalBackupCoordinator(
     }
 
     companion object {
+        private val IMAGE_METADATA_TABLES = listOf("schedule_photos", "shift_note_attachments")
         const val REPLACE_CONFIRMATION = "Reemplazar todo"
         private val SUGGESTED_NAME_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd_HHmm")
         private const val SPACE_MARGIN_BYTES = 16L * 1024L * 1024L

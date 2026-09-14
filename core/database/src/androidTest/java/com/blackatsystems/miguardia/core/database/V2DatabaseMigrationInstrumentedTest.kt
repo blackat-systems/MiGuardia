@@ -239,7 +239,46 @@ class V2DatabaseMigrationInstrumentedTest {
     }
 
     @Test
-    fun migrationChainOneToTwoToThreeToFourToFiveToSixPreservesVersionOneData() {
+    fun migrationSixToSevenPreservesNotesAndCreatesOrderedAttachmentTable() {
+        helper.createDatabase(DB_SIX_TO_SEVEN, 6).apply {
+            execSQL(
+                "INSERT INTO objectives VALUES " +
+                    "('objective-note', 'Objetivo', 'OBJ', NULL, NULL, 1, 1, 1, NULL, NULL)",
+            )
+            execSQL(
+                """INSERT INTO shifts VALUES (
+                    'shift-note', 1787472000000, 1787500800000, 'America/Argentina/Cordoba', '2026-08-23',
+                    'Objetivo', 'OBJ', NULL, '08:00', '16:00', -13408615,
+                    NULL, 'PLANNED', 'objective-note', 1, 1
+                )""".trimIndent(),
+            )
+            execSQL("INSERT INTO shift_notes VALUES ('note-existing', 'shift-note', 'Texto histórico', 1, 1)")
+            close()
+        }
+
+        val migrated = helper.runMigrationsAndValidate(
+            DB_SIX_TO_SEVEN,
+            7,
+            true,
+            MiGuardiaV2Database.MIGRATION_6_7,
+        )
+
+        assertEquals("Texto histórico", migrated.string("SELECT body FROM shift_notes WHERE id = 'note-existing'"))
+        assertEquals(0, migrated.scalar("SELECT COUNT(*) FROM shift_note_attachments"))
+        assertForeignKey(migrated, "shift_note_attachments", "shift_notes", "CASCADE")
+        assertEquals(
+            1,
+            migrated.scalar(
+                "SELECT COUNT(*) FROM pragma_index_list('shift_note_attachments') " +
+                    "WHERE name = 'index_shift_note_attachments_noteId_position' AND `unique` = 1",
+            ),
+        )
+        assertHealthy(migrated)
+        migrated.close()
+    }
+
+    @Test
+    fun migrationChainOneToSevenPreservesVersionOneData() {
         helper.createDatabase(DB_CHAIN, 1).apply {
             seedEveryVersionOneTable()
             close()
@@ -247,19 +286,21 @@ class V2DatabaseMigrationInstrumentedTest {
 
         val migrated = helper.runMigrationsAndValidate(
             DB_CHAIN,
-            6,
+            7,
             true,
             MiGuardiaV2Database.MIGRATION_1_2,
             MiGuardiaV2Database.MIGRATION_2_3,
             MiGuardiaV2Database.MIGRATION_3_4,
             MiGuardiaV2Database.MIGRATION_4_5,
             MiGuardiaV2Database.MIGRATION_5_6,
+            MiGuardiaV2Database.MIGRATION_6_7,
         )
 
         VERSION_ONE_TABLES.forEach { table ->
             assertEquals("La cadena debe preservar $table", 1, migrated.scalar("SELECT COUNT(*) FROM `$table`"))
         }
-        (NEW_TABLES + VERSION_THREE_TABLES + VERSION_FOUR_TABLES + VERSION_FIVE_TABLES).forEach { table ->
+        (NEW_TABLES + VERSION_THREE_TABLES + VERSION_FOUR_TABLES + VERSION_FIVE_TABLES + VERSION_SEVEN_TABLES)
+            .forEach { table ->
             assertEquals("La cadena debe iniciar $table vacía", 0, migrated.scalar("SELECT COUNT(*) FROM `$table`"))
         }
         assertHealthy(migrated)
@@ -529,6 +570,7 @@ class V2DatabaseMigrationInstrumentedTest {
         const val DB_THREE_TO_FOUR = "v2-migration-3-4-test.db"
         const val DB_FOUR_TO_FIVE = "v2-migration-4-5-test.db"
         const val DB_FIVE_TO_SIX = "v2-migration-5-6-test.db"
+        const val DB_SIX_TO_SEVEN = "v2-migration-6-7-test.db"
         val VERSION_ONE_TABLES = listOf(
             "objectives",
             "shifts",
@@ -563,5 +605,6 @@ class V2DatabaseMigrationInstrumentedTest {
         )
         val VERSION_FOUR_TABLES = listOf("independent_extra_work_records")
         val VERSION_FIVE_TABLES = listOf("availability_windows")
+        val VERSION_SEVEN_TABLES = listOf("shift_note_attachments")
     }
 }

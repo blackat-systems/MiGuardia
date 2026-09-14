@@ -434,7 +434,7 @@
     "com.blackatsystems.miguardia.upgrade.PublicUpgradeBackupFixtureTest": {
       "module": "app",
       "source": "app/src/androidTest/java/com/blackatsystems/miguardia/upgrade/PublicUpgradeBackupFixtureTest.kt",
-      "sha256": "2cae1acb66f683b0b5e8d3e1d1df1f869aec50b249126f7654a6a51a75d0567a",
+      "sha256": "7dc024ab057c414404afc540544323cab629f51479b6fdf1ccaf6927c0692940",
       "methods": ["preparesCompleteSyntheticBackupForExplicitDisposableUpgradeRehearsal"]
     },
     "com.blackatsystems.miguardia.AppearanceComposeTest": {
@@ -490,7 +490,7 @@
     "com.blackatsystems.miguardia.backup.BackupComposeTest": {
       "module": "app",
       "source": "app/src/androidTest/java/com/blackatsystems/miguardia/backup/BackupComposeTest.kt",
-      "sha256": "655b740cf44a65b07ea4649d298895ee1b3292b55fc5d4bd2d43feff5cf0a5d5",
+      "sha256": "1a8bd2bbd825009f6081b98dba87d5d4bdb73cf8ffaa3878793288677a24d76d",
       "methods": [
         "creationStartsEncryptedAndRequiresMatchingPasswords",
         "unencryptedCreationNeedsAnExplicitReadableFileWarning",
@@ -507,7 +507,7 @@
     "com.blackatsystems.miguardia.backup.BackupDocumentPublicationInstrumentedTest": {
       "module": "app",
       "source": "app/src/androidTest/java/com/blackatsystems/miguardia/backup/BackupDocumentPublicationInstrumentedTest.kt",
-      "sha256": "3bbeb44c36a2be3065b59524977c1623d9894c730ffd0eb5cd5fd2dfb7a4dd7f",
+      "sha256": "62b33914bb67009667ed8b6ed414a0e8c3343c3d1be4aa9aa60d18cd785c6d72",
       "methods": [
         "completeDocumentIsPublishedByteForByteOnlyAfterItsPayloadIsDurable",
         "completePasswordlessDocumentOpensWithoutPasswordButItsPayloadIsSealed",
@@ -518,7 +518,7 @@
     "com.blackatsystems.miguardia.backup.BackupPhotoFilesInstrumentedTest": {
       "module": "app",
       "source": "app/src/androidTest/java/com/blackatsystems/miguardia/backup/BackupPhotoFilesInstrumentedTest.kt",
-      "sha256": "0342a055cad033de9ff76d451b2088f36394bdcd6a4de6e275770427dba04695",
+      "sha256": "8ebd3a53278ceabdcf6a27e86ca1b9405ffbced21f00f912c4180f9effdb9f77",
       "methods": [
         "resolvedRowAlsoControlsThePhotoBytesWithoutSilentOverwrite",
         "finalVerificationRejectsDifferentBytesWithTheSameSizeAndDimensions",
@@ -553,7 +553,7 @@
     "com.blackatsystems.miguardia.backup.PortablePreferencesGatewayInstrumentedTest": {
       "module": "app",
       "source": "app/src/androidTest/java/com/blackatsystems/miguardia/backup/PortablePreferencesGatewayInstrumentedTest.kt",
-      "sha256": "adbba310b6831a906786642ee82eb1bd19d91e934deb1d7917db752b7fc13f32",
+      "sha256": "104a35f768f13be21841bf99811efd1bfa918c69350cb1094492e4a3fd91c2fa",
       "methods": [
         "backupReadsPropagateDataStoreIoFailuresInsteadOfUsingDefaults",
         "restoreMovesOnlySemanticPreferencesAndKeepsDeviceBookkeepingOut"
@@ -670,14 +670,15 @@
     "com.blackatsystems.miguardia.ExceptionsComposeTest": {
       "module": "app",
       "source": "app/src/androidTest/java/com/blackatsystems/miguardia/ExceptionsComposeTest.kt",
-      "sha256": "10210d37d762f0a4ae7fe25bf5d41893a88500b2a37c98e1f363a6bc91e6b6a7",
+      "sha256": "d8e6e6bda7b4866518cec14b0bedbd0a7571a344f52a206e336989e4122e7c89",
       "methods": [
         "holidaysKeepMainCalendarSelectionAndLocalEditing",
         "holidayDateSelectionUsesTheOnlyMainMonthGrid",
         "holidayConflictsExposeReplaceKeepAndCancelPolicies",
         "closingWithAHolidayDraftRequiresExplicitDiscard",
         "notesRemainPrivateAndDeletionRequiresConfirmation",
-        "noteDraftUsesOnlyTheSelectedV2Shift"
+        "noteDraftUsesOnlyTheSelectedV2Shift",
+        "noteAttachmentCanBeReplacedWithoutRecyclingTheBitmapStillBeingDrawn"
       ]
     },
     "com.blackatsystems.miguardia.FrancoFlowInstrumentedTest": {
@@ -1087,7 +1088,7 @@
     "com.blackatsystems.miguardia.SupportMenuActivityTest": {
       "module": "app",
       "source": "app/src/androidTest/java/com/blackatsystems/miguardia/SupportMenuActivityTest.kt",
-      "sha256": "0e76038855f5a7c092d783e7448e07c2c251785780b21e4fcebb69489c65315c",
+      "sha256": "09e070abd301a5b8f293ade730ebac45560077338fa4cd114574b8b2254a0e2e",
       "methods": [
         "closedRootNeverExposesOrReplaysSupportAcrossRecreation",
         "existingAuthorizedSessionPreservesDataAndDestinationWithExactInterceptedIntent",
@@ -1140,7 +1141,7 @@
     "com.blackatsystems.miguardia.UpdatesActivityTest": {
       "module": "app",
       "source": "app/src/androidTest/java/com/blackatsystems/miguardia/UpdatesActivityTest.kt",
-      "sha256": "763438b2219f8e159f249f46f988be37c8bc028a99799e89d9fe17a7782d72cb",
+      "sha256": "f0b686a6daf9cf60a492ec01486d2cfe86c749b23e0dd53f618431e2571e244c",
       "methods": [
         "closedRootCannotExposeUpdatesAndRecreationDoesNotMutateExistingTablesOrBeta",
         "activityRestoresTheProducerSequenceBeforeIssuingAnotherCalendarRequest",
@@ -1185,7 +1186,7 @@
     "com.blackatsystems.miguardia.UpdatesSupervisedActivityTest": {
       "module": "app",
       "source": "app/src/androidTest/java/com/blackatsystems/miguardia/UpdatesSupervisedActivityTest.kt",
-      "sha256": "a9ec8fdd7fc40f396606b47a4ed798cfde55530a5caf8e8bfb88c751c3fe275f",
+      "sha256": "5ed2399a924fd682f28b2934dfc26d22133844c3d6b246033ab9c0e7f3c2f200",
       "methods": [
         "authorizedTemporarySessionPreservesHelpAndSummaryAfterRealUpdatesRecreation"
       ]
@@ -1238,7 +1239,7 @@
     "com.blackatsystems.miguardia.V2ReadOnlySurfacesInstrumentedTest": {
       "module": "app",
       "source": "app/src/androidTest/java/com/blackatsystems/miguardia/V2ReadOnlySurfacesInstrumentedTest.kt",
-      "sha256": "8c87bf96dad3b985032978630ea1c76a52526e34657e873ccc2b0cd5eec04c83",
+      "sha256": "1f7b29bea67a1aa1db2289b612cad8d99e8ef5fdbed05e7c81bb3195ce3b1991",
       "methods": [
         "calendarSummaryTodayCardAndWidgetQueriesLeaveAllApplicationTablesUnchanged"
       ]
@@ -1293,10 +1294,10 @@
     "com.blackatsystems.miguardia.V2ShiftActualComposeTest": {
       "module": "app",
       "source": "app/src/androidTest/java/com/blackatsystems/miguardia/V2ShiftActualComposeTest.kt",
-      "sha256": "e02e9ef0a1cdadffc286a1a520649207c693d79216d062e39a47ddf2d355a4c7",
+      "sha256": "a6dbf3c755b218836b6c07076bf4003b1ef9faa931c41d8898cf127cd5c4528f",
       "methods": [
         "detailShowsNeutralErrorRetryBoundaryActionAndStableIdentity",
-        "summaryShowsPlannedRealRegularTwoExtrasAndTotalWithDates",
+        "summaryShowsHumanTimeRangesRegularTwoExtrasAndTotal",
         "catalogStartsBothAnswersEmptyAndSaveOnlyEnablesAfterExplicitYesNo",
         "editorPrimaryActionRemainsReachableInBothThemesAndEveryInternalZoom",
         "changingLocalTimeClearsHistoricalOffsetBeforeResolution",
@@ -1534,10 +1535,10 @@
     "com.blackatsystems.miguardia.core.database.BackupDatabaseGatewayInstrumentedTest": {
       "module": "database",
       "source": "core/database/src/androidTest/java/com/blackatsystems/miguardia/core/database/BackupDatabaseGatewayInstrumentedTest.kt",
-      "sha256": "1831d07b810ad051070dd7c9da7e6ca149e666ad5c604386fc02aaf57f5cef5c",
+      "sha256": "51087cdcdb8b4f12a5ed1af384a2a5f84170f3c6b59dd2be13afc195b9670f78",
       "methods": [
-        "capturesAndReopensExactlyTheTwentySevenLogicalTablesIncludingWeatherLocation",
-        "roomFiveBackupUpgradesIntoRoomSixWithNullWeatherLocationAndReopens",
+        "capturesAndReopensExactlyTheTwentyEightLogicalTablesIncludingNoteAttachments",
+        "roomFiveBackupUpgradesIntoRoomSevenWithNullWeatherLocationAndEmptyAttachments",
         "roomCaptureUsesTheSharedDecodedMemoryEstimateAtTheExactBoundary",
         "failedReplacementRollsBackTheWholeRoomTransaction",
         "invalidSemanticDateIsRejectedBeforeCommit",
@@ -1580,12 +1581,13 @@
     "com.blackatsystems.miguardia.core.database.LocalDataStoreInstrumentedTest": {
       "module": "database",
       "source": "core/database/src/androidTest/java/com/blackatsystems/miguardia/core/database/LocalDataStoreInstrumentedTest.kt",
-      "sha256": "3495e3083ddacaf61b4fbc8b9ca701fb132f2ffcf20d14be2826d3f815f5c076",
+      "sha256": "bf800372c0538e67e7aca2bcc6426167444fea94f73ab4db6798d0289e307466",
       "methods": [
-        "v2DatabaseStartsAtVersionSixWithTheExactTwentySevenTables",
+        "v2DatabaseStartsAtVersionSevenWithTheExactTwentyEightTables",
         "removedV1ColumnsAreAbsentAndSourceObjectiveIsRequired",
         "newV2DatabaseStartsWithoutApplicationRowsOrImplicitDefaults",
-        "exportedV2SchemasKeepVersionsOneToFiveAndMatchVersionSix",
+        "imageOnlyNotePersistsAttachmentsInOrderAndDeleteCascades",
+        "exportedV2SchemasKeepVersionsOneToSixAndMatchVersionSeven",
         "instrumentationResetIsRejectedOutsideTheQaApplication",
         "openingV2UsesAnotherFileAndDoesNotTransformTheLegacyDatabase"
       ]
@@ -1593,9 +1595,9 @@
     "com.blackatsystems.miguardia.core.database.MonthlyReportSnapshotInstrumentedTest": {
       "module": "database",
       "source": "core/database/src/androidTest/java/com/blackatsystems/miguardia/core/database/MonthlyReportSnapshotInstrumentedTest.kt",
-      "sha256": "69f15dac73a03e1507517fce8f2a60d264601ca1ee41117e26970ebf76da9993",
+      "sha256": "61362be4526f1f0904e52a3412128af3e030e543847ba562cc9d590b3ffe527e",
       "methods": [
-        "captureReadsTheMonthInsideOneTransactionWithoutChangingAnyOfTheTwentySevenTables",
+        "captureReadsTheMonthInsideOneTransactionWithoutChangingAnyOfTheTwentyEightTables",
         "concurrentTwoTableWriteCanOnlyProduceTheCompletePreviousOrCompleteNextState",
         "missingSelectedPhotoFailsWithoutRowsOrChangesAndTheDatabaseCanBeReopened",
         "reportMonthAvailabilityKeepsActiveWorkThatStartedInThePreviousMonth",
@@ -1670,14 +1672,15 @@
     "com.blackatsystems.miguardia.core.database.V2DatabaseMigrationInstrumentedTest": {
       "module": "database",
       "source": "core/database/src/androidTest/java/com/blackatsystems/miguardia/core/database/V2DatabaseMigrationInstrumentedTest.kt",
-      "sha256": "667aa1c836550a128bd97bcb895c0062778997f285a61e134ec7b676c30ba3a7",
+      "sha256": "ee6981c5b1319ef48d184505304698c7d8e45203b062e50513545959bd860b8a",
       "methods": [
         "migrationOneToTwoPreservesEveryV2TableAndStartsRecurringTablesEmpty",
         "migrationTwoToThreePreservesAllTwentyTwoPopulatedTablesAndCreatesExactEmptySchema",
         "migrationThreeToFourPreservesTwentyFiveTablesBackfillsReferenceStartsAndCreatesEmptyExtras",
         "migrationFourToFivePreservesAllTwentySixPopulatedTablesAndCreatesExactEmptyAvailability",
         "migrationFiveToSixPreservesObjectivesAndStartsTheirWeatherLocationEmpty",
-        "migrationChainOneToTwoToThreeToFourToFiveToSixPreservesVersionOneData"
+        "migrationSixToSevenPreservesNotesAndCreatesOrderedAttachmentTable",
+        "migrationChainOneToSevenPreservesVersionOneData"
       ]
     },
     "com.blackatsystems.miguardia.core.database.V2ShiftPersistenceInstrumentedTest": {

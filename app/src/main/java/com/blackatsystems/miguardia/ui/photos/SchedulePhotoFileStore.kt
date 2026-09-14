@@ -23,6 +23,7 @@ class SchedulePhotoFileStore(private val context: Context) {
         ownerId: UUID,
         versioned: Boolean = false,
         replacingStorageKey: String? = null,
+        namespace: String? = null,
     ): StoredPhoto = withContext(Dispatchers.IO) {
         if (!root.exists() && !root.mkdirs()) throw IOException("No se pudo preparar el almacenamiento de fotos")
         val storageManager = context.getSystemService(StorageManager::class.java)
@@ -33,7 +34,9 @@ class SchedulePhotoFileStore(private val context: Context) {
             ?: throw InvalidLocalDataException("El archivo seleccionado no es una imagen compatible.")
         val extension = when (mime) { "image/png" -> "png"; "image/webp" -> "webp"; else -> "jpg" }
         val version = if (versioned) "_${UUID.randomUUID().toString().take(8)}" else ""
-        val key = "$ownerId$version.$extension"
+        require(namespace == null || namespace == NOTE_NAMESPACE)
+        val prefix = namespace?.let { "${it}_" }.orEmpty()
+        val key = "$prefix$ownerId$version.$extension"
         val temp = File(root, "$key.tmp")
         val target = File(root, key)
         try {
@@ -95,6 +98,26 @@ class SchedulePhotoFileStore(private val context: Context) {
         require(it.parentFile?.canonicalFile == root.canonicalFile) { "Referencia de archivo inválida" }
     }
 
+    suspend fun discardUnreferenced(storageKey: String) = withContext(Dispatchers.IO) {
+        val candidate = file(storageKey)
+        if (candidate.exists() && !candidate.delete()) {
+            throw IOException("No se pudo retirar una imagen sin guardar")
+        }
+    }
+
+    suspend fun reconcileNoteAttachments(expectedStorageKeys: Set<String>) = withContext(Dispatchers.IO) {
+        root.listFiles().orEmpty()
+            .filter { it.isFile && it.name.startsWith("${NOTE_NAMESPACE}_") }
+            .forEach { candidate ->
+                val stableKey = candidate.name.removeSuffix(".tmp").removeSuffix(".trash")
+                if (candidate.name.endsWith(".tmp") || stableKey !in expectedStorageKeys) {
+                    candidate.delete()
+                } else if (candidate.name.endsWith(".trash")) {
+                    candidate.renameTo(File(root, stableKey))
+                }
+            }
+    }
+
     suspend fun removeRecoverably(storageKey: String, deleteMetadata: suspend () -> Unit) = withContext(Dispatchers.IO) {
         val original = file(storageKey)
         val trash = File(root, "$storageKey.trash")
@@ -122,6 +145,7 @@ class SchedulePhotoFileStore(private val context: Context) {
                     }
                 }
                 candidate.name.matches(STORAGE_KEY_PATTERN) -> {
+                    if (candidate.name.startsWith("${NOTE_NAMESPACE}_")) return@forEach
                     val ownerId = candidate.name.ownerIdOrNull()
                     if (ownerId == null || expectedStorageKey(ownerId) != candidate.name) candidate.delete()
                 }
@@ -134,12 +158,13 @@ class SchedulePhotoFileStore(private val context: Context) {
             ?.take(UUID_TEXT_LENGTH)
             ?.let { runCatching { UUID.fromString(it) }.getOrNull() }
 
-    private companion object {
+    companion object {
         const val UUID_TEXT_LENGTH = 36
         const val MAX_IMAGE_DIMENSION = 65_535
+        internal const val NOTE_NAMESPACE = "note"
         val ALLOWED_MIME_TYPES = setOf("image/jpeg", "image/png", "image/webp")
         val STORAGE_KEY_PATTERN = Regex(
-            "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}" +
+            "(?:note_)?[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}" +
                 "(?:_[0-9a-fA-F]{8})?\\.[a-z0-9]{2,8}",
         )
     }
