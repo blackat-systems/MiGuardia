@@ -689,7 +689,7 @@ anterior copiado exacto en main/stage12-contract-before-normal-qa-use-20261024.m
 MAIN no opera Samsung/ADB en paralelo ni promueve reporte a prueba nativa.
 
 MAIN corroboró apertura de QA instalada desde salida nativa del Stage: Samsung
-SM-S938B/API36/serialR5CY529W6PL, MainActivity QA, Status:ok/COLD/265ms/266ms.
+SM-S938B/API36/serial <binding QA privado>, MainActivity QA, Status:ok/COLD/265ms/266ms.
 Recibo main/samsung-installed-qa-opening-review-20261024.json; sin relanzamiento
 MAIN, prueba de familias, candidata nueva, certificado/bytes o aceptación UI.
 Stage reporta QA dedicada/lint completos, pendientes de revisión pertinente.

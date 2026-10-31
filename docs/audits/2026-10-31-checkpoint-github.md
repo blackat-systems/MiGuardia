@@ -14,12 +14,17 @@ previos a la comprobación; esos archivos permanecen fuera de Git.
 
 Preparación para el repositorio público:
 
-- Se retiraron 23 apariciones del identificador del dispositivo en 21 archivos.
-  Las referencias documentales remiten al binding privado; las fixtures
-  negativas utilizan un identificador ficticio. Se conservaron las preimágenes.
-  El barrido completo encontró otras 30 referencias en 26 documentos históricos
-  sin cambios, ya presentes en el padre publicado. Este corte sanitiza el delta;
-  no reescribe ese archivo histórico ni acredita retirar información de GitHub.
+- Se hicieron 23 sustituciones en 21 archivos: 22 apariciones del identificador
+  real y una fixture ya ficticia. La revisión independiente posterior al push
+  encontró una aparición adicional en un documento nuevo del commit `20abd324`.
+  El barrido previo con límites de palabra omitió el identificador pegado a una
+  letra; su afirmación de cero residuos nuevos era incorrecta.
+  Este correctivo documental reemplaza esa aparición por el binding privado.
+  El barrido literal, sin límites de palabra, distingue 31 apariciones en
+  27 archivos del commit publicado: una nueva y 30 anteriores en 26 documentos.
+  La copia local corregida conserva esas 30 referencias previas fuera del alcance
+  del correctivo; no reescribe historia ni elimina el dato del commit anterior.
+  La publicación del correctivo y su verificación remota se registran por separado.
 - Una prueba de bootstrap dependía de evidencia privada ignorada. Ahora usa una
   fixture normativa sintética incluida en el repositorio, sin identidades ni
   admisiones reales. Su plantilla pendiente sigue siendo rechazada.
