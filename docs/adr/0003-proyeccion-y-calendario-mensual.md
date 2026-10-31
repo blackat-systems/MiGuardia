@@ -1,8 +1,8 @@
 # ADR 0003: proyección temporal y calendario mensual
 
 - Vigencia: PARCIAL
-- Sucesores: `docs/adr/0020-modelo-laboral-personalizable-y-vigencia-por-fecha.md`; `docs/adr/0032-proyeccion-unica-de-eventos-y-avisos-locales-v2.md`
-- Alcance vigente: Se conservan consulta y proyección mensual; reglas laborales y proyección actuales en sucesores y planificación §12.
+- Sucesores: `docs/adr/0020-modelo-laboral-personalizable-y-vigencia-por-fecha.md`; `docs/adr/0032-proyeccion-unica-de-eventos-y-avisos-locales-v2.md`; `docs/adr/0042-zoom-tipografico-del-calendario-mensual.md`
+- Alcance vigente: Consulta y proyección mensual conservadas; reglas y proyección en sucesores; zoom geométrico/scroll sustituidos por ADR 0042.
 - Fecha: 2026-08-13
 - Autoridad: MAIN, después de revisar la entrega de CALENDARIO MENSUAL
 

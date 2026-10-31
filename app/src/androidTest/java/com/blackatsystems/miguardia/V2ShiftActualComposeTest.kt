@@ -37,8 +37,8 @@ import com.blackatsystems.miguardia.ui.management.V2ShiftActualStage
 import com.blackatsystems.miguardia.ui.management.V2ShiftActualSurface
 import com.blackatsystems.miguardia.ui.management.V2ShiftActualSurfaceHost
 import com.blackatsystems.miguardia.ui.management.V2ShiftActualUiState
-import com.blackatsystems.miguardia.ui.theme.AppZoom
-import com.blackatsystems.miguardia.ui.theme.MiGuardiaTheme
+import com.blackatsystems.miguardia.testsupport.TestFontScale
+import com.blackatsystems.miguardia.testsupport.AndroidFontScaleTheme
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -63,7 +63,7 @@ class V2ShiftActualComposeTest {
         var retries = 0
         var begins = 0
         compose.setContent {
-            MiGuardiaTheme {
+            AndroidFontScaleTheme {
                 V2ShiftActualDetailCard(
                     shift = expected.planned.shift,
                     ordinal = 2,
@@ -104,7 +104,7 @@ class V2ShiftActualComposeTest {
     fun summaryShowsHumanTimeRangesRegularTwoExtrasAndTotal() {
         val expected = expectationWithTwoExtras()
         compose.setContent {
-            MiGuardiaTheme {
+            AndroidFontScaleTheme {
                 V2ShiftActualDetailCard(
                     shift = expected.planned.shift,
                     ordinal = 1,
@@ -117,9 +117,9 @@ class V2ShiftActualComposeTest {
         }
 
         compose.onNodeWithText("Horario estipulado").assertIsDisplayed()
-        compose.onNodeWithText("08:00 – 16:00").assertIsDisplayed()
+        compose.onNodeWithText("25/08/2026 08:00 – 25/08/2026 16:00").assertIsDisplayed()
         compose.onNodeWithText("Horario realmente cumplido").assertIsDisplayed()
-        compose.onNodeWithText("07:30 – 16:30").assertIsDisplayed()
+        compose.onNodeWithText("25/08/2026 07:30 – 25/08/2026 16:30").assertIsDisplayed()
         compose.onNodeWithText("Trabajaste 1 hora más de lo planeado.").assertIsDisplayed()
         compose.onNodeWithText("Horas trabajadas sin extras: 8 h 0 min").assertIsDisplayed()
         compose.onNodeWithText("Extra 1: Horas extras", substring = true).assertIsDisplayed()
@@ -127,6 +127,49 @@ class V2ShiftActualComposeTest {
         compose.onNodeWithText("Total real: 9 h 0 min").assertIsDisplayed()
         compose.onNodeWithTag("v2-actual-$SHIFT_ID-correct").assertIsDisplayed()
         compose.onNodeWithTag("v2-actual-$SHIFT_ID-return-planned").assertIsDisplayed()
+    }
+
+    @Test
+    fun overnightPlannedAndActualSummariesShowBothCivilEndpoints() {
+        val base = expectation()
+        val night = base.planned.shift.copy(
+            startAt = DATE.atTime(22, 0).atZone(ZONE).toInstant(),
+            endAt = DATE.plusDays(1).atTime(6, 0).atZone(ZONE).toInstant(),
+            startTimeSnapshot = LocalTime.of(22, 0),
+            endTimeSnapshot = LocalTime.of(6, 0),
+        )
+        val expected = base.copy(planned = base.planned.copy(shift = night))
+        val actualEnd = DATE.plusDays(1).atTime(7, 30).atZone(ZONE).toInstant()
+        val actual = requireNotNull(buildShiftActualSaveMutation(
+            expectation = expected,
+            draft = ShiftActualDraft(
+                actualStart = DATE.atTime(23, 15).atZone(ZONE).toInstant(),
+                actualEnd = actualEnd,
+                differenceReason = "Horario nocturno declarado",
+                explanation = null,
+                differenceChoice = ShiftActualDifferenceChoice.ALL_REGULAR,
+                classSelection = null,
+                fragments = emptyList(),
+            ),
+            clock = Clock.fixed(actualEnd.plusSeconds(3600), ZONE),
+            timestamp = actualEnd.plusSeconds(3600),
+        )).replacement
+        compose.setContent {
+            AndroidFontScaleTheme {
+                V2ShiftActualDetailCard(
+                    shift = night,
+                    ordinal = 1,
+                    count = 1,
+                    ownerDate = DATE,
+                    rowState = V2ShiftActualRowState.Content(expected.copy(previousActual = actual), true, null),
+                    actions = V2ShiftActualActions(),
+                )
+            }
+        }
+
+        compose.onNodeWithText("25/08/2026 22:00 – 26/08/2026 06:00").assertIsDisplayed()
+        compose.onNodeWithText("25/08/2026 23:15 – 26/08/2026 07:30").assertIsDisplayed()
+        compose.onNodeWithText("Total real: 8 h 15 min").assertIsDisplayed()
     }
 
     @Test
@@ -138,7 +181,7 @@ class V2ShiftActualComposeTest {
             ),
         )
         compose.setContent {
-            MiGuardiaTheme {
+            AndroidFontScaleTheme {
                 V2ShiftActualSurfaceHost(
                     state,
                     V2ShiftActualActions(
@@ -161,12 +204,12 @@ class V2ShiftActualComposeTest {
     }
 
     @Test
-    fun editorPrimaryActionRemainsReachableInBothThemesAndEveryInternalZoom() {
+    fun editorPrimaryActionRemainsReachableInBothThemesAndEveryAndroidFontScale() {
         val expected = expectation()
         var dark by mutableStateOf(false)
-        var zoom by mutableStateOf(AppZoom.STANDARD)
+        var fontScale by mutableStateOf(TestFontScale.STANDARD)
         compose.setContent {
-            MiGuardiaTheme(darkTheme = dark, appZoom = zoom) {
+            AndroidFontScaleTheme(darkTheme = dark, fontScale = fontScale) {
                 V2ShiftActualSurfaceHost(
                     V2ShiftActualUiState(
                         surface = V2ShiftActualSurface.EDITOR,
@@ -190,10 +233,10 @@ class V2ShiftActualComposeTest {
         }
 
         listOf(false, true).forEach { darkTheme ->
-            AppZoom.entries.forEach { appZoom ->
+            TestFontScale.entries.forEach { selectedScale ->
                 compose.runOnIdle {
                     dark = darkTheme
-                    zoom = appZoom
+                    fontScale = selectedScale
                 }
                 compose.onNodeWithTag("v2-actual-next-save")
                     .performScrollTo()
@@ -227,7 +270,7 @@ class V2ShiftActualComposeTest {
             ),
         )
         compose.setContent {
-            MiGuardiaTheme {
+            AndroidFontScaleTheme {
                 V2ShiftActualSurfaceHost(
                     state,
                     V2ShiftActualActions(
@@ -278,7 +321,7 @@ class V2ShiftActualComposeTest {
             ),
         )
         compose.setContent {
-            MiGuardiaTheme {
+            AndroidFontScaleTheme {
                 V2ShiftActualSurfaceHost(
                     state,
                     V2ShiftActualActions(
@@ -334,7 +377,7 @@ class V2ShiftActualComposeTest {
             ),
         )
         compose.setContent {
-            MiGuardiaTheme {
+            AndroidFontScaleTheme {
                 V2ShiftActualSurfaceHost(
                     state,
                     V2ShiftActualActions(
@@ -363,7 +406,7 @@ class V2ShiftActualComposeTest {
         var retries = 0
         var discards = 0
         compose.setContent {
-            MiGuardiaTheme {
+            AndroidFontScaleTheme {
                 V2ShiftActualSurfaceHost(
                     V2ShiftActualUiState(
                         restoredDraftError = "No pudimos recuperar la jornada ficticia del borrador.",
@@ -414,7 +457,7 @@ class V2ShiftActualComposeTest {
             ),
         )
         compose.setContent {
-            MiGuardiaTheme {
+            AndroidFontScaleTheme {
                 V2ShiftActualSurfaceHost(
                     state,
                     V2ShiftActualActions(

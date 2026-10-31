@@ -42,15 +42,14 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.core.net.toUri
 import com.blackatsystems.miguardia.core.domain.model.Shift
-import com.blackatsystems.miguardia.core.domain.nextevent.NextEventItem
 import com.blackatsystems.miguardia.notifications.NotificationAttentionMode
 import com.blackatsystems.miguardia.notifications.NotificationPrivacy
 import com.blackatsystems.miguardia.notifications.NotificationRhythm
@@ -58,7 +57,6 @@ import com.blackatsystems.miguardia.ui.components.PersistentMessage
 import com.blackatsystems.miguardia.ui.components.ScreenHeading
 import com.blackatsystems.miguardia.ui.components.SectionCard
 import com.blackatsystems.miguardia.ui.theme.vigiliaColors
-import java.time.format.DateTimeFormatter
 
 data class NotificationActions(
     val openGlobal: () -> Unit = {},
@@ -138,64 +136,81 @@ fun NotificationSurfaceHost(state: NotificationUiState, actions: NotificationAct
                 modifier = Modifier
                     .widthIn(max = 620.dp)
                     .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
                     .padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-            ScreenHeading(
-                if (state.surface == NotificationSurface.GLOBAL) "Notificaciones" else "Avisos de la jornada",
-                supportingText = if (state.surface == NotificationSurface.GLOBAL) {
-                    "MiGuardia funciona aunque no concedas permisos; podés corregirlos después."
-                } else {
-                    state.selectedShift?.let { "${it.objectiveAbbreviationSnapshot} · ${it.startTimeSnapshot}–${it.endTimeSnapshot}" }.orEmpty()
-                },
-            )
-            state.errorMessage?.let {
-                PersistentMessage(it, onDismiss = actions.clearMessage, onRetry = actions.retry)
-            }
-            state.infoMessage?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
-            if (state.isLoading) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center,
-                ) { CircularProgressIndicator() }
-            } else when (state.surface) {
-                NotificationSurface.GLOBAL -> GlobalSettings(
-                    state = state,
-                    actions = actions,
-                    requestPermission = {
-                        if (Build.VERSION.SDK_INT >= 33) permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                        else actions.refreshSystemAccess()
-                    },
-                    requestExactAccess = {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                            settingsLauncher.launch(
-                                Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
-                                    .setData("package:${context.packageName}".toUri()),
-                            )
+                Row(verticalAlignment = Alignment.Top) {
+                    ScreenHeading(
+                        if (state.surface == NotificationSurface.GLOBAL) "Notificaciones" else "Avisos de la jornada",
+                        modifier = Modifier.weight(1f),
+                    )
+                    TextButton(onClick = actions.close, modifier = Modifier.testTag("notification-close")) {
+                        Text("Cerrar")
+                    }
+                }
+                Column(
+                    modifier = Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Text(
+                        if (state.surface == NotificationSurface.GLOBAL) {
+                            "MiGuardia funciona aunque no concedas permisos; podés corregirlos después."
                         } else {
-                            actions.refreshSystemAccess()
-                        }
-                    },
-                    openAppSettings = {
-                        settingsLauncher.launch(
-                            Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
-                                .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName),
+                            state.selectedShift?.let { "${it.objectiveAbbreviationSnapshot} · ${it.startTimeSnapshot}–${it.endTimeSnapshot}" }.orEmpty()
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    state.errorMessage?.let {
+                        PersistentMessage(it, onDismiss = actions.clearMessage, onRetry = actions.retry)
+                    }
+                    state.infoMessage?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
+                    if (state.isLoading) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center,
+                        ) { CircularProgressIndicator() }
+                    } else when (state.surface) {
+                        NotificationSurface.GLOBAL -> GlobalSettings(
+                            state = state,
+                            actions = actions,
+                            requestPermission = {
+                                com.blackatsystems.miguardia.QaInstrumentationScope.requireExternalAction(context, "notification.permission")
+                                if (Build.VERSION.SDK_INT >= 33) permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                else actions.refreshSystemAccess()
+                            },
+                            requestExactAccess = {
+                                com.blackatsystems.miguardia.QaInstrumentationScope.requireExternalAction(context, "notification.exact-access")
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                                    settingsLauncher.launch(
+                                        Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
+                                            .setData("package:${context.packageName}".toUri()),
+                                    )
+                                } else {
+                                    actions.refreshSystemAccess()
+                                }
+                            },
+                            openAppSettings = {
+                                com.blackatsystems.miguardia.QaInstrumentationScope.requireExternalAction(context, "notification.settings")
+                                settingsLauncher.launch(
+                                    Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                                        .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName),
+                                )
+                            },
+                            chooseSound = {
+                                com.blackatsystems.miguardia.QaInstrumentationScope.requireExternalAction(context, "notification.sound-picker")
+                                ringtoneLauncher.launch(
+                                    Intent(RingtoneManager.ACTION_RINGTONE_PICKER)
+                                        .putExtra(RingtoneManager.EXTRA_RINGTONE_TYPE, RingtoneManager.TYPE_NOTIFICATION)
+                                        .putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, false)
+                                        .putExtra(RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, state.preferences.soundUri),
+                                )
+                            },
                         )
-                    },
-                    chooseSound = {
-                        ringtoneLauncher.launch(
-                            Intent(RingtoneManager.ACTION_RINGTONE_PICKER)
-                                .putExtra(RingtoneManager.EXTRA_RINGTONE_TYPE, RingtoneManager.TYPE_NOTIFICATION)
-                                .putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, false)
-                                .putExtra(RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, state.preferences.soundUri),
-                        )
-                    },
-                )
-                NotificationSurface.SHIFT -> ShiftSettings(state, actions)
-                NotificationSurface.NONE -> Unit
-            }
-                OutlinedButton(onClick = actions.close, modifier = Modifier.fillMaxWidth()) { Text("Volver") }
+                        NotificationSurface.SHIFT -> ShiftSettings(state, actions)
+                        NotificationSurface.NONE -> Unit
+                    }
+                }
             }
         }
     }
@@ -378,7 +393,7 @@ private fun PulsoVigiliaPreview(privacy: NotificationPrivacy) {
     val accent = if (privacy == NotificationPrivacy.HIDDEN) {
         MaterialTheme.colorScheme.outline
     } else {
-        Color(0xFF8B5CFF)
+        colors.active
     }
     val title = when (privacy) {
         NotificationPrivacy.COMPLETE -> "PRÓXIMA JORNADA · Hospital Norte"
@@ -507,17 +522,6 @@ private fun RestorableNotifications(state: NotificationUiState, actions: Notific
     }
 }
 
-private fun NextEventItem.restorableLabel(): String = when (this) {
-    is NextEventItem.Shift ->
-        "$placeAbbreviationSnapshot · ${ownerLocalDate.format(HiddenNotificationDateFormatter)} · " +
-            "${startTimeSnapshot.format(HiddenNotificationTimeFormatter)}–" +
-            endTimeSnapshot.format(HiddenNotificationTimeFormatter)
-    is NextEventItem.Availability ->
-        "$labelSnapshot · ${ownerLocalDate.format(HiddenNotificationDateFormatter)} · " +
-            "${start.atZone(zoneId).toLocalTime().format(HiddenNotificationTimeFormatter)}–" +
-            end.atZone(zoneId).toLocalTime().format(HiddenNotificationTimeFormatter)
-}
-
 @Composable
 private fun ShiftSettings(state: NotificationUiState, actions: NotificationActions) {
     var showEditor by rememberSaveable { mutableStateOf(false) }
@@ -614,7 +618,11 @@ private fun ReminderEditor(title: String, values: List<Long>, onChange: (Collect
 
 @Composable
 private fun ToggleRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
-    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
         Text(label, modifier = Modifier.weight(1f))
         Switch(checked = checked, onCheckedChange = onChange)
     }
@@ -684,6 +692,3 @@ private fun reminderSummary(values: List<Long>): String = when (values.size) {
     }
     else -> "${values.size} avisos configurados."
 }
-
-private val HiddenNotificationDateFormatter = DateTimeFormatter.ofPattern("dd/MM")
-private val HiddenNotificationTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")

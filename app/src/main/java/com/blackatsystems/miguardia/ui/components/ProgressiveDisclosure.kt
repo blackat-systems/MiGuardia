@@ -61,7 +61,7 @@ fun AdvancedOptionsSection(
                     )
                 }
             }
-            // The app zoom reduces available logical width. Keep the help action from
+            // Large Android text needs more room. Keep the help action from
             // squeezing the label into fragments; do not shrink the user's text size.
             if (maxWidth < 240.dp) {
                 Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.End) {

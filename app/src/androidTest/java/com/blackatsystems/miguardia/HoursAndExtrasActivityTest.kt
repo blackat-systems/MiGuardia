@@ -99,7 +99,7 @@ class HoursAndExtrasActivityTest {
         }
         scenario = ActivityScenario.launch(MainActivity::class.java)
         selectFixtureDay()
-        waitForTag("register-independent-extra-${fixtureShift.localStartDate}")
+        waitForTag("day-edit-menu")
     }
 
     @After
@@ -110,6 +110,7 @@ class HoursAndExtrasActivityTest {
 
     @Test
     fun createRecreateCorrectAndDeleteReturnsToTheSameCalendarDetail() {
+        openDayOptions()
         compose.onNodeWithTag("register-independent-extra-${fixtureShift.localStartDate}")
             .performScrollTo()
             .performClick()
@@ -133,6 +134,7 @@ class HoursAndExtrasActivityTest {
         compose.waitUntil(WAIT_MILLIS) { runBlocking { storedExtras().size == 1 } }
         val created = runBlocking { storedExtras().single() }
         assertEquals(FIRST_POSITION, created.snapshot.position)
+        openDayOptions()
         waitForTag("independent-extra-${created.id}")
         compose.onNodeWithTag("correct-independent-extra-${created.id}").performScrollTo().performClick()
 
@@ -146,12 +148,14 @@ class HoursAndExtrasActivityTest {
             runBlocking { storedExtras().singleOrNull()?.snapshot?.position == CORRECTED_POSITION }
         }
 
+        openDayOptions()
         waitForTag("independent-extra-${created.id}")
         compose.onNodeWithTag("delete-independent-extra-${created.id}").performScrollTo().performClick()
         waitForTag("extra-delete-confirm")
         compose.onNodeWithTag("extra-delete-confirm").performClick()
         compose.waitUntil(WAIT_MILLIS) { runBlocking { storedExtras().isEmpty() } }
         assertTrue(runBlocking { store.independentExtraWork.get(created.id) == null })
+        openDayOptions()
         waitForTag("register-independent-extra-${fixtureShift.localStartDate}")
     }
 
@@ -228,12 +232,18 @@ class HoursAndExtrasActivityTest {
         } else {
             completed
         }
-        compose.onNodeWithTag(tag).performScrollTo().performClick()
+        compose.onNodeWithTag(tag).assertIsDisplayed().performClick()
     }
 
     private suspend fun storedExtras() = qaStore().independentExtraWork
         .observeOn(V2AppTestFixture.TIMELINE_ID, WorkSector.NURSING, fixtureShift.localStartDate)
         .first()
+
+    private fun openDayOptions() {
+        waitForTag("day-other-options")
+        compose.onNodeWithTag("day-other-options").performScrollTo().performClick()
+        waitForTag("register-independent-extra-${fixtureShift.localStartDate}")
+    }
 
     private fun waitForTag(tag: String) {
         compose.waitUntil(WAIT_MILLIS) {

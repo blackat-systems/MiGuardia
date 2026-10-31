@@ -2,15 +2,21 @@ package com.blackatsystems.miguardia
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
@@ -19,9 +25,11 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.unit.dp
 import com.blackatsystems.miguardia.core.domain.calendar.CalendarDay
+import com.blackatsystems.miguardia.core.domain.calendar.projectCalendarMonth
 import com.blackatsystems.miguardia.core.domain.work.EffectiveRevision
 import com.blackatsystems.miguardia.core.domain.work.HoursReference
 import com.blackatsystems.miguardia.core.domain.work.MissingWorkSetupRequirement
@@ -29,14 +37,15 @@ import com.blackatsystems.miguardia.core.domain.work.WorkCatalog
 import com.blackatsystems.miguardia.core.domain.work.WorkConfiguration
 import com.blackatsystems.miguardia.core.domain.work.WorkSector
 import com.blackatsystems.miguardia.core.domain.work.WorkSetupState
+import com.blackatsystems.miguardia.core.domain.work.WorkType
 import com.blackatsystems.miguardia.backup.BackupActions
 import com.blackatsystems.miguardia.ui.MiGuardiaApp
 import com.blackatsystems.miguardia.ui.calendar.CalendarInteractionMode
 import com.blackatsystems.miguardia.ui.calendar.CalendarLoadState
 import com.blackatsystems.miguardia.ui.calendar.CalendarUiState
 import com.blackatsystems.miguardia.ui.management.V2RecurringActions
-import com.blackatsystems.miguardia.ui.theme.AppZoom
-import com.blackatsystems.miguardia.ui.theme.MiGuardiaTheme
+import com.blackatsystems.miguardia.testsupport.TestFontScale
+import com.blackatsystems.miguardia.testsupport.AndroidFontScaleTheme
 import com.blackatsystems.miguardia.ui.worksetup.WorkPlaceDraft
 import com.blackatsystems.miguardia.ui.worksetup.WorkSetupActions
 import com.blackatsystems.miguardia.ui.worksetup.WorkSetupStep
@@ -49,6 +58,8 @@ import java.time.LocalDate
 import java.time.YearMonth
 import java.util.UUID
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -61,7 +72,7 @@ class WorkSetupComposeTest {
         var opened = 0
         var availabilityOpened = 0
         compose.setContent {
-            MiGuardiaTheme {
+            AndroidFontScaleTheme {
                 WorkSetupSurfaceHost(
                     state = readyState(WorkSector.NURSING).copy(surface = WorkSetupSurface.OVERVIEW),
                     actions = WorkSetupActions(
@@ -129,17 +140,19 @@ class WorkSetupComposeTest {
         compose.onNodeWithText("Salud").assertDoesNotExist()
         compose.onNodeWithText("Otro").assertDoesNotExist()
         compose.onNodeWithTag("work-sector-continue").assertIsNotEnabled()
-        compose.onNodeWithTag("work-setup-restore-backup").performClick()
+        compose.onNodeWithTag("work-setup-restore-backup")
+            .performScrollTo().assertIsDisplayed().assertIsEnabled().performClick()
         compose.runOnIdle { assertEquals(true, restoreOpened) }
 
-        compose.onNodeWithText("Enfermería").performClick()
+        compose.onNodeWithText("Enfermería").performScrollTo().assertIsDisplayed().performClick()
         compose.onNodeWithTag("work-sector-nursing").assertIsSelected()
-        compose.onNodeWithTag("work-sector-continue").assertIsEnabled().performClick()
+        compose.onNodeWithTag("work-sector-continue")
+            .performScrollTo().assertIsDisplayed().assertIsEnabled().performClick()
         compose.onNodeWithTag("work-sector-continue").assertIsNotEnabled()
         compose.onNodeWithTag("work-sector-nursing").assertIsSelected()
 
         compose.runOnIdle { state = needsFirstSetState(WorkSector.NURSING) }
-        compose.onNodeWithTag("next-event-card").assertIsDisplayed()
+        compose.onNodeWithTag("month-grid").assertIsDisplayed()
         compose.onNodeWithText("Todavía no cargaste ningún lugar de trabajo").assertIsDisplayed()
     }
 
@@ -151,7 +164,7 @@ class WorkSetupComposeTest {
             actions = WorkSetupActions(openFirstWorkSet = { opened = true }),
         )
 
-        compose.onNodeWithTag("next-event-card").assertIsDisplayed()
+        compose.onNodeWithTag("month-grid").assertIsDisplayed()
         compose.onNodeWithText("Todavía no cargaste ningún lugar de trabajo").assertIsDisplayed()
         compose.onNodeWithText("Cargar datos").assertDoesNotExist()
         compose.onNodeWithText("Editar calendario").assertDoesNotExist()
@@ -188,8 +201,8 @@ class WorkSetupComposeTest {
 
         compose.onNodeWithContentDescription("Abrir menú").performClick()
 
-        compose.onNodeWithTag("drawer-action-work-setup").assertIsDisplayed()
-        compose.onNodeWithTag("main-destination-summary").assertIsDisplayed()
+        compose.onNodeWithTag("drawer-action-work-setup").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("main-destination-summary").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Perfil laboral").assertDoesNotExist()
         compose.onNodeWithText("Objetivos y horarios").assertDoesNotExist()
     }
@@ -207,15 +220,18 @@ class WorkSetupComposeTest {
         )
 
         compose.onNodeWithTag("work-setup-recurring-plans").assertDoesNotExist()
-        compose.onAllNodesWithTag("advanced-options-toggle")[1].performScrollTo().performClick()
-        compose.onNodeWithTag("work-setup-recurring-plans").assertIsDisplayed().performClick()
+        compose.onNodeWithTag("advanced-options-toggle").performScrollTo().performClick()
+        compose.onNodeWithTag("work-setup-recurring-plans")
+            .performScrollTo().assertIsDisplayed().assertIsEnabled().performClick()
         compose.runOnIdle { assertEquals(1, opened) }
 
         compose.runOnIdle {
             state = needsFirstSetState(WorkSector.MEDICINE).copy(surface = WorkSetupSurface.OVERVIEW)
         }
         compose.onNodeWithTag("work-setup-recurring-plans").assertDoesNotExist()
-        compose.onAllNodesWithTag("work-setup-calendar-guide")[0].assertIsDisplayed()
+        compose.onNode(
+            hasTestTag("work-setup-calendar-guide") and hasAnyAncestor(hasTestTag("work-setup-overview")),
+        ).performScrollTo().assertIsDisplayed()
     }
 
     @Test
@@ -483,14 +499,14 @@ class WorkSetupComposeTest {
     }
 
     @Test
-    fun sectorSelectionRemainsReachableInBothThemesOrientationsAndAllZooms() {
+    fun sectorSelectionRemainsReachableInBothThemesOrientationsAndAllFontScales() {
         var dark by mutableStateOf(true)
-        var zoom by mutableStateOf(AppZoom.EXTRA_LARGE)
+        var fontScale by mutableStateOf(TestFontScale.EXTRA_LARGE)
         var width by mutableStateOf(320.dp)
         var height by mutableStateOf(480.dp)
         var workSetupState by mutableStateOf(WorkSetupUiState(rootState = WorkSetupState.FreshInstall))
         compose.setContent {
-            MiGuardiaTheme(darkTheme = dark, appZoom = zoom) {
+            AndroidFontScaleTheme(darkTheme = dark, fontScale = fontScale) {
                 Box(Modifier.size(width = width, height = height)) {
                     MiGuardiaApp(
                         calendarState = calendarState(),
@@ -526,7 +542,7 @@ class WorkSetupComposeTest {
 
         compose.runOnIdle {
             dark = false
-            zoom = AppZoom.LARGE
+            fontScale = TestFontScale.LARGE
             width = 480.dp
             height = 320.dp
             workSetupState = WorkSetupUiState(rootState = WorkSetupState.FreshInstall)
@@ -535,11 +551,71 @@ class WorkSetupComposeTest {
         compose.onNodeWithTag("work-sector-continue").performScrollTo().assertIsDisplayed()
 
         compose.runOnIdle {
-            zoom = AppZoom.STANDARD
+            fontScale = TestFontScale.STANDARD
             width = 320.dp
             height = 480.dp
         }
         compose.onNodeWithTag("work-sector-continue").performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun templateTypeSelectionKeepsWholeLabelsAndContainedTargetsAcrossThemesAndFontScales() {
+        val original = readyState(WorkSector.MEDICINE)
+        val catalog = requireNotNull(original.catalog)
+        val firstName = "Guardia habitual en consultorio y atención ambulatoria"
+        val secondName = "Atención de urgencias"
+        val timestamp = Instant.parse("2026-08-22T12:00:00Z")
+        val first = WorkType.create(UUID(31L, 1L), catalog.timelineId, catalog.sector, firstName, timestamp)
+        val second = WorkType.create(UUID(31L, 2L), catalog.timelineId, catalog.sector, secondName, timestamp)
+        var state by mutableStateOf(original.copy(
+            surface = WorkSetupSurface.ADDITIONAL_TEMPLATE,
+            catalog = catalog.copy(workTypes = listOf(first, second)),
+            selectedTemplateTypeId = first.id,
+        ))
+        var dark by mutableStateOf(false)
+        var fontScale by mutableStateOf(TestFontScale.STANDARD)
+        var themedDensity = 1f
+        var selections = 0
+        compose.setContent {
+            Box(Modifier.width(320.dp)) {
+                AndroidFontScaleTheme(darkTheme = dark, fontScale = fontScale) {
+                    themedDensity = LocalDensity.current.density
+                    WorkSetupSurfaceHost(state, WorkSetupActions(selectTemplateType = {
+                        selections++
+                        state = state.copy(selectedTemplateTypeId = it)
+                    }))
+                }
+            }
+        }
+        for (theme in listOf(false, true)) for (scale in TestFontScale.entries) {
+            compose.runOnIdle {
+                dark = theme
+                fontScale = scale
+                state = state.copy(selectedTemplateTypeId = first.id)
+            }
+            val row = compose.onNodeWithText(firstName).performScrollTo().assertIsSelected()
+            val bounds = row.fetchSemanticsNode().boundsInRoot
+            val target = row.fetchSemanticsNode().touchBoundsInRoot
+            assertTrue("Objetivo fuera de su fila: $theme/$scale",
+                target.left >= bounds.left - 1f && target.top >= bounds.top - 1f &&
+                    target.right <= bounds.right + 1f && target.bottom <= bounds.bottom + 1f)
+            assertTrue("Objetivo menor a 48 dp: $theme/$scale", target.height >= 48f * themedDensity - 1f)
+            val layouts = mutableListOf<TextLayoutResult>()
+            val text = compose.onNodeWithText(firstName, useUnmergedTree = true)
+            text.performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(layouts) }
+            assertTrue(layouts.isNotEmpty())
+            layouts.forEach {
+                assertEquals(firstName, it.layoutInput.text.text)
+                assertFalse("Etiqueta recortada: $theme/$scale", it.hasVisualOverflow)
+            }
+            val textBounds = text.fetchSemanticsNode().boundsInRoot
+            assertTrue("Texto fuera de su fila: $theme/$scale",
+                textBounds.left >= bounds.left - 1f && textBounds.top >= bounds.top - 1f &&
+                    textBounds.right <= bounds.right + 1f && textBounds.bottom <= bounds.bottom + 1f)
+            compose.onNodeWithText(secondName).performScrollTo().performClick().assertIsSelected()
+            compose.runOnIdle { assertEquals(second.id, state.selectedTemplateTypeId) }
+        }
+        compose.runOnIdle { assertEquals(6, selections) }
     }
 
     private fun setApp(
@@ -550,7 +626,7 @@ class WorkSetupComposeTest {
         calendar: CalendarUiState = calendarState(),
     ) {
         compose.setContent {
-            MiGuardiaTheme {
+            AndroidFontScaleTheme {
                 MiGuardiaApp(
                     calendarState = calendar,
                     onPreviousMonth = {},
@@ -571,7 +647,13 @@ class WorkSetupComposeTest {
     private fun calendarState() = CalendarUiState(
         visibleMonth = YearMonth.of(2026, 8),
         referenceInstant = Instant.parse("2026-08-22T12:00:00Z"),
-        days = emptyList(),
+        days = projectCalendarMonth(
+            month = YearMonth.of(2026, 8),
+            shifts = emptyList(),
+            explicitDayStatuses = emptyList(),
+            medicalLeaves = emptyList(),
+            now = Instant.parse("2026-08-22T12:00:00Z"),
+        ),
         hasAnyShifts = false,
         hasAnyShiftsLoaded = true,
         loadState = CalendarLoadState.CONTENT,

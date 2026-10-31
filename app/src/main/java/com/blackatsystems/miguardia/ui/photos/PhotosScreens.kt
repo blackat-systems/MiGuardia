@@ -112,7 +112,7 @@ fun PhotosSurfaceHost(
     fileStore: SchedulePhotoFileStore,
 ) {
     BackHandler(onBack = actions.back)
-    TransientConfirmation(state.infoMessage, actions.clearMessage) {
+    TransientConfirmation(state.infoMessage, actions.clearMessage, reserveSpace = true) {
         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             when (state.surface) {
                 PhotosSurface.NONE -> Unit
@@ -254,7 +254,7 @@ private fun PhotoCard(
                     Text(
                         "Foto ${index + 1} de $total",
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.SemiBold,
                     )
                     Text(
                         photo.objectiveNameSnapshot ?: "Sin objetivo asociado",

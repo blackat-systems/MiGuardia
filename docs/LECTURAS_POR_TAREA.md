@@ -4,11 +4,11 @@ Arranque común: `AGENTS.md` y `docs/STATUS.md`. Esta tabla dirige la lectura ad
 
 | Si la tarea afecta… | Consultar antes de cambiar |
 |---|---|
-| MAIN: elegir, retomar o delegar la siguiente etapa | `docs/ORQUESTACION_MAIN.md` (ruta al entrar; etapa pertinente al reanudar), cursor/autorización en STATUS y `docs/WORKFLOW.md`; no cargar fuente gráfica ni inventarios |
+| MAIN: elegir, retomar o delegar | STATUS, su contrato y `docs/WORKFLOW.md`; `docs/ORQUESTACION_MAIN.md` es historia 2.0, no despacho 3.0 |
 | Sólo documentación o flujo | `docs/WORKFLOW.md`, documento afectado y `docs/adr/README.md` si cambia vigencia |
 | Producto, vocabulario o reglas laborales | Sección pertinente de `docs/PLANIFICACION_MIGUARDIA_2_0.md`, ficha en `docs/sectores/`, ADR del tema, `core/domain/src/` y sus pruebas |
 | Persistencia/migraciones | Planificación §16, ADR 0026–0030/0038, `core/database/src/` y `core/database/schemas/` |
-| Calendario/navegación/zoom | Planificación §12, ADR 0003/0015 y contratos de proyección 0032, `app/src/main/java/com/blackatsystems/miguardia/ui/`, Activity y pruebas afectadas |
+| Calendario/navegación/letra | Planificación §12, ADR 0003/0015/0032/0042 y 0043 (letra Android), `app/src/main/java/com/blackatsystems/miguardia/ui/`, Activity y pruebas afectadas |
 | Próximo evento/avisos/Widget | Planificación §15, ADR 0033 y contrato histórico sólo para garantías aún usadas; módulos next-event/notifications/widget |
 | Fotos | ADR 0008/0026, `photos/`, FileProvider y pruebas de orientación/almacenamiento privado |
 | Informes/Copias | Planificación §16, ADR 0034/0035, `reports/`, `backup/`, repositorios y pruebas de consistencia |

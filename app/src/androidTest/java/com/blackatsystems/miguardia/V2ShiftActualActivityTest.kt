@@ -164,7 +164,7 @@ class V2ShiftActualActivityTest {
             compose.onNodeWithContentDescription(previous).performClick()
         }
         val dayTag = waitForCalendarDay()
-        compose.onNodeWithTag(dayTag).performScrollTo().performClick()
+        compose.onNodeWithTag(dayTag).assertIsDisplayed().performClick()
     }
 
     private fun waitForCalendarDay(): String {

@@ -20,6 +20,11 @@ import com.blackatsystems.miguardia.core.domain.repository.LocalDataException
 import com.blackatsystems.miguardia.core.domain.repository.ShiftNoteRepository
 import com.blackatsystems.miguardia.core.domain.repository.ShiftRepository
 import com.blackatsystems.miguardia.ui.photos.SchedulePhotoFileStore
+import com.blackatsystems.miguardia.ui.photos.NoteImageSelection
+import com.blackatsystems.miguardia.ui.photos.NoteAttachmentFiles
+import com.blackatsystems.miguardia.ui.photos.noteAttachments
+import com.blackatsystems.miguardia.backup.LocalDataMutationGate
+import com.blackatsystems.miguardia.ui.management.NoteFileCommitGate
 import java.time.Clock
 import java.time.LocalDate
 import java.time.YearMonth
@@ -34,6 +39,7 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 internal data class ExceptionsPersistedState(
     val surface: ExceptionsSurface,
@@ -44,7 +50,6 @@ internal data class ExceptionsPersistedState(
     val noteDraft: NoteDraft = NoteDraft(),
 )
 
-private const val MAX_NOTE_IMAGES = 30
 private const val ATTACHMENT_FIELD_SEPARATOR = "|"
 
 private fun ShiftNoteAttachment.encodeForSavedState(): String = listOf(
@@ -83,10 +88,12 @@ internal class ExceptionsCoordinator(
     private val shifts: ShiftRepository,
     private val clock: Clock,
     private val uuidProvider: () -> UUID,
-    private val imageStore: SchedulePhotoFileStore? = null,
+    imageStore: SchedulePhotoFileStore? = null,
     private val scope: CoroutineScope,
     private val initialState: ExceptionsPersistedState,
     private val persist: (ExceptionsPersistedState) -> Unit,
+    private val mutationGate: LocalDataMutationGate = LocalDataMutationGate(),
+    private val noteFiles: NoteAttachmentFiles? = imageStore?.noteAttachments(),
 ) {
     private val writeMutex = Mutex()
     private val _uiState = MutableStateFlow(
@@ -107,7 +114,9 @@ internal class ExceptionsCoordinator(
         scope.launch {
             val draftKeys = initialState.noteDraft.attachments.mapTo(linkedSetOf(), ShiftNoteAttachment::storageKey)
             runCatching {
-                imageStore?.reconcileNoteAttachments(notes.allAttachmentStorageKeys() + draftKeys)
+                withNoteFileMutation {
+                    noteFiles?.reconcileNoteAttachments(notes.allAttachmentStorageKeys() + draftKeys)
+                }
             }
         }
         when {
@@ -401,6 +410,7 @@ internal class ExceptionsCoordinator(
 
     fun editNote(item: ShiftNoteWithAttachments) {
         if (_uiState.value.isSaving) return
+        discardNewDraftFiles(_uiState.value.noteDraft)
         _uiState.update {
             it.copy(
                 noteDraft = NoteDraft(
@@ -417,23 +427,22 @@ internal class ExceptionsCoordinator(
 
     fun addNoteImages(uris: List<Uri>) {
         if (uris.isEmpty() || _uiState.value.isSaving) return
-        val store = imageStore ?: return showError("No pudimos preparar el almacenamiento de imágenes.")
-        val available = (MAX_NOTE_IMAGES - _uiState.value.noteDraft.attachments.size).coerceAtLeast(0)
-        val accepted = uris.take(available)
-        if (accepted.isEmpty()) return showError("Esta nota ya tiene el máximo de 30 imágenes.")
-        launchWrite {
-            val imported = mutableListOf<ShiftNoteAttachment>()
+        NoteImageSelection.rejectionMessage(_uiState.value.noteDraft.attachments.size, uris.size)?.let {
+            showError(it)
+            return
+        }
+        val store = noteFiles ?: return showError("No pudimos preparar el almacenamiento de imágenes.")
+        launchNoteWrite {
             val noteId = _uiState.value.noteDraft.editingId ?: pendingNoteId()
-            try {
-                accepted.forEach { uri ->
+            val imported = NoteImageSelection.importBatch(uris, _uiState.value.noteDraft.attachments.size,
+                importImage = { uri, position ->
                     val attachmentId = uuidProvider()
                     val stored = store.import(
                         uri = uri,
-                        ownerId = attachmentId,
-                        namespace = SchedulePhotoFileStore.NOTE_NAMESPACE,
+                        id = attachmentId,
                     )
                     val now = clock.instant()
-                    imported += ShiftNoteAttachment(
+                    ShiftNoteAttachment(
                         id = attachmentId,
                         noteId = noteId,
                         storageKey = stored.storageKey,
@@ -441,25 +450,20 @@ internal class ExceptionsCoordinator(
                         byteSize = stored.byteSize,
                         pixelWidth = stored.width,
                         pixelHeight = stored.height,
-                        position = _uiState.value.noteDraft.attachments.size + imported.size,
+                        position = position,
                         createdAt = now,
                         updatedAt = now,
                     )
-                }
-                _uiState.update { state ->
-                    val current = state.noteDraft
-                    state.copy(
-                        noteDraft = current.copy(attachments = current.attachments + imported),
-                        infoMessage = if (uris.size > accepted.size) {
-                            "Se agregaron ${accepted.size} imágenes. Se rechazó el excedente del máximo de 30."
-                        } else null,
-                    )
-                }
-                persistCurrentState()
-            } catch (error: Exception) {
-                imported.forEach { runCatching { store.discardUnreferenced(it.storageKey) } }
-                throw error
+                },
+                discard = { images -> images.forEach { runCatching { store.discardUnreferenced(it.storageKey) } } })
+            _uiState.update { state ->
+                val current = state.noteDraft
+                state.copy(
+                    noteDraft = current.copy(attachments = current.attachments + imported),
+                    infoMessage = null,
+                )
             }
+            persistCurrentState()
         }
     }
 
@@ -473,7 +477,7 @@ internal class ExceptionsCoordinator(
         _uiState.update { it.copy(noteDraft = draft.copy(attachments = updated), errorMessage = null) }
         persistCurrentState()
         if (id !in draft.originalAttachmentIds) {
-            scope.launch { runCatching { imageStore?.discardUnreferenced(target.storageKey) } }
+            scope.launch { runCatching { withNoteFileMutation { discardUnreferencedNoteFiles(listOf(target.storageKey)) } } }
         }
     }
 
@@ -487,12 +491,13 @@ internal class ExceptionsCoordinator(
     fun saveNote() {
         val shift = _uiState.value.selectedShift ?: return
         val draft = _uiState.value.noteDraft
-        launchWrite {
+        launchNoteWrite {
             val noteId = draft.editingId ?: pendingNoteId()
-            val existing = draft.editingId?.let { notes.getWithAttachments(it) }
+            val existing = notes.getWithAttachments(noteId)
             if (draft.editingId != null && existing == null) {
                 throw IllegalStateException("La nota ya no existe.")
             }
+            require(existing == null || existing.note.shiftId == shift.id) { "La nota ya no corresponde a esta jornada." }
             val now = clock.instant()
             val note = ShiftNote(
                 id = noteId,
@@ -507,11 +512,15 @@ internal class ExceptionsCoordinator(
             val attachments = draft.attachments.mapIndexed { index, item ->
                 item.copy(noteId = noteId, position = index, updatedAt = now)
             }
+            noteFiles?.let { files ->
+                require(attachments.all { files.exists(it.storageKey) }) {
+                    "Una imagen ya no está disponible. Quitala de la nota o volvé a agregarla antes de guardar."
+                }
+            }
             notes.saveWithAttachments(note, attachments)
             val retainedIds = attachments.mapTo(hashSetOf(), ShiftNoteAttachment::id)
-            existing?.attachments.orEmpty().filter { it.id !in retainedIds }.forEach { removed ->
-                runCatching { imageStore?.discardUnreferenced(removed.storageKey) }
-            }
+            discardUnreferencedNoteFiles(existing?.attachments.orEmpty()
+                .filter { it.id !in retainedIds }.map { it.storageKey })
             _uiState.update {
                 it.copy(noteDraft = NoteDraft(), infoMessage = "Nota guardada.")
             }
@@ -519,19 +528,21 @@ internal class ExceptionsCoordinator(
         }
     }
 
-    fun deleteNote(id: UUID) = launchWrite {
+    fun deleteNote(id: UUID) = launchNoteWrite {
         val existing = notes.getWithAttachments(id)
+        val draft = _uiState.value.noteDraft.takeIf { (it.editingId ?: it.pendingId) == id }
+        val removedKeys = (existing?.attachments.orEmpty() + draft?.attachments.orEmpty())
+            .map(ShiftNoteAttachment::storageKey).distinct()
         notes.delete(id)
-        existing?.attachments.orEmpty().forEach { attachment ->
-            runCatching { imageStore?.discardUnreferenced(attachment.storageKey) }
-        }
+        discardUnreferencedNoteFiles(removedKeys)
         _uiState.update {
             it.copy(
-                noteDraft = it.noteDraft.takeUnless { draft -> draft.editingId == id }
+                noteDraft = it.noteDraft.takeUnless { current -> (current.editingId ?: current.pendingId) == id }
                     ?: NoteDraft(),
                 infoMessage = "Nota eliminada.",
             )
         }
+        persistCurrentState()
     }
 
     fun retry() {
@@ -656,13 +667,36 @@ internal class ExceptionsCoordinator(
         }
     }
 
+    private fun launchNoteWrite(block: suspend () -> Unit) = launchWrite { withNoteFileMutation(block) }
+
+    // Match manual-load promotion: restore's gate is always outside the note-file gate.
+    // The reference query and cleanup stay together without widening a SQL transaction.
+    private suspend fun <T> withNoteFileMutation(block: suspend () -> T): T =
+        mutationGate.withExclusiveMutation { NoteFileCommitGate.mutex.withLock { block() } }
+
+    private suspend fun discardUnreferencedNoteFiles(keys: List<String>) {
+        if (keys.isEmpty()) return
+        val files = noteFiles ?: return
+        runCatching {
+            val retained = notes.allAttachmentStorageKeys()
+            keys.filterNot { it in retained }.forEach { key -> runCatching { files.discardUnreferenced(key) } }
+        }
+    }
+
     private fun showError(message: String) {
         _uiState.update { it.copy(errorMessage = message, infoMessage = null) }
     }
 
     private fun pendingNoteId(): UUID {
-        val existing = _uiState.value.noteDraft.attachments.firstOrNull()?.noteId
-        return existing ?: uuidProvider()
+        val draft = _uiState.value.noteDraft
+        draft.editingId?.let { return it }
+        draft.pendingId?.let { return it }
+        val id = draft.attachments.firstOrNull()?.noteId ?: uuidProvider()
+        _uiState.update { it.copy(noteDraft = it.noteDraft.copy(pendingId = id)) }
+        // Reserve the draft identity before crossing the write boundary. An uncertain
+        // acknowledgement/recreation may retry it, but must never create a second note.
+        persistCurrentState()
+        return id
     }
 
     private fun discardNewDraftFiles(draft: NoteDraft) {
@@ -670,7 +704,7 @@ internal class ExceptionsCoordinator(
             .filter { it.id !in draft.originalAttachmentIds }
             .map(ShiftNoteAttachment::storageKey)
         if (keys.isNotEmpty()) scope.launch {
-            keys.forEach { runCatching { imageStore?.discardUnreferenced(it) } }
+            runCatching { withNoteFileMutation { discardUnreferencedNoteFiles(keys) } }
         }
     }
 
@@ -710,6 +744,7 @@ class ExceptionsViewModel(
     uuidProvider: () -> UUID,
     imageStore: SchedulePhotoFileStore,
     savedStateHandle: SavedStateHandle,
+    mutationGate: LocalDataMutationGate = LocalDataMutationGate(),
 ) : ViewModel() {
     private val coordinator = ExceptionsCoordinator(
         holidays = holidays,
@@ -718,6 +753,7 @@ class ExceptionsViewModel(
         clock = clock,
         uuidProvider = uuidProvider,
         imageStore = imageStore,
+        mutationGate = mutationGate,
         scope = viewModelScope,
         initialState = ExceptionsPersistedState(
             surface = savedStateHandle.get<String>(SURFACE_KEY)
@@ -751,6 +787,8 @@ class ExceptionsViewModel(
                     .orEmpty()
                     .mapNotNull { raw -> runCatching { UUID.fromString(raw) }.getOrNull() }
                     .toSet(),
+                pendingId = savedStateHandle.get<String>(NOTE_PENDING_ID_KEY)
+                    ?.let { raw -> runCatching { UUID.fromString(raw) }.getOrNull() },
             ),
         ),
         persist = { state ->
@@ -766,6 +804,7 @@ class ExceptionsViewModel(
                 ArrayList(state.noteDraft.attachments.map(ShiftNoteAttachment::encodeForSavedState))
             savedStateHandle[NOTE_ORIGINAL_IDS_KEY] =
                 ArrayList(state.noteDraft.originalAttachmentIds.map(UUID::toString))
+            savedStateHandle[NOTE_PENDING_ID_KEY] = state.noteDraft.pendingId?.toString()
             if (state.noteDraft.editingId == null) {
                 savedStateHandle.remove<String>(NOTE_EDITING_ID_KEY)
             } else {
@@ -819,6 +858,7 @@ class ExceptionsViewModel(
         private val imageStore: SchedulePhotoFileStore,
         private val clock: Clock = Clock.system(AppDefaults.zoneId()),
         private val uuidProvider: () -> UUID = UUID::randomUUID,
+        private val mutationGate: LocalDataMutationGate = LocalDataMutationGate(),
     ) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
             require(modelClass.isAssignableFrom(ExceptionsViewModel::class.java))
@@ -831,6 +871,7 @@ class ExceptionsViewModel(
                 uuidProvider = uuidProvider,
                 imageStore = imageStore,
                 savedStateHandle = extras.createSavedStateHandle(),
+                mutationGate = mutationGate,
             ) as T
         }
     }
@@ -848,5 +889,6 @@ class ExceptionsViewModel(
         const val NOTE_BODY_KEY = "exceptions.noteBody"
         const val NOTE_ATTACHMENTS_KEY = "exceptions.noteAttachments"
         const val NOTE_ORIGINAL_IDS_KEY = "exceptions.noteOriginalIds"
+        const val NOTE_PENDING_ID_KEY = "exceptions.notePendingId"
     }
 }

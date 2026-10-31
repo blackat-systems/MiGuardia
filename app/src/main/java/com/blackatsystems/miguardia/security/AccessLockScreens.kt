@@ -17,6 +17,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -76,88 +77,97 @@ internal fun AccessLockGate(
     onOpenDeviceSecurity: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(24.dp)
-            .testTag("access-lock-gate"),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
+    Surface(
+        modifier = modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background,
+        contentColor = MaterialTheme.colorScheme.onBackground,
     ) {
-        Text(
-            text = stringResource(R.string.app_name),
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-        )
-        Spacer(Modifier.height(20.dp))
-        when (state.phase) {
-            AccessLockPhase.WAITING_FOR_RECOVERY,
-            AccessLockPhase.LOADING,
-            -> {
-                CircularProgressIndicator(modifier = Modifier.testTag("access-lock-loading"))
-                Text(
-                    text = stringResource(R.string.access_lock_protecting),
-                    modifier = Modifier.padding(top = 16.dp),
-                )
-            }
-
-            AccessLockPhase.STORE_ERROR -> {
-                Text(
-                    text = stringResource(R.string.access_lock_store_error_title),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                )
-                Text(
-                    text = stringResource(R.string.access_lock_store_error_body),
-                    modifier = Modifier.padding(top = 12.dp),
-                )
-                AccessLockMessage(state.message)
-                Button(
-                    onClick = onRetryStore,
-                    enabled = !state.authenticationInProgress && !state.persistenceInProgress,
-                    modifier = Modifier.fillMaxWidth().padding(top = 20.dp).testTag("access-lock-retry-store"),
-                ) { Text(stringResource(R.string.retry)) }
-                OutlinedButton(
-                    onClick = onRepairStore,
-                    enabled = !state.authenticationInProgress && !state.persistenceInProgress &&
-                        capability == DeviceAuthenticationCapability.AVAILABLE,
-                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp).testTag("access-lock-repair-store"),
-                ) { Text(stringResource(R.string.access_lock_repair)) }
-                DeviceCapabilityMessage(capability, onRetryDeviceSecurity, onOpenDeviceSecurity)
-            }
-
-            AccessLockPhase.READY -> {
-                if (!state.locked) {
-                    CircularProgressIndicator(modifier = Modifier.testTag("access-lock-privacy-cover"))
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(24.dp)
+                .testTag("access-lock-gate"),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                text = stringResource(R.string.app_name),
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+            )
+            Spacer(Modifier.height(20.dp))
+            when (state.phase) {
+                AccessLockPhase.WAITING_FOR_RECOVERY,
+                AccessLockPhase.LOADING,
+                -> {
+                    CircularProgressIndicator(modifier = Modifier.testTag("access-lock-loading"))
                     Text(
                         text = stringResource(R.string.access_lock_protecting),
                         modifier = Modifier.padding(top = 16.dp),
                     )
-                } else {
+                }
+
+                AccessLockPhase.STORE_ERROR -> {
                     Text(
-                        text = stringResource(R.string.access_lock_gate_title),
+                        text = stringResource(R.string.access_lock_store_error_title),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                     )
                     Text(
-                        text = stringResource(R.string.access_lock_gate_body),
+                        text = stringResource(R.string.access_lock_store_error_body),
                         modifier = Modifier.padding(top = 12.dp),
                     )
                     AccessLockMessage(state.message)
                     Button(
-                        onClick = onUnlock,
-                        enabled = !state.authenticationInProgress &&
+                        onClick = onRetryStore,
+                        enabled = !state.authenticationInProgress && !state.persistenceInProgress,
+                        modifier = Modifier.fillMaxWidth().padding(top = 20.dp).testTag("access-lock-retry-store"),
+                    ) { Text(stringResource(R.string.retry)) }
+                    OutlinedButton(
+                        onClick = onRepairStore,
+                        enabled = !state.authenticationInProgress && !state.persistenceInProgress &&
                             capability == DeviceAuthenticationCapability.AVAILABLE,
-                        modifier = Modifier.fillMaxWidth().padding(top = 20.dp).testTag("access-lock-unlock"),
-                    ) {
-                        if (state.authenticationInProgress) {
-                            CircularProgressIndicator(modifier = Modifier.height(20.dp))
-                        } else {
-                            Text(stringResource(R.string.access_lock_unlock))
-                        }
-                    }
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp).testTag("access-lock-repair-store"),
+                    ) { Text(stringResource(R.string.access_lock_repair)) }
                     DeviceCapabilityMessage(capability, onRetryDeviceSecurity, onOpenDeviceSecurity)
+                }
+
+                AccessLockPhase.READY -> {
+                    if (!state.locked) {
+                        CircularProgressIndicator(modifier = Modifier.testTag("access-lock-privacy-cover"))
+                        Text(
+                            text = stringResource(R.string.access_lock_protecting),
+                            modifier = Modifier.padding(top = 16.dp),
+                        )
+                    } else {
+                        Text(
+                            text = stringResource(R.string.access_lock_gate_title),
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        Text(
+                            text = stringResource(R.string.access_lock_gate_body),
+                            modifier = Modifier.padding(top = 12.dp),
+                        )
+                        AccessLockMessage(state.message)
+                        Button(
+                            onClick = onUnlock,
+                            enabled = !state.authenticationInProgress &&
+                                capability == DeviceAuthenticationCapability.AVAILABLE,
+                            modifier = Modifier.fillMaxWidth().padding(top = 20.dp).testTag("access-lock-unlock"),
+                        ) {
+                            if (state.authenticationInProgress) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.height(20.dp).testTag("access-lock-authenticating"),
+                                    color = MaterialTheme.colorScheme.primary,
+                                )
+                            } else {
+                                Text(stringResource(R.string.access_lock_unlock))
+                            }
+                        }
+                        DeviceCapabilityMessage(capability, onRetryDeviceSecurity, onOpenDeviceSecurity)
+                    }
                 }
             }
         }

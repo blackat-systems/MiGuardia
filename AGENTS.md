@@ -4,7 +4,7 @@
 
 1. Leer este archivo y `docs/STATUS.md`. El estado autorizado vive sólo en STATUS.
 2. Usar `docs/LECTURAS_POR_TAREA.md` para elegir contrato, decisiones, código y pruebas pertinentes.
-3. MAIN orquesta por `docs/ORQUESTACION_MAIN.md`: respetar sus etapas y dependencias, tomando el cursor y permisos de STATUS. Leer la ruta al entrar y sólo la etapa pertinente al reanudar; no cargar el Mermaid de presentación ni inventarios históricos.
+3. MAIN sigue el contrato y cursor de STATUS. `docs/ORQUESTACION_MAIN.md` conserva la ruta histórica 2.0; no reinicia ni impone sus 24 etapas a 3.0. No cargar Mermaid ni inventarios históricos al reanudar.
 4. Para integrar o delegar, consultar `docs/WORKFLOW.md`; para comprobar, `docs/VALIDACION.md`.
 
 No releer toda la documentación al reanudar: comprobar Git y cambios desde la última base conocida. Leer de nuevo los contratos modificados o cuyo contexto falte. `docs/archive/`, auditorías y prompts cerrados son antecedentes, no lectura de arranque ni órdenes ejecutables. Las rutas antiguas se conservan como enlaces de compatibilidad.
@@ -51,7 +51,7 @@ Autoridad: instrucción actual de Joaquin; decisiones de producto vigentes en `d
 - Aplicar `docs/VALIDACION.md` según impacto: documentación, lógica local, interoperabilidad, compilación, instrumentación y distribución son niveles distintos.
 - Repetir pruebas después de cambios/fallos pertinentes; una evidencia previa sólo sirve si cubre los mismos insumos y superficie. No exigir reconstrucción global en cada iteración por plantilla.
 - Si cambia conducta, probar límites y errores relevantes. UI/sistema requieren QA física proporcional autorizada; informar pendiente si no se ejecutó, sin confundir una extracción mecánica verificada con QA nueva.
-- Preservar tema claro/oscuro, accesibilidad y zoom interno 100/150/200, elegido por la persona y persistido. Usar densidad estable; no adaptar a `font_scale`, zoom o tamaño de Android ni consultar/modificar esos ajustes en pruebas.
+- Preservar tema, TalkBack sin controles extra y tamaño de letra nativo de Android (ADR 0043). No hay zoom interno. Conservar su preferencia heredada sólo en Copias; no modificar ajustes globales durante QA.
 - Revisar diff completo del alcance, no rastreados, permisos, dependencias y ausencia de datos privados antes del cierre.
 - Registrar implementación, revisión, commit real, validación local, matriz física y distribución por separado. Actualizar sólo STATUS para estado actual; el contrato conserva requisitos, la auditoría evidencia fechada.
 - Cierre breve: qué cambió y por qué, archivos relevantes, comprobaciones reales, límites y próximo paso. No declarar publicación, instalación o prueba que no ocurrió.

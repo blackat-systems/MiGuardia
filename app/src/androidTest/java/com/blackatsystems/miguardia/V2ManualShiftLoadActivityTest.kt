@@ -3,6 +3,7 @@ package com.blackatsystems.miguardia
 import android.content.Context
 import android.content.Intent
 import android.view.inputmethod.InputMethodManager
+import androidx.core.content.FileProvider
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.Lifecycle
 import android.content.pm.ActivityInfo
@@ -10,8 +11,11 @@ import android.content.res.Configuration
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ComposeTimeoutException
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.isDisplayed
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -27,6 +31,8 @@ import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.UiDevice
 import com.blackatsystems.miguardia.core.domain.AppDefaults
 import com.blackatsystems.miguardia.core.domain.model.Objective
+import com.blackatsystems.miguardia.core.domain.model.V2ShiftWrite
+import com.blackatsystems.miguardia.core.domain.model.ExplicitDayStatusType
 import com.blackatsystems.miguardia.core.domain.work.EffectiveRevision
 import com.blackatsystems.miguardia.core.domain.work.FirstWorkSet
 import com.blackatsystems.miguardia.core.domain.work.HolidayRule
@@ -42,22 +48,29 @@ import com.blackatsystems.miguardia.core.domain.work.WorkType
 import com.blackatsystems.miguardia.core.domain.work.WorkplaceRuleRevision
 import com.blackatsystems.miguardia.core.domain.work.WorkplaceRules
 import com.blackatsystems.miguardia.ui.calendar.CalendarViewModel
+import com.blackatsystems.miguardia.ui.calendar.CalendarInteractionMode
+import com.blackatsystems.miguardia.ui.calendar.CalendarSelectionPurpose
 import com.blackatsystems.miguardia.ui.management.V2ManualShiftLoadViewModel
+import com.blackatsystems.miguardia.ui.management.V2ManualShiftLoadStage
+import com.blackatsystems.miguardia.ui.management.V2ManualShiftLoadUiState
 import com.blackatsystems.miguardia.ui.theme.AppThemeMode
-import com.blackatsystems.miguardia.ui.theme.AppZoom
 import com.blackatsystems.miguardia.ui.worksetup.WorkSetupViewModel
 import com.blackatsystems.miguardia.ui.worksetup.WorkSetupSurface
 import java.time.YearMonth
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
+import java.time.format.DateTimeFormatter
 import java.io.File
+import java.util.Locale
 import java.util.UUID
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -113,7 +126,7 @@ class V2ManualShiftLoadActivityTest {
         scenario = ActivityScenario.launch(MainActivity::class.java)
         requireNotNull(scenario).onActivity { scenarioLaunchIntent = Intent(it.intent) }
         compose.waitUntil(WAIT_MILLIS) {
-            compose.onAllNodesWithTag("calendar-v2-load-shifts").fetchSemanticsNodes().isNotEmpty()
+            compose.onAllNodesWithTag("main-menu-button").fetchSemanticsNodes().isNotEmpty()
         }
         requireNotNull(scenario).onActivity {
             assertEquals(YearMonth.from(selectedDate), ViewModelProvider(it)[CalendarViewModel::class.java].uiState.value.visibleMonth)
@@ -144,24 +157,84 @@ class V2ManualShiftLoadActivityTest {
     }
 
     @Test
-    fun draftSurvivesRecreationAndShiftSnapshotSurviveReopen() {
-        compose.onNodeWithTag("calendar-v2-load-shifts").performScrollTo().performClick()
-        compose.onNodeWithTag("day-$selectedDate").performScrollTo().performClick()
-        compose.onNodeWithTag("v2-manual-confirm-dates").performScrollTo().performClick()
+    fun backFromInitialDateSelectionCancelsCompletelyWithoutReentryOrWrites() {
+        openManualLoad()
+        compose.onNodeWithTag("day-$selectedDate").performClick()
+
+        requireNotNull(scenario).onActivity { it.onBackPressedDispatcher.onBackPressed() }
         compose.waitUntil(WAIT_MILLIS) {
-            compose.onAllNodesWithTag("v2-template-$TEMPLATE_ID").fetchSemanticsNodes().isNotEmpty()
+            compose.onAllNodesWithTag("main-menu-button").fetchSemanticsNodes().isNotEmpty()
         }
-        compose.onNodeWithTag("v2-template-$TEMPLATE_ID").performScrollTo().performClick()
-        compose.onNodeWithTag("advanced-options-toggle").performScrollTo().performClick()
+        compose.waitForIdle()
+
+        requireNotNull(scenario).onActivity { activity ->
+            val load = ViewModelProvider(activity)[V2ManualShiftLoadViewModel::class.java].uiState.value
+            val calendar = ViewModelProvider(activity)[CalendarViewModel::class.java].uiState.value
+            assertEquals(V2ManualShiftLoadStage.IDLE, load.stage)
+            assertEquals(false, load.isActive)
+            assertEquals(CalendarInteractionMode.VIEW, calendar.interactionMode)
+            assertEquals(null, calendar.selectionPurpose)
+        }
+        assertTrue(runBlocking {
+            store().shifts.observeStartingBetween(selectedDate, selectedDate).first().isEmpty()
+        })
+        compose.onNodeWithTag("v2-manual-confirm-dates").assertDoesNotExist()
+    }
+
+    @Test
+    fun backFromTemplateStageReturnsToTheSameDateSelectionWithoutWriting() {
+        openManualLoad()
+        compose.onNodeWithTag("day-$selectedDate").performClick()
+        compose.onNodeWithTag("v2-manual-confirm-dates").performClick()
+        compose.waitUntil(WAIT_MILLIS) {
+            compose.onAllNodesWithTag("manual-institutions").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        requireNotNull(scenario).onActivity { it.onBackPressedDispatcher.onBackPressed() }
+        compose.waitUntil(WAIT_MILLIS) {
+            compose.onAllNodesWithTag("v2-manual-confirm-dates").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        requireNotNull(scenario).onActivity { activity ->
+            val load = ViewModelProvider(activity)[V2ManualShiftLoadViewModel::class.java].uiState.value
+            val calendar = ViewModelProvider(activity)[CalendarViewModel::class.java].uiState.value
+            assertEquals(V2ManualShiftLoadStage.SELECT_DATES, load.stage)
+            assertEquals(setOf(selectedDate), load.selectedDates)
+            assertEquals(CalendarInteractionMode.EDIT, calendar.interactionMode)
+            assertEquals(CalendarSelectionPurpose.MANUAL_LOAD, calendar.selectionPurpose)
+            assertEquals(setOf(selectedDate), calendar.editSelectedDates)
+            assertEquals(false, calendar.editSelectionConfirmed)
+        }
+        assertTrue(runBlocking {
+            store().shifts.observeStartingBetween(selectedDate, selectedDate).first().isEmpty()
+        })
+    }
+
+    @Test
+    fun draftSurvivesRecreationAndShiftSnapshotSurviveReopen() {
+        openManualLoad()
+        compose.onNodeWithTag("day-$selectedDate").performClick()
+        compose.onNodeWithTag("v2-manual-confirm-dates").performClick()
+        chooseInitialTemplate()
+        compose.onNodeWithTag("manual-add-note").performScrollTo().performClick()
+        compose.onNodeWithTag("manual-note").performScrollTo().performTextInput(NOTE)
+        compose.onNodeWithTag("manual-toggle-position").performScrollTo().performClick()
+        awaitEnabledControl("v2-manual-position")
         compose.onNodeWithTag("v2-manual-position").performScrollTo().performTextInput(POSITION)
 
         requireNotNull(scenario).recreate()
 
         compose.waitUntil(WAIT_MILLIS) {
-            compose.onAllNodesWithTag("v2-template-$TEMPLATE_ID").fetchSemanticsNodes().isNotEmpty()
+            compose.onAllNodesWithTag("manual-institutions").fetchSemanticsNodes().isNotEmpty()
         }
-        compose.onNodeWithTag("v2-template-$TEMPLATE_ID").assertIsSelected()
-        compose.onNodeWithText(POSITION).assertIsDisplayed()
+        assertDraftRestoredWithoutWrites()
+        assertSelectedTemplate(TEMPLATE_ID)
+        expandNoteEditorIfNeeded()
+        compose.onNodeWithTag("manual-note").performScrollTo().assertTextContains(NOTE)
+        compose.onNodeWithTag("v2-manual-position")
+            .performScrollTo()
+            .assertIsDisplayed()
+            .assertTextContains(POSITION)
 
         rotateAndVerifyDraft(
             requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE,
@@ -190,6 +263,7 @@ class V2ManualShiftLoadActivityTest {
         assertEquals(saved.id, snapshot?.shiftId)
         assertEquals(TEMPLATE_ID, snapshot?.templateId)
         assertEquals(WorkSector.NURSING, snapshot?.sector)
+        assertEquals(NOTE, runBlocking { store.shiftNotes.observeForShift(saved.id).first().single().body })
 
         compose.waitUntil(WAIT_MILLIS) {
             compose.onAllNodesWithText(ABBREVIATION, useUnmergedTree = true)
@@ -208,9 +282,14 @@ class V2ManualShiftLoadActivityTest {
 
     @Test
     fun contextualPlaceAndTemplateSurviveRecreationThenConfirmExactPairs() {
-        val otherDate = if (selectedDate.dayOfMonth == 1) selectedDate.plusDays(1) else selectedDate.withDayOfMonth(1)
+        val otherDate = if (selectedDate.dayOfWeek.value < 7 && selectedDate.plusDays(1).month == selectedDate.month) {
+            selectedDate.plusDays(1)
+        } else {
+            selectedDate.minusDays(1)
+        }
         val dates = setOf(selectedDate, otherDate)
         enterContextualLoad(dates)
+        openCatalog()
         compose.onNodeWithTag("v2-manual-create-place").performScrollTo().performClick()
         awaitEnabledControl("work-place-name")
         compose.onNodeWithTag("work-place-name").performScrollTo().performTextInput("Lugar ficticio contextual")
@@ -237,7 +316,7 @@ class V2ManualShiftLoadActivityTest {
         val template = awaitCreatedTemplate()
         assertEquals(place.id, template.workPlaceId)
         assertLoadPreserved(dates, template.id)
-        captureContextualMatrix("return", listOf("v2-template-${template.id}", "v2-manual-save-direct"))
+        captureContextualMatrix("return", listOf("manual-institutions", "v2-manual-save-direct"))
         assertLoadPreserved(dates, template.id)
         assertTrue(runBlocking { store.shifts.observeStartingBetween(dates.min(), dates.max()).first().isEmpty() })
         compose.onNodeWithTag("v2-manual-save-direct").performScrollTo().performClick()
@@ -255,6 +334,7 @@ class V2ManualShiftLoadActivityTest {
     @Test
     fun contextualExistingPlaceDefersExternalDateUntilLoadConfirmation() {
         enterContextualLoad(setOf(selectedDate))
+        openCatalog(PLACE_ID)
         compose.onNodeWithTag("v2-manual-create-template").performScrollTo().performClick()
         awaitEnabledControl("work-time-start")
         val externalDate = selectedDate.plusMonths(1)
@@ -283,6 +363,7 @@ class V2ManualShiftLoadActivityTest {
     @Test
     fun cancellingContextualTemplateKeepsSavedPlaceAndOriginalConfirmedLoad() {
         enterContextualLoad(setOf(selectedDate))
+        openCatalog()
         compose.onNodeWithTag("v2-manual-create-place").performScrollTo().performClick()
         awaitEnabledControl("work-place-name")
         compose.onNodeWithTag("work-place-name").performScrollTo().performTextInput("Lugar ficticio parcial")
@@ -306,6 +387,326 @@ class V2ManualShiftLoadActivityTest {
         assertTrue(runBlocking { store().shifts.observeStartingBetween(selectedDate, selectedDate).first().isEmpty() })
     }
 
+    @Test
+    fun unifiedSingleAndMultipleLoadOverwriteOverlayClearAndCancelPreserveExactData() {
+        val month = YearMonth.from(selectedDate)
+        val otherDates = (1..month.lengthOfMonth()).map(month::atDay).filter { it != selectedDate }.take(2)
+        val batchDates = setOf(selectedDate, otherDates[0])
+        val francoDate = otherDates[1]
+
+        // The real single-day entry goes directly from detail to the same main form.
+        compose.onNodeWithTag("day-$selectedDate").performClick()
+        captureClosureFrame("day-detail")
+        compose.onNodeWithText("Editar día").performScrollTo().performClick()
+        awaitEnabledControl("manual-institutions")
+        compose.onNodeWithTag("day-detail-manage-day-off").assertDoesNotExist()
+        compose.onAllNodesWithText("Cargando jornada para los días:").assertCountEquals(1)
+        chooseInitialTemplate()
+        addLoadNote("Nota original ficticia")
+        captureContextualMatrix("load-note", listOf("manual-note", "v2-manual-save-direct"))
+        compose.onNodeWithTag("v2-manual-save-direct").performScrollTo().performClick()
+        awaitShiftCount(setOf(selectedDate), 1)
+        val first = runBlocking { store().shifts.observeStartingBetween(selectedDate, selectedDate).first().single() }
+        val oldNotes = runBlocking { store().shiftNotes.observeForShift(first.id).first() }
+        assertEquals("Nota original ficticia", oldNotes.single().body)
+
+        // A separate, non-overlapping row is synthetic fixture data, not another UI action.
+        val untouchedId = UUID.randomUUID()
+        val untouched = first.copy(id = untouchedId,
+            startAt = selectedDate.atTime(20, 0).atZone(AppDefaults.zoneId()).toInstant(),
+            endAt = selectedDate.atTime(23, 0).atZone(AppDefaults.zoneId()).toInstant(),
+            startTimeSnapshot = LocalTime.of(20, 0), endTimeSnapshot = LocalTime.of(23, 0))
+        runBlocking {
+            val snapshot = requireNotNull(store().v2Shifts.getWorkSnapshot(first.id))
+            val eveningTemplate = requireNotNull(store().workCatalog.getWorkTemplate(snapshot.templateId))
+                .copy(id = UUID.randomUUID(), startTime = LocalTime.of(20, 0), endTime = LocalTime.of(23, 0))
+            store().workCatalog.createWorkTemplate(eveningTemplate)
+            store().v2Shifts.insert(V2ShiftWrite(untouched,
+                snapshot.copy(shiftId = untouchedId, templateId = eveningTemplate.id)))
+        }
+
+        enterContextualLoad(batchDates)
+        addLoadNote("Nota común ficticia, independiente")
+        compose.onNodeWithTag("v2-manual-save-direct").performScrollTo().performClick()
+        awaitEnabledControl("v2-occupied-dialog")
+        captureClosureFrame("overwrite-preview")
+        compose.onNodeWithText("Sobrescribir").performScrollTo().performClick()
+        confirmWarningsIfPresented(batchDates, 3)
+        val afterOverwrite = runBlocking { store().shifts.observeStartingBetween(batchDates.min(), batchDates.max()).first() }
+        assertEquals(untouched, afterOverwrite.single { it.id == untouchedId })
+        assertTrue(afterOverwrite.none { it.id == first.id })
+        assertTrue(runBlocking { store().shiftNotes.observeForShift(first.id).first().isEmpty() })
+        val newNotes = afterOverwrite.filter { it.id != untouchedId }.map { row ->
+            runBlocking { store().shiftNotes.observeForShift(row.id).first().single() }
+        }
+        assertEquals(2, newNotes.map { it.id }.distinct().size)
+        assertTrue(newNotes.all { it.body == "Nota común ficticia, independiente" })
+
+        openLoadDates(setOf(francoDate))
+        compose.onNodeWithTag("v2-mark-day-off").performScrollTo().performClick()
+        awaitEnabledControl("manual-batch-preview")
+        compose.onNodeWithText("Confirmar").performClick()
+        compose.waitUntil(WAIT_MILLIS) {
+            runBlocking { store().explicitDayStatuses.observeBetween(francoDate, francoDate).first().singleOrNull()?.type == ExplicitDayStatusType.DAY_OFF }
+        }
+        awaitLoadCompleted()
+        openLoadDates(setOf(francoDate))
+        chooseInitialTemplate()
+        compose.onNodeWithTag("v2-manual-save-direct").performScrollTo().performClick()
+        awaitEnabledControl("v2-occupied-dialog")
+        compose.onNodeWithText("Superponer").performScrollTo().performClick()
+        confirmWarningsIfPresented(setOf(francoDate), 1)
+        assertEquals(ExplicitDayStatusType.DAY_OFF, runBlocking {
+            store().explicitDayStatuses.observeBetween(francoDate, francoDate).first().single().type
+        })
+        captureClosureFrame("calendar-after-overlay")
+
+        openLoadDates(setOf(selectedDate))
+        val beforeClear = runBlocking { store().shifts.observeStartingBetween(selectedDate, selectedDate).first() }
+        compose.onNodeWithTag("manual-clear-days").performScrollTo().performClick()
+        awaitEnabledControl("manual-batch-preview")
+        captureClosureFrame("clear-preview")
+        compose.onNodeWithText("Cancelar").performClick()
+        assertEquals(beforeClear, runBlocking { store().shifts.observeStartingBetween(selectedDate, selectedDate).first() })
+        compose.onNodeWithTag("manual-clear-days").performScrollTo().performClick()
+        awaitEnabledControl("manual-batch-preview")
+        compose.onNodeWithText("Confirmar").performClick()
+        awaitShiftCount(setOf(selectedDate), 0)
+        assertEquals(ExplicitDayStatusType.UNDEFINED, runBlocking {
+            store().explicitDayStatuses.observeBetween(selectedDate, selectedDate).first().single().type
+        })
+        assertEquals(1, runBlocking { store().shifts.observeStartingBetween(otherDates[0], otherDates[0]).first().size })
+
+        openLoadDates(setOf(selectedDate))
+        chooseInitialTemplate()
+        addLoadNote("Esta nota ficticia no se guarda")
+        compose.onNodeWithTag("manual-cancel-load").performScrollTo().performClick()
+        compose.onNodeWithText("Descartar carga").performClick()
+        awaitLoadCompleted()
+        assertTrue(runBlocking { store().shifts.observeStartingBetween(selectedDate, selectedDate).first().isEmpty() })
+        assertEquals(2, runBlocking { store().workCatalog.observeCatalog(TIMELINE_ID, WorkSector.NURSING).first().workTemplates.size })
+        compose.onNodeWithTag("month-grid").assertIsDisplayed()
+        compose.onNodeWithTag("calendar-primary-actions").assertDoesNotExist()
+        captureClosureFrame("calendar-final")
+    }
+
+    @Test
+    fun reselectingDatesPreservesCompleteDraftAcrossEmptySelectionAndRecreationThenSavesOnlyFinalDates() {
+        val month = YearMonth.from(selectedDate)
+        val initialDates = (1..4).map(month::atDay).toSet()
+        val finalDates = setOf(month.atDay(2), month.atDay(4))
+        enterContextualLoad(initialDates)
+        addLoadNote(NOTE)
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        check(context.packageName == QA_APPLICATION_ID)
+        val bitmap = android.graphics.Bitmap.createBitmap(2, 2, android.graphics.Bitmap.Config.ARGB_8888)
+        val bytes = java.io.ByteArrayOutputStream().use { output ->
+            try {
+                bitmap.eraseColor(android.graphics.Color.CYAN)
+                check(bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, output))
+                output.toByteArray()
+            } finally { bitmap.recycle() }
+        }
+        // A private synthetic source exercises the real importer, not the OEM picker or user media.
+        val source = File(context.filesDir, "reports/artifacts/stage32-source-${UUID.randomUUID()}.png").also {
+            check(it.parentFile!!.isDirectory || it.parentFile!!.mkdirs())
+            it.writeBytes(bytes)
+        }
+        try {
+            val uri = FileProvider.getUriForFile(context, "$QA_APPLICATION_ID.fileprovider", source)
+            requireNotNull(scenario).onActivity { activity ->
+                ViewModelProvider(activity)[V2ManualShiftLoadViewModel::class.java].importNoteImages(List(31) { uri })
+            }
+            compose.waitUntil(WAIT_MILLIS) { manualLoadState().errorMessage != null }
+            assertTrue(manualLoadState().noteAttachments.isEmpty())
+            requireNotNull(scenario).onActivity { activity ->
+                ViewModelProvider(activity)[V2ManualShiftLoadViewModel::class.java].importNoteImages(listOf(uri))
+            }
+            compose.waitUntil(WAIT_MILLIS) {
+                manualLoadState().let { !it.isLoading && it.noteAttachments.size == 1 }
+            }
+            val before = manualLoadState()
+            assertNull(before.errorMessage)
+            val draftFile = File(context.filesDir, "manual_load_drafts/${before.noteAttachments.single().storageKey}")
+            assertArrayEquals(bytes, draftFile.readBytes())
+            compose.onNodeWithTag("manual-expand-dates").performScrollTo().performClick()
+            val locale = Locale.forLanguageTag("es-AR")
+            val fullDates = initialDates.sorted().joinToString("\n") { date ->
+                date.format(DateTimeFormatter.ofPattern("EEEE dd/MM/yy", locale))
+                    .replaceFirstChar { it.titlecase(locale) }
+            }
+            compose.onNodeWithTag("v2-manual-exact-dates").performScrollTo().assertTextContains(fullDates)
+            captureClosureFrame("stage32-expanded-dates")
+            compose.onNodeWithTag("manual-expand-dates").performScrollTo().performClick()
+            openCatalog(PLACE_ID)
+            compose.onNodeWithTag("v2-manual-create-template").performScrollTo().assertIsDisplayed()
+            captureClosureFrame("stage32-inline-institution-schedules")
+            compose.onNodeWithTag("manual-institutions").performScrollTo().performClick()
+            captureContextualMatrix("stage32-draft", listOf("manual-toggle-position", "manual-note-images"))
+            assertNoDraftWrites(month)
+            compose.onNodeWithTag("v2-manual-modify-dates").performScrollTo().performClick()
+            awaitEnabledControl("v2-manual-confirm-dates")
+            initialDates.forEach { date -> compose.onNodeWithTag("day-$date").performClick() }
+            compose.waitUntil(WAIT_MILLIS) { manualLoadState().selectedDates.isEmpty() }
+            compose.onNodeWithTag("v2-manual-confirm-dates").assertIsNotEnabled()
+            requireNotNull(scenario).recreate()
+            compose.waitUntil(WAIT_MILLIS) {
+                compose.onAllNodesWithTag("v2-manual-confirm-dates").fetchSemanticsNodes().isNotEmpty()
+            }
+            compose.onNodeWithTag("v2-manual-confirm-dates").assertIsNotEnabled()
+            val empty = manualLoadState()
+            assertEquals(V2ManualShiftLoadStage.SELECT_DATES, empty.stage)
+            assertTrue(empty.selectedDates.isEmpty())
+            assertDraftValues(before, empty)
+            assertArrayEquals(bytes, draftFile.readBytes())
+            assertNoDraftWrites(month)
+            captureClosureFrame("stage32-empty-selection-restored")
+            finalDates.forEach { date -> compose.onNodeWithTag("day-$date").performClick() }
+            awaitEnabledControl("v2-manual-confirm-dates")
+            compose.onNodeWithTag("v2-manual-confirm-dates").performClick()
+            awaitEnabledControl("manual-institutions")
+            val after = manualLoadState()
+            assertEquals(finalDates, after.selectedDates)
+            assertEquals(before.selectedOption, after.selectedOption)
+            assertDraftValues(before, after)
+            assertTrue(after.occupiedDates.isEmpty())
+            assertEquals(null, after.occupiedPolicy)
+            assertEquals(null, after.reviewFingerprint)
+            compose.onNodeWithTag("manual-expand-dates").assertDoesNotExist()
+            expandNoteEditorIfNeeded()
+            compose.onNodeWithTag("manual-note").performScrollTo().assertTextContains(NOTE)
+            compose.onNodeWithTag("manual-note-images").assertTextContains("Agregar imágenes")
+            compose.onNodeWithTag("note-draft-image-1").performScrollTo().assertIsDisplayed()
+            assertNoDraftWrites(month)
+            captureClosureFrame("stage32-final-draft-restored")
+            compose.onNodeWithTag("v2-manual-save-direct").performScrollTo().performClick()
+            awaitShiftCount(finalDates, finalDates.size)
+            val saved = runBlocking { store().shifts.observeStartingBetween(month.atDay(1), month.atEndOfMonth()).first() }
+            assertEquals(finalDates, saved.map { it.localStartDate }.toSet())
+            assertEquals(finalDates.size, saved.size)
+            val notes = saved.map { shift ->
+                assertEquals(POSITION, shift.position)
+                assertEquals(OBJECTIVE_ID, shift.sourceObjectiveId)
+                assertEquals(TEMPLATE_ID, runBlocking { store().v2Shifts.getWorkSnapshot(shift.id) }?.templateId)
+                runBlocking { store().shiftNotes.observeWithAttachmentsForShift(shift.id).first().single() }
+            }
+            assertEquals(finalDates.size, notes.map { it.note.id }.distinct().size)
+            assertEquals(finalDates.size, notes.map { it.attachments.single().storageKey }.distinct().size)
+            notes.forEach { note ->
+                assertEquals(NOTE, note.note.body)
+                assertArrayEquals(bytes, File(context.filesDir, "schedule_photos/${note.attachments.single().storageKey}").readBytes())
+            }
+            assertEquals(false, draftFile.exists())
+            assertEquals(1, runBlocking { store().workCatalog.observeCatalog(TIMELINE_ID, WorkSector.NURSING).first().workTemplates.size })
+            compose.onNodeWithTag("month-grid").assertIsDisplayed()
+            compose.onNodeWithTag("calendar-primary-actions").assertDoesNotExist()
+            captureClosureFrame("stage32-calendar-final-selection")
+        } finally {
+            check(!source.exists() || source.delete())
+        }
+    }
+
+    private fun manualLoadState(): V2ManualShiftLoadUiState {
+        var state: V2ManualShiftLoadUiState? = null
+        requireNotNull(scenario).onActivity { state = ViewModelProvider(it)[V2ManualShiftLoadViewModel::class.java].uiState.value }
+        return requireNotNull(state)
+    }
+
+    private fun assertDraftValues(before: V2ManualShiftLoadUiState, after: V2ManualShiftLoadUiState) {
+        assertEquals(before.operationId, after.operationId)
+        assertEquals(before.operationTimestamp, after.operationTimestamp)
+        assertEquals(before.selectedTemplateId, after.selectedTemplateId)
+        assertEquals(before.selectedTemplateFingerprint, after.selectedTemplateFingerprint)
+        assertEquals(before.position, after.position)
+        assertEquals(before.noteBody, after.noteBody)
+        assertEquals(before.noteAttachments, after.noteAttachments)
+    }
+
+    private fun assertNoDraftWrites(month: YearMonth) {
+        assertTrue(runBlocking { store().shifts.observeStartingBetween(month.atDay(1), month.atEndOfMonth()).first().isEmpty() })
+        assertTrue(runBlocking { store().shiftNotes.allAttachmentStorageKeys().isEmpty() })
+        assertTrue(runBlocking { store().explicitDayStatuses.observeBetween(month.atDay(1), month.atEndOfMonth()).first().isEmpty() })
+    }
+
+    private fun captureClosureFrame(name: String) {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        if (InstrumentationRegistry.getArguments().getString("captureContextualEvidence") != "true") return
+        val context = instrumentation.targetContext
+        check(context.packageName == QA_APPLICATION_ID)
+        compose.waitForIdle()
+        settleConfirmationForCapture()
+        compose.waitUntil(WAIT_MILLIS) {
+            instrumentation.uiAutomation.rootInActiveWindow?.packageName?.toString() == QA_APPLICATION_ID
+        }
+        val directory = contextualEvidenceDirectory ?: File(checkNotNull(context.getExternalFilesDir(null)),
+            "contextual-qa/${UUID.randomUUID()}").also { check(it.mkdirs()); contextualEvidenceDirectory = it }
+        val output = File(directory, "$name.png")
+        captureQaFrame(output)
+    }
+
+    private fun captureQaFrame(output: File) {
+        val automation = InstrumentationRegistry.getInstrumentation().uiAutomation
+        fun qaFocused() = automation.rootInActiveWindow?.packageName?.toString() == QA_APPLICATION_ID
+        check(qaFocused()) { "Se detuvo la captura: QA perdió el foco." }
+        val bitmap = checkNotNull(automation.takeScreenshot())
+        try {
+            // Keep pixels in memory until both checks agree; never persist a foreign window.
+            check(qaFocused()) { "Se descartó la captura: QA perdió el foco." }
+            check(!output.exists())
+            output.outputStream().use { check(bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)) }
+        } finally { bitmap.recycle() }
+    }
+
+    private fun addLoadNote(text: String) {
+        compose.onNodeWithTag("manual-add-note").performScrollTo().performClick()
+        compose.onNodeWithTag("manual-note").performScrollTo().performTextInput(text)
+        requireNotNull(scenario).onActivity { activity ->
+            activity.currentFocus?.clearFocus()
+            (activity.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager)
+                .hideSoftInputFromWindow(activity.window.decorView.windowToken, 0)
+        }
+    }
+
+    private fun openLoadDates(dates: Set<LocalDate>) {
+        openManualLoad()
+        dates.forEach { date -> awaitEnabledControl("day-$date"); compose.onNodeWithTag("day-$date").performClick() }
+        compose.onNodeWithTag("v2-manual-confirm-dates").performClick()
+        awaitEnabledControl("manual-institutions")
+    }
+
+    private fun awaitShiftCount(dates: Set<LocalDate>, expected: Int) {
+        compose.waitUntil(WAIT_MILLIS) {
+            runBlocking { store().shifts.observeStartingBetween(dates.min(), dates.max()).first()
+                .count { it.localStartDate in dates } == expected }
+        }
+        awaitLoadCompleted()
+    }
+
+    private fun awaitLoadCompleted() {
+        compose.waitUntil(WAIT_MILLIS) {
+            var complete = false
+            requireNotNull(scenario).onActivity { activity ->
+                complete = ViewModelProvider(activity)[V2ManualShiftLoadViewModel::class.java].uiState.value.stage == V2ManualShiftLoadStage.IDLE &&
+                    ViewModelProvider(activity)[CalendarViewModel::class.java].uiState.value.interactionMode == CalendarInteractionMode.VIEW
+            }
+            complete
+        }
+        awaitEnabledControl("main-menu-button")
+    }
+
+    private fun confirmWarningsIfPresented(dates: Set<LocalDate>, expected: Int) {
+        // Wait for the next state, not a retry: at most one explicit acknowledgement.
+        compose.waitUntil(WAIT_MILLIS) {
+            compose.onAllNodesWithTag("v2-warning-dialog").fetchSemanticsNodes().isNotEmpty() ||
+                runBlocking { store().shifts.observeStartingBetween(dates.min(), dates.max()).first()
+                    .count { it.localStartDate in dates } == expected }
+        }
+        if (compose.onAllNodesWithTag("v2-warning-dialog").fetchSemanticsNodes().isNotEmpty()) {
+            compose.onNodeWithText("Continuar igualmente").performClick()
+        }
+        awaitShiftCount(dates, expected)
+    }
+
     private fun store() = (InstrumentationRegistry.getInstrumentation().targetContext.applicationContext as MiGuardiaApplication).localDataStore
 
     /** Opt-in visual evidence of this disposable synthetic fixture; never changes Android display settings. */
@@ -322,17 +723,16 @@ class V2ManualShiftLoadActivityTest {
             contextualEvidenceDirectory = it
         }
         val preferences = context.getSharedPreferences(MainActivity.DISPLAY_PREFERENCES, Context.MODE_PRIVATE)
-        val hadZoom = preferences.contains(MainActivity.APP_ZOOM_PERCENT)
-        val previousZoom = preferences.getInt(MainActivity.APP_ZOOM_PERCENT, AppZoom.STANDARD.percent)
         val hadTheme = preferences.contains(MainActivity.APP_THEME_MODE)
         val previousTheme = preferences.getString(MainActivity.APP_THEME_MODE, null)
         val device = UiDevice.getInstance(instrumentation)
         try {
             for (theme in listOf(AppThemeMode.LIGHT, AppThemeMode.DARK)) {
-                for (zoom in AppZoom.entries) {
+                // Real Activity evidence inherits the phone's current Android text size.
+                // Simulated Android text configurations are covered by Compose matrix tests.
+                run {
                     check(preferences.edit()
                         .putString(MainActivity.APP_THEME_MODE, theme.name)
-                        .putInt(MainActivity.APP_ZOOM_PERCENT, zoom.percent)
                         .commit())
                     requireNotNull(scenario).recreate()
                     awaitEnabledControl(controlTags.first())
@@ -343,6 +743,7 @@ class V2ManualShiftLoadActivityTest {
                             .hideSoftInputFromWindow(activity.window.decorView.windowToken, 0)
                     }
                     compose.waitForIdle()
+                    settleConfirmationForCapture()
                     for (tag in controlTags) {
                         awaitEnabledControl(tag)
                         compose.onNodeWithTag(tag).performScrollTo().assertIsDisplayed().assertIsEnabled()
@@ -360,24 +761,20 @@ class V2ManualShiftLoadActivityTest {
                             compose.waitUntil(WAIT_MILLIS) { qaWindowIsActive() }
                         } catch (error: ComposeTimeoutException) {
                             throw AssertionError(
-                                "QA capture $stage/${theme.name}/${zoom.percent}: focus=$hasFocus, activePackage=$activePackage",
+                                "QA capture $stage/${theme.name}/android-current-font: QA focus unavailable",
                                 error,
                             )
                         }
                         check(qaWindowIsActive()) {
                             "No se captura una aplicación ajena al fixture QA"
                         }
-                        val file = File(evidence, "$stage-${theme.name}-${zoom.percent}-$tag.png")
-                        check(!file.exists() && device.takeScreenshot(file)) {
-                            "No se pudo guardar la captura contextual propia"
-                        }
+                        val file = File(evidence, "$stage-${theme.name}-android-current-font-$tag.png")
+                        captureQaFrame(file)
                     }
                 }
             }
         } finally {
             val editor = preferences.edit()
-            if (hadZoom) editor.putInt(MainActivity.APP_ZOOM_PERCENT, previousZoom)
-            else editor.remove(MainActivity.APP_ZOOM_PERCENT)
             if (hadTheme) editor.putString(MainActivity.APP_THEME_MODE, previousTheme)
             else editor.remove(MainActivity.APP_THEME_MODE)
             check(editor.commit()) { "No se pudo restaurar la apariencia interna del fixture" }
@@ -386,17 +783,61 @@ class V2ManualShiftLoadActivityTest {
         }
     }
 
+    private fun settleConfirmationForCapture() {
+        // Verify the normal transient dismissal using Compose's clock, so a banner
+        // cannot obscure the visual evidence. No production duration or assertion changes.
+        compose.mainClock.advanceTimeBy(com.blackatsystems.miguardia.ui.components.CONFIRMATION_DURATION_MILLIS + 32)
+        compose.waitForIdle()
+        compose.onNodeWithTag("transient-confirmation").assertDoesNotExist()
+    }
+
     private fun enterContextualLoad(dates: Set<LocalDate>) {
-        compose.onNodeWithTag("calendar-v2-load-shifts").performScrollTo().performClick()
+        openManualLoad()
         dates.forEach {
             awaitEnabledControl("day-$it")
-            compose.onNodeWithTag("day-$it").performScrollTo().performClick()
+            compose.onNodeWithTag("day-$it").performClick()
         }
-        compose.onNodeWithTag("v2-manual-confirm-dates").performScrollTo().performClick()
-        compose.waitUntil(WAIT_MILLIS) { compose.onAllNodesWithTag("v2-template-$TEMPLATE_ID").fetchSemanticsNodes().isNotEmpty() }
-        compose.onNodeWithTag("v2-template-$TEMPLATE_ID").performScrollTo().performClick()
-        compose.onNodeWithTag("advanced-options-toggle").performScrollTo().performClick()
+        compose.onNodeWithTag("v2-manual-confirm-dates").performClick()
+        chooseInitialTemplate()
+        compose.onNodeWithTag("manual-toggle-position").performScrollTo().performClick()
+        awaitEnabledControl("v2-manual-position")
         compose.onNodeWithTag("v2-manual-position").performScrollTo().performTextInput(POSITION)
+    }
+
+    private fun openManualLoad() {
+        awaitEnabledControl("main-menu-button")
+        compose.onNodeWithTag("main-menu-button").performClick()
+        awaitEnabledControl("drawer-action-calendar-load")
+        compose.onNodeWithTag("drawer-action-calendar-load").performClick()
+    }
+
+    private fun openCatalog(placeId: UUID? = null) {
+        awaitEnabledControl("manual-institutions")
+        if (compose.onAllNodesWithTag("manual-inline-catalog").fetchSemanticsNodes().isEmpty()) {
+            compose.onNodeWithTag("manual-institutions").performScrollTo().performClick()
+        }
+        if (placeId != null) {
+            awaitEnabledControl("manual-place-$placeId")
+            compose.onNodeWithTag("manual-place-$placeId").performScrollTo().performClick()
+        }
+    }
+
+    private fun chooseInitialTemplate() {
+        openCatalog(PLACE_ID)
+        compose.onNodeWithTag("v2-template-$TEMPLATE_ID").performScrollTo().performClick()
+        assertSelectedTemplate(TEMPLATE_ID)
+    }
+
+    private fun assertSelectedTemplate(templateId: UUID) {
+        val template = runBlocking {
+            store().workCatalog.observeCatalog(TIMELINE_ID, WorkSector.NURSING).first()
+                .workTemplates.single { it.id == templateId }
+        }
+        openCatalog(template.workPlaceId)
+        awaitSelectedControl("v2-template-$templateId")
+        compose.onNodeWithTag("v2-template-$templateId").performScrollTo().assertIsSelected()
+        compose.onNodeWithTag("manual-institutions").performScrollTo().performClick()
+        compose.onNodeWithTag("manual-institutions").performScrollTo().assertIsDisplayed()
     }
 
     private fun fillContextualTemplate() {
@@ -409,6 +850,7 @@ class V2ManualShiftLoadActivityTest {
     }
 
     private fun awaitEnabledControl(tag: String) {
+        if (tag == "manual-note" || tag == "manual-note-images") expandNoteEditorIfNeeded()
         // Room/recovery may expose a disabled editor before its asynchronous check completes.
         // Await the same semantic enablement required by text input, not merely its presence.
         compose.waitUntil(WAIT_MILLIS) {
@@ -419,18 +861,32 @@ class V2ManualShiftLoadActivityTest {
         compose.onNodeWithTag(tag).assertIsEnabled()
     }
 
+    private fun expandNoteEditorIfNeeded() {
+        if (compose.onAllNodesWithTag("manual-note").fetchSemanticsNodes().isEmpty()) {
+            compose.onNodeWithTag("manual-add-note").performScrollTo().performClick()
+        }
+    }
+
+    private fun awaitSelectedControl(tag: String) {
+        compose.waitUntil(WAIT_MILLIS) {
+            compose.onAllNodesWithTag(tag).fetchSemanticsNodes().singleOrNull()?.let {
+                it.config.getOrElse(SemanticsProperties.Selected) { false }
+            } == true
+        }
+        compose.onNodeWithTag(tag).assertIsSelected()
+    }
+
     private fun awaitCreatedTemplate(): WorkTemplate {
         compose.waitUntil(WAIT_MILLIS) {
             runBlocking { store().workCatalog.observeCatalog(TIMELINE_ID, WorkSector.NURSING).first().workTemplates.size == 2 }
         }
         val template = runBlocking { store().workCatalog.observeCatalog(TIMELINE_ID, WorkSector.NURSING).first().workTemplates.single { it.id != TEMPLATE_ID } }
-        compose.waitUntil(WAIT_MILLIS) { compose.onAllNodesWithTag("v2-template-${template.id}").fetchSemanticsNodes().isNotEmpty() }
+        awaitEnabledControl("manual-institutions")
         return template
     }
 
     private fun assertLoadPreserved(dates: Set<LocalDate>, templateId: UUID) {
-        compose.waitUntil(WAIT_MILLIS) { compose.onAllNodesWithTag("v2-template-$templateId").fetchSemanticsNodes().isNotEmpty() }
-        compose.onNodeWithTag("v2-template-$templateId").performScrollTo().assertIsSelected()
+        assertSelectedTemplate(templateId)
         requireNotNull(scenario).onActivity {
             val load = ViewModelProvider(it)[V2ManualShiftLoadViewModel::class.java].uiState.value
             val calendar = ViewModelProvider(it)[CalendarViewModel::class.java].uiState.value
@@ -461,11 +917,35 @@ class V2ManualShiftLoadActivityTest {
             currentOrientation == expectedConfigurationOrientation
         }
         compose.waitUntil(WAIT_MILLIS) {
-            compose.onAllNodesWithTag("v2-template-$TEMPLATE_ID").fetchSemanticsNodes().isNotEmpty()
+            compose.onAllNodesWithTag("manual-institutions").fetchSemanticsNodes().isNotEmpty()
         }
-        compose.onNodeWithTag("v2-template-$TEMPLATE_ID").assertIsSelected()
-        compose.onNodeWithTag("v2-manual-position").performScrollTo()
-        compose.onNodeWithText(POSITION).assertIsDisplayed()
+        assertDraftRestoredWithoutWrites()
+        assertSelectedTemplate(TEMPLATE_ID)
+        expandNoteEditorIfNeeded()
+        compose.onNodeWithTag("manual-note").performScrollTo().assertTextContains(NOTE)
+        compose.onNodeWithTag("v2-manual-position")
+            .performScrollTo()
+            .assertIsDisplayed()
+            .assertTextContains(POSITION)
+    }
+
+    private fun assertDraftRestoredWithoutWrites() {
+        requireNotNull(scenario).onActivity { activity ->
+            val load = ViewModelProvider(activity)[V2ManualShiftLoadViewModel::class.java].uiState.value
+            val calendar = ViewModelProvider(activity)[CalendarViewModel::class.java].uiState.value
+            assertEquals(V2ManualShiftLoadStage.CHOOSE_TEMPLATE, load.stage)
+            assertEquals(setOf(selectedDate), load.selectedDates)
+            assertEquals(TEMPLATE_ID, load.selectedTemplateId)
+            assertEquals(POSITION, load.position)
+            assertEquals(NOTE, load.noteBody)
+            assertEquals(CalendarInteractionMode.EDIT, calendar.interactionMode)
+            assertEquals(CalendarSelectionPurpose.MANUAL_LOAD, calendar.selectionPurpose)
+            assertEquals(setOf(selectedDate), calendar.editSelectedDates)
+            assertTrue(calendar.editSelectionConfirmed)
+        }
+        assertTrue(runBlocking {
+            store().shifts.observeStartingBetween(selectedDate, selectedDate).first().isEmpty()
+        })
     }
 
     private fun firstWorkSet(
@@ -540,6 +1020,7 @@ class V2ManualShiftLoadActivityTest {
         const val WAIT_MILLIS: Long = 10_000L
         const val ABBREVIATION: String = "INT"
         const val POSITION: String = "Puesto ficticio integral"
+        const val NOTE: String = "Nota ficticia preservada al recrear"
         val TIMELINE_ID: UUID = UUID.fromString("93000000-0000-0000-0000-000000000001")
         val REVISION_ID: UUID = UUID.fromString("93000000-0000-0000-0000-000000000002")
         val OBJECTIVE_ID: UUID = UUID.fromString("93000000-0000-0000-0000-000000000003")

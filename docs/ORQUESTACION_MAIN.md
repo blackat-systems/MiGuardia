@@ -1,5 +1,7 @@
 # Orden de orquestación de MAIN — MiGuardia 2.0
 
+> Referencia histórica 2.0. Para continuar 3.0 rigen `docs/STATUS.md`, su contrato y `docs/WORKFLOW.md`. Las etapas y expresiones de despacho siguientes conservan su contexto 2.0; no reabren trabajo ni constituyen una ruta 3.0 aceptada.
+
 **Contrato de orden adoptado por Joaquín y actualizado por su decisión de distribución pública del 8/09/2026.** MAIN debe organizar la continuación desde las 24 etapas de este flowchart. Este archivo define **orden, dependencias y aceptación**; `docs/STATUS.md` conserva **etapa alcanzada, siguiente despacho, estado, evidencia y autorizaciones**. Planificación y ADR conservan las reglas de producto y técnicas.
 
 Al entrar por primera vez, leer este documento. Al reanudar, comprobar STATUS y el delta Git; releer sólo la etapa pertinente y los contratos modificados. El código de presentación Mermaid y los inventarios históricos no son lectura de arranque.

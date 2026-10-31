@@ -11,9 +11,10 @@ import com.blackatsystems.miguardia.core.domain.backup.BackupValue
 import com.blackatsystems.miguardia.core.domain.backup.InvalidBackupException
 import com.blackatsystems.miguardia.core.domain.backup.MiGuardiaBackupContract
 import com.blackatsystems.miguardia.core.domain.backup.MiGuardiaBackupSchemaV5
-import com.blackatsystems.miguardia.core.domain.backup.MiGuardiaBackupSchemaV7
+import com.blackatsystems.miguardia.core.domain.backup.MiGuardiaBackupSchemaV8
 import com.blackatsystems.miguardia.core.domain.backup.estimateDecodedDatabaseBytes
 import com.blackatsystems.miguardia.core.domain.backup.upgradeSupportedBackupSchema
+import com.blackatsystems.miguardia.core.domain.model.MedicalLeave
 import java.time.Instant
 import java.time.LocalDate
 import java.util.UUID
@@ -49,20 +50,20 @@ class BackupDatabaseGatewayInstrumentedTest {
     }
 
     @Test
-    fun capturesAndReopensExactlyTheTwentyEightLogicalTablesIncludingNoteAttachments() = runBlocking {
-        val expected = fullSnapshot()
+    fun capturesAndReopensExactlyTheTwentyNineLogicalTablesIncludingSituations() = runBlocking {
+        val expected = fullSnapshot().withCancelledSituation()
 
         store.backups.validateCandidate(expected)
         store.backups.replace(expected)
 
         assertEquals(expected, store.backups.capture())
         store.backups.verifyLiveAfterReopen(expected)
-        assertEquals(28, expected.tables.size)
-        assertTrue(expected.tables.all { it.records.size == 1 })
+        assertEquals(29, expected.tables.size)
+        assertTrue(expected.tables.all { it.records.isNotEmpty() })
     }
 
     @Test
-    fun roomFiveBackupUpgradesIntoRoomSevenWithNullWeatherLocationAndEmptyAttachments() = runBlocking {
+    fun roomFiveBackupUpgradesIntoRoomEightWithNullWeatherLocationAndEmptyNewTables() = runBlocking {
         val current = fullSnapshot()
         val legacy = current.copy(
             roomVersion = MiGuardiaBackupContract.LEGACY_ROOM_VERSION_V5,
@@ -207,6 +208,34 @@ class BackupDatabaseGatewayInstrumentedTest {
     }
 
     @Test
+    fun overlappingMedicalLeavesRemainValidAndBackupableAsIndependentRecords() = runBlocking {
+        val first = MedicalLeave(
+            id = UUID.fromString("00000000-0000-0000-0000-000000000701"),
+            startDate = LocalDate.of(2026, 9, 10),
+            endDateInclusive = LocalDate.of(2026, 9, 12),
+            privateNote = "Primera",
+            createdAt = Instant.ofEpochMilli(CREATED_AT),
+            updatedAt = Instant.ofEpochMilli(CREATED_AT),
+        )
+        val second = MedicalLeave(
+            id = UUID.fromString("00000000-0000-0000-0000-000000000702"),
+            startDate = LocalDate.of(2026, 9, 11),
+            endDateInclusive = LocalDate.of(2026, 9, 13),
+            privateNote = "Segunda",
+            createdAt = Instant.ofEpochMilli(CREATED_AT + 1),
+            updatedAt = Instant.ofEpochMilli(CREATED_AT + 1),
+        )
+        store.medicalLeaves.create(first)
+        store.medicalLeaves.create(second)
+
+        val captured = store.backups.capture()
+
+        val rows = captured.table("medical_leaves").records
+        assertEquals(2, rows.size)
+        store.backups.validateCandidate(captured)
+    }
+
+    @Test
     fun openingTheLiveGatewaySweepsOnlyOrphanedCandidateDatabasesAndSidecars() = runBlocking {
         val orphanName = "miguardia-backup-candidate-${UUID.randomUUID()}.db"
         val orphan = MiGuardiaV2Database.build(context, orphanName)
@@ -267,7 +296,7 @@ class BackupDatabaseGatewayInstrumentedTest {
 
     private fun emptySnapshot(): BackupDatabaseSnapshot = BackupDatabaseSnapshot(
         timelineId = null,
-        tables = MiGuardiaBackupSchemaV7.tables.map { spec ->
+        tables = MiGuardiaBackupSchemaV8.tables.map { spec ->
             BackupTable(spec.name, spec.columns, spec.primaryKey, emptyList())
         },
     )
@@ -399,8 +428,44 @@ class BackupDatabaseGatewayInstrumentedTest {
         )
         return BackupDatabaseSnapshot(
             timelineId = TIMELINE_ID,
-            tables = MiGuardiaBackupSchemaV7.tables.map { spec ->
-                BackupTable(spec.name, spec.columns, spec.primaryKey, listOf(requireNotNull(rows[spec.name])))
+            tables = MiGuardiaBackupSchemaV8.tables.map { spec ->
+                BackupTable(spec.name, spec.columns, spec.primaryKey, rows[spec.name]?.let(::listOf).orEmpty())
+            },
+        )
+    }
+
+    private fun BackupDatabaseSnapshot.withCancelledSituation(): BackupDatabaseSnapshot {
+        val start = Instant.parse("2026-08-14T11:00:00Z").toEpochMilli()
+        val end = Instant.parse("2026-08-14T19:00:00Z").toEpochMilli()
+        return copy(
+            tables = tables.map { table ->
+                when (table.name) {
+                    "shifts" -> table.copy(
+                        records = table.records + row(
+                            text(SITUATION_SHIFT_ID), integer(start), integer(end), text(ZONE_ID), text("2026-08-14"),
+                            text("Objetivo ficticio"), text("FIC"), text("Dirección ficticia"), text("08:00"),
+                            text("16:00"), integer(COLOR), nullValue(), text("CANCELLED"),
+                            text(OBJECTIVE_ID), integer(CREATED_AT), integer(CREATED_AT),
+                        ),
+                    )
+                    "shift_work_snapshots" -> table.copy(
+                        records = table.records + row(
+                            text(SITUATION_SHIFT_ID), text(TIMELINE_ID), text("PRIVATE_SECURITY"), text(CONFIGURATION_ID),
+                            text(PLACE_ID), text(OBJECTIVE_ID), text(TEMPLATE_ID), text(TYPE_ID),
+                            text("Jornada habitual"), text("ACTIVE_WORK"),
+                        ),
+                    )
+                    "shift_situations" -> table.copy(
+                        records = listOf(
+                            row(
+                                text(SITUATION_SHIFT_ID), text("CANCELLED"), text("Servicio retirado"), nullValue(),
+                                text("EMPLOYER"), integer(CREATED_AT), nullValue(), nullValue(), nullValue(),
+                                nullValue(), nullValue(), nullValue(), integer(CREATED_AT), integer(CREATED_AT),
+                            ),
+                        ),
+                    )
+                    else -> table
+                }
             },
         )
     }
@@ -457,6 +522,7 @@ class BackupDatabaseGatewayInstrumentedTest {
         const val TEMPLATE_ID = "30000000-0000-4000-8000-000000000007"
         const val RULE_ID = "30000000-0000-4000-8000-000000000008"
         const val SHIFT_ID = "30000000-0000-4000-8000-000000000009"
+        const val SITUATION_SHIFT_ID = "30000000-0000-4000-8000-000000000022"
         const val NOTE_ID = "30000000-0000-4000-8000-000000000010"
         const val NOTE_ATTACHMENT_ID = "30000000-0000-4000-8000-000000000021"
         const val NOTE_ATTACHMENT_STORAGE_KEY = "note_30000000-0000-4000-8000-000000000021.png"

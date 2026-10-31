@@ -51,7 +51,6 @@ import com.blackatsystems.miguardia.reports.ReportsViewModel
 import com.blackatsystems.miguardia.ui.summary.SummaryObserver
 import com.blackatsystems.miguardia.ui.summary.SummaryViewModel
 import com.blackatsystems.miguardia.ui.theme.AppThemeMode
-import com.blackatsystems.miguardia.ui.theme.AppZoom
 import com.blackatsystems.miguardia.ui.theme.MiGuardiaTheme
 import com.blackatsystems.miguardia.ui.theme.vigiliaSystemBarStyle
 import com.blackatsystems.miguardia.ui.vacation.VacationViewModel
@@ -76,6 +75,15 @@ import java.util.UUID
 import com.blackatsystems.miguardia.updates.*
 
 class MainActivity : FragmentActivity() {
+    override fun attachBaseContext(newBase: android.content.Context) {
+        QaInstrumentationScope.requireProductActivity(newBase)
+        super.attachBaseContext(QaInstrumentationScope.wrapActivity(newBase))
+    }
+
+    override fun startActivityForResult(intent: Intent, requestCode: Int, options: Bundle?) {
+        QaInstrumentationScope.requireActivityLaunch(this, intent)
+        super.startActivityForResult(intent, requestCode, options)
+    }
     private var directionsConsent by mutableStateOf<DirectionsConsent?>(null)
     private fun cancelDirections() { directionsConsent?.cancel(); directionsConsent = null }
     private val updatesViewModel: UpdatesViewModel by viewModels {
@@ -120,6 +128,7 @@ class MainActivity : FragmentActivity() {
             runtime = application.weatherRuntime,
             shifts = application.localDataStore.shifts,
             vacations = application.localDataStore.vacations,
+            medicalLeaves = application.localDataStore.medicalLeaves,
         )
     }
     private val widgetViewModel: WidgetViewModel by viewModels {
@@ -161,6 +170,12 @@ class MainActivity : FragmentActivity() {
             medicalLeaveRepository = dataStore.medicalLeaves,
             holidayRepository = dataStore.holidays,
             vacationRepository = dataStore.vacations,
+            shiftSituationRepository = dataStore.shiftSituations,
+            evidenceFileStore = SchedulePhotoFileStore(applicationContext),
+            mutationGate = (application as MiGuardiaApplication).localDataMutationGate,
+            calendarBatchRepository = dataStore.calendarBatches,
+            clock = QaInstrumentationScope.calendarClock(this)
+                ?: java.time.Clock.system(com.blackatsystems.miguardia.core.domain.AppDefaults.zoneId()),
         )
     }
 
@@ -172,6 +187,9 @@ class MainActivity : FragmentActivity() {
     private val v2ManualShiftLoadViewModel: V2ManualShiftLoadViewModel by viewModels {
         val dataStore = (application as MiGuardiaApplication).localDataStore
         V2ManualShiftLoadViewModel.Factory(
+            calendarBatchRepository = dataStore.calendarBatches,
+            noteFiles = com.blackatsystems.miguardia.ui.management.ManualLoadNotes(applicationContext, dataStore.shiftNotes, dataStore.shiftSituations,
+                (application as MiGuardiaApplication).localDataMutationGate),
             configurationRepository = dataStore.workConfiguration,
             catalogRepository = dataStore.workCatalog,
             objectiveRepository = dataStore.objectives,
@@ -308,6 +326,7 @@ class MainActivity : FragmentActivity() {
             notes = dataStore.shiftNotes,
             shifts = dataStore.shifts,
             imageStore = SchedulePhotoFileStore(applicationContext),
+            mutationGate = (application as MiGuardiaApplication).localDataMutationGate,
         )
     }
 
@@ -332,13 +351,6 @@ class MainActivity : FragmentActivity() {
         setContent {
             val preferences = remember {
                 getSharedPreferences(DISPLAY_PREFERENCES, MODE_PRIVATE)
-            }
-            var appZoom by remember {
-                mutableStateOf(
-                    AppZoom.fromPercent(
-                        preferences.getInt(APP_ZOOM_PERCENT, AppZoom.STANDARD.percent),
-                    ),
-                )
             }
             var appThemeMode by remember {
                 mutableStateOf(
@@ -370,7 +382,6 @@ class MainActivity : FragmentActivity() {
             } else null
             LaunchedEffect(backupState.successSequence, sensitiveContentReady) {
                 if (sensitiveContentReady && backupState.successSequence > 0) {
-                    backupState.restoredZoom?.let { appZoom = it }
                     backupState.restoredTheme?.let { appThemeMode = it }
                     workSetupViewModel.refreshReferenceDate()
                     hoursAndExtrasViewModel.refresh()
@@ -403,9 +414,6 @@ class MainActivity : FragmentActivity() {
             }
             LaunchedEffect(recoveryState, sensitiveContentReady) {
                 if (sensitiveContentReady) {
-                    appZoom = AppZoom.fromPercent(
-                        preferences.getInt(APP_ZOOM_PERCENT, AppZoom.STANDARD.percent),
-                    )
                     appThemeMode = AppThemeMode.fromStorage(
                         preferences.getString(APP_THEME_MODE, null),
                     )
@@ -432,7 +440,6 @@ class MainActivity : FragmentActivity() {
             }
             MiGuardiaTheme(
                 darkTheme = useDarkTheme,
-                appZoom = appZoom,
             ) {
                 val consent = directionsConsent
                 if (sensitiveContentReady && helpState.canConsumePendingDestination && consent != null) {
@@ -469,7 +476,12 @@ class MainActivity : FragmentActivity() {
                     }
                     BackupSurfaceHost(
                         state = protectedState,
-                        actions = BackupActions.from(backupViewModel),
+                        actions = BackupActions.from(backupViewModel).let { actions ->
+                            if (!QaInstrumentationScope.isIsolated(this)) actions else actions.copy(
+                                apply = { QaInstrumentationScope.requireExternalAction(this, "backup.native-apply") },
+                                retryRecovery = { QaInstrumentationScope.requireExternalAction(this, "backup.native-recovery") },
+                            )
+                        },
                     )
                 } else AccessLockContentGate(
                         state = accessLockState,
@@ -511,11 +523,6 @@ class MainActivity : FragmentActivity() {
                     backupViewModel = backupViewModel,
                     helpViewModel = helpViewModel,
                     calendarNavigationRequest = calendarNavigationRequest,
-                    appZoom = appZoom,
-                    onAppZoomChange = { selected ->
-                        appZoom = selected
-                        preferences.edit { putInt(APP_ZOOM_PERCENT, selected.percent) }
-                    },
                     appThemeMode = appThemeMode,
                     onAppThemeModeChange = { selected ->
                         appThemeMode = selected
@@ -721,6 +728,7 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun authenticate(operation: AccessLockOperation) {
+        QaInstrumentationScope.requireExternalAction(this, "security.authenticate")
         val application = application as MiGuardiaApplication
         deviceAuthenticator.attachToInFlightAuthentication(
             application.accessLockCoordinator.activeAuthenticationToken(
@@ -741,6 +749,7 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun openDeviceSecurity() {
+        QaInstrumentationScope.requireExternalAction(this, "security.settings")
         if (!deviceAuthenticator.openDeviceSecuritySettings()) {
             deviceAuthenticationCapability = DeviceAuthenticationCapability.TEMPORARILY_UNAVAILABLE
             (application as MiGuardiaApplication).accessLockCoordinator.reportUnavailable(
@@ -811,6 +820,7 @@ class MainActivity : FragmentActivity() {
         const val EXTRA_SHIFT_ID = "shift_id"
         const val EXTRA_OWNER_LOCAL_DATE = "owner_local_date"
         const val DISPLAY_PREFERENCES = "miguardia_display_preferences"
+        // Legacy portable preference: retained for existing Copias, never applied to UI.
         const val APP_ZOOM_PERCENT = "app_zoom_percent"
         const val APP_THEME_MODE = "app_theme_mode"
         private val NotificationActions = setOf(

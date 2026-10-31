@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.blackatsystems.miguardia.core.domain.nextevent.isEligibleForWeather
 import com.blackatsystems.miguardia.core.domain.repository.ShiftRepository
 import com.blackatsystems.miguardia.core.domain.repository.VacationRepository
+import com.blackatsystems.miguardia.core.domain.repository.MedicalLeaveRepository
 import com.blackatsystems.miguardia.core.domain.weather.WeatherFailureKind
 import com.blackatsystems.miguardia.core.domain.weather.WeatherCoverage
 import com.blackatsystems.miguardia.core.domain.weather.WeatherFreshness
@@ -28,6 +29,7 @@ class WeatherViewModel(
     private val runtime: WeatherRuntime,
     private val shifts: ShiftRepository,
     private val vacations: VacationRepository,
+    private val medicalLeaves: MedicalLeaveRepository? = null,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(WeatherUiState())
     val uiState: StateFlow<WeatherUiState> = _uiState
@@ -165,7 +167,9 @@ class WeatherViewModel(
                         val applicableVacations = vacations
                             .observeOverlapping(shift.localStartDate, shift.localStartDate)
                             .first()
-                        if (!shift.isEligibleForWeather(runtime.clock.instant(), applicableVacations)) return@forEach
+                        val applicableMedical = medicalLeaves
+                            ?.observeIntersecting(shift.localStartDate, shift.localStartDate)?.first().orEmpty()
+                        if (!shift.isEligibleForWeather(runtime.clock.instant(), applicableVacations, applicableMedical)) return@forEach
                         val forecast = when (val refresh = runtime.refreshIfEnabled(shift, force = false)) {
                             is WeatherRefreshResult.Success -> refresh.forecast
                             is WeatherRefreshResult.Failure ->
@@ -373,8 +377,10 @@ class WeatherViewModel(
             return false
         }
         val applicableVacations = vacations.observeOverlapping(shift.localStartDate, shift.localStartDate).first()
+        val applicableMedical = medicalLeaves
+            ?.observeIntersecting(shift.localStartDate, shift.localStartDate)?.first().orEmpty()
         if (!isCurrentShift(expectedShiftId)) return false
-        val eligible = shift.isEligibleForWeather(runtime.clock.instant(), applicableVacations)
+        val eligible = shift.isEligibleForWeather(runtime.clock.instant(), applicableVacations, applicableMedical)
         val hasLocation = runtime.hasLocationFor(shift)
         if (!isCurrentShift(expectedShiftId)) return false
         val usable = eligible && hasLocation
@@ -433,11 +439,12 @@ class WeatherViewModel(
         private val runtime: WeatherRuntime,
         private val shifts: ShiftRepository,
         private val vacations: VacationRepository,
+        private val medicalLeaves: MedicalLeaveRepository? = null,
     ) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             require(modelClass.isAssignableFrom(WeatherViewModel::class.java))
             @Suppress("UNCHECKED_CAST")
-            return WeatherViewModel(runtime, shifts, vacations) as T
+            return WeatherViewModel(runtime, shifts, vacations, medicalLeaves) as T
         }
     }
 }

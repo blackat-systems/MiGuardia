@@ -1,5 +1,7 @@
 package com.blackatsystems.miguardia.ui.management
 
+import com.blackatsystems.miguardia.ui.EventTimeRangeStyle
+import com.blackatsystems.miguardia.ui.formatEventTimeRange
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -1552,7 +1554,7 @@ internal class V2ShiftEditCoordinator(
     }
 
     private fun Shift.timeRange(): String =
-        "${startTimeSnapshot.format(TIME_FORMATTER)}–${endTimeSnapshot.format(TIME_FORMATTER)}"
+        formatEventTimeRange(startAt, endAt, zoneId, EventTimeRangeStyle.COMPACT)
 
     private fun reviewFingerprint(
         original: V2ShiftWrite,
@@ -1667,7 +1669,6 @@ internal class V2ShiftEditCoordinator(
     private companion object {
         const val MAX_POSITION_LENGTH = 120
         val DATE_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/uuuu")
-        val TIME_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
     }
 }
 

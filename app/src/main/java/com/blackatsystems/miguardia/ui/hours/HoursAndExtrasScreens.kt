@@ -5,16 +5,19 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -27,6 +30,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -38,12 +42,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.blackatsystems.miguardia.core.domain.model.IndependentExtraWorkRecord
@@ -225,7 +232,7 @@ private fun HoursProgressContent(
                 ProgressLine("Horas por encima de la meta", it, emphasized = true)
             }
             progress.completionPercentage?.let { value ->
-                Text("Avance: ${"%.1f".format(SpanishArgentina, value)} %", fontWeight = FontWeight.Bold)
+                Text("Avance: ${"%.1f".format(SpanishArgentina, value)} %", fontWeight = FontWeight.SemiBold)
             }
             ContextHelpButton(
                 ContextHelp(
@@ -247,9 +254,9 @@ private fun HoursProgressContent(
             SectionCard(
                 title = referenceLabel(progress.segment.ownerRevision.value.hoursReference),
                 supportingText = if (progress.segment.endExclusive == java.time.LocalDate.MAX) {
-                    "Vigente desde ${progress.segment.startInclusive}."
+                    "Vigente desde ${progress.segment.startInclusive.visibleDate()}."
                 } else {
-                    "Desde ${progress.segment.startInclusive} hasta ${progress.segment.endExclusive.minusDays(1)}."
+                    "Desde ${progress.segment.startInclusive.visibleDate()} hasta ${progress.segment.endExclusive.minusDays(1).visibleDate()}."
                 },
             ) {
                 progress.segment.ownerRevision.value.hoursReference.periodOrNull()?.let { period ->
@@ -257,7 +264,11 @@ private fun HoursProgressContent(
                 }
                 ProgressLine("Horas que cuentan para tu meta", progress.helpsMeetReferenceMinutes)
                 ProgressLine("Extras que no cuentan para la meta", progress.doesNotHelpReferenceMinutes)
-                ProgressLine("Horas de jornadas que todavía faltan trabajar", progress.pendingScheduledMinutes)
+                ProgressLine(
+                    "Horas de jornadas que todavía faltan trabajar",
+                    progress.pendingScheduledMinutes,
+                    tag = "hours-pending-scheduled",
+                )
                 if (progress.segment.isShortNaturalSegment) {
                     Text("La meta completa se mantiene aunque esta configuración haya empezado dentro del período.")
                 }
@@ -329,7 +340,7 @@ private fun PerPeriodValueEditorScreen(
                     state.message?.let { PersistentMessage(it, onDismiss = actions.clearMessage) }
                     SectionCard(
                         title = if (existing == null) "Informar meta" else "Corregir meta",
-                        supportingText = "Período ${window.startInclusive} a ${window.endExclusive.minusDays(1)}.",
+                        supportingText = "Período del ${window.startInclusive.visibleDate()} al ${window.endExclusive.minusDays(1).visibleDate()}.",
                     ) {
                         existing?.let { Text("Valor actual: ${minutesLabel(it.requiredMinutes.value)}") }
                         OutlinedTextField(
@@ -540,7 +551,7 @@ private fun ReferenceReviewContent(state: HoursAndExtrasUiState, actions: HoursA
             if (review == null) {
                 Text("El borrador fue restaurado. Al guardar se revalidarán todas las fuentes.")
             } else {
-                Text(referenceLabel(review.reference), fontWeight = FontWeight.Bold)
+                Text(referenceLabel(review.reference), fontWeight = FontWeight.SemiBold)
                 review.reference.periodOrNull()?.let { period ->
                     Text("Período: ${period.visibleLabel()}")
                 }
@@ -549,10 +560,10 @@ private fun ReferenceReviewContent(state: HoursAndExtrasUiState, actions: HoursA
                     fontWeight = FontWeight.SemiBold,
                 )
                 review.previousSegmentEndInclusive?.let { previousEnd ->
-                    Text("El tramo anterior termina: $previousEnd")
+                    Text("El tramo anterior termina: ${previousEnd.visibleDate()}")
                 }
-                Text("El tramo nuevo comienza: ${review.startedOn}")
-                review.naturalWindowEndExclusive?.let { Text("Primer límite natural: $it") }
+                Text("El tramo nuevo comienza: ${review.startedOn.visibleDate()}")
+                review.naturalWindowEndExclusive?.let { Text("Primer límite natural: ${it.visibleDate()}") }
                 Text(
                     if (review.isShortFirstSegment) {
                         "El primer tramo es corto y conserva la meta completa."
@@ -563,10 +574,10 @@ private fun ReferenceReviewContent(state: HoursAndExtrasUiState, actions: HoursA
                 if (review.isPast) {
                     Text(
                         if (review.recalculationEndExclusive == java.time.LocalDate.MAX) {
-                            "Se recalcularán los tramos y resultados desde ${review.startedOn} en adelante."
+                            "Se recalcularán los tramos y resultados desde ${review.startedOn.visibleDate()} en adelante."
                         } else {
-                            "Se recalcularán los tramos y resultados desde ${review.startedOn} " +
-                                "hasta ${review.recalculationEndExclusive.minusDays(1)}."
+                            "Se recalcularán los tramos y resultados desde ${review.startedOn.visibleDate()} " +
+                                "hasta ${review.recalculationEndExclusive.minusDays(1).visibleDate()}."
                         },
                         color = MaterialTheme.vigiliaColors.info,
                     )
@@ -644,7 +655,7 @@ private fun IndependentExtraDraftContent(
             title = "Fecha elegida",
             supportingText = "Para cambiar de día, volvé a la única grilla mensual.",
         ) {
-            Text(draft.ownerDate?.toString() ?: "Sin fecha", fontWeight = FontWeight.Bold)
+            Text(draft.ownerDate?.visibleDate() ?: "Sin fecha", fontWeight = FontWeight.SemiBold)
         }
         SectionCard("Lugar") {
             source.catalog.workPlaces.forEach { place ->
@@ -808,7 +819,7 @@ private fun IndependentExtraReviewContent(state: HoursAndExtrasUiState, actions:
                 Text("El borrador fue restaurado. Al guardar se revalidarán fuentes, ocupación y protecciones.")
             } else {
                 val record = review.record
-                Text("${record.snapshot.workPlaceName} (${record.snapshot.workPlaceAbbreviation})", fontWeight = FontWeight.Bold)
+                Text("${record.snapshot.workPlaceName} (${record.snapshot.workPlaceAbbreviation})", fontWeight = FontWeight.SemiBold)
                 Text("${record.start.visibleAt(record.zoneId)} – ${record.end.visibleAt(record.zoneId)}")
                 Text("Duración: ${minutesLabel(record.durationMinutes)}")
                 Text("Tipo: ${record.snapshot.workTypeName}")
@@ -909,6 +920,7 @@ fun IndependentExtraDetailCard(
     record: IndependentExtraWorkRecord,
     onCorrect: () -> Unit,
     onDelete: () -> Unit,
+    showActions: Boolean = true,
 ) {
     Card(
         modifier = Modifier.fillMaxWidth().testTag("independent-extra-${record.id}"),
@@ -917,7 +929,7 @@ fun IndependentExtraDetailCard(
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Box(Modifier.size(18.dp).background(Color(record.snapshot.colorArgb), CircleShape))
-                Text("Trabajo extra independiente", fontWeight = FontWeight.Bold)
+                Text("Trabajo extra independiente", fontWeight = FontWeight.SemiBold)
             }
             Text("${record.snapshot.workPlaceName} (${record.snapshot.workPlaceAbbreviation})")
             Text("${record.start.visibleAt(record.zoneId)} – ${record.end.visibleAt(record.zoneId)}")
@@ -925,18 +937,20 @@ fun IndependentExtraDetailCard(
             Text("Clase: ${record.snapshot.className}")
             Text(if (record.snapshot.helpsMeetHoursReference) "Cuenta para tu meta" else "No cuenta para tu meta")
             record.snapshot.position?.let { Text("Puesto: $it") }
-            OutlinedButton(
-                onClick = onCorrect,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("correct-independent-extra-${record.id}"),
-            ) { Text("Corregir trabajo extra") }
-            TextButton(
-                onClick = onDelete,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("delete-independent-extra-${record.id}"),
-            ) { Text("Eliminar trabajo extra") }
+            if (showActions) {
+                OutlinedButton(
+                    onClick = onCorrect,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("correct-independent-extra-${record.id}"),
+                ) { Text("Corregir trabajo extra") }
+                TextButton(
+                    onClick = onDelete,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("delete-independent-extra-${record.id}"),
+                ) { Text("Eliminar trabajo extra") }
+            }
         }
     }
 }
@@ -1004,9 +1018,10 @@ private fun SimpleChoice(
     tag: String? = null,
     onClick: () -> Unit,
 ) {
-    Row(
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxWidth()
+            .heightIn(min = 48.dp)
             .then(tag?.let { Modifier.testTag(it) } ?: Modifier)
             .semantics {
                 selected = isSelected
@@ -1014,35 +1029,107 @@ private fun SimpleChoice(
             }
             .clickable(onClick = onClick)
             .padding(vertical = 9.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Box(
-            Modifier.size(18.dp).background(
-                if (isSelected) MaterialTheme.vigiliaColors.active else MaterialTheme.colorScheme.outlineVariant,
-                CircleShape,
-            ),
-        )
-        Text(label, modifier = Modifier.weight(1f), fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
+        val labelContent: @Composable (Modifier) -> Unit = { labelModifier ->
+            Text(label, modifier = labelModifier, style = MaterialTheme.typography.bodyMedium,
+                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal)
+        }
+        if (maxWidth < 240.dp) {
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                labelContent(Modifier.fillMaxWidth())
+                RadioButton(selected = isSelected, onClick = null, modifier = Modifier.align(Alignment.End))
+            }
+        } else {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                RadioButton(selected = isSelected, onClick = null)
+                labelContent(Modifier.weight(1f))
+            }
+        }
     }
 }
 
 @Composable
 private fun ConfirmRow(label: String, checked: Boolean, onChecked: (Boolean) -> Unit) {
-    Row(
-        Modifier.fillMaxWidth().clickable { onChecked(!checked) }.padding(vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
+    BoxWithConstraints(
+        Modifier.fillMaxWidth().heightIn(min = 48.dp)
+            .toggleable(value = checked, role = Role.Checkbox, onValueChange = onChecked)
+            .padding(vertical = 6.dp),
     ) {
-        Checkbox(checked = checked, onCheckedChange = onChecked)
-        Text(label, modifier = Modifier.weight(1f))
+        if (maxWidth < 240.dp) {
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(label, style = MaterialTheme.typography.bodyMedium)
+                Checkbox(checked = checked, onCheckedChange = null, modifier = Modifier.align(Alignment.End))
+            }
+        } else {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Checkbox(checked = checked, onCheckedChange = null)
+                Text(label, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+            }
+        }
     }
 }
 
 @Composable
-private fun ProgressLine(label: String, minutes: Long, emphasized: Boolean = false) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(label, fontWeight = if (emphasized) FontWeight.Bold else FontWeight.Normal)
-        Text(minutesLabel(minutes), fontWeight = if (emphasized) FontWeight.Bold else FontWeight.Normal)
+private fun ProgressLine(
+    label: String,
+    minutes: Long,
+    emphasized: Boolean = false,
+    tag: String? = null,
+) {
+    val measurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    val labelStyle = MaterialTheme.typography.bodyMedium.copy(
+        fontWeight = if (emphasized) FontWeight.Medium else FontWeight.Normal,
+    )
+    val valueStyle = (if (emphasized) MaterialTheme.typography.titleMedium else MaterialTheme.typography.bodyMedium)
+        .copy(fontWeight = FontWeight.SemiBold)
+    val value = minutesLabel(minutes)
+    BoxWithConstraints(
+        Modifier.fillMaxWidth().then(tag?.let { Modifier.testTag(it) } ?: Modifier),
+    ) {
+        val valueWidth = measurer.measure(value, style = valueStyle, softWrap = false).size.width
+        val longestLabelWord = label.split(Regex("\\s+")).maxOfOrNull {
+            measurer.measure(it, style = labelStyle, softWrap = false).size.width
+        } ?: 0
+        val useInline = longestLabelWord + with(density) { 12.dp.roundToPx() } + valueWidth <= constraints.maxWidth
+        val wrapValue = valueWidth > constraints.maxWidth
+        val displayedValue = if (wrapValue) value.replace(" h", "\u00a0h").replace(" min", "\u00a0min") else value
+        val labelContent: @Composable (Modifier) -> Unit = { modifier ->
+            Text(
+                label,
+                modifier = modifier.then(tag?.let { Modifier.testTag("$it-label") } ?: Modifier),
+                style = labelStyle,
+            )
+        }
+        val valueContent: @Composable (Modifier) -> Unit = { modifier ->
+            Text(
+                // Avoid the optimized String path's reconstructed, wider semantics paragraph.
+                AnnotatedString(displayedValue),
+                modifier = modifier.then(tag?.let { Modifier.testTag("$it-value") } ?: Modifier),
+                style = valueStyle,
+                textAlign = TextAlign.End,
+                maxLines = if (wrapValue) Int.MAX_VALUE else 1,
+                softWrap = wrapValue,
+            )
+        }
+        // Keep each quantity and its unit together when the full amount needs more than one line.
+        if (!useInline) {
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                labelContent(Modifier.fillMaxWidth())
+                valueContent(Modifier.fillMaxWidth())
+            }
+        } else {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                labelContent(Modifier.weight(1f))
+                valueContent(Modifier)
+            }
+        }
     }
 }
 

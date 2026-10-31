@@ -104,7 +104,7 @@ fun BackupSurfaceHost(
                     "Copias y restauración",
                     modifier = Modifier.weight(1f),
                     style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.SemiBold,
                 )
                 TextButton(
                     onClick = if (state.canCancel) actions.cancelOperation else actions.close,

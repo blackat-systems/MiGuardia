@@ -10,6 +10,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 
 class ShiftAlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
+        if (com.blackatsystems.miguardia.QaInstrumentationScope.suppress(context, "notifications.alarm-receiver")) return
         val application = context.applicationContext as? MiGuardiaApplication ?: return
         val dismissedEventKey = readDismissedEventKey(intent)
         val deliveryIdentity = if (dismissedEventKey == null) {
@@ -56,6 +57,7 @@ class ShiftAlarmReceiver : BroadcastReceiver() {
 internal suspend fun processQueuedNotificationActionsUnderMutationGate(
     application: MiGuardiaApplication,
 ) {
+    if (com.blackatsystems.miguardia.QaInstrumentationScope.suppress(application, "notifications.queued-replay")) return
     application.localDataMutationGate.withExclusiveMutation {
         if (!application.startupRecoveryGate.isReady ||
             !com.blackatsystems.miguardia.localAllowsPublication(application) ||

@@ -2,20 +2,39 @@
 
 Aplicación Android personal para organizar jornadas y horas de Vigilancia privada, Policía, Enfermería y Medicina. Datos laborales locales, una sola configuración y reglas elegidas por cada persona. No calcula sueldos ni reemplaza sistemas institucionales.
 
-Este repositorio inicia la evolución hacia MiGuardia 3.0 desde la base estable 2.0.2. La etapa de descubrimiento todavía no autoriza cambios funcionales, de arquitectura ni del versionado Android.
+Este repositorio desarrolla MiGuardia 3.0 desde la base estable 2.0.2. El alcance autorizado y el punto de continuación están en STATUS; el handoff inicial conserva la procedencia, no el estado actual.
 
 ## Entrar al proyecto
 
-- Inicialización de MAIN 3.0: `docs/HANDOFF_A_MAIN_3_0.md`.
-- Estado actual, autorización y pendientes: `docs/STATUS.md`.
-- Orden obligatorio de MAIN y flowchart: [ruta de orquestación](docs/ORQUESTACION_MAIN.md); STATUS indica el punto de continuación.
-- Reglas estables: `AGENTS.md`; lecturas adicionales: `docs/LECTURAS_POR_TAREA.md`.
+- Arranque: `AGENTS.md` y `docs/STATUS.md`, único estado actual, autorización y pendientes.
+- Lecturas por área: `docs/LECTURAS_POR_TAREA.md`; método de integración: `docs/WORKFLOW.md`.
+- Contrato y handoff de continuación: los señalados por STATUS; índice en `docs/prompts/README.md`.
+- Antecedentes: `docs/HANDOFF_A_MAIN_3_0.md` y [ruta de orquestación 2.0](docs/ORQUESTACION_MAIN.md). No reinician etapas ni sustituyen el contrato 3.0.
 - Producto: `docs/MAPA_MAESTRO_MIGUARDIA_2_0.md`; detalle en planificación.
 - Comprobaciones: `docs/VALIDACION.md`; decisiones técnicas: `docs/adr/README.md`.
 
 La base heredada contiene Calendario, carga/edición, recurrencias, horario real y extras, disponibilidad, Resumen, próximos eventos, notificaciones, Widget, Clima por objetivo, fotos, informes PDF/XLSX, Copias, bloqueo opcional, Ayuda, actualización pública manual, apoyo y feedback voluntarios. Implementación presente, commit integrado, QA y distribución son estados distintos: consultar STATUS antes de asumir una entrega publicable.
 
 MiGuardia 1.0 fue una prueba interna y base de código. V2 comienza limpia, sin migración de datos V1; las migraciones posteriores conservan datos V2.
+
+## Ubicación de los archivos
+
+| Ruta | Responsabilidad |
+|---|---|
+| `app/src/main/` | Aplicación Android, interfaz, recursos y adaptadores del sistema |
+| `core/domain/src/main/` | Reglas y contratos de negocio sin Android |
+| `core/database/src/main/` y `core/database/schemas/` | Persistencia Room, migraciones y esquemas exportados |
+| `src/test/`, `src/androidTest/` de cada módulo | Pruebas JVM e instrumentadas; `app/src/testSupport/` sólo aporta fixtures de pruebas |
+| `settings.gradle.kts`, Gradle y `gradle/` | Módulos, compilación, catálogo de versiones y wrapper |
+| `tools/` | Verificación documental, pruebas y catálogo QA |
+| `docs/` | Estado, ruta de lectura, planificación y documentación vigente |
+| `docs/adr/`, `docs/prompts/` | Decisiones técnicas e índice de contratos |
+| `docs/archive/`, `docs/audits/`, `docs/diagrams/` | Historia, evidencia fechada y diagramas de su respectiva base; no otro estado actual |
+| `.local-evidence/`, `build/`, `.gradle/`, `.kotlin/` | Evidencia local y generados ignorados; no mover ni eliminar por antigüedad |
+
+El índice Git no determina el orden de lectura. Los archivos nuevos del candidato pueden seguir sin rastrear: no agregarlos al staging ni mover fuentes para ordenar la vista. `local.properties`, firmas y datos privados permanecen fuera de Git.
+
+La [auditoría del traslado del workspace](docs/audits/2026-10-20-integridad-y-rutas-del-workspace.md) registra las rutas actuales, la conservación de archivos y la preparación local de las herramientas. Las rutas absolutas de auditorías anteriores son procedencia histórica, no configuración para el perfil actual.
 
 ## Entorno y comprobaciones
 
@@ -32,10 +51,12 @@ python tools/verify.py --profile build
 Las pruebas locales no necesitan Node ni otro checkout. La interoperabilidad es una puerta explícita y obligatoria cuando cambian las actualizaciones públicas o su contrato: requiere el proyecto `website` en sólo lectura y Node con transformación TypeScript. El runner comprueba esas capacidades; no instala herramientas.
 
 ```powershell
-python tools/verify.py --profile interop --website ../website --node 'C:\Program Files\nodejs\node.exe' --fresh-tests
+python tools/verify.py --profile interop --website ../../website --node 'C:\Program Files\nodejs\node.exe' --fresh-tests
 ```
 
 La ruta Node es un ejemplo local: indicar la propia o dejar que `--node` se resuelva desde PATH. `--plan` muestra tareas sin ejecutarlas ni escribir evidencia. Para detalle, perfiles completos, compatibilidad histórica, actualizaciones públicas y autorización de dispositivos, consultar VALIDACION. La firma Debug local opcional se configura con `miguardia.debugKeystore`; Release y publicación conservan sus puertas.
+
+Si Python o Java no están en PATH, usar sus ejecutables locales o preparar la sesión según la auditoría del traslado; no cambiar dependencias del proyecto para resolver una ruta del equipo.
 
 ## Privacidad y conexiones
 

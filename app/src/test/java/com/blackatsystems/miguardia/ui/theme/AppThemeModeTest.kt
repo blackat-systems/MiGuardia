@@ -7,10 +7,24 @@ import org.junit.Test
 
 class AppThemeModeTest {
     @Test
-    fun storedThemeModeFallsBackToSystem() {
-        assertEquals(AppThemeMode.DARK, AppThemeMode.fromStorage("DARK"))
-        assertEquals(AppThemeMode.SYSTEM, AppThemeMode.fromStorage("unknown"))
-        assertEquals(AppThemeMode.SYSTEM, AppThemeMode.fromStorage(null))
+    fun missingThemeStartsInVigiliaDarkRegardlessOfSystemTheme() {
+        val initial = AppThemeMode.fromStorage(null)
+        assertEquals(AppThemeMode.DARK, initial)
+        assertTrue(initial.resolve(systemDarkTheme = false))
+        assertTrue(initial.resolve(systemDarkTheme = true))
+    }
+
+    @Test
+    fun explicitStoredChoicesRemainUnchanged() {
+        AppThemeMode.entries.forEach { choice ->
+            assertEquals(choice, AppThemeMode.fromStorage(choice.name))
+        }
+    }
+
+    @Test
+    fun invalidStoredThemeUsesTheSameDarkDefault() {
+        assertEquals(AppThemeMode.DEFAULT, AppThemeMode.fromStorage("unknown"))
+        assertEquals(AppThemeMode.DARK, AppThemeMode.fromStorage(""))
     }
 
     @Test
@@ -24,11 +38,11 @@ class AppThemeModeTest {
     @Test
     fun systemBarsKeepBackgroundAndIconsReadableInBothThemes() {
         val dark = vigiliaSystemBarStyle(darkTheme = true)
-        assertEquals(0xFF090812.toInt(), dark.backgroundArgb)
+        assertEquals(0xFF15151E.toInt(), dark.backgroundArgb)
         assertFalse(dark.useDarkIcons)
 
         val light = vigiliaSystemBarStyle(darkTheme = false)
-        assertEquals(0xFFF7F4FA.toInt(), light.backgroundArgb)
+        assertEquals(0xFFF5F4F8.toInt(), light.backgroundArgb)
         assertTrue(light.useDarkIcons)
     }
 }

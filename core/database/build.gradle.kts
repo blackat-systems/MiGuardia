@@ -21,6 +21,16 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+
+}
+
+androidComponents {
+    onVariants(selector().all()) { variant ->
+        // Only instrumentation receives these pure fixtures; no production dependency.
+        variant.androidTest?.sources?.kotlin?.addStaticSourceDirectory(
+            rootProject.file("app/src/testSupport/java/com/blackatsystems/miguardia/upgrade").path,
+        )
+    }
 }
 
 room {

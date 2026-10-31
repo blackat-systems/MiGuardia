@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
@@ -20,6 +21,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
@@ -28,6 +30,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -184,7 +187,8 @@ fun WorkSetupSurfaceHost(
                 } else "Todavía hay datos sin guardar. ¿Querés descartarlos y volver al Calendario?")
             },
             confirmButton = {
-                TextButton(onClick = actions.confirmDiscard) { Text("Descartar") }
+                TextButton(onClick = actions.confirmDiscard,
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) { Text("Descartar") }
             },
             dismissButton = {
                 TextButton(onClick = actions.dismissDiscard) { Text("Seguir editando") }
@@ -312,22 +316,23 @@ private fun SectorCard(
             .clickable(enabled = enabled, onClick = onClick),
         colors = CardDefaults.cardColors(
             containerColor = if (selected) {
-                MaterialTheme.vigiliaColors.active.copy(alpha = 0.18f)
+                MaterialTheme.vigiliaColors.selection
             } else {
                 MaterialTheme.colorScheme.surfaceContainer
             },
+            contentColor = if (selected) MaterialTheme.vigiliaColors.onSelection else MaterialTheme.colorScheme.onSurface,
         ),
         border = androidx.compose.foundation.BorderStroke(
             1.dp,
-            if (selected) MaterialTheme.vigiliaColors.active else MaterialTheme.colorScheme.outlineVariant,
+            if (selected) MaterialTheme.vigiliaColors.active else MaterialTheme.colorScheme.outline,
         ),
     ) {
         Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(sector.displayName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text(sector.displayName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             Text(
                 "Usaremos “${sector.suggestedVocabulary.placeLabel}” y “${sector.suggestedVocabulary.shiftLabel}” como ayuda visible.",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = if (selected) MaterialTheme.vigiliaColors.onSelection else MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
@@ -470,7 +475,7 @@ private fun FirstWorkSetScreen(state: WorkSetupUiState, actions: WorkSetupAction
             Text(
                 if (state.step == WorkSetupStep.PLACE_AND_RULES) "Paso 1 de 2" else "Paso 2 de 2",
                 color = MaterialTheme.vigiliaColors.active,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
             )
             state.errorMessage?.let {
                 PersistentMessage(it, onDismiss = actions.clearMessage)
@@ -888,7 +893,7 @@ private fun WorkSetupCompletion(state: WorkSetupUiState, actions: WorkSetupActio
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text("Listo", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+        Text("Listo", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
         Spacer(Modifier.height(8.dp))
         Text(
             state.infoMessage ?: "Tu configuración laboral quedó guardada.",
@@ -987,6 +992,7 @@ private fun SelectionRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .heightIn(min = 48.dp)
             .semantics {
                 this.selected = selected
                 role = Role.RadioButton
@@ -997,15 +1003,8 @@ private fun SelectionRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Box(
-            modifier = Modifier
-                .size(18.dp)
-                .background(
-                    if (selected) MaterialTheme.vigiliaColors.active else MaterialTheme.colorScheme.outlineVariant,
-                    CircleShape,
-                ),
-        )
-        Text(title, modifier = Modifier.weight(1f), fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal)
+        RadioButton(selected = selected, onClick = null, enabled = enabled)
+        Text(title, modifier = Modifier.weight(1f), fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal)
     }
 }
 

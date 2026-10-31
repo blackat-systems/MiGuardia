@@ -2,7 +2,7 @@
 
 Resumen del producto aprobado. Reglas completas: `docs/PLANIFICACION_MIGUARDIA_2_0.md`. Estado actual, evidencias y siguiente paso: únicamente `docs/STATUS.md`.
 
-MAIN ejecuta el orden del [flowchart de orquestación](ORQUESTACION_MAIN.md), adoptado por Joaquín el 8/09/2026. Este mapa del producto conserva su función de resumen; no mantiene otra secuencia de despacho.
+El [flowchart de orquestación](ORQUESTACION_MAIN.md) conserva la construcción histórica de 2.0. MAIN despacha 3.0 únicamente por STATUS y su contrato vigente. Este mapa resume el producto; no define otra secuencia de ejecución.
 
 MiGuardia es una aplicación Android personal para organizar jornadas y horas. Comparte Calendario y capacidades locales entre Vigilancia privada, Policía, Enfermería y Medicina. El sector cambia vocabulario y ejemplos; cada persona configura cómo trabaja. Hay una sola configuración laboral, con historia por fecha, sin perfiles simultáneos ni sector `Otro`.
 
@@ -20,7 +20,7 @@ MiGuardia es una aplicación Android personal para organizar jornadas y horas. C
 
 ## Capacidades comunes
 
-Calendario de una sola grilla, carga individual/múltiple, detalle y edición consciente, lugares y horarios, recurrencias, horas y Resumen personalizable, próximo evento, avisos, Widget, notas y feriados manuales, vacaciones y carpetas médicas sin certificados, fotos privadas, informes PDF/XLSX, Copias, bloqueo opcional, Ayuda y zoom interno.
+Calendario de una sola grilla, carga individual/múltiple, detalle y edición consciente, lugares y horarios, recurrencias, horas y Resumen personalizable, próximo evento, avisos, Widget, notas y feriados manuales, vacaciones y carpetas médicas sin certificados, fotos privadas, informes PDF/XLSX, Copias, bloqueo opcional y Ayuda. En 3.0 rige letra nativa Android sin zoom interno, según ADR 0043; su preferencia antigua se conserva sólo en Copias.
 
 Las jornadas guardan instantáneas. Cambiar una plantilla, lugar o regla no reinterpreta el pasado. Las extras no nacen de superar una meta; todo trabajo activo suma y la disponibilidad se informa aparte. Las clasificaciones noche/feriado/fin de semana pueden coincidir sin duplicar minutos.
 

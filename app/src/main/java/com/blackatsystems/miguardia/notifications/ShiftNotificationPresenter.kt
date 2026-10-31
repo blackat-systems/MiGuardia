@@ -1,5 +1,7 @@
 package com.blackatsystems.miguardia.notifications
 
+import com.blackatsystems.miguardia.ui.EventTimeRangeStyle
+import com.blackatsystems.miguardia.ui.formatEventTimeRange
 import android.Manifest
 import android.app.Notification
 import android.app.NotificationChannel
@@ -26,12 +28,12 @@ import com.blackatsystems.miguardia.weather.WeatherCredits
 import java.security.MessageDigest
 import java.time.Duration
 import java.time.Instant
-import java.time.format.DateTimeFormatter
 
 internal class ShiftNotificationPresenter(private val context: Context) {
-    private val manager = NotificationManagerCompat.from(context)
+    private val manager by lazy { NotificationManagerCompat.from(context) }
 
     fun showRecoveryForExisting() {
+        if (com.blackatsystems.miguardia.QaInstrumentationScope.suppress(context, "notification.recovery-sweep")) return
         val native = context.getSystemService(NotificationManager::class.java)
         runCatching {
             native.activeNotifications.forEach { active ->
@@ -41,6 +43,7 @@ internal class ShiftNotificationPresenter(private val context: Context) {
     }
 
     internal fun recoveryNotification(original: Notification? = null): Notification {
+        com.blackatsystems.miguardia.QaInstrumentationScope.requireExternalAction(context, "notification.recovery-channel")
         val channel = "miguardia-beta-access-v1"
         context.getSystemService(NotificationManager::class.java).createNotificationChannel(
             NotificationChannel(channel, "Recuperación local", NotificationManager.IMPORTANCE_LOW).apply {
@@ -65,14 +68,11 @@ internal class ShiftNotificationPresenter(private val context: Context) {
         weatherText: String? = null,
         silentUpdate: Boolean = false,
     ) {
+        com.blackatsystems.miguardia.QaInstrumentationScope.requireExternalAction(context, "notification.show")
         val ongoing = now >= event.start
-        val timeRange = when (event) {
-            is NextEventItem.Shift ->
-                "${event.startTimeSnapshot.format(TimeFormatter)}–${event.endTimeSnapshot.format(TimeFormatter)}"
-            is NextEventItem.Availability ->
-                "${event.start.atZone(event.zoneId).toLocalTime().format(TimeFormatter)}–" +
-                    event.end.atZone(event.zoneId).toLocalTime().format(TimeFormatter)
-        }
+        val timeRange = formatEventTimeRange(
+            event.start, event.end, event.zoneId, EventTimeRangeStyle.COMPACT_DATED,
+        )
         val card = when (event) {
             is NextEventItem.Shift -> NotificationCard(
                 state = if (ongoing) "JORNADA EN CURSO" else "PRÓXIMA JORNADA",
@@ -134,6 +134,7 @@ internal class ShiftNotificationPresenter(private val context: Context) {
     }
 
     fun showTestNotification(preferences: NotificationPreferences) {
+        com.blackatsystems.miguardia.QaInstrumentationScope.requireExternalAction(context, "notification.preview")
         val card = NotificationCard(
             state = "PRUEBA · PRÓXIMA JORNADA",
             objective = "Jornada habitual · Hospital Norte",
@@ -168,12 +169,14 @@ internal class ShiftNotificationPresenter(private val context: Context) {
     }
 
     fun cancel(eventKey: String) {
+        com.blackatsystems.miguardia.QaInstrumentationScope.requireExternalAction(context, "notification.cancel")
         val identity = NextEventIdentity.parseTrackingKey(eventKey) ?: return
         manager.cancel(identity.trackingKey, NOTIFICATION_ID)
         cancelLegacyTag(identity)
     }
 
     fun updateGroupSummary(count: Int, preferences: NotificationPreferences) {
+        com.blackatsystems.miguardia.QaInstrumentationScope.requireExternalAction(context, "notification.group-summary")
         if (count <= 1) {
             manager.cancel(GROUP_SUMMARY_TAG, GROUP_SUMMARY_ID)
             return
@@ -280,6 +283,7 @@ internal class ShiftNotificationPresenter(private val context: Context) {
     }
 
     private fun notifySafely(tag: String?, id: Int, notification: Notification) {
+        com.blackatsystems.miguardia.QaInstrumentationScope.requireExternalAction(context, "notification.notify")
         if (
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
             PackageManager.PERMISSION_GRANTED || !manager.areNotificationsEnabled()
@@ -315,6 +319,7 @@ internal class ShiftNotificationPresenter(private val context: Context) {
         event: NextEventItem,
         boundary: Instant,
     ): PendingIntent {
+        com.blackatsystems.miguardia.QaInstrumentationScope.requireExternalAction(context, "notification.activity-identity")
         val intent = Intent(context, MainActivity::class.java)
             .setAction(action)
             .setData(
@@ -347,6 +352,7 @@ internal class ShiftNotificationPresenter(private val context: Context) {
     }
 
     private fun dismissIntent(identity: NextEventIdentity): PendingIntent {
+        com.blackatsystems.miguardia.QaInstrumentationScope.requireExternalAction(context, "notification.dismiss-identity")
         val intent = Intent(context, ShiftAlarmReceiver::class.java)
             .setAction(ShiftAlarmReceiver.ACTION_NOTIFICATION_DISMISSED)
             .setData(
@@ -365,12 +371,14 @@ internal class ShiftNotificationPresenter(private val context: Context) {
     }
 
     private fun cancelLegacyTag(identity: NextEventIdentity) {
+        com.blackatsystems.miguardia.QaInstrumentationScope.requireExternalAction(context, "notification.cancel-legacy")
         if (identity is NextEventIdentity.Shift) {
             manager.cancel(identity.shiftId.toString(), NOTIFICATION_ID)
         }
     }
 
     private fun ensureChannel(preferences: NotificationPreferences): String {
+        com.blackatsystems.miguardia.QaInstrumentationScope.requireExternalAction(context, "notification.channel-sweep")
         val notificationManager = context.getSystemService(NotificationManager::class.java)
         val effectiveSound = preferences.soundUri
             ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
@@ -481,7 +489,6 @@ internal class ShiftNotificationPresenter(private val context: Context) {
         private const val PREVIEW_TIMEOUT_MILLIS = 60_000L
         private const val VIGILIA_ACCENT = 0xFF8B5CFF.toInt()
         private const val HIDDEN_ACCENT = 0xFF665E70.toInt()
-        private val TimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
     }
 }
 

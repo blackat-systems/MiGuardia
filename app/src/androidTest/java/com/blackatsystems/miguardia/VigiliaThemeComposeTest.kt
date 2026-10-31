@@ -28,13 +28,13 @@ class VigiliaThemeComposeTest {
         }
 
         compose.runOnIdle {
-            assertEquals(Color(0xFF090812), scheme.background)
-            assertEquals(Color(0xFF151125), scheme.surface)
-            assertEquals(Color(0xFF8B5CFF), scheme.primary)
-            assertEquals(Color(0xFF34254A), scheme.outline)
-            assertEquals(Color(0xFFEC63F5), roles?.active)
-            assertEquals(Color(0xFF42D392), roles?.success)
-            assertEquals(Color(0xFF71D8D1), roles?.vacation)
+            assertEquals(Color(0xFF15151E), scheme.background)
+            assertEquals(Color(0xFF23232F), scheme.surface)
+            assertEquals(Color(0xFFB8A2F8), scheme.primary)
+            assertEquals(Color(0xFF91899F), scheme.outline)
+            assertEquals(Color(0xFFB8A2F8), roles?.active)
+            assertEquals(Color(0xFFB0D9CB), roles?.success)
+            assertEquals(Color(0xFFBFDEE0), roles?.vacation)
             assertThemeContrast(scheme, requireNotNull(roles))
         }
     }
@@ -51,13 +51,13 @@ class VigiliaThemeComposeTest {
         }
 
         compose.runOnIdle {
-            assertEquals(Color(0xFFF7F4FA), scheme.background)
+            assertEquals(Color(0xFFF5F4F8), scheme.background)
             assertEquals(Color.White, scheme.surface)
-            assertEquals(Color(0xFF6F3DE1), scheme.primary)
-            assertEquals(Color(0xFFDDD3E7), scheme.outline)
-            assertEquals(Color(0xFFB62AC8), roles?.active)
-            assertEquals(Color(0xFF167A56), roles?.success)
-            assertEquals(Color(0xFF006A65), roles?.vacation)
+            assertEquals(Color(0xFF6951B4), scheme.primary)
+            assertEquals(Color(0xFF80778F), scheme.outline)
+            assertEquals(Color(0xFF6951B4), roles?.active)
+            assertEquals(Color(0xFF2A6957), roles?.success)
+            assertEquals(Color(0xFF284B53), roles?.vacation)
             assertThemeContrast(scheme, requireNotNull(roles))
         }
     }
@@ -68,6 +68,13 @@ class VigiliaThemeComposeTest {
     ) {
         assertContrast(scheme.onSurface, scheme.surface)
         assertContrast(roles.onSurfaceMuted, scheme.surface)
+        assertContrast(roles.onSurfaceMuted, scheme.surfaceContainerHighest)
+        assertContrast(scheme.onSurface, roles.surfaceHero)
+        assertContrast(scheme.onSurface, roles.heroEnd)
+        assertContrast(roles.onSelection, roles.selection)
+        assertContrast(roles.onDateContainer, roles.dateContainer)
+        assertContrast(roles.onCompletedContainer, roles.completedContainer)
+        assertContrast(roles.onPlannedContainer, roles.plannedContainer)
         assertContrast(scheme.onPrimary, scheme.primary)
         assertContrast(roles.onActive, roles.active)
         assertContrast(roles.onSuccess, roles.success)

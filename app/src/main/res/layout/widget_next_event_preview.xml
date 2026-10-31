@@ -11,7 +11,7 @@
         android:layout_width="5dp"
         android:layout_height="match_parent"
         android:layout_marginEnd="12dp"
-        android:background="#6F3DE1"
+        android:background="#6951B4"
         android:contentDescription="@null" />
 
     <LinearLayout
@@ -24,7 +24,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/widget_preview_title"
-            android:textColor="#665E70"
+            android:textColor="#665F74"
             android:textSize="12sp"
             android:textStyle="bold" />
 
@@ -33,7 +33,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
             android:text="@string/widget_preview_primary"
-            android:textColor="#1B1524"
+            android:textColor="#292738"
             android:textSize="17sp"
             android:textStyle="bold" />
 
@@ -41,7 +41,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/widget_preview_schedule"
-            android:textColor="#665E70"
+            android:textColor="#665F74"
             android:textSize="13sp" />
     </LinearLayout>
 </LinearLayout>

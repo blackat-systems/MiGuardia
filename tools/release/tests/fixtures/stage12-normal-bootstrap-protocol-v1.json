@@ -1,0 +1,93 @@
+{
+  "purpose": "Synthetic contract fixture only; no device observation, permission or executable admission.",
+  "provenance": "Public normative fields of the Stage12 normal-bootstrap protocol dated 2026-10-23; independently maintained, not generated from the validator. Runtime identities and observations are deliberately null.",
+  "authority": {
+    "sha256": "b330ba9cb1a6c6019c23027390e477b18f32a93a9c4872d7f690af840ce95987"
+  },
+  "source_review": {
+    "sha256": "b2c14974b032e41d79dcc8dc78b93ddc90091e05cb43887e6560aca73e65caaa"
+  },
+  "schemas": {
+    "expected": {
+      "required": [
+        "schema", "authority_sha256", "run_id", "round", "qa_sha256",
+        "runner_sha256", "candidate_role", "avd", "target", "runner",
+        "root_id", "art_resource", "emoji"
+      ]
+    },
+    "testimony": {
+      "required": [
+        "schema", "authority_sha256", "run_id", "round", "qa_sha256",
+        "runner_sha256", "candidate_role", "avd", "target", "runner",
+        "root_id", "providers", "art", "emoji", "fileprovider", "business"
+      ]
+    }
+  },
+  "art": {
+    "resource": {
+      "path": "/data/misc/profiles/cur/0/com.blackatsystems.miguardia.qa/primary.prof"
+    },
+    "uid": null
+  },
+  "emoji": {
+    "states": [
+      { "state": "DISCOVERY_NOT_ADMITTED" },
+      { "state": "ABSENT" },
+      { "state": "IDENTIFIED_ADMITTED" }
+    ],
+    "identified_provider": null
+  },
+  "fileprovider": {
+    "fixture": {
+      "utf8": "stage12 normal bootstrap synthetic readback\n",
+      "bytes": 44,
+      "sha256": "2244ca7eeda4fba7613b34275b6eca6d2f262f1ead6be7889eabf7b74f36f033"
+    }
+  },
+  "pending_expected": {
+    "schema": "stage12-normal-bootstrap-expected-v1",
+    "authority_sha256": "b330ba9cb1a6c6019c23027390e477b18f32a93a9c4872d7f690af840ce95987",
+    "run_id": null,
+    "round": null,
+    "qa_sha256": null,
+    "runner_sha256": null,
+    "candidate_role": "NORMAL_BOOTSTRAP_RESOURCE_CANDIDATE",
+    "avd": {
+      "name": null,
+      "api": null,
+      "serial": null
+    },
+    "target": {
+      "package": "com.blackatsystems.miguardia.qa",
+      "user_id": null,
+      "uid": null,
+      "certificate_sha256": null,
+      "apk_sha256": null,
+      "uid_observation_sha256": null
+    },
+    "runner": {
+      "package": "com.blackatsystems.miguardia.qa.test",
+      "class": "com.blackatsystems.miguardia.stage12.Stage12Runner",
+      "certificate_sha256": null,
+      "apk_sha256": null,
+      "identity_observation_sha256": null
+    },
+    "root_id": null,
+    "art_resource": {
+      "id": "ART_QA_USER0_CURRENT_PROFILE",
+      "path": "/data/misc/profiles/cur/0/com.blackatsystems.miguardia.qa/primary.prof",
+      "package": "com.blackatsystems.miguardia.qa",
+      "user_id": null,
+      "uid": null
+    },
+    "emoji": {
+      "state": "DISCOVERY_NOT_ADMITTED",
+      "query_action": "androidx.content.action.LOAD_EMOJI_FONT",
+      "system_only": true,
+      "discovery_result": "PENDING_CLASSIFICATION",
+      "discovery_sha256": null,
+      "provider": null,
+      "fonts": []
+    }
+  }
+}

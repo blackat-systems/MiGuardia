@@ -42,6 +42,7 @@ Para rastrear un hallazgo de la auditoría original, sus números de línea corr
 | `docs/prompts/NOVEDADES_FERIADOS_Y_NOTAS.md` | Novedades y Room v2 | `docs/archive/2026-09-06-before-optimization/docs/prompts/NOVEDADES_FERIADOS_Y_NOTAS.md` |
 | `docs/prompts/OBJETIVOS_Y_GUARDIAS.md` | Lugares, horarios y cargas | `docs/archive/2026-09-06-before-optimization/docs/prompts/OBJETIVOS_Y_GUARDIAS.md` |
 | `docs/prompts/ONBOARDING_Y_PRIMERA_CARGA.md` | Diseño de onboarding V1 | `docs/archive/2026-09-06-before-optimization/docs/prompts/ONBOARDING_Y_PRIMERA_CARGA.md` |
+| `docs/prompts/ORQUESTACION_SECUENCIAL_MAIN_2_0.md` | Coordinación histórica; sucesor vigente: WORKFLOW | `docs/archive/2026-09-06-before-optimization/docs/prompts/ORQUESTACION_SECUENCIAL_MAIN_2_0.md` |
 | `docs/prompts/PAGINA_DE_APORTES_VOLUNTARIOS_WEB_V2.md` | CERRADO / PUBLICADO | `docs/archive/2026-09-06-before-optimization/docs/prompts/PAGINA_DE_APORTES_VOLUNTARIOS_WEB_V2.md` |
 | `docs/prompts/PAGINA_PUBLICA_DE_MIGUARDIA_Y_ACCESO_A_LA_BETA_WEB_V2.md` | CERRADO / PUBLICADO | `docs/archive/2026-09-06-before-optimization/docs/prompts/PAGINA_PUBLICA_DE_MIGUARDIA_Y_ACCESO_A_LA_BETA_WEB_V2.md` |
 | `docs/prompts/PERFIL_LABORAL_Y_CONFIGURACION.md` | Perfil local V1 | `docs/archive/2026-09-06-before-optimization/docs/prompts/PERFIL_LABORAL_Y_CONFIGURACION.md` |

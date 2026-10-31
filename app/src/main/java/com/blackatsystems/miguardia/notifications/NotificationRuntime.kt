@@ -46,6 +46,7 @@ class NotificationRuntime(
     private var pausedForRestore = false
 
     private fun publicationReady(): Boolean {
+        if (com.blackatsystems.miguardia.QaInstrumentationScope.suppress(context, "notification.publication")) return false
         val allowed = com.blackatsystems.miguardia.localAllowsPublication(context)
         if (!allowed) presenter.showRecoveryForExisting()
         return allowed

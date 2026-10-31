@@ -6,6 +6,8 @@ import com.blackatsystems.miguardia.core.domain.widget.WidgetEventPresentation
 import com.blackatsystems.miguardia.core.domain.widget.WidgetMode
 import com.blackatsystems.miguardia.core.domain.widget.WidgetPrivacy
 import com.blackatsystems.miguardia.core.domain.widget.WidgetProjection
+import com.blackatsystems.miguardia.ui.EventTimeRangeStyle
+import com.blackatsystems.miguardia.ui.formatEventTimeRange
 import com.blackatsystems.miguardia.ui.theme.AppThemeMode
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -94,19 +96,19 @@ internal fun resolveWidgetPalette(mode: AppThemeMode, systemDark: Boolean): Widg
     val dark = mode.resolve(systemDark)
     return if (dark) {
         WidgetPalette(
-            background = 0xFF151125.toInt(),
-            primaryText = 0xFFF7F2FA.toInt(),
-            secondaryText = 0xFFC9C2D6.toInt(),
-            defaultAccent = 0xFF8B5CFF.toInt(),
-            action = 0xFF55C2FF.toInt(),
+            background = 0xFF15151E.toInt(),
+            primaryText = 0xFFF2EFF8.toInt(),
+            secondaryText = 0xFFB5AFC3.toInt(),
+            defaultAccent = 0xFFB8A2F8.toInt(),
+            action = 0xFFB8A2F8.toInt(),
         )
     } else {
         WidgetPalette(
-            background = 0xFFFFFFFF.toInt(),
-            primaryText = 0xFF1B1524.toInt(),
-            secondaryText = 0xFF665E70.toInt(),
-            defaultAccent = 0xFF6F3DE1.toInt(),
-            action = 0xFF00629A.toInt(),
+            background = 0xFFF5F4F8.toInt(),
+            primaryText = 0xFF292738.toInt(),
+            secondaryText = 0xFF665F74.toInt(),
+            defaultAccent = 0xFF6951B4.toInt(),
+            action = 0xFF6951B4.toInt(),
         )
     }
 }
@@ -160,10 +162,7 @@ private fun WidgetEventPresentation.completeRow(): String {
 }
 
 private fun WidgetEventPresentation.schedule(): String =
-    "${ownerLocalDate.format(ShortDateFormatter)} · ${start.atZone(zoneId).format(TimeFormatter)}–" +
-        end.atZone(zoneId).format(TimeFormatter)
+    formatEventTimeRange(start, end, zoneId, EventTimeRangeStyle.COMPACT_DATED)
 
 private val SpanishArgentina = Locale.forLanguageTag("es-AR")
 private val DateFormatter = DateTimeFormatter.ofPattern("EEEE d 'de' MMMM", SpanishArgentina)
-private val ShortDateFormatter = DateTimeFormatter.ofPattern("dd/MM", SpanishArgentina)
-private val TimeFormatter = DateTimeFormatter.ofPattern("HH:mm", SpanishArgentina)

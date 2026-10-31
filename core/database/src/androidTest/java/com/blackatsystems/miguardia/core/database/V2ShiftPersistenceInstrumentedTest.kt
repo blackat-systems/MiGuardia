@@ -6,6 +6,10 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.blackatsystems.miguardia.core.database.mapping.toEntity
 import com.blackatsystems.miguardia.core.database.repository.RoomV2ShiftRepository
 import com.blackatsystems.miguardia.core.domain.model.ShiftNote
+import com.blackatsystems.miguardia.core.domain.model.ShiftNoteWithAttachments
+import com.blackatsystems.miguardia.core.domain.model.ShiftNoteAttachment
+import com.blackatsystems.miguardia.core.domain.model.ExplicitDayStatus
+import com.blackatsystems.miguardia.core.domain.model.ExplicitDayStatusType
 import com.blackatsystems.miguardia.core.domain.model.ShiftNotificationConfig
 import com.blackatsystems.miguardia.core.domain.model.ShiftOccupancyExpectation
 import com.blackatsystems.miguardia.core.domain.model.V2ShiftBatchMutation
@@ -22,6 +26,7 @@ import com.blackatsystems.miguardia.core.domain.work.HoursReference
 import com.blackatsystems.miguardia.core.domain.work.WorkConfiguration
 import java.time.Clock
 import java.time.LocalDate
+import java.time.LocalTime
 import java.util.UUID
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -43,6 +48,111 @@ class V2ShiftPersistenceInstrumentedTest {
     private lateinit var context: Context
     private lateinit var database: MiGuardiaV2Database
     private lateinit var store: LocalDataStore
+
+    @Test
+    fun intervalOverwriteRemovesPreviousNightAndPreservesLaterSameDayShift() = runBlocking {
+        val fixture = store.seedV2Catalog()
+        val nightTemplate = fixture.template.copy(id = V2TestIds.uuid(951),
+            startTime = LocalTime.of(19, 0), endTime = LocalTime.of(9, 0))
+        val laterTemplate = fixture.template.copy(id = V2TestIds.uuid(952),
+            startTime = LocalTime.of(18, 0), endTime = LocalTime.of(22, 0))
+        store.workCatalog.createWorkTemplate(nightTemplate)
+        store.workCatalog.createWorkTemplate(laterTemplate)
+        val date = V2TestIds.SHIFT_DATE
+        val night = store.buildTestV2Write(fixture.copy(template = nightTemplate), V2TestIds.uuid(953), date.minusDays(1))
+        val later = store.buildTestV2Write(fixture.copy(template = laterTemplate), V2TestIds.uuid(954), date)
+        val candidate = store.buildTestV2Write(fixture, V2TestIds.uuid(955), date)
+        store.v2Shifts.insert(night)
+        store.v2Shifts.insert(later)
+        val plan = com.blackatsystems.miguardia.core.domain.shift.planV2ShiftBatch(
+            setOf(date), listOf(night.shift, later.shift), listOf(candidate),
+            com.blackatsystems.miguardia.core.domain.shift.OccupiedDatePolicy.REPLACE,
+        )
+        store.v2Shifts.applyV2Batch(plan.mutation.copy(deletionExpectations =
+            store.v2Shifts.captureDeletionExpectations(plan.mutation.shiftIdsToDelete)),
+            ShiftOccupancyExpectation.capture(date.minusDays(1), date, listOf(night.shift, later.shift)))
+        assertEquals(V2ShiftLookup.Missing, store.v2Shifts.getShift(night.shift.id))
+        assertEquals(V2ShiftLookup.V2(later), store.v2Shifts.getShift(later.shift.id))
+        assertEquals(V2ShiftLookup.V2(candidate), store.v2Shifts.getShift(candidate.shift.id))
+    }
+
+    @Test
+    fun unifiedBatchInsertsIndependentNotesAndRecognizesExactRetry() = runBlocking {
+        val fixture = store.seedV2Catalog()
+        val first = store.buildTestV2Write(fixture, V2TestIds.uuid(901), V2TestIds.SHIFT_DATE)
+        val second = store.buildTestV2Write(fixture, V2TestIds.uuid(902), V2TestIds.SHIFT_DATE.plusDays(1))
+        val notes = listOf(first, second).mapIndexed { index, write ->
+            val note = ShiftNote(V2TestIds.uuid(911 + index), write.shift.id,
+                "Nota sintética", write.shift.createdAt, write.shift.updatedAt)
+            ShiftNoteWithAttachments(note, listOf(ShiftNoteAttachment(
+                id = V2TestIds.uuid(915 + index), noteId = note.id,
+                storageKey = "note_${V2TestIds.uuid(915 + index)}.jpg", mimeType = "image/jpeg",
+                byteSize = 100, pixelWidth = 10, pixelHeight = 10, position = 0,
+                createdAt = write.shift.createdAt, updatedAt = write.shift.updatedAt,
+            )))
+        }
+        val mutation = V2ShiftBatchMutation(shiftsToInsert = listOf(first, second), notesToInsert = notes)
+        val expected = ShiftOccupancyExpectation.capture(first.shift.localStartDate, second.shift.localStartDate, emptyList())
+        store.v2Shifts.applyV2Batch(mutation, expected)
+        store.v2Shifts.applyV2Batch(mutation, expected)
+        assertEquals(2, database.shiftNoteDao().getAll().size)
+        assertEquals(notes[0].note, store.shiftNotes.getById(notes[0].note.id))
+        assertEquals(notes[1].note, store.shiftNotes.getById(notes[1].note.id))
+        store.shiftNotes.delete(notes[0].note.id)
+        assertEquals(notes[1], store.shiftNotes.getWithAttachments(notes[1].note.id))
+        assertEquals(setOf(notes[1].attachments.single().storageKey), store.shiftNotes.allAttachmentStorageKeys())
+    }
+
+    @Test
+    fun changedAssociatedNoteRejectsOverwriteWithoutPartialWrites() = runBlocking {
+        val fixture = store.seedV2Catalog()
+        val original = store.buildTestV2Write(fixture, V2TestIds.uuid(921), V2TestIds.SHIFT_DATE)
+        val candidate = store.buildTestV2Write(fixture, V2TestIds.uuid(922), V2TestIds.SHIFT_DATE)
+        store.v2Shifts.insert(original)
+        val expected = store.v2Shifts.captureDeletionExpectations(setOf(original.shift.id))
+        store.shiftNotes.insert(ShiftNote(V2TestIds.uuid(923), original.shift.id, "Nota agregada luego del preview",
+            original.shift.createdAt, original.shift.updatedAt))
+        assertSuspendThrows<ConflictingLocalWriteException> {
+            store.v2Shifts.applyV2Batch(V2ShiftBatchMutation(shiftIdsToDelete = setOf(original.shift.id),
+                shiftsToInsert = listOf(candidate), deletionExpectations = expected), occupancyOf(original))
+        }
+        assertEquals(V2ShiftLookup.V2(original), store.v2Shifts.getShift(original.shift.id))
+        assertEquals(V2ShiftLookup.Missing, store.v2Shifts.getShift(candidate.shift.id))
+    }
+
+    @Test
+    fun overlayPreservesFrancoAndStatusCasRejectsStaleDecision() = runBlocking {
+        val fixture = store.seedV2Catalog()
+        val date = V2TestIds.SHIFT_DATE
+        val candidate = store.buildTestV2Write(fixture, V2TestIds.uuid(931), date)
+        val occupancy = ShiftOccupancyExpectation.capture(date, date, emptyList())
+        val mutation = V2ShiftBatchMutation(shiftsToInsert = listOf(candidate),
+            explicitStatusExpectations = mapOf(date to null))
+        store.explicitDayStatuses.set(date, ExplicitDayStatusType.DAY_OFF)
+        assertSuspendThrows<ConflictingLocalWriteException> { store.v2Shifts.applyV2Batch(mutation, occupancy) }
+        store.v2Shifts.applyV2Batch(mutation.copy(explicitStatusExpectations = mapOf(date to
+            ExplicitDayStatus(date, ExplicitDayStatusType.DAY_OFF))), occupancy)
+        assertEquals(ExplicitDayStatusType.DAY_OFF, store.explicitDayStatuses.observeBetween(date, date).first().single().type)
+    }
+
+    @Test
+    fun noteConstraintFailureRollsBackEveryInsertedJourney() = runBlocking {
+        val fixture = store.seedV2Catalog()
+        val first = store.buildTestV2Write(fixture, V2TestIds.uuid(941), V2TestIds.SHIFT_DATE)
+        val second = store.buildTestV2Write(fixture, V2TestIds.uuid(942), V2TestIds.SHIFT_DATE.plusDays(1))
+        database.openHelper.writableDatabase.execSQL(
+            "CREATE TRIGGER reject_load_note BEFORE INSERT ON shift_notes BEGIN SELECT RAISE(ABORT, 'synthetic note failure'); END",
+        )
+        val note = ShiftNoteWithAttachments(ShiftNote(V2TestIds.uuid(943), second.shift.id, "Nota sintética",
+            second.shift.createdAt, second.shift.updatedAt), emptyList())
+        assertSuspendThrows<InvalidLocalDataException> {
+            store.v2Shifts.applyV2Batch(V2ShiftBatchMutation(shiftsToInsert = listOf(first, second), notesToInsert = listOf(note)),
+                ShiftOccupancyExpectation.capture(first.shift.localStartDate, second.shift.localStartDate, emptyList()))
+        }
+        assertEquals(V2ShiftLookup.Missing, store.v2Shifts.getShift(first.shift.id))
+        assertEquals(V2ShiftLookup.Missing, store.v2Shifts.getShift(second.shift.id))
+        assertTrue(database.shiftNoteDao().getAll().isEmpty())
+    }
 
     @Before
     fun setUp() {

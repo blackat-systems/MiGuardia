@@ -11,6 +11,10 @@ import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
 import com.blackatsystems.miguardia.core.domain.repository.HolidayRepository
 import com.blackatsystems.miguardia.core.domain.repository.ShiftNoteRepository
 import com.blackatsystems.miguardia.core.domain.repository.ShiftRepository
+import com.blackatsystems.miguardia.ui.photos.NoteImageSelection
+import com.blackatsystems.miguardia.ui.photos.NoteAttachmentFiles
+import com.blackatsystems.miguardia.ui.photos.StoredPhoto
+import com.blackatsystems.miguardia.backup.LocalDataMutationGate
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
@@ -24,6 +28,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
@@ -41,6 +46,296 @@ class ExceptionsCoordinatorTest {
     @After
     fun tearDown() {
         scopes.forEach(CoroutineScope::cancel)
+    }
+
+    @Test
+    fun imageSelectionCapacityAcceptsExactFitAndRejectsWholeExcessBeforeImport() = runBlocking {
+        for (existing in listOf(0, 1, 29, 30)) {
+            val available = 30 - existing
+            val imported = mutableListOf<Int>()
+            val result = NoteImageSelection.importBatch((0 until available).toList(), existing,
+                importImage = { source, position -> imported += source; position }, discard = { error("No rollback expected") })
+            assertEquals((existing until 30).toList(), result)
+            imported.clear()
+            try {
+                NoteImageSelection.importBatch((0..available).toList(), existing,
+                    importImage = { source, _ -> imported += source; source }, discard = { error("No import should start") })
+                org.junit.Assert.fail("The whole excess must be rejected")
+            } catch (error: IllegalArgumentException) {
+                assertTrue(error.message!!.contains("No se agregó ninguna imagen"))
+            }
+            assertTrue(imported.isEmpty())
+        }
+    }
+
+    @Test
+    fun imageSelectionReadFailureOrCancellationRollsBackOnlyNewImages() = runBlocking {
+        for (failure in listOf(java.io.IOException("Lectura interrumpida"), kotlinx.coroutines.CancellationException("Cancelado"))) {
+            val privateImages = mutableSetOf("confirmed", "previous-draft")
+            try {
+                NoteImageSelection.importBatch(listOf("new-a", "new-b"), 2,
+                    importImage = { source, _ -> if (source == "new-b") throw failure else source.also(privateImages::add) },
+                    discard = { images -> privateImages.removeAll(images.toSet()) })
+                org.junit.Assert.fail("The selection must fail")
+            } catch (error: Exception) {
+                assertTrue(error === failure)
+            }
+            assertEquals(setOf("confirmed", "previous-draft"), privateImages)
+        }
+    }
+
+    @Test
+    fun cancelledPickerNeverImportsOrClearsExistingImages() = runBlocking {
+        val imported = NoteImageSelection.importBatch(emptyList<String>(), 30,
+            importImage = { _, _ -> error("No file should be read") }, discard = { error("No file should be removed") })
+        assertTrue(imported.isEmpty())
+    }
+
+    @Test
+    fun coroutineCancellationStillCompletesSuspendingImageCleanup() = runBlocking {
+        val files = mutableSetOf("previous")
+        val operation = async {
+            NoteImageSelection.importBatch(listOf("new", "cancel"), 1,
+                importImage = { source, _ ->
+                    if (source == "cancel") {
+                        kotlinx.coroutines.currentCoroutineContext().cancel()
+                        kotlinx.coroutines.yield()
+                    }
+                    source.also(files::add)
+                },
+                discard = { imported -> kotlinx.coroutines.yield(); files.removeAll(imported.toSet()) })
+        }
+        try { operation.await(); org.junit.Assert.fail("Expected cancellation") }
+        catch (_: kotlinx.coroutines.CancellationException) { }
+        assertEquals(setOf("previous"), files)
+    }
+
+    @Test
+    fun doubleNoteSaveWhileWritePendingCreatesOneAggregate() = runBlocking {
+        val release = CompletableDeferred<Unit>()
+        val notes = FakeNoteRepository().apply { saveRelease = release }
+        val coordinator = coordinator(notes = notes)
+        coordinator.openNotes(SHIFT)
+        coordinator.updateNoteDraft { it.copy(body = "Nota sintética") }
+        coordinator.saveNote()
+        assertTrue(coordinator.uiState.value.isSaving)
+        coordinator.saveNote()
+        assertEquals(1, notes.saveCalls)
+        release.complete(Unit)
+        assertFalse(coordinator.uiState.value.isSaving)
+        assertEquals("Nota sintética", notes.saved!!.note.body)
+        assertEquals(NoteDraft(), coordinator.uiState.value.noteDraft)
+    }
+
+    @Test
+    fun rejectedNoteSavePreservesDraftForExplicitRetry() {
+        val notes = FakeNoteRepository().apply { failNextSave = true }
+        val coordinator = coordinator(notes = notes)
+        coordinator.openNotes(SHIFT)
+        coordinator.updateNoteDraft { it.copy(body = "Nota a conservar") }
+        val before = coordinator.uiState.value.noteDraft
+        coordinator.saveNote()
+        assertEquals(before.body, coordinator.uiState.value.noteDraft.body)
+        assertEquals(before.attachments, coordinator.uiState.value.noteDraft.attachments)
+        assertNull(notes.saved)
+        assertFalse(coordinator.uiState.value.isSaving)
+        coordinator.saveNote()
+        assertEquals("Nota a conservar", notes.saved!!.note.body)
+        assertEquals(2, notes.saveCalls)
+    }
+
+    @Test
+    fun lostNoteSaveAcknowledgementRetriesSameIdentityAfterRecreation() {
+        val notes = FakeNoteRepository().apply { failAfterNextSave = true }
+        val persisted = mutableListOf<ExceptionsPersistedState>()
+        val first = coordinator(notes = notes, persist = persisted::add)
+        first.openNotes(SHIFT)
+        first.updateNoteDraft { it.copy(body = "Nota sin duplicar") }
+        first.saveNote()
+        assertEquals(1, notes.count)
+        val committed = requireNotNull(notes.saved)
+        assertEquals("Nota sin duplicar", first.uiState.value.noteDraft.body)
+        val restored = coordinator(notes = notes, initial = persisted.last(), uuidSeed = 200L)
+        restored.saveNote()
+        assertEquals("A retry must not insert another note after a lost acknowledgement", 1, notes.count)
+        assertEquals(committed.note.id, requireNotNull(notes.saved).note.id)
+        assertEquals(NoteDraft(), restored.uiState.value.noteDraft)
+    }
+
+    @Test
+    fun startupReconciliationCannotDeleteAttachmentFromConcurrentRestore() = runBlocking {
+        noteRestoreRace(reconciliation = true)
+    }
+
+    @Test
+    fun deletionCleanupCannotDeleteAttachmentFromConcurrentRestore() = runBlocking {
+        noteRestoreRace(reconciliation = false)
+    }
+
+    @Test
+    fun missingImageKeepsDraftAndRejectsBrokenReferenceBeforeSaving() {
+        val image = ShiftNoteAttachment(uuid(801), uuid(802), "note_${uuid(801)}.png", "image/png", 10, 1, 1, 0, NOW, NOW)
+        val notes = FakeNoteRepository()
+        val draft = NoteDraft(body = "Nota conservada", attachments = listOf(image))
+        val coordinator = coordinator(notes = notes, noteFiles = FakeNoteFiles(),
+            initial = ExceptionsPersistedState(ExceptionsSurface.NOTES, MONTH, shiftId = SHIFT.id, noteDraft = draft))
+        coordinator.saveNote()
+        assertEquals(0, notes.saveCalls)
+        assertEquals(draft.body, coordinator.uiState.value.noteDraft.body)
+        assertEquals(draft.attachments, coordinator.uiState.value.noteDraft.attachments)
+        assertTrue(coordinator.uiState.value.errorMessage!!.contains("Una imagen ya no está disponible"))
+        assertFalse(coordinator.uiState.value.isSaving)
+    }
+
+    @Test
+    fun cancellingAfterLostAcknowledgementPreservesTheConfirmedImage() {
+        val image = ShiftNoteAttachment(uuid(811), uuid(812), "note_${uuid(811)}.png", "image/png", 10, 1, 1, 0, NOW, NOW)
+        val notes = FakeNoteRepository().apply { failAfterNextSave = true }
+        val files = FakeNoteFiles().apply { keys += image.storageKey }
+        val coordinator = coordinator(notes = notes, noteFiles = files,
+            initial = ExceptionsPersistedState(ExceptionsSurface.NOTES, MONTH, shiftId = SHIFT.id,
+                noteDraft = NoteDraft(body = "Nota confirmada", attachments = listOf(image))))
+        coordinator.saveNote()
+        assertEquals(1, notes.count)
+        coordinator.cancelNoteEdit()
+        assertEquals(NoteDraft(), coordinator.uiState.value.noteDraft)
+        assertTrue(files.exists(image.storageKey))
+        assertEquals(1, notes.count)
+    }
+
+    @Test
+    fun deletingEditedNoteCleansUnsavedImagesButPreservesFreshReferences() = runBlocking {
+        val note = ShiftNote(uuid(901), SHIFT.id, "Nota editada", NOW, NOW)
+        val other = ShiftNote(uuid(902), SHIFT.id, "Nota restaurada", NOW, NOW)
+        fun image(id: Long, noteId: UUID) = ShiftNoteAttachment(uuid(id), noteId,
+            "note_${uuid(id)}.png", "image/png", 10, 1, 1, 0, NOW, NOW)
+        val original = image(903, note.id)
+        val added = image(904, note.id)
+        val referencedElsewhere = image(905, other.id)
+        val notes = FakeNoteRepository()
+        notes.saveWithAttachments(note, listOf(original))
+        notes.saveWithAttachments(other, listOf(referencedElsewhere))
+        val files = FakeNoteFiles().apply { keys += setOf(original.storageKey, referencedElsewhere.storageKey) }
+        val coordinator = coordinator(notes = notes, noteFiles = files)
+        coordinator.openNotes(SHIFT)
+        coordinator.editNote(requireNotNull(notes.getWithAttachments(note.id)))
+        // Post-import fixture: the original was removed from the draft, a new image was
+        // imported, and restore has since confirmed another draft key in a different note.
+        files.keys += added.storageKey
+        coordinator.updateNoteDraft { it.copy(attachments = listOf(added, referencedElsewhere.copy(noteId = note.id, position = 1))) }
+
+        coordinator.deleteNote(note.id)
+
+        assertNull(notes.getWithAttachments(note.id))
+        assertEquals(other, notes.getWithAttachments(other.id)!!.note)
+        assertEquals(setOf(referencedElsewhere.storageKey), files.keys)
+        assertEquals(NoteDraft(), coordinator.uiState.value.noteDraft)
+    }
+
+    @Test
+    fun deletingNoteAfterLostAcknowledgementAlsoClearsItsPendingDraft() {
+        val notes = FakeNoteRepository().apply { failAfterNextSave = true }
+        val coordinator = coordinator(notes = notes)
+        coordinator.openNotes(SHIFT)
+        coordinator.updateNoteDraft { it.copy(body = "Nota confirmada sin respuesta") }
+        coordinator.saveNote()
+        val id = requireNotNull(notes.saved).note.id
+        coordinator.deleteNote(id)
+        assertEquals(0, notes.count)
+        assertEquals(NoteDraft(), coordinator.uiState.value.noteDraft)
+    }
+
+    @Test
+    fun deletingAnotherNotePreservesTheCurrentDraftAndItsPrivateImages() = runBlocking {
+        val note = ShiftNote(uuid(911), SHIFT.id, "Nota en edición", NOW, NOW)
+        val other = ShiftNote(uuid(912), SHIFT.id, "Otra nota", NOW, NOW)
+        val image = ShiftNoteAttachment(uuid(913), note.id, "note_${uuid(913)}.png", "image/png", 10, 1, 1, 0, NOW, NOW)
+        val notes = FakeNoteRepository()
+        notes.saveWithAttachments(note, emptyList())
+        notes.saveWithAttachments(other, emptyList())
+        val files = FakeNoteFiles()
+        val coordinator = coordinator(notes = notes, noteFiles = files)
+        coordinator.openNotes(SHIFT)
+        coordinator.editNote(requireNotNull(notes.getWithAttachments(note.id)))
+        files.keys += image.storageKey
+        coordinator.updateNoteDraft { it.copy(attachments = listOf(image)) }
+        val before = coordinator.uiState.value.noteDraft
+        coordinator.deleteNote(other.id)
+        assertEquals(before, coordinator.uiState.value.noteDraft)
+        assertTrue(files.exists(image.storageKey))
+        assertEquals(note, notes.getWithAttachments(note.id)!!.note)
+    }
+
+    /** Real coordinator and gate; fake SQL/files expose the interleaving without Android. */
+    private suspend fun noteRestoreRace(reconciliation: Boolean) = kotlinx.coroutines.coroutineScope {
+        val entered = CompletableDeferred<Unit>()
+        val release = CompletableDeferred<Unit>()
+        val notes = FakeNoteRepository()
+        val files = FakeNoteFiles()
+        val gate = LocalDataMutationGate()
+        val id = uuid(790)
+        val note = ShiftNote(uuid(791), SHIFT.id, "Nota restaurable", NOW, NOW)
+        val image = ShiftNoteAttachment(id, note.id, "note_$id.png", "image/png", 10, 1, 1, 0, NOW, NOW)
+        if (!reconciliation) {
+            notes.saveWithAttachments(note, listOf(image))
+            files.keys += image.storageKey
+            notes.deleteBarrier = entered to release
+        } else notes.referencesBarrier = entered to release
+        val coordinator = coordinator(notes = notes, noteFiles = files, mutationGate = gate)
+        try {
+            if (!reconciliation) coordinator.deleteNote(note.id)
+            kotlinx.coroutines.withTimeout(5_000) { entered.await() }
+            val restoreEntered = CompletableDeferred<Unit>()
+            val restore = async(start = kotlinx.coroutines.CoroutineStart.UNDISPATCHED) {
+                gate.withExclusiveMutation {
+                    restoreEntered.complete(Unit)
+                    notes.saveWithAttachments(note, listOf(image))
+                    files.keys += image.storageKey
+                }
+            }
+            if (restoreEntered.isCompleted) restore.await()
+            release.complete(Unit)
+            kotlinx.coroutines.withTimeout(5_000) { restore.await() }
+            assertEquals(setOf(image.storageKey), notes.allAttachmentStorageKeys())
+            assertTrue("A confirmed restored note must retain its private bytes", files.keys.contains(image.storageKey))
+        } finally { release.complete(Unit) }
+    }
+
+    @Test
+    fun detailImageExcessKeepsDraftAndReportsHowToAdjustSelection() {
+        val images = (0 until 29).map { index ->
+            val id = uuid(500L + index)
+            ShiftNoteAttachment(id, uuid(499), "note_$id.jpg", "image/jpeg", 123, 20, 10, index, NOW, NOW)
+        }
+        val draft = NoteDraft(body = "Nota conservada", attachments = images)
+        val coordinator = coordinator(initial = ExceptionsPersistedState(ExceptionsSurface.NOTES, MONTH,
+            shiftId = SHIFT.id, noteDraft = draft))
+        val unreadSelection = object : AbstractList<android.net.Uri>() {
+            override val size = 2
+            override fun get(index: Int): android.net.Uri = error("Selection must be rejected before reading any URI")
+        }
+        coordinator.addNoteImages(unreadSelection)
+        assertEquals(draft, coordinator.uiState.value.noteDraft)
+        assertEquals(NoteImageSelection.rejectionMessage(29, 2), coordinator.uiState.value.errorMessage)
+        assertFalse(coordinator.uiState.value.isSaving)
+    }
+
+    @Test
+    fun backCancellationClosesHolidaySelectionWithoutRestoreOrWrites() {
+        val holidays = FakeHolidayRepository()
+        val persisted = mutableListOf<ExceptionsPersistedState>()
+        val coordinator = coordinator(holidays = holidays, persist = persisted::add)
+        coordinator.beginHolidaySelection(MONTH)
+        coordinator.updateHolidaySelection(MONTH, setOf(DATE, DATE.plusDays(1)))
+
+        coordinator.cancelHolidaySelection()
+
+        assertFalse(coordinator.uiState.value.holidaySelectionActive)
+        assertEquals(ExceptionsSurface.HOLIDAYS, coordinator.uiState.value.surface)
+        assertEquals(setOf(DATE, DATE.plusDays(1)), coordinator.uiState.value.holidayDraft.selectedDates)
+        assertFalse(persisted.last().holidaySelectionActive)
+        assertEquals(0, holidays.applyCalls)
+        assertTrue(holidays.mutations.isEmpty())
     }
 
     @Test
@@ -211,9 +506,12 @@ class ExceptionsCoordinatorTest {
             holidayMonth = MONTH,
         ),
         persist: (ExceptionsPersistedState) -> Unit = {},
+        uuidSeed: Long = 100L,
+        noteFiles: NoteAttachmentFiles? = null,
+        mutationGate: LocalDataMutationGate = LocalDataMutationGate(),
     ): ExceptionsCoordinator {
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined).also(scopes::add)
-        var nextUuid = 100L
+        var nextUuid = uuidSeed
         return ExceptionsCoordinator(
             holidays = holidays,
             notes = notes,
@@ -223,6 +521,8 @@ class ExceptionsCoordinatorTest {
             scope = scope,
             initialState = initial,
             persist = persist,
+            noteFiles = noteFiles,
+            mutationGate = mutationGate,
         )
     }
 
@@ -291,7 +591,14 @@ private class FakeHolidayRepository(initial: List<Holiday> = emptyList()) : Holi
 }
 
 private class FakeNoteRepository : ShiftNoteRepository {
+    var referencesBarrier: Pair<CompletableDeferred<Unit>, CompletableDeferred<Unit>>? = null
+    var deleteBarrier: Pair<CompletableDeferred<Unit>, CompletableDeferred<Unit>>? = null
+    var saveRelease: CompletableDeferred<Unit>? = null
+    var saveCalls = 0
+    var failNextSave = false
+    var failAfterNextSave = false
     private val aggregates = MutableStateFlow<List<ShiftNoteWithAttachments>>(emptyList())
+    val count get() = aggregates.value.size
     var saved: ShiftNoteWithAttachments? = null
 
     override fun observeForShift(shiftId: UUID): Flow<List<ShiftNote>> =
@@ -314,14 +621,33 @@ private class FakeNoteRepository : ShiftNoteRepository {
     }
 
     override suspend fun saveWithAttachments(note: ShiftNote, attachments: List<ShiftNoteAttachment>) {
+        saveCalls++
+        saveRelease?.await()
+        if (failNextSave) { failNextSave = false; error("Fallo sintético al guardar") }
         val aggregate = ShiftNoteWithAttachments(note, attachments)
         saved = aggregate
         aggregates.value = aggregates.value.filterNot { it.note.id == note.id } + aggregate
+        if (failAfterNextSave) { failAfterNextSave = false; error("Confirmación sintética perdida después de guardar") }
     }
 
     override suspend fun delete(id: UUID) {
         aggregates.value = aggregates.value.filterNot { it.note.id == id }
+        deleteBarrier?.let { (entered, release) -> deleteBarrier = null; entered.complete(Unit); release.await() }
     }
+
+    override suspend fun allAttachmentStorageKeys(): Set<String> {
+        val captured = aggregates.value.flatMap { it.attachments }.mapTo(linkedSetOf()) { it.storageKey }
+        referencesBarrier?.let { (entered, release) -> referencesBarrier = null; entered.complete(Unit); release.await() }
+        return captured
+    }
+}
+
+private class FakeNoteFiles : NoteAttachmentFiles {
+    val keys = linkedSetOf<String>()
+    override suspend fun import(uri: android.net.Uri, id: UUID): StoredPhoto = error("Import is outside this fixture")
+    override suspend fun discardUnreferenced(storageKey: String) { keys.remove(storageKey) }
+    override suspend fun reconcileNoteAttachments(expectedStorageKeys: Set<String>) { keys.retainAll(expectedStorageKeys) }
+    override fun exists(storageKey: String) = storageKey in keys
 }
 
 private class FakeShiftRepository(private val rows: List<Shift>) : ShiftRepository {

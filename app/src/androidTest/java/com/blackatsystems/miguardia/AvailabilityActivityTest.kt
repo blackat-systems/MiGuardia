@@ -1,12 +1,14 @@
 package com.blackatsystems.miguardia
 
 import android.content.Intent
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextReplacement
@@ -24,6 +26,7 @@ import com.blackatsystems.miguardia.core.domain.work.EffectiveRevision
 import com.blackatsystems.miguardia.core.domain.work.WorkConfigurationAvailabilityMutation
 import com.blackatsystems.miguardia.core.domain.work.WorkConfigurationAvailabilityWriteResult
 import com.blackatsystems.miguardia.core.domain.work.WorkSector
+import com.blackatsystems.miguardia.ui.fullDisplayName
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
@@ -95,7 +98,8 @@ class AvailabilityActivityTest {
         }
         scenario = ActivityScenario.launch(MainActivity::class.java)
         selectOwnerDay()
-        waitForTag("availability-add-$ownerDate")
+        waitForTag("day-edit-menu")
+        compose.onNodeWithText(ownerDate.fullDisplayName()).assertIsDisplayed()
     }
 
     @After
@@ -132,13 +136,16 @@ class AvailabilityActivityTest {
                 .putExtra(MainActivity.EXTRA_OWNER_LOCAL_DATE, ownerDate.toString()),
         )
 
-        waitForTag("availability-add-$ownerDate")
-        compose.onNodeWithTag("availability-add-$ownerDate").assertExists()
+        waitForTag("day-edit-menu")
+        compose.onNodeWithText(ownerDate.fullDisplayName()).assertIsDisplayed()
+        openDayOptions()
+        compose.onNodeWithTag("day-add-retainer").assertExists()
     }
 
     @Test
     fun createRecreateCorrectAndDeleteReturnsToSameCalendarDetail() {
-        compose.onNodeWithTag("availability-add-$ownerDate").performScrollTo().performClick()
+        openDayOptions()
+        compose.onNodeWithTag("day-add-retainer").performScrollTo().performClick()
         waitForTag("availability-start")
         requireNotNull(scenario).recreate()
         waitForTag("availability-start")
@@ -151,6 +158,8 @@ class AvailabilityActivityTest {
 
         compose.waitUntil(WAIT_MILLIS) { runBlocking { stored().size == 1 } }
         val created = runBlocking { stored().single() }
+        assertEquals(AvailabilityLabel.ON_CALL_RETAINER.displayName, created.labelSnapshot)
+        openDayOptions()
         waitForTag("availability-window-${created.id}")
         compose.onNodeWithTag("availability-correct-${created.id}").performScrollTo().performClick()
         waitForTag("availability-start")
@@ -165,7 +174,13 @@ class AvailabilityActivityTest {
         compose.waitUntil(WAIT_MILLIS) {
             runBlocking { stored().singleOrNull()?.start?.atZone(AppDefaults.zoneId())?.hour == 9 }
         }
+        assertEquals(AvailabilityLabel.ON_CALL_RETAINER.displayName, runBlocking { stored().single().labelSnapshot })
+        assertEquals(
+            AvailabilityLabel.PASSIVE_GUARD,
+            runBlocking { qaStore().workConfiguration.get()?.timeline?.valueAt(ownerDate)?.availabilityLabel },
+        )
 
+        openDayOptions()
         waitForTag("availability-delete-${created.id}")
         compose.onNodeWithTag("availability-delete-${created.id}").performScrollTo().performClick()
         waitForTag("availability-delete-confirm")
@@ -174,7 +189,8 @@ class AvailabilityActivityTest {
         compose.onNodeWithTag("availability-delete-confirm").performClick()
         compose.waitUntil(WAIT_MILLIS) { runBlocking { stored().isEmpty() } }
         assertEquals(null, runBlocking { qaStore().availabilityWindows.get(created.id) })
-        waitForTag("availability-add-$ownerDate")
+        openDayOptions()
+        compose.onNodeWithTag("day-add-retainer").assertExists()
     }
 
     @Test
@@ -238,7 +254,14 @@ class AvailabilityActivityTest {
                 compose.onAllNodesWithTag(completed).fetchSemanticsNodes().isNotEmpty()
         }
         val tag = if (compose.onAllNodesWithTag(regular).fetchSemanticsNodes().isNotEmpty()) regular else completed
-        compose.onNodeWithTag(tag).performScrollTo().performClick()
+        compose.onNodeWithTag(tag).assertIsDisplayed().performClick()
+    }
+
+    private fun openDayOptions() {
+        waitForTag("day-other-options")
+        compose.onNodeWithText(ownerDate.fullDisplayName()).assertIsDisplayed()
+        compose.onNodeWithTag("day-other-options").performScrollTo().performClick()
+        waitForTag("day-add-retainer")
     }
 
     private suspend fun stored() = qaStore().availabilityWindows.observeOn(

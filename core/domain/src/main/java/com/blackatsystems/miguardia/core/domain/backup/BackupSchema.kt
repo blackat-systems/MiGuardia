@@ -1,5 +1,12 @@
 package com.blackatsystems.miguardia.core.domain.backup
 
+import com.blackatsystems.miguardia.core.domain.model.CancellationEvidence
+import com.blackatsystems.miguardia.core.domain.model.CancellationActor
+import com.blackatsystems.miguardia.core.domain.model.ShiftSituation
+import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
+import java.time.Instant
+import java.util.UUID
+
 data class BackupTableSpec(
     val name: String,
     val columns: List<String>,
@@ -118,14 +125,14 @@ object MiGuardiaBackupSchemaV7 {
     fun requireValid(snapshot: BackupDatabaseSnapshot) {
         requireValidBackupSnapshot(
             snapshot = snapshot,
-            expectedRoomVersion = MiGuardiaBackupContract.ROOM_VERSION,
-            expectedIdentityHash = MiGuardiaBackupContract.ROOM_IDENTITY_HASH,
+            expectedRoomVersion = MiGuardiaBackupContract.LEGACY_ROOM_VERSION_V7,
+            expectedIdentityHash = MiGuardiaBackupContract.LEGACY_ROOM_IDENTITY_HASH_V7,
             expectedTables = tables,
         )
         requireValidNoteAttachments(snapshot)
     }
 
-    private fun requireValidNoteAttachments(snapshot: BackupDatabaseSnapshot) {
+    internal fun requireValidNoteAttachments(snapshot: BackupDatabaseSnapshot) {
         val notes = snapshot.table("shift_notes")
         val noteIdIndex = notes.columns.indexOf("id")
         val noteBodyIndex = notes.columns.indexOf("body")
@@ -170,6 +177,107 @@ object MiGuardiaBackupSchemaV7 {
         BackupTableSpec(name, columns.toList(), pk)
 }
 
+/** Current V8 allowlist. Legacy ABSENT/CANCELLED rows may omit the controller table. */
+object MiGuardiaBackupSchemaV8 {
+    val tables: List<BackupTableSpec> = MiGuardiaBackupSchemaV7.tables + BackupTableSpec(
+        name = "shift_situations",
+        columns = listOf(
+            "shiftId", "status", "reason", "privateNote", "cancellationActor",
+            "notifiedAtEpochMillis", "evidenceStorageKey", "evidenceMimeType",
+            "evidenceByteSize", "evidencePixelWidth", "evidencePixelHeight", "evidenceSha256",
+            "createdAtEpochMillis", "updatedAtEpochMillis",
+        ),
+        primaryKey = listOf("shiftId"),
+    )
+    val byName: Map<String, BackupTableSpec> = tables.associateBy(BackupTableSpec::name)
+
+    init { check(tables.size == 29 && byName.size == tables.size) }
+
+    fun requireValid(snapshot: BackupDatabaseSnapshot) {
+        requireValidBackupSnapshot(snapshot, MiGuardiaBackupContract.ROOM_VERSION,
+            MiGuardiaBackupContract.ROOM_IDENTITY_HASH, tables)
+        MiGuardiaBackupSchemaV7.requireValidNoteAttachments(snapshot)
+        requireValidShiftSituations(snapshot)
+    }
+
+    private fun requireValidShiftSituations(snapshot: BackupDatabaseSnapshot) {
+        val shifts = snapshot.table("shifts")
+        val shiftIdIndex = shifts.columns.indexOf("id")
+        val shiftStatusIndex = shifts.columns.indexOf("status")
+        val statusById = shifts.records.associate { row ->
+            (row.values[shiftIdIndex] as? BackupValue.Text)?.value to
+                (row.values[shiftStatusIndex] as? BackupValue.Text)?.value
+        }
+        val table = snapshot.table("shift_situations")
+        fun BackupRecord.value(column: String) = values[table.columns.indexOf(column)]
+        table.records.forEach { row ->
+            val shiftId = (row.value("shiftId") as? BackupValue.Text)?.value
+                ?: throw InvalidBackupException("Una situación laboral tiene una identidad inválida.")
+            runCatching { UUID.fromString(shiftId) }.getOrElse {
+                throw InvalidBackupException("Una situación laboral tiene una identidad inválida.")
+            }
+            val status = (row.value("status") as? BackupValue.Text)?.value
+            if (status !in setOf("ABSENT", "CANCELLED") || statusById[shiftId] != status) {
+                throw InvalidBackupException("Una situación laboral no coincide con su jornada.")
+            }
+            val actor = (row.value("cancellationActor") as? BackupValue.Text)?.value
+            val reason = (row.value("reason") as? BackupValue.Text)?.value
+            val notice = row.value("notifiedAtEpochMillis")
+            val evidenceValues = listOf(
+                row.value("evidenceStorageKey"), row.value("evidenceMimeType"), row.value("evidenceByteSize"),
+                row.value("evidencePixelWidth"), row.value("evidencePixelHeight"), row.value("evidenceSha256"),
+            )
+            if (status == "CANCELLED") {
+                if (reason.isNullOrBlank() || actor !in setOf("NOT_REPORTED", "EMPLOYER", "ME", "OTHER") ||
+                    notice !is BackupValue.Integer
+                ) {
+                    throw InvalidBackupException("Una cancelación no conserva quién canceló y cuándo se avisó.")
+                }
+            } else if (actor != null || notice !== BackupValue.Null || evidenceValues.any { it !== BackupValue.Null }) {
+                throw InvalidBackupException("Una ausencia contiene metadatos propios de una cancelación.")
+            }
+            val evidence = if (evidenceValues.any { it !== BackupValue.Null }) {
+                if (evidenceValues.any { it === BackupValue.Null }) {
+                    throw InvalidBackupException("La evidencia de una cancelación está incompleta.")
+                }
+                try {
+                    CancellationEvidence(
+                        storageKey = (evidenceValues[0] as BackupValue.Text).value,
+                        mimeType = (evidenceValues[1] as BackupValue.Text).value,
+                        byteSize = (evidenceValues[2] as BackupValue.Integer).value,
+                        pixelWidth = Math.toIntExact((evidenceValues[3] as BackupValue.Integer).value),
+                        pixelHeight = Math.toIntExact((evidenceValues[4] as BackupValue.Integer).value),
+                        sha256 = (evidenceValues[5] as BackupValue.Text).value,
+                    )
+                } catch (_: RuntimeException) {
+                    throw InvalidBackupException("La evidencia de una cancelación es inválida.")
+                }
+            } else null
+            try {
+                ShiftSituation(
+                    shiftId = UUID.fromString(shiftId),
+                    status = ShiftStatus.valueOf(requireNotNull(status)),
+                    reason = (row.value("reason") as? BackupValue.Text)?.value,
+                    privateNote = (row.value("privateNote") as? BackupValue.Text)?.value,
+                    cancellationActor = actor?.let(CancellationActor::valueOf),
+                    notifiedAt = (notice as? BackupValue.Integer)?.value?.let(Instant::ofEpochMilli),
+                    evidence = evidence,
+                    createdAt = Instant.ofEpochMilli(
+                        (row.value("createdAtEpochMillis") as? BackupValue.Integer)?.value
+                            ?: throw IllegalArgumentException(),
+                    ),
+                    updatedAt = Instant.ofEpochMilli(
+                        (row.value("updatedAtEpochMillis") as? BackupValue.Integer)?.value
+                            ?: throw IllegalArgumentException(),
+                    ),
+                )
+            } catch (_: RuntimeException) {
+                throw InvalidBackupException("Una situación laboral contiene metadatos inválidos.")
+            }
+        }
+    }
+}
+
 fun BackupRecord.backupKey(spec: BackupTableSpec): BackupRecordKey = BackupRecordKey(
     table = spec.name,
     primaryKeyValues = spec.primaryKey.map { column -> values[spec.columns.indexOf(column)] },
@@ -201,7 +309,8 @@ private fun compareBackupValues(first: BackupValue, second: BackupValue): Int {
 
 internal fun requireSupportedBackupSchema(snapshot: BackupDatabaseSnapshot) {
     when (snapshot.roomVersion) {
-        MiGuardiaBackupContract.ROOM_VERSION -> MiGuardiaBackupSchemaV7.requireValid(snapshot)
+        MiGuardiaBackupContract.ROOM_VERSION -> MiGuardiaBackupSchemaV8.requireValid(snapshot)
+        MiGuardiaBackupContract.LEGACY_ROOM_VERSION_V7 -> MiGuardiaBackupSchemaV7.requireValid(snapshot)
         MiGuardiaBackupContract.LEGACY_ROOM_VERSION_V6 -> MiGuardiaBackupSchemaV6.requireValid(snapshot)
         MiGuardiaBackupContract.LEGACY_ROOM_VERSION_V5 -> MiGuardiaBackupSchemaV5.requireValid(snapshot)
         else -> throw InvalidBackupException("La copia usa una versión de datos no compatible.")
@@ -231,18 +340,31 @@ fun upgradeSupportedBackupSchema(snapshot: BackupDatabaseSnapshot): BackupDataba
     } else {
         snapshot
     }
-    MiGuardiaBackupSchemaV6.requireValid(v6)
-    val upgraded = v6.copy(
+    val v7 = if (v6.roomVersion == MiGuardiaBackupContract.LEGACY_ROOM_VERSION_V7) v6 else {
+        MiGuardiaBackupSchemaV6.requireValid(v6)
+        v6.copy(
+            roomVersion = MiGuardiaBackupContract.LEGACY_ROOM_VERSION_V7,
+            roomIdentityHash = MiGuardiaBackupContract.LEGACY_ROOM_IDENTITY_HASH_V7,
+            tables = v6.tables + BackupTable(
+                name = "shift_note_attachments",
+                columns = MiGuardiaBackupSchemaV7.byName.getValue("shift_note_attachments").columns,
+                primaryKey = listOf("id"),
+                records = emptyList(),
+            ),
+        )
+    }
+    MiGuardiaBackupSchemaV7.requireValid(v7)
+    val upgraded = v7.copy(
         roomVersion = MiGuardiaBackupContract.ROOM_VERSION,
         roomIdentityHash = MiGuardiaBackupContract.ROOM_IDENTITY_HASH,
-        tables = v6.tables + BackupTable(
-            name = "shift_note_attachments",
-            columns = MiGuardiaBackupSchemaV7.byName.getValue("shift_note_attachments").columns,
-            primaryKey = listOf("id"),
+        tables = v7.tables + BackupTable(
+            name = "shift_situations",
+            columns = MiGuardiaBackupSchemaV8.byName.getValue("shift_situations").columns,
+            primaryKey = listOf("shiftId"),
             records = emptyList(),
         ),
     )
-    MiGuardiaBackupSchemaV7.requireValid(upgraded)
+    MiGuardiaBackupSchemaV8.requireValid(upgraded)
     return upgraded
 }
 

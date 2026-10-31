@@ -4,7 +4,6 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts.PickMultipleVisualMedia
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
@@ -22,6 +21,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
@@ -36,12 +36,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.blackatsystems.miguardia.core.domain.model.Holiday
@@ -57,17 +55,17 @@ import com.blackatsystems.miguardia.ui.components.ScreenHeading
 import com.blackatsystems.miguardia.ui.components.SectionCard
 import com.blackatsystems.miguardia.ui.components.SurfaceHeader
 import com.blackatsystems.miguardia.ui.components.TransientConfirmation
-import com.blackatsystems.miguardia.ui.photos.SchedulePhotoBitmapDecoder
 import com.blackatsystems.miguardia.ui.photos.SchedulePhotoFileStore
+import com.blackatsystems.miguardia.ui.photos.NoteDraftAttachment
+import com.blackatsystems.miguardia.ui.photos.NoteImageSelection
+import com.blackatsystems.miguardia.ui.photos.PrivateNoteImage
+import com.blackatsystems.miguardia.ui.photos.PrivateNoteImageDialog
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.util.UUID
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
-private val noteBitmapDecoder = SchedulePhotoBitmapDecoder()
 
 data class ExceptionsActions(
     val openHolidays: (YearMonth) -> Unit = {},
@@ -143,7 +141,7 @@ fun ExceptionsSurfaceHost(
         }
     }
     BackHandler(onBack = requestClose)
-    TransientConfirmation(state.infoMessage, actions.clearMessage) {
+    TransientConfirmation(state.infoMessage, actions.clearMessage, reserveSpace = true) {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             Column(Modifier.fillMaxSize().safeDrawingPadding()) {
                 SurfaceHeader(
@@ -249,7 +247,7 @@ private fun HolidayContent(state: ExceptionsUiState, actions: ExceptionsActions)
                 modifier = Modifier.fillMaxWidth(),
             ) { Text("Cancelar edición") }
         }
-        Text("Feriados del mes", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Text("Feriados del mes", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
         if (state.isLoading) {
             CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
         } else if (state.holidays.isEmpty()) {
@@ -265,7 +263,7 @@ private fun HolidayContent(state: ExceptionsUiState, actions: ExceptionsActions)
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Column(Modifier.weight(1f)) {
-                            Text(holiday.date.holidayDisplayName(), fontWeight = FontWeight.Bold)
+                            Text(holiday.date.holidayDisplayName(), fontWeight = FontWeight.SemiBold)
                             Text(holiday.name ?: "Feriado")
                         }
                         TextButton(
@@ -327,6 +325,7 @@ fun HolidayCalendarSelectionContent(
     selectedDates: Set<LocalDate>,
     onConfirm: () -> Unit,
     onCancel: () -> Unit,
+    showActions: Boolean = true,
 ) {
     val editing = state.holidayDraft.editingId != null
     state.errorMessage?.let { message ->
@@ -350,20 +349,22 @@ fun HolidayCalendarSelectionContent(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        PrimaryAction(
-            label = "Continuar",
-            onClick = onConfirm,
-            enabled = selectedDates.isNotEmpty() && !state.isSaving,
-            modifier = Modifier.testTag("holiday-confirm-calendar-selection"),
-        )
-        OutlinedButton(
-            onClick = onCancel,
-            enabled = !state.isSaving,
-            modifier = Modifier
-                .fillMaxWidth()
-                .testTag("holiday-cancel-calendar-selection"),
-        ) {
-            Text("Volver a Feriados")
+        if (showActions) {
+            PrimaryAction(
+                label = "Continuar",
+                onClick = onConfirm,
+                enabled = selectedDates.isNotEmpty() && !state.isSaving,
+                modifier = Modifier.testTag("holiday-confirm-calendar-selection"),
+            )
+            OutlinedButton(
+                onClick = onCancel,
+                enabled = !state.isSaving,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("holiday-cancel-calendar-selection"),
+            ) {
+                Text("Volver a Feriados")
+            }
         }
     }
 }
@@ -378,7 +379,7 @@ private fun NotesContent(
     var pendingDelete by rememberSaveable { mutableStateOf<String?>(null) }
     var pendingAttachmentDelete by rememberSaveable { mutableStateOf<String?>(null) }
     var viewingStorageKey by rememberSaveable { mutableStateOf<String?>(null) }
-    val picker = rememberLauncherForActivityResult(PickMultipleVisualMedia(maxItems = 30)) { uris ->
+    val picker = rememberLauncherForActivityResult(PickMultipleVisualMedia(maxItems = NoteImageSelection.MAX_IMAGES)) { uris ->
         actions.addNoteImages(uris)
     }
     Column(
@@ -407,22 +408,9 @@ private fun NotesContent(
             ) { Text("Agregar imágenes") }
             if (state.noteDraft.attachments.isNotEmpty() && imageStore != null) {
                 state.noteDraft.attachments.forEachIndexed { index, attachment ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        NoteImage(
-                            attachment = attachment,
-                            imageStore = imageStore,
-                            modifier = Modifier.size(88.dp).clickable { viewingStorageKey = attachment.storageKey },
-                        )
-                        Text("Imagen ${index + 1}", modifier = Modifier.weight(1f))
-                        TextButton(
-                            onClick = { pendingAttachmentDelete = attachment.id.toString() },
-                            enabled = !state.isSaving,
-                        ) { Text("Quitar") }
-                    }
+                    NoteDraftAttachment(attachment, index, imageStore, enabled = !state.isSaving,
+                        onView = { viewingStorageKey = attachment.storageKey },
+                        onRemove = { pendingAttachmentDelete = attachment.id.toString() })
                 }
             }
             Button(
@@ -454,11 +442,16 @@ private fun NotesContent(
                 SectionCard(title = "Nota", supportingText = supporting) {
                     if (imageStore != null && item.attachments.isNotEmpty()) {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            item.attachments.take(3).forEach { attachment ->
-                                NoteImage(
-                                    attachment = attachment,
+                            item.attachments.take(3).forEachIndexed { index, attachment ->
+                                PrivateNoteImage(
+                                    storageKey = attachment.storageKey,
+                                    description = "Imagen ${index + 1} de la nota",
                                     imageStore = imageStore,
-                                    modifier = Modifier.size(76.dp).clickable {
+                                    modifier = Modifier.size(76.dp).clickable(
+                                        enabled = !state.isSaving,
+                                        role = Role.Button,
+                                        onClickLabel = "Ver imagen ${index + 1}",
+                                    ) {
                                         viewingStorageKey = attachment.storageKey
                                     },
                                 )
@@ -505,51 +498,7 @@ private fun NotesContent(
         )
     }
     if (viewingStorageKey != null && imageStore != null) {
-        AlertDialog(
-            onDismissRequest = { viewingStorageKey = null },
-            title = { Text("Imagen de la nota") },
-            text = {
-                NoteImage(
-                    storageKey = requireNotNull(viewingStorageKey),
-                    imageStore = imageStore,
-                    modifier = Modifier.fillMaxWidth().height(420.dp),
-                    maxDimension = 1600,
-                )
-            },
-            confirmButton = { TextButton(onClick = { viewingStorageKey = null }) { Text("Cerrar") } },
-        )
-    }
-}
-
-@Composable
-private fun NoteImage(
-    attachment: ShiftNoteAttachment,
-    imageStore: SchedulePhotoFileStore,
-    modifier: Modifier,
-) = NoteImage(attachment.storageKey, imageStore, modifier, 384)
-
-@Composable
-private fun NoteImage(
-    storageKey: String,
-    imageStore: SchedulePhotoFileStore,
-    modifier: Modifier,
-    maxDimension: Int,
-) {
-    val bitmap by produceState<android.graphics.Bitmap?>(null, storageKey, maxDimension) {
-        value = withContext(Dispatchers.IO) {
-            noteBitmapDecoder.decode(imageStore.file(storageKey), maxDimension)?.bitmap
-        }
-    }
-    val loaded = bitmap
-    if (loaded == null) {
-        Box(modifier, contentAlignment = Alignment.Center) { Text("Imagen no disponible") }
-    } else {
-        Image(
-            bitmap = loaded.asImageBitmap(),
-            contentDescription = "Imagen adjunta a la nota",
-            modifier = modifier,
-            contentScale = ContentScale.Crop,
-        )
+        PrivateNoteImageDialog(requireNotNull(viewingStorageKey), imageStore, onDismiss = { viewingStorageKey = null })
     }
 }
 
@@ -564,7 +513,8 @@ private fun ConfirmDeleteDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = { Text(text) },
-        confirmButton = { TextButton(onClick = onConfirm) { Text("Eliminar") } },
+        confirmButton = { TextButton(onClick = onConfirm,
+            colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) { Text("Eliminar") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } },
     )
 }

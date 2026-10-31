@@ -15,9 +15,11 @@ enum class AppThemeMode(
     }
 
     companion object {
+        val DEFAULT: AppThemeMode = DARK
+
         fun fromStorage(value: String?): AppThemeMode = entries.firstOrNull {
             it.name == value
-        } ?: SYSTEM
+        } ?: DEFAULT
     }
 }
 
@@ -28,12 +30,12 @@ data class VigiliaSystemBarStyle(
 
 fun vigiliaSystemBarStyle(darkTheme: Boolean): VigiliaSystemBarStyle = if (darkTheme) {
     VigiliaSystemBarStyle(
-        backgroundArgb = 0xFF090812.toInt(),
+        backgroundArgb = 0xFF15151E.toInt(),
         useDarkIcons = false,
     )
 } else {
     VigiliaSystemBarStyle(
-        backgroundArgb = 0xFFF7F4FA.toInt(),
+        backgroundArgb = 0xFFF5F4F8.toInt(),
         useDarkIcons = true,
     )
 }

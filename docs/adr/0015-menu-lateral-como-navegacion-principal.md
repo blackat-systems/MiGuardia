@@ -1,8 +1,8 @@
 # ADR 0015: menú lateral como navegación principal
 
 - Vigencia: PARCIAL
-- Sucesores: `docs/adr/0026-base-room-exclusiva-v2-y-retiro-del-modo-v1.md`; `docs/adr/0037-ayuda-y-recorrido-inicial-versionado-v2.md`
-- Alcance vigente: Menú lateral, ausencia de barra inferior, acciones directas, tema/zoom y prioridad de gestos. La composición V1 y sus destinos laborales fueron sustituidos por V2; consultar planificación y superficies actuales. Estado y evidencia sólo en docs/STATUS.md.
+- Sucesores: `docs/adr/0026-base-room-exclusiva-v2-y-retiro-del-modo-v1.md`; `docs/adr/0037-ayuda-y-recorrido-inicial-versionado-v2.md`; `docs/adr/0043-letra-nativa-android-sin-zoom-interno.md`
+- Alcance vigente: Menú lateral, ausencia de barra inferior, acciones directas, tema y prioridad de gestos. Composición V1 sustituida por V2; zoom interno retirado por ADR 0043. Estado y evidencia sólo en docs/STATUS.md.
 - Fecha: 2026-08-18
 
 ## Contexto

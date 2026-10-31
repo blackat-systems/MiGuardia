@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="940" viewBox="0 0 1400 940" role="img" aria-labelledby="title desc">
+  <title id="title">Flujo funcional de Stage 3</title>
+  <desc id="desc">El Calendario permite abrir el detalle con un toque, plegar el mes o entrar en selección múltiple con pulsación larga. La selección conduce a una acción, una revisión de compatibilidad y una confirmación atómica antes de volver al Calendario.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 Z" fill="#7656d6"/>
+    </marker>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#100b1c" flood-opacity="0.22"/>
+    </filter>
+    <style>
+      .bg{fill:#0e0b16}.surface{fill:#1b1428;stroke:#4d386e;stroke-width:2}.active{fill:#2c2042;stroke:#8c63ff;stroke-width:3}.safe{fill:#173126;stroke:#58a979;stroke-width:2}.decision{fill:#241a34;stroke:#b194ff;stroke-width:2}.title{fill:#f6f1ff;font:700 34px system-ui,sans-serif}.label{fill:#f6f1ff;font:600 21px system-ui,sans-serif}.small{fill:#d3c9e2;font:400 17px system-ui,sans-serif}.edge{fill:none;stroke:#7656d6;stroke-width:4;marker-end:url(#arrow)}.edge2{fill:none;stroke:#58a979;stroke-width:4;marker-end:url(#arrow)}.caption{fill:#b9accb;font:500 16px system-ui,sans-serif}
+    </style>
+  </defs>
+  <rect class="bg" width="1400" height="940" rx="28"/>
+  <text class="title" x="700" y="58" text-anchor="middle">Stage 3 · Calendario inmediato y selección múltiple</text>
+
+  <rect class="active" x="505" y="96" width="390" height="104" rx="24" filter="url(#shadow)"/>
+  <text class="label" x="700" y="138" text-anchor="middle">CALENDARIO PRINCIPAL</text>
+  <text class="small" x="700" y="171" text-anchor="middle">Acciones inferiores siempre visibles</text>
+
+  <path class="edge" d="M505 150 H250 V250"/>
+  <path class="edge" d="M700 200 V250"/>
+  <path class="edge" d="M895 150 H1150 V250"/>
+  <text class="caption" x="327" y="132" text-anchor="middle">Toque breve</text>
+  <text class="caption" x="700" y="230" text-anchor="middle">Control explícito</text>
+  <text class="caption" x="1060" y="132" text-anchor="middle">Pulsación larga o botón</text>
+
+  <rect class="surface" x="70" y="250" width="360" height="124" rx="22"/>
+  <text class="label" x="250" y="296" text-anchor="middle">Detalle del día</text>
+  <text class="small" x="250" y="329" text-anchor="middle">DD/MM/YYYY · Editar día</text>
+  <text class="small" x="250" y="355" text-anchor="middle">Condición del día</text>
+
+  <rect class="surface" x="520" y="250" width="360" height="124" rx="22"/>
+  <text class="label" x="700" y="296" text-anchor="middle">Persiana del calendario</text>
+  <text class="small" x="700" y="329" text-anchor="middle">Mes completo ↔ semana activa</text>
+  <text class="small" x="700" y="355" text-anchor="middle">Sin achicar celdas</text>
+
+  <rect class="active" x="970" y="250" width="360" height="124" rx="22"/>
+  <text class="label" x="1150" y="296" text-anchor="middle">Modo selección</text>
+  <text class="small" x="1150" y="329" text-anchor="middle">Tocar para agregar o quitar</text>
+  <text class="small" x="1150" y="355" text-anchor="middle">Contador · Continuar · Cancelar</text>
+
+  <path class="edge" d="M1150 374 V438"/>
+  <rect class="decision" x="970" y="438" width="360" height="92" rx="22"/>
+  <text class="label" x="1150" y="478" text-anchor="middle">Elegir una acción</text>
+  <text class="small" x="1150" y="507" text-anchor="middle">Hoja compacta, sin botonera eterna</text>
+
+  <path class="edge" d="M970 484 H780"/>
+  <rect class="surface" x="90" y="420" width="650" height="150" rx="22"/>
+  <text class="label" x="415" y="462" text-anchor="middle">Acciones permitidas</text>
+  <text class="small" x="415" y="498" text-anchor="middle">Cargar jornadas · Marcar Franco</text>
+  <text class="small" x="415" y="529" text-anchor="middle">Marcar Sin definir · Agregar Retén</text>
+  <text class="caption" x="415" y="555" text-anchor="middle">No: ausencia, cancelación, carpeta médica ni eliminar genérico</text>
+
+  <path class="edge" d="M415 570 V632"/>
+  <rect class="decision" x="160" y="632" width="510" height="116" rx="22"/>
+  <text class="label" x="415" y="674" text-anchor="middle">Revisar antes de guardar</text>
+  <text class="small" x="415" y="708" text-anchor="middle">Se aplicará · Ya estaba así · Conflicto</text>
+  <text class="small" x="415" y="735" text-anchor="middle">Fechas y cantidades visibles</text>
+
+  <path class="edge" d="M670 690 H810"/>
+  <rect class="safe" x="810" y="632" width="430" height="116" rx="22"/>
+  <text class="label" x="1025" y="674" text-anchor="middle">Confirmación atómica</text>
+  <text class="small" x="1025" y="708" text-anchor="middle">Todo el conjunto o ningún cambio</text>
+  <text class="small" x="1025" y="735" text-anchor="middle">Resultado claro y auditable</text>
+
+  <path class="edge2" d="M1025 748 V826 H700"/>
+  <path class="edge2" d="M250 374 V826 H505"/>
+  <path class="edge2" d="M700 374 V826"/>
+  <path class="edge2" d="M1150 374 H1350 V826 H895"/>
+  <rect class="safe" x="505" y="806" width="390" height="92" rx="24" filter="url(#shadow)"/>
+  <text class="label" x="700" y="846" text-anchor="middle">VOLVER AL CALENDARIO</text>
+  <text class="small" x="700" y="877" text-anchor="middle">Estado actualizado o sin cambios al cancelar</text>
+</svg>

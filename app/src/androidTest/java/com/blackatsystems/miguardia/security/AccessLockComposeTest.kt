@@ -9,6 +9,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -17,9 +18,12 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
-import com.blackatsystems.miguardia.ui.theme.AppZoom
-import com.blackatsystems.miguardia.ui.theme.MiGuardiaTheme
+import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.core.graphics.ColorUtils
+import com.blackatsystems.miguardia.testsupport.TestFontScale
+import com.blackatsystems.miguardia.testsupport.AndroidFontScaleTheme
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -32,7 +36,7 @@ class AccessLockComposeTest {
         var state by mutableStateOf(enabledState(locked = true))
         var sensitiveCompositions = 0
         compose.setContent {
-            MiGuardiaTheme(appZoom = AppZoom.EXTRA_LARGE) {
+            AndroidFontScaleTheme(fontScale = TestFontScale.EXTRA_LARGE) {
                 AccessLockContentGate(
                     state = state,
                     capability = DeviceAuthenticationCapability.AVAILABLE,
@@ -59,10 +63,64 @@ class AccessLockComposeTest {
     }
 
     @Test
+    fun authenticationInProgressKeepsTheGateClosedAndTheDisabledButtonIndicatorVisible() {
+        var dark by mutableStateOf(false)
+        var unlocks = 0
+        var sensitiveCompositions = 0
+        compose.setContent {
+            AndroidFontScaleTheme(darkTheme = dark) {
+                AccessLockContentGate(
+                    state = enabledState(locked = true).copy(authenticationInProgress = true),
+                    capability = DeviceAuthenticationCapability.AVAILABLE,
+                    onUnlock = { unlocks++ },
+                    onRetryStore = {},
+                    onRepairStore = {},
+                    onRetryDeviceSecurity = {},
+                    onOpenDeviceSecurity = {},
+                ) {
+                    sensitiveCompositions++
+                    Text("SENSITIVE CALENDAR", modifier = Modifier.testTag("sensitive-content"))
+                }
+            }
+        }
+
+        for (theme in listOf(false, true)) {
+            compose.runOnIdle { dark = theme }
+            val button = compose.onNodeWithTag("access-lock-unlock")
+                .performScrollTo().assertIsDisplayed().assertIsNotEnabled()
+            val indicator = compose.onNodeWithTag("access-lock-authenticating", useUnmergedTree = true)
+                .assertIsDisplayed()
+            val buttonImage = button.captureToImage().asAndroidBitmap()
+            val indicatorImage = indicator.captureToImage().asAndroidBitmap()
+            try {
+                // Sample the actual disabled container away from the centered indicator.
+                // Contrast comes from rendered pixels, independent of the selected token.
+                val background = buttonImage.getPixel(buttonImage.width / 4, buttonImage.height / 2)
+                var maximumContrast = 1.0
+                for (y in 0 until indicatorImage.height) for (x in 0 until indicatorImage.width) {
+                    val pixel = indicatorImage.getPixel(x, y)
+                    if ((pixel ushr 24) == 0xFF) {
+                        maximumContrast = maxOf(maximumContrast, ColorUtils.calculateContrast(pixel, background))
+                    }
+                }
+                assertTrue("dark=$theme indicator contrast=$maximumContrast", maximumContrast >= 3.0)
+            } finally {
+                buttonImage.recycle()
+                indicatorImage.recycle()
+            }
+            compose.onNodeWithTag("sensitive-content").assertDoesNotExist()
+            compose.runOnIdle {
+                assertEquals(0, unlocks)
+                assertEquals(0, sensitiveCompositions)
+            }
+        }
+    }
+
+    @Test
     fun storeErrorStaysGenericAndRepairRequiresSecureDeviceCapability() {
         var deviceSecurityRetries = 0
         compose.setContent {
-            MiGuardiaTheme {
+            AndroidFontScaleTheme {
                 AccessLockContentGate(
                     state = AccessLockState(phase = AccessLockPhase.STORE_ERROR),
                     capability = DeviceAuthenticationCapability.NO_SECURE_CREDENTIAL,
@@ -89,7 +147,7 @@ class AccessLockComposeTest {
         var changed: AccessLockTimeout? = null
         var state by mutableStateOf(disabledState())
         compose.setContent {
-            MiGuardiaTheme {
+            AndroidFontScaleTheme {
                 AccessLockSettingsScreen(
                     state = state,
                     capability = DeviceAuthenticationCapability.AVAILABLE,
@@ -123,7 +181,7 @@ class AccessLockComposeTest {
     fun unlockRestoresTheExistingSaveableSurfaceAndDraftWithinTheLiveProcess() {
         var state by mutableStateOf(enabledState(locked = false))
         compose.setContent {
-            MiGuardiaTheme {
+            AndroidFontScaleTheme {
                 AccessLockContentGate(
                     state = state,
                     capability = DeviceAuthenticationCapability.AVAILABLE,

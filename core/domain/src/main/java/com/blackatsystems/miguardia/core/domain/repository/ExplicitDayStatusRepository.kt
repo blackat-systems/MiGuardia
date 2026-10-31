@@ -18,6 +18,11 @@ interface ExplicitDayStatusRepository {
     suspend fun setAll(dates: Set<LocalDate>, type: ExplicitDayStatusType)
     suspend fun clear(date: LocalDate)
 
+    /** Atomically marks or removes an explicit unknown day without replacing any other source. */
+    suspend fun updateUndefined(date: LocalDate, expected: ExplicitDayStatus?, mark: Boolean) {
+        throw UnsupportedOperationException("Este repositorio no permite editar días sin definir.")
+    }
+
     /** Atomically changes only explicit days off after revalidating the current timeline.
      * Marking refuses dates occupied by a planned/actual shift; other records are preserved.
      * Removing never clears an UNDEFINED status. Repeating the same request is idempotent.

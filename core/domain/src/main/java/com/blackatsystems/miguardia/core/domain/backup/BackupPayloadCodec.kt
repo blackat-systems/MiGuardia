@@ -22,7 +22,7 @@ object BackupPayloadCodec {
         output: OutputStream,
         encodedLimitBytes: Long,
     ) {
-        MiGuardiaBackupSchemaV7.requireValid(snapshot)
+        MiGuardiaBackupSchemaV8.requireValid(snapshot)
         val bounded = BoundedOutputStream(output, encodedLimitBytes, "database.bin")
         DataOutputStream(BufferedOutputStream(bounded)).use { data ->
             data.writeInt(DATABASE_MAGIC)
@@ -58,7 +58,7 @@ object BackupPayloadCodec {
             estimator.consumeSnapshotObject()
             val identityHash = data.readUtf8(estimator)
             val timelineId = data.readNullableUtf8(estimator)
-            val tableCount = data.readBoundedCount(28, "tablas")
+            val tableCount = data.readBoundedCount(29, "tablas")
             estimator.consumeTableReferences(tableCount)
             val tables = ArrayList<BackupTable>(tableCount)
             var totalRows = 0
@@ -241,7 +241,7 @@ object BackupPayloadCodec {
             val timelineId = data.readNullableUtf8()?.also(::requireUuid)
             val photoMode = BackupPhotoMode.entries.getOrNull(data.readUnsignedByte())
                 ?: throw InvalidBackupException("El modo de fotografías es inválido.")
-            val countSize = data.readBoundedCount(28, "conteos")
+            val countSize = data.readBoundedCount(29, "conteos")
             val counts = linkedMapOf<String, Int>()
             repeat(countSize) {
                 val name = data.readUtf8()
@@ -437,6 +437,6 @@ object BackupPayloadCodec {
     private const val MAX_PREFERENCE_VALUES = 128
     private const val MAX_IMAGE_DIMENSION = 65_535
     private val SHA256 = Regex("[0-9a-f]{64}")
-    private val SAFE_STORAGE_KEY = Regex("(?:note_)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?:_[0-9a-f]{8})?\\.(?:jpg|jpeg|png|webp)")
+    private val SAFE_STORAGE_KEY = Regex("(?:(?:note|cancel)_)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?:_[0-9a-f]{8})?\\.(?:jpg|jpeg|png|webp)")
     private val ALLOWED_IMAGE_MIME_TYPES = setOf("image/jpeg", "image/png", "image/webp")
 }

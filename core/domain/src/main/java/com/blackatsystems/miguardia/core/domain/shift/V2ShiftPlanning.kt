@@ -173,9 +173,11 @@ fun planV2ShiftBatch(
         throw InvalidLocalDataException("Las jornadas preparadas no coinciden con las fechas seleccionadas.")
     }
     val relevantExisting = existingShifts.filterNot { it.id == editingShiftId }
-    val occupiedDates = relevantExisting
-        .filter { it.localStartDate in selectedDates }
-        .mapTo(linkedSetOf()) { it.localStartDate }
+    val occupiedDates = candidates.filter { candidate ->
+        relevantExisting.any { existing ->
+            existing.startAt < candidate.shift.endAt && candidate.shift.startAt < existing.endAt
+        }
+    }.mapTo(linkedSetOf()) { it.shift.localStartDate }
     if (policy == OccupiedDatePolicy.CANCEL) {
         return V2ShiftBatchPlan(
             mutation = V2ShiftBatchMutation(),
@@ -189,7 +191,9 @@ fun planV2ShiftBatch(
     val deletions = buildSet {
         if (policy == OccupiedDatePolicy.REPLACE) {
             relevantExisting
-                .filter { it.localStartDate in occupiedDates }
+                .filter { existing -> plannedWrites.any { candidate ->
+                    existing.startAt < candidate.shift.endAt && candidate.shift.startAt < existing.endAt
+                } }
                 .mapTo(this) { it.id }
         }
     }

@@ -42,8 +42,8 @@ import com.blackatsystems.miguardia.ui.photos.PhotosUiState
 import com.blackatsystems.miguardia.ui.management.V2RecurringStage
 import com.blackatsystems.miguardia.ui.management.V2RecurringUiState
 import com.blackatsystems.miguardia.ui.theme.AppThemeMode
-import com.blackatsystems.miguardia.ui.theme.AppZoom
-import com.blackatsystems.miguardia.ui.theme.MiGuardiaTheme
+import com.blackatsystems.miguardia.testsupport.TestFontScale
+import com.blackatsystems.miguardia.testsupport.AndroidFontScaleTheme
 import com.blackatsystems.miguardia.ui.vacation.VacationSurface
 import com.blackatsystems.miguardia.ui.vacation.VacationActions
 import com.blackatsystems.miguardia.ui.vacation.VacationUiState
@@ -126,10 +126,10 @@ class NavigationDrawerComposeTest {
         compose.onNodeWithTag("main-navigation-drawer").assertIsNotDisplayed()
 
         openDestination("main-destination-appearance", "Tema de MiGuardia")
-        listOf(
-            "Tema de MiGuardia",
-            "Zoom de MiGuardia",
-        ).forEach { compose.onNodeWithText(it).assertExists() }
+        compose.onNodeWithText("Tema de MiGuardia").assertIsDisplayed()
+        compose.onNodeWithTag("theme-mode-toggle").assertIsDisplayed()
+        compose.onNodeWithTag("theme-mode-system").assertIsDisplayed()
+        compose.onNodeWithText("FontScale de MiGuardia").assertDoesNotExist()
         compose.onNodeWithTag("main-navigation-drawer").assertIsNotDisplayed()
 
         openDestination("main-destination-help", "Ayuda")
@@ -138,7 +138,8 @@ class NavigationDrawerComposeTest {
 
         compose.onNodeWithContentDescription("Abrir menú").performClick()
         compose.onNodeWithTag("main-destination-calendar").performScrollTo().performClick()
-        compose.onNodeWithTag("next-event-card").assertIsDisplayed()
+        // The complete month is required; the optional next-event card depends on available height.
+        compose.onNodeWithTag("month-grid").assertIsDisplayed()
         compose.onNodeWithTag("main-navigation-drawer").assertIsNotDisplayed()
     }
 
@@ -147,7 +148,7 @@ class NavigationDrawerComposeTest {
         val opened = mutableListOf<String>()
         val expectedMonth = YearMonth.of(2026, 8)
         compose.setContent {
-            MiGuardiaTheme {
+            AndroidFontScaleTheme {
                 MiGuardiaApp(
                     calendarState = calendarState(expectedMonth),
                     onPreviousMonth = {},
@@ -218,7 +219,7 @@ class NavigationDrawerComposeTest {
         var request by androidx.compose.runtime.mutableLongStateOf(0L)
         var calendarState by mutableStateOf(calendarState(month).copy(detailDate = null))
         compose.setContent {
-            MiGuardiaTheme {
+            AndroidFontScaleTheme {
                 MiGuardiaApp(
                     calendarState = calendarState,
                     onPreviousMonth = {},
@@ -257,7 +258,7 @@ class NavigationDrawerComposeTest {
         val ready = workSetup.rootState as WorkSetupState.V2Ready
         var recurring by mutableStateOf(V2RecurringUiState())
         compose.setContent {
-            MiGuardiaTheme {
+            AndroidFontScaleTheme {
                 MiGuardiaApp(
                     calendarState = calendarState(month),
                     onPreviousMonth = {},
@@ -322,14 +323,14 @@ class NavigationDrawerComposeTest {
     }
 
     @Test
-    fun drawerRemainsUsableAcrossThemesZoomsPortraitAndLandscape() {
+    fun drawerRemainsUsableAcrossThemesFontScalesPortraitAndLandscape() {
         var themeMode by mutableStateOf(AppThemeMode.SYSTEM)
-        var zoom by mutableStateOf(AppZoom.STANDARD)
+        var fontScale by mutableStateOf(TestFontScale.STANDARD)
         var landscape by mutableStateOf(false)
         compose.setContent {
-            MiGuardiaTheme(
+            AndroidFontScaleTheme(
                 darkTheme = themeMode == AppThemeMode.DARK,
-                appZoom = zoom,
+                fontScale = fontScale,
             ) {
                 Box(
                     Modifier.size(
@@ -345,7 +346,6 @@ class NavigationDrawerComposeTest {
                         onSelectDate = {},
                         onDismissDate = {},
                         onRetry = {},
-                        appZoom = zoom,
                         appThemeMode = themeMode,
                     )
                 }
@@ -353,10 +353,10 @@ class NavigationDrawerComposeTest {
         }
 
         AppThemeMode.entries.forEach { mode ->
-            AppZoom.entries.forEach { option ->
+            TestFontScale.entries.forEach { option ->
                 compose.runOnIdle {
                     themeMode = mode
-                    zoom = option
+                    fontScale = option
                 }
                 compose.onNodeWithContentDescription("Abrir menú").performClick()
                 compose.onNodeWithTag("main-destination-calendar").assertIsDisplayed().performClick()
@@ -372,7 +372,7 @@ class NavigationDrawerComposeTest {
 
     private fun setAppContent(onNextMonth: () -> Unit = {}) {
         compose.setContent {
-            MiGuardiaTheme {
+            AndroidFontScaleTheme {
                 MiGuardiaApp(
                     calendarState = calendarState(),
                     onPreviousMonth = {},

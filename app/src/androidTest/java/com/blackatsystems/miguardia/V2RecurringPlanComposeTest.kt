@@ -44,8 +44,8 @@ import com.blackatsystems.miguardia.ui.management.V2RecurringPlanSurfaceHost
 import com.blackatsystems.miguardia.ui.management.V2RecurringStage
 import com.blackatsystems.miguardia.ui.management.V2RecurringTemplateOption
 import com.blackatsystems.miguardia.ui.management.V2RecurringUiState
-import com.blackatsystems.miguardia.ui.theme.AppZoom
-import com.blackatsystems.miguardia.ui.theme.MiGuardiaTheme
+import com.blackatsystems.miguardia.testsupport.TestFontScale
+import com.blackatsystems.miguardia.testsupport.AndroidFontScaleTheme
 import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
@@ -140,7 +140,7 @@ class V2RecurringPlanComposeTest {
     fun dateFieldsAddSlashesWhileThePersonTypesOnlyNumbers() {
         var state by mutableStateOf(formState().copy(startDateText = "", endDateText = ""))
         compose.setContent {
-            MiGuardiaTheme {
+            AndroidFontScaleTheme {
                 Box(Modifier.size(width = 820.dp, height = 460.dp)) {
                     V2RecurringPlanSurfaceHost(
                         state = state,
@@ -172,7 +172,7 @@ class V2RecurringPlanComposeTest {
             position = "Puesto ficticio",
             conflictPolicy = RecurringConflictPolicy.KEEP_BOTH,
         )
-        setSurface(state, darkTheme = false, zoom = AppZoom.LARGE)
+        setSurface(state, darkTheme = false, fontScale = TestFontScale.LARGE)
 
         compose.onNodeWithTag("v2-recurring-cut-date").performScrollTo().assertIsDisplayed()
         compose.onNodeWithTag("v2-recurring-start-date").performScrollTo().assertIsNotEnabled()
@@ -194,7 +194,7 @@ class V2RecurringPlanComposeTest {
                 preview = preview(dates),
             ),
             actions = V2RecurringActions(save = { saves++ }),
-            zoom = AppZoom.EXTRA_LARGE,
+            fontScale = TestFontScale.EXTRA_LARGE,
         )
 
         compose.onNodeWithText("Cantidad total de fechas: 10").performScrollTo().assertIsDisplayed()
@@ -273,12 +273,12 @@ class V2RecurringPlanComposeTest {
     }
 
     @Test
-    fun primaryReviewStaysReachableInBothThemesOrientationsAndEveryInternalZoom() {
+    fun primaryReviewStaysReachableInBothThemesOrientationsAndEveryAndroidFontScale() {
         var dark by mutableStateOf(false)
         var landscape by mutableStateOf(false)
-        var zoom by mutableStateOf(AppZoom.STANDARD)
+        var fontScale by mutableStateOf(TestFontScale.STANDARD)
         compose.setContent {
-            MiGuardiaTheme(darkTheme = dark, appZoom = zoom) {
+            AndroidFontScaleTheme(darkTheme = dark, fontScale = fontScale) {
                 Box(
                     Modifier.size(
                         width = if (landscape) 820.dp else 360.dp,
@@ -292,11 +292,11 @@ class V2RecurringPlanComposeTest {
 
         listOf(false, true).forEach { darkTheme ->
             listOf(false, true).forEach { useLandscape ->
-                AppZoom.entries.forEach { appZoom ->
+                TestFontScale.entries.forEach { selectedScale ->
                     compose.runOnIdle {
                         dark = darkTheme
                         landscape = useLandscape
-                        zoom = appZoom
+                        fontScale = selectedScale
                     }
                     compose.onNodeWithTag("v2-recurring-review")
                         .performScrollTo()
@@ -311,10 +311,10 @@ class V2RecurringPlanComposeTest {
         state: V2RecurringUiState,
         actions: V2RecurringActions = V2RecurringActions(),
         darkTheme: Boolean = true,
-        zoom: AppZoom = AppZoom.STANDARD,
+        fontScale: TestFontScale = TestFontScale.STANDARD,
     ) {
         compose.setContent {
-            MiGuardiaTheme(darkTheme = darkTheme, appZoom = zoom) {
+            AndroidFontScaleTheme(darkTheme = darkTheme, fontScale = fontScale) {
                 Box(Modifier.size(width = 820.dp, height = 460.dp)) {
                     V2RecurringPlanSurfaceHost(state, actions)
                 }

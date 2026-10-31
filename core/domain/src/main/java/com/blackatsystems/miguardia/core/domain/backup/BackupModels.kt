@@ -8,8 +8,10 @@ object MiGuardiaBackupContract {
     const val MIME_TYPE: String = "application/vnd.blackatsystems.miguardia.backup"
     const val FORMAT_VERSION: Int = 1
     const val MIN_READER_VERSION: Int = 1
-    const val ROOM_VERSION: Int = 7
-    const val ROOM_IDENTITY_HASH: String = "e2bdce73ce37f7bd36110ce338fa2f90"
+    const val ROOM_VERSION: Int = 8
+    const val ROOM_IDENTITY_HASH: String = "ba1016e34e957457e7bec8ab18a98aad"
+    const val LEGACY_ROOM_VERSION_V7: Int = 7
+    const val LEGACY_ROOM_IDENTITY_HASH_V7: String = "e2bdce73ce37f7bd36110ce338fa2f90"
     const val LEGACY_ROOM_VERSION_V6: Int = 6
     const val LEGACY_ROOM_IDENTITY_HASH_V6: String = "7eb39f6fab5a44e69350e206716554be"
     const val LEGACY_ROOM_VERSION_V5: Int = 5

@@ -1,5 +1,7 @@
 # Cómo continuar MiGuardia 2.0
 
+Referencia 2.x, no entrada operativa de 3.0. Las menciones de carpeta/rama siguientes pertenecen a 2.0; para continuar en este repositorio usar `AGENTS.md`, `docs/STATUS.md` y `docs/WORKFLOW.md`.
+
 Joaquin decide el objetivo; MAIN inspecciona, implementa o coordina, comprueba e integra ese alcance. El estado de hoy y lo pendiente están en `docs/STATUS.md`. El procedimiento técnico vive en `docs/WORKFLOW.md`.
 
 La carpeta de desarrollo es `MiGuardia-2.0` y la rama `codex/miguardia-2.0`. MAIN es el rol que integra; `main` es una rama Git protegida. Los proyectos/worktrees antiguos se conservan como antecedentes, no como base de trabajo.

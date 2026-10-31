@@ -18,8 +18,8 @@ import com.blackatsystems.miguardia.core.domain.work.MissingWorkSetupRequirement
 import com.blackatsystems.miguardia.core.domain.work.WorkConfiguration
 import com.blackatsystems.miguardia.core.domain.work.WorkSector
 import com.blackatsystems.miguardia.core.domain.work.WorkSetupState
-import com.blackatsystems.miguardia.ui.theme.AppZoom
-import com.blackatsystems.miguardia.ui.theme.MiGuardiaTheme
+import com.blackatsystems.miguardia.testsupport.TestFontScale
+import com.blackatsystems.miguardia.testsupport.AndroidFontScaleTheme
 import com.blackatsystems.miguardia.ui.worksetup.WorkPlaceDraft
 import com.blackatsystems.miguardia.ui.worksetup.WorkSetupActions
 import com.blackatsystems.miguardia.ui.worksetup.WorkSetupStep
@@ -44,7 +44,7 @@ class RgbColorPickerComposeTest {
         var confirmed: Int? = null
         var state by mutableStateOf(workSetupState())
         compose.setContent {
-            MiGuardiaTheme(darkTheme = true, appZoom = AppZoom.EXTRA_LARGE) {
+            AndroidFontScaleTheme(darkTheme = true, fontScale = TestFontScale.EXTRA_LARGE) {
                 WorkSetupSurfaceHost(
                     state = state,
                     actions = WorkSetupActions(
@@ -84,7 +84,7 @@ class RgbColorPickerComposeTest {
     fun pickerKeepsTenCommonColorsAtTheBottomAndAppliesTheChosenOne() {
         var state by mutableStateOf(workSetupState())
         compose.setContent {
-            MiGuardiaTheme(appZoom = AppZoom.EXTRA_LARGE) {
+            AndroidFontScaleTheme(fontScale = TestFontScale.EXTRA_LARGE) {
                 WorkSetupSurfaceHost(
                     state = state,
                     actions = WorkSetupActions(

@@ -99,6 +99,7 @@ class WidgetRuntime(
     val isPausedForRestore: Boolean get() = pausedForRestore
 
     private fun publicationReady(): Boolean {
+        if (com.blackatsystems.miguardia.QaInstrumentationScope.suppress(context, "widget.publication")) return false
         val allowed = com.blackatsystems.miguardia.localAllowsPublication(context)
         if (!allowed) renderer.renderRecovery()
         return allowed
@@ -140,6 +141,7 @@ class WidgetRuntime(
     }
 
     internal fun showLoading(appWidgetIds: IntArray) {
+        if (com.blackatsystems.miguardia.QaInstrumentationScope.suppress(context, "widget.loading")) return
         renderer.renderLoading(appWidgetIds.validIds())
     }
 
@@ -196,6 +198,7 @@ class WidgetRuntime(
     }
 
     suspend fun deleteNow(appWidgetIds: IntArray) {
+        com.blackatsystems.miguardia.QaInstrumentationScope.requireExternalAction(context, "widget.delete")
         preferences.delete(appWidgetIds.toList())
         val remaining = renderer.installedIds().validIds().filterNot { it in appWidgetIds.toSet() }.toIntArray()
         if (remaining.isEmpty()) {
@@ -206,21 +209,25 @@ class WidgetRuntime(
     }
 
     fun disabled() {
+        if (com.blackatsystems.miguardia.QaInstrumentationScope.suppress(context, "widget.disabled")) return
         stopBackgroundWork()
     }
 
     internal fun receiverFailed(appWidgetIds: IntArray) {
+        if (com.blackatsystems.miguardia.QaInstrumentationScope.suppress(context, "widget.receiver-failure")) return
         val valid = appWidgetIds.validIds()
         renderer.renderRecoverableError(valid)
         if (valid.isNotEmpty()) scheduler.schedule(recoveryBoundary())
     }
 
     fun registerRestoration(newIds: IntArray) {
+        com.blackatsystems.miguardia.QaInstrumentationScope.requireExternalAction(context, "widget.register-restore")
         newIds.validIds().forEach { id -> restoreBarriers.putIfAbsent(id, CompletableDeferred()) }
         renderer.renderLoading(newIds.validIds())
     }
 
     suspend fun restoreNow(oldIds: IntArray, newIds: IntArray) {
+        com.blackatsystems.miguardia.QaInstrumentationScope.requireExternalAction(context, "widget.restore")
         try {
             preferences.remap(oldIds, newIds)
         } finally {
@@ -393,6 +400,7 @@ class WidgetRuntime(
     }
 
     private fun stopBackgroundWork() {
+        if (com.blackatsystems.miguardia.QaInstrumentationScope.suppress(context, "widget.background-stop")) return
         observationJob?.cancel()
         observationJob = null
         observationDate = null

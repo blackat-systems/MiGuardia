@@ -9,6 +9,7 @@ import com.blackatsystems.miguardia.core.database.validation.validateRange
 import com.blackatsystems.miguardia.core.database.validation.validated
 import com.blackatsystems.miguardia.core.domain.model.MedicalLeave
 import com.blackatsystems.miguardia.core.domain.repository.InvalidLocalDataException
+import com.blackatsystems.miguardia.core.domain.repository.ConflictingLocalWriteException
 import com.blackatsystems.miguardia.core.domain.repository.MedicalLeaveRepository
 import com.blackatsystems.miguardia.core.domain.repository.VacationMedicalLeaveConflictException
 import java.time.LocalDate
@@ -58,6 +59,38 @@ internal class RoomMedicalLeaveRepository(
 
     override suspend fun delete(id: UUID) {
         dao.delete(id.toString())
+    }
+
+    override suspend fun updateExpected(expected: MedicalLeave, replacement: MedicalLeave) {
+        require(expected.id == replacement.id && expected.createdAt == replacement.createdAt) {
+            "Editar una carpeta médica debe conservar identidad y fecha de creación"
+        }
+        val entity = replacement.validated().toEntity()
+        database.withTransaction {
+            val current = dao.getIntersecting(expected.startDate.toString(), expected.endDateInclusive.toString())
+                .singleOrNull { it.id == expected.id.toString() }
+                ?.toDomain()
+            if (current != expected) throw ConflictingLocalWriteException(
+                "La carpeta médica cambió mientras la editabas. Revisala nuevamente.",
+            )
+            ensureNoVacationConflict(entity.startDate, entity.endDateInclusive)
+            if (dao.update(entity) != 1) throw ConflictingLocalWriteException(
+                "La carpeta médica ya no existe.",
+            )
+        }
+    }
+
+    override suspend fun deleteExpected(expected: MedicalLeave) {
+        database.withTransaction {
+            val current = dao.getIntersecting(expected.startDate.toString(), expected.endDateInclusive.toString())
+                .singleOrNull { it.id == expected.id.toString() }
+                ?.toDomain()
+            if (current != expected || dao.delete(expected.id.toString()) != 1) {
+                throw ConflictingLocalWriteException(
+                    "La carpeta médica cambió mientras confirmabas. Revisala nuevamente.",
+                )
+            }
+        }
     }
 
     private suspend fun ensureNoVacationConflict(startDate: String, endDateInclusive: String) {

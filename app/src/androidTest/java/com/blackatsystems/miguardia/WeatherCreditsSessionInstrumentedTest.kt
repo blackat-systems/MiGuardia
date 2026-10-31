@@ -282,15 +282,19 @@ class WeatherCreditsSessionInstrumentedTest {
         app: MiGuardiaApplication,
         expected: MainActivity,
         checkpoint: (String) -> Unit = {},
+        providerDetailsExpanded: Boolean = false,
     ) {
         val heading = "Pronóstico según la ubicación guardada en cada objetivo."
         checkpoint("await-weather")
         compose.waitUntil(15_000) { compose.onAllNodesWithText(heading).fetchSemanticsNodes().isNotEmpty() }
         checkpoint("weather-found")
         compose.onNodeWithText(heading).performScrollTo().assertIsDisplayed()
+        if (!providerDetailsExpanded) {
+            compose.onNodeWithTag("weather-provider-details").performScrollTo().performClick()
+        }
         compose.onNodeWithText(WeatherCreditLink.LICENCE.label).performScrollTo().assertIsDisplayed()
         checkpoint("before-return")
-        compose.onNodeWithText("Volver").performScrollTo().performClick()
+        compose.onNodeWithTag("weather-close").assertIsDisplayed().performClick()
         checkpoint("return-clicked")
         compose.waitUntil(15_000) { compose.onAllNodesWithText(heading).fetchSemanticsNodes().isEmpty() }
         checkpoint("dialog-closed")
@@ -345,7 +349,7 @@ class WeatherCreditsSessionInstrumentedTest {
             originalResumed = foreground.any { it === expected }
         }
         val weatherVisible = runCatching {
-            compose.onNodeWithText("Pronóstico según la ubicación guardada en cada objetivo.").assertIsDisplayed()
+            compose.onNodeWithTag("weather-close").assertIsDisplayed()
         }.isSuccess
         val helpVisible = runCatching { compose.onNodeWithTag("help-screen").assertIsDisplayed() }.isSuccess
         File(evidence, "notification-diagnostic-$stage.txt").writeText(
@@ -375,9 +379,10 @@ class WeatherCreditsSessionInstrumentedTest {
             safeUi("Licence link or its return path failed") {
                 compose.onNodeWithContentDescription("Abrir menú").performClick()
                 compose.onNodeWithTag("drawer-action-weather").performScrollTo().performClick()
+                compose.onNodeWithTag("weather-provider-details").performScrollTo().performClick()
                 compose.onNodeWithText(WeatherCreditLink.LICENCE.label).performScrollTo().performClick()
                 compose.runOnIdle { check(requests.get() == 1 && !unexpected.get()) }
-                assertGlobalWeatherAndReturnToHelp(app, expected)
+                assertGlobalWeatherAndReturnToHelp(app, expected, providerDetailsExpanded = true)
             }
         } finally { instrumentation.removeMonitor(monitor) }
     }

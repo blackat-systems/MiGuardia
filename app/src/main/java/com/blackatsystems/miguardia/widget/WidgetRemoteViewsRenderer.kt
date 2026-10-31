@@ -36,10 +36,14 @@ class WidgetRemoteViewsRenderer(
     private val context: Context,
     private val manager: AppWidgetManager = AppWidgetManager.getInstance(context),
 ) {
-    fun installedIds(): IntArray = manager.getAppWidgetIds(providerComponent())
+    fun installedIds(): IntArray {
+        com.blackatsystems.miguardia.QaInstrumentationScope.requireExternalAction(context, "widget.installed-query")
+        return manager.getAppWidgetIds(providerComponent())
+    }
 
-    fun renderRecovery(appWidgetIds: IntArray = installedIds()) {
-        appWidgetIds.filterValidIds().forEach { id ->
+    fun renderRecovery(appWidgetIds: IntArray? = null) {
+        if (com.blackatsystems.miguardia.QaInstrumentationScope.suppress(context, "widget.recovery")) return
+        (appWidgetIds ?: installedIds()).filterValidIds().forEach { id ->
             manager.updateAppWidget(id, recoveryViews(id))
         }
     }
@@ -48,12 +52,14 @@ class WidgetRemoteViewsRenderer(
         statusViews(id, "MIGUARDIA", "Abrí MiGuardia para terminar la recuperación de tus datos.")
 
     fun renderLoading(appWidgetIds: IntArray) {
+        if (com.blackatsystems.miguardia.QaInstrumentationScope.suppress(context, "widget.render-loading")) return
         appWidgetIds.filterValidIds().forEach { id ->
             manager.updateAppWidget(id, statusViews(id, "CARGANDO", "Actualizando el próximo evento…"))
         }
     }
 
     fun renderRecoverableError(appWidgetIds: IntArray) {
+        if (com.blackatsystems.miguardia.QaInstrumentationScope.suppress(context, "widget.render-error")) return
         appWidgetIds.filterValidIds().forEach { id ->
             manager.updateAppWidget(
                 id,
@@ -68,6 +74,7 @@ class WidgetRemoteViewsRenderer(
         preferences: WidgetInstancePreferences,
         weatherText: String?,
     ) {
+        com.blackatsystems.miguardia.QaInstrumentationScope.requireExternalAction(context, "widget.render")
         if (appWidgetId <= 0) return
         if (!com.blackatsystems.miguardia.localAllowsPublication(context)) {
             renderRecovery(intArrayOf(appWidgetId))
@@ -173,6 +180,8 @@ class WidgetRemoteViewsRenderer(
                 val credit = WeatherCredits.forDisplayedWeather(renderedWeather)
                 setOptionalText(R.id.widget_weather_credit, credit, palette.action)
                 setViewVisibility(R.id.widget_weather_area, if (credit != null) View.VISIBLE else View.GONE)
+                setOnClickPendingIntent(R.id.widget_weather_area, null)
+                setContentDescription(R.id.widget_weather_area, null)
                 if (renderedWeather != null) {
                     setOnClickPendingIntent(R.id.widget_weather_area, weatherIntent(appWidgetId))
                     setContentDescription(R.id.widget_weather_area, "$renderedWeather. $credit. ${WeatherCredits.OPEN}.")
@@ -193,6 +202,8 @@ class WidgetRemoteViewsRenderer(
         RowIds.forEachIndexed { index, viewId ->
             val row = rows.drop(1).getOrNull(index)
             setOptionalText(viewId, row, palette.primaryText)
+            setOnClickPendingIntent(viewId, null)
+            setContentDescription(viewId, null)
             val event = projection.events.drop(1).getOrNull(index)
             if (row != null && event != null) {
                 setOnClickPendingIntent(viewId, navigationIntent(appWidgetId, event.navigation))
@@ -214,19 +225,23 @@ class WidgetRemoteViewsRenderer(
         }
         val visible = base != null && format != null
         setViewVisibility(R.id.widget_countdown, if (visible) View.VISIBLE else View.GONE)
+        setTextColor(R.id.widget_countdown, color)
+        setContentDescription(R.id.widget_countdown, null)
         if (visible) {
             setChronometer(R.id.widget_countdown, requireNotNull(base), format, true)
             setChronometerCountDown(R.id.widget_countdown, true)
-            setTextColor(R.id.widget_countdown, color)
+        } else {
+            setChronometer(R.id.widget_countdown, 0L, null, false)
+            setChronometerCountDown(R.id.widget_countdown, false)
+            setTextViewText(R.id.widget_countdown, "")
         }
     }
 
     private fun RemoteViews.setOptionalText(viewId: Int, value: String?, color: Int) {
         setViewVisibility(viewId, if (value == null) View.GONE else View.VISIBLE)
-        if (value != null) {
-            setTextViewText(viewId, value)
-            setTextColor(viewId, color)
-        }
+        setTextViewText(viewId, value ?: "")
+        setTextColor(viewId, color)
+        setContentDescription(viewId, null)
     }
 
     private fun statusViews(appWidgetId: Int, title: String, primary: String): RemoteViews {
@@ -243,9 +258,14 @@ class WidgetRemoteViewsRenderer(
             setTextViewText(R.id.widget_primary, primary)
             setTextColor(R.id.widget_title, palette.secondaryText)
             setTextColor(R.id.widget_primary, palette.primaryText)
-            setViewVisibility(R.id.widget_schedule, View.GONE)
+            setOptionalText(R.id.widget_schedule, null, palette.secondaryText)
+            setOptionalText(R.id.widget_simultaneous, null, palette.action)
             setViewVisibility(R.id.widget_countdown, View.GONE)
-            setViewVisibility(R.id.widget_simultaneous, View.GONE)
+            setChronometer(R.id.widget_countdown, 0L, null, false)
+            setChronometerCountDown(R.id.widget_countdown, false)
+            setTextViewText(R.id.widget_countdown, "")
+            setTextColor(R.id.widget_countdown, palette.action)
+            setContentDescription(R.id.widget_countdown, null)
             setOnClickPendingIntent(R.id.widget_root, calendarIntent(appWidgetId))
             setContentDescription(R.id.widget_root, "$title. $primary")
         }
@@ -291,6 +311,7 @@ class WidgetRemoteViewsRenderer(
         discriminator: String,
         extras: (Intent) -> Unit = {},
     ): PendingIntent {
+        com.blackatsystems.miguardia.QaInstrumentationScope.requireExternalAction(context, "widget.activity-identity")
         val intent = Intent(context, MainActivity::class.java)
             .setAction(action)
             .setData(widgetUri(appWidgetId, action, discriminator))
@@ -305,6 +326,7 @@ class WidgetRemoteViewsRenderer(
     }
 
     private fun configurationIntent(appWidgetId: Int): PendingIntent {
+        com.blackatsystems.miguardia.QaInstrumentationScope.requireExternalAction(context, "widget.configuration-identity")
         val intent = Intent(context, WidgetConfigurationActivity::class.java)
             .setAction(AppWidgetManager.ACTION_APPWIDGET_CONFIGURE)
             .setData(widgetUri(appWidgetId, "configure", appWidgetId.toString()))
@@ -362,7 +384,7 @@ class WidgetRemoteViewsRenderer(
     private fun IntArray.filterValidIds() = filter { it > 0 }
 
     private companion object {
-        const val DARK_BACKGROUND = 0xFF151125.toInt()
+        const val DARK_BACKGROUND = 0xFF15151E.toInt()
         val RowIds = intArrayOf(R.id.widget_row_1, R.id.widget_row_2, R.id.widget_row_3)
     }
 }

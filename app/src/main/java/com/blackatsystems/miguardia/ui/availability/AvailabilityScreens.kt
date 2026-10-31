@@ -1,17 +1,20 @@
 package com.blackatsystems.miguardia.ui.availability
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -24,6 +27,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.blackatsystems.miguardia.core.domain.model.AvailabilityBreakdown
@@ -35,8 +40,11 @@ import com.blackatsystems.miguardia.ui.components.AutomaticTimeField
 import com.blackatsystems.miguardia.ui.components.PersistentMessage
 import com.blackatsystems.miguardia.ui.components.SectionCard
 import com.blackatsystems.miguardia.ui.components.SurfaceHeader
+import com.blackatsystems.miguardia.ui.theme.vigiliaColors
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import com.blackatsystems.miguardia.ui.EventTimeRangeStyle
+import com.blackatsystems.miguardia.ui.formatEventTimeRange
 
 data class AvailabilityActions(
     val retry: () -> Unit = {},
@@ -172,14 +180,20 @@ private fun ConfigurationEditor(state: AvailabilityUiState, actions: Availabilit
             AvailabilityLabel.ON_CALL_RETAINER,
             null,
         )).forEach { option ->
+            val selected = draft.label == option
             OutlinedButton(
                 onClick = { actions.updateConfiguration(draft.copy(label = option)) },
-                modifier = Modifier.fillMaxWidth().testTag(
+                border = BorderStroke(1.dp, if (selected) MaterialTheme.vigiliaColors.active else MaterialTheme.colorScheme.outline),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    containerColor = if (selected) MaterialTheme.vigiliaColors.selection else MaterialTheme.colorScheme.surface,
+                    contentColor = if (selected) MaterialTheme.vigiliaColors.onSelection else MaterialTheme.colorScheme.primary,
+                ),
+                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).semantics { this.selected = selected }.testTag(
                     "availability-label-${option?.name ?: "none"}",
                 ),
             ) {
                 Text(
-                    (if (draft.label == option) "✓ " else "") +
+                    (if (selected) "✓ " else "") +
                         (option?.displayName ?: "No uso disponibilidad"),
                 )
             }
@@ -335,6 +349,7 @@ fun AvailabilityDaySection(
     date: LocalDate,
     state: AvailabilityUiState,
     actions: AvailabilityActions,
+    showActions: Boolean = true,
 ) {
     val source = state.source ?: return
     val windows = state.windowsOn(date)
@@ -359,23 +374,24 @@ fun AvailabilityDaySection(
             val result = source.breakdowns[record.id]
             Text(record.labelSnapshot, fontWeight = FontWeight.SemiBold)
             Text(
-                "${record.start.atZone(record.zoneId).toLocalTime()}–" +
-                    "${record.end.atZone(record.zoneId).format(EndFormatter)}",
+                formatEventTimeRange(record.start, record.end, record.zoneId, EventTimeRangeStyle.DETAIL),
                 modifier = Modifier.testTag("availability-window-${record.id}"),
             )
             result?.let { Text(resultShortLabel(it)) }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextButton(
-                    onClick = { actions.openCorrect(record) },
-                    modifier = Modifier.testTag("availability-correct-${record.id}"),
-                ) { Text("Corregir") }
-                TextButton(
-                    onClick = { actions.requestDelete(record) },
-                    modifier = Modifier.testTag("availability-delete-${record.id}"),
-                ) { Text("Eliminar") }
+            if (showActions) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(
+                        onClick = { actions.openCorrect(record) },
+                        modifier = Modifier.testTag("availability-correct-${record.id}"),
+                    ) { Text("Corregir") }
+                    TextButton(
+                        onClick = { actions.requestDelete(record) },
+                        modifier = Modifier.testTag("availability-delete-${record.id}"),
+                    ) { Text("Eliminar") }
+                }
             }
         }
-        if (label != null) {
+        if (label != null && showActions) {
             OutlinedButton(
                 onClick = { actions.openCreate(date) },
                 modifier = Modifier.fillMaxWidth().testTag("availability-add-$date"),
@@ -468,6 +484,7 @@ private fun DeleteConfirmation(state: AvailabilityUiState, actions: Availability
         confirmButton = {
             Button(
                 onClick = actions.confirmDelete,
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error, contentColor = MaterialTheme.colorScheme.onError),
                 enabled = !state.isSaving,
                 modifier = Modifier.testTag("availability-delete-confirm"),
             ) { Text(if (state.isSaving) "Eliminando…" else "Eliminar") }
@@ -485,7 +502,9 @@ private fun DiscardConfirmation(actions: AvailabilityActions) {
         title = { Text("Descartar cambios") },
         text = { Text("Los datos que todavía no guardaste se perderán.") },
         confirmButton = {
-            Button(onClick = actions.confirmDiscard, modifier = Modifier.testTag("availability-discard-confirm")) {
+            Button(onClick = actions.confirmDiscard,
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error, contentColor = MaterialTheme.colorScheme.onError),
+                modifier = Modifier.testTag("availability-discard-confirm")) {
                 Text("Descartar")
             }
         },
@@ -494,4 +513,3 @@ private fun DiscardConfirmation(actions: AvailabilityActions) {
 }
 
 private val LocalDateTimeFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")
-private val EndFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM HH:mm")

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <application>
+        <meta-data android:name="com.blackatsystems.miguardia.STAGE12_HARNESS"
+            android:value="${stage12HarnessEnabled}" />
+        <!-- Dedicated opt-in harness only; ordinary QA retains the merged provider defaults. -->
+        <provider android:name="androidx.core.content.FileProvider"
+            android:enabled="${stage12BootstrapProvidersEnabled}" tools:replace="android:enabled" />
+        <!-- Do not declare absent providers. Any provider added by a future dependency
+             must pass the runner's all-providers-disabled gate before admission. -->
+        <activity android:name="com.blackatsystems.miguardia.stage12.Stage12CaptureActivity"
+            android:exported="false" android:excludeFromRecents="true"
+            android:theme="@android:style/Theme.Material.Light.NoActionBar" />
+    </application>
+</manifest>

@@ -35,6 +35,38 @@ import org.junit.Test
 
 class V2ShiftPlanningTest {
     @Test
+    fun overwriteUsesIntervalsAndPreservesOtherWorkOnSameDate() {
+        val morning = build(id = SHIFT_ID, template = template(start = LocalTime.of(8, 0), end = LocalTime.of(12, 0)))
+        val evening = build(id = OTHER_SHIFT_ID, template = template(start = LocalTime.of(18, 0), end = LocalTime.of(22, 0)))
+        val candidate = build(id = UUID.randomUUID(), template = template(start = LocalTime.of(10, 0), end = LocalTime.of(14, 0)))
+        val plan = planV2ShiftBatch(setOf(DATE), listOf(morning.shift, evening.shift), listOf(candidate), OccupiedDatePolicy.REPLACE)
+        assertEquals(setOf(morning.shift.id), plan.mutation.shiftIdsToDelete)
+        assertEquals(listOf(candidate), plan.mutation.shiftsToInsert)
+    }
+
+    @Test
+    fun overwriteIncludesPreviousNightButNotContiguousIntervals() {
+        val candidate = build(template = template(start = LocalTime.of(6, 0), end = LocalTime.of(10, 0)))
+        val night = candidate.shift.copy(id = OTHER_SHIFT_ID, localStartDate = DATE.minusDays(1),
+            startAt = candidate.shift.startAt.minusSeconds(11 * 3600), endAt = candidate.shift.startAt.plusSeconds(3600))
+        val contiguous = candidate.shift.copy(id = UUID.randomUUID(), startAt = candidate.shift.endAt,
+            endAt = candidate.shift.endAt.plusSeconds(3600))
+        val plan = planV2ShiftBatch(setOf(DATE), listOf(night, contiguous), listOf(candidate), OccupiedDatePolicy.REPLACE)
+        assertEquals(setOf(night.id), plan.mutation.shiftIdsToDelete)
+        assertEquals(setOf(DATE), plan.occupiedDates)
+    }
+
+    @Test
+    fun overlayKeepsOverlapsAndOnlyWarnsAboutShortRest() {
+        val candidate = build()
+        val existing = candidate.shift.copy(id = OTHER_SHIFT_ID)
+        val plan = planV2ShiftBatch(setOf(DATE), listOf(existing), listOf(candidate), OccupiedDatePolicy.ADD_SECOND_SHIFT)
+        assertTrue(plan.mutation.shiftIdsToDelete.isEmpty())
+        assertTrue(plan.warnings.isNotEmpty())
+        assertEquals(listOf(candidate), plan.mutation.shiftsToInsert)
+    }
+
+    @Test
     fun buildCopiesExistingShiftSnapshotsAndV2WorkIdentity() {
         val write = build()
 

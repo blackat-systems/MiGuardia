@@ -178,11 +178,11 @@ internal fun nextRefreshDelay(
     zoneId: ZoneId,
     projection: TodayCardProjection,
 ): Duration = when (projection.primary) {
-    TodayCardPrimary.COMPLETED_SUMMARY,
     TodayCardPrimary.EMPTY,
     -> durationUntilNextMidnight(now, zoneId)
 
     TodayCardPrimary.ONGOING_SHIFT,
+    TodayCardPrimary.COMPLETED_SUMMARY,
     TodayCardPrimary.UPCOMING_SHIFT,
     TodayCardPrimary.NO_WORK_TODAY,
     TodayCardPrimary.FUTURE_EVENT,

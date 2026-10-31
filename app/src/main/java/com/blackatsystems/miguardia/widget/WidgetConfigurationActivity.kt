@@ -22,6 +22,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -50,7 +51,6 @@ import com.blackatsystems.miguardia.core.domain.widget.WidgetPrivacy
 import com.blackatsystems.miguardia.ui.components.ScreenHeading
 import com.blackatsystems.miguardia.ui.components.SectionCard
 import com.blackatsystems.miguardia.ui.theme.AppThemeMode
-import com.blackatsystems.miguardia.ui.theme.AppZoom
 import com.blackatsystems.miguardia.ui.theme.MiGuardiaTheme
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
@@ -69,6 +69,15 @@ data class WidgetConfigurationDraft(
 )
 
 class WidgetConfigurationActivity : FragmentActivity() {
+    override fun attachBaseContext(newBase: android.content.Context) {
+        com.blackatsystems.miguardia.QaInstrumentationScope.requireProductActivity(newBase)
+        super.attachBaseContext(com.blackatsystems.miguardia.QaInstrumentationScope.wrapActivity(newBase))
+    }
+
+    override fun startActivityForResult(intent: Intent, requestCode: Int, options: Bundle?) {
+        com.blackatsystems.miguardia.QaInstrumentationScope.requireActivityLaunch(this, intent)
+        super.startActivityForResult(intent, requestCode, options)
+    }
     private val accessLockActivityToken = Any()
     private lateinit var accessLockAuthenticationHostId: String
     private var accessLockActivityResumed = false
@@ -105,7 +114,6 @@ class WidgetConfigurationActivity : FragmentActivity() {
         }
         setContent {
             val display = remember { getSharedPreferences(MainActivity.DISPLAY_PREFERENCES, MODE_PRIVATE) }
-            val localZoom = AppZoom.fromPercent(display.getInt(MainActivity.APP_ZOOM_PERCENT, AppZoom.STANDARD.percent))
             val localTheme = AppThemeMode.fromStorage(display.getString(MainActivity.APP_THEME_MODE, null))
             val localDark = localTheme.resolve(androidx.compose.foundation.isSystemInDarkTheme())
             val workContentState = androidx.compose.runtime.saveable.rememberSaveableStateHolder()
@@ -125,7 +133,7 @@ class WidgetConfigurationActivity : FragmentActivity() {
                 }
             }
             when (val recovery = recoveryState) {
-                StartupRecoveryState.Ready -> MiGuardiaTheme(darkTheme = localDark, appZoom = localZoom) {
+                StartupRecoveryState.Ready -> MiGuardiaTheme(darkTheme = localDark) {
                     AccessLockContentGate(
                             state = accessLockState,
                             capability = deviceAuthenticationCapability,
@@ -138,10 +146,10 @@ class WidgetConfigurationActivity : FragmentActivity() {
                         workContentState.SaveableStateProvider("beta-widget-content") { ReadyWidgetConfiguration(application) }
                     }
                 }
-                StartupRecoveryState.Recovering -> MiGuardiaTheme {
+                StartupRecoveryState.Recovering -> MiGuardiaTheme(darkTheme = localDark) {
                     WidgetRecoveryGateScreen(errorMessage = null, onCancel = ::finish)
                 }
-                is StartupRecoveryState.Failed -> MiGuardiaTheme {
+                is StartupRecoveryState.Failed -> MiGuardiaTheme(darkTheme = localDark) {
                     WidgetRecoveryGateScreen(errorMessage = recovery.message, onCancel = ::finish)
                 }
             }
@@ -222,6 +230,7 @@ class WidgetConfigurationActivity : FragmentActivity() {
     }
 
     private fun authenticate(operation: AccessLockOperation) {
+        com.blackatsystems.miguardia.QaInstrumentationScope.requireExternalAction(this, "security.authenticate")
         val application = application as MiGuardiaApplication
         deviceAuthenticator.attachToInFlightAuthentication(
             application.accessLockCoordinator.activeAuthenticationToken(
@@ -242,6 +251,7 @@ class WidgetConfigurationActivity : FragmentActivity() {
     }
 
     private fun openDeviceSecurity() {
+        com.blackatsystems.miguardia.QaInstrumentationScope.requireExternalAction(this, "security.settings")
         if (!deviceAuthenticator.openDeviceSecuritySettings()) {
             deviceAuthenticationCapability = DeviceAuthenticationCapability.TEMPORARILY_UNAVAILABLE
             (application as MiGuardiaApplication).accessLockCoordinator.reportUnavailable(
@@ -269,14 +279,11 @@ class WidgetConfigurationActivity : FragmentActivity() {
         val displayPreferences = remember {
             getSharedPreferences(MainActivity.DISPLAY_PREFERENCES, MODE_PRIVATE)
         }
-        val zoom = AppZoom.fromPercent(
-            displayPreferences.getInt(MainActivity.APP_ZOOM_PERCENT, AppZoom.STANDARD.percent),
-        )
         val theme = AppThemeMode.fromStorage(
             displayPreferences.getString(MainActivity.APP_THEME_MODE, null),
         )
         val systemDark = androidx.compose.foundation.isSystemInDarkTheme()
-        MiGuardiaTheme(darkTheme = theme.resolve(systemDark), appZoom = zoom) {
+        MiGuardiaTheme(darkTheme = theme.resolve(systemDark)) {
             WidgetConfigurationContent(application)
         }
     }
@@ -371,6 +378,7 @@ class WidgetConfigurationActivity : FragmentActivity() {
     }
 
     private fun isInstalledWidget(id: Int): Boolean {
+        com.blackatsystems.miguardia.QaInstrumentationScope.requireExternalAction(this, "widget.configuration-installed-query")
         val manager = AppWidgetManager.getInstance(this)
         val provider = ComponentName(this, NextEventAppWidgetProvider::class.java)
         return belongsToWidgetProvider(id, manager.getAppWidgetIds(provider))
@@ -383,23 +391,29 @@ class WidgetConfigurationActivity : FragmentActivity() {
 
 @Composable
 private fun WidgetRecoveryGateScreen(errorMessage: String?, onCancel: () -> Unit) {
-    Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp).testTag("widget-recovery-gate"),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background,
+        contentColor = MaterialTheme.colorScheme.onBackground,
     ) {
-        if (errorMessage == null) {
-            CircularProgressIndicator()
-            Text("Protegiendo tus datos antes de configurar el Widget…", modifier = Modifier.padding(top = 12.dp))
-        } else {
-            Text(errorMessage, color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.SemiBold)
-            Text(
-                "Abrí MiGuardia para terminar la recuperación antes de configurar el Widget.",
-                modifier = Modifier.padding(top = 12.dp),
-            )
-        }
-        OutlinedButton(onClick = onCancel, modifier = Modifier.fillMaxWidth().padding(top = 16.dp)) {
-            Text("Cancelar")
+        Column(
+            modifier = Modifier.fillMaxSize().padding(24.dp).testTag("widget-recovery-gate"),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            if (errorMessage == null) {
+                CircularProgressIndicator()
+                Text("Protegiendo tus datos antes de configurar el Widget…", modifier = Modifier.padding(top = 12.dp))
+            } else {
+                Text(errorMessage, color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.SemiBold)
+                Text(
+                    "Abrí MiGuardia para terminar la recuperación antes de configurar el Widget.",
+                    modifier = Modifier.padding(top = 12.dp),
+                )
+            }
+            OutlinedButton(onClick = onCancel, modifier = Modifier.fillMaxWidth().padding(top = 16.dp)) {
+                Text("Cancelar")
+            }
         }
     }
 }
@@ -464,6 +478,7 @@ fun WidgetConfigurationScreen(
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     Text("Incluir Clima cuando esté disponible", modifier = Modifier.weight(1f))
                     Switch(
@@ -509,18 +524,24 @@ fun WidgetConfigurationScreen(
 
 @Composable
 private fun LoadingConfiguration(failed: Boolean, onRetry: () -> Unit, onCancel: () -> Unit) {
-    Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background,
+        contentColor = MaterialTheme.colorScheme.onBackground,
     ) {
-        if (failed) {
-            Text("No pudimos leer la configuración del Widget.", fontWeight = FontWeight.SemiBold)
-            Button(onClick = onRetry, modifier = Modifier.fillMaxWidth().padding(top = 16.dp)) { Text("Reintentar") }
-            OutlinedButton(onClick = onCancel, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) { Text("Cancelar") }
-        } else {
-            CircularProgressIndicator()
-            Text("Cargando configuración…", modifier = Modifier.padding(top = 12.dp))
+        Column(
+            modifier = Modifier.fillMaxSize().padding(24.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            if (failed) {
+                Text("No pudimos leer la configuración del Widget.", fontWeight = FontWeight.SemiBold)
+                Button(onClick = onRetry, modifier = Modifier.fillMaxWidth().padding(top = 16.dp)) { Text("Reintentar") }
+                OutlinedButton(onClick = onCancel, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) { Text("Cancelar") }
+            } else {
+                CircularProgressIndicator()
+                Text("Cargando configuración…", modifier = Modifier.padding(top = 12.dp))
+            }
         }
     }
 }

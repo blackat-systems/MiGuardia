@@ -215,6 +215,32 @@ class RecurringPlanPersistenceInstrumentedTest {
     }
 
     @Test
+    fun manualOverlapFromNextDateLeavesPreviousNightOccurrenceExcluded() = runBlocking {
+        val dayFixture = fixture
+        val night = fixture.template.copy(id = V2TestIds.uuid(971),
+            startTime = java.time.LocalTime.of(19, 0), endTime = java.time.LocalTime.of(9, 0))
+        store.workCatalog.createWorkTemplate(night)
+        fixture = fixture.copy(template = night)
+        val recurring = store.buildTestV2Write(fixture, V2TestIds.uuid(972), DATE)
+        createPlan(listOf(DATE), listOf(recurring))
+        val manual = store.buildTestV2Write(dayFixture, V2TestIds.uuid(973), DATE.plusDays(1))
+        val mutation = V2ShiftBatchMutation(
+            shiftIdsToDelete = setOf(recurring.shift.id), shiftsToInsert = listOf(manual),
+            deletionExpectations = store.v2Shifts.captureDeletionExpectations(setOf(recurring.shift.id)),
+        )
+        store.v2Shifts.applyV2Batch(mutation,
+            ShiftOccupancyExpectation.capture(DATE, DATE.plusDays(1), listOf(recurring.shift)))
+        val occurrence = requireNotNull(store.recurringPlans.getPlan(PLAN_ID)).occurrences.single()
+        assertEquals(DATE, occurrence.localDate)
+        assertEquals(RecurringOccurrenceState.EXCLUDED, occurrence.state)
+        assertNull(occurrence.shiftId)
+        assertEquals(V2ShiftLookup.Missing, store.v2Shifts.getShift(recurring.shift.id))
+        assertEquals(V2ShiftLookup.V2(manual), store.v2Shifts.getShift(manual.shift.id))
+        assertNull(store.recurringPlans.getOccurrenceForShift(manual.shift.id))
+        assertDatabaseIntegrity()
+    }
+
+    @Test
     fun changedProtectionRejectsFinalizationWithoutPartialMutation() = runBlocking {
         val original = store.buildTestV2Write(fixture, V2TestIds.uuid(241), DATE)
         createPlan(listOf(DATE), listOf(original))

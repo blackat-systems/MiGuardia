@@ -1,5 +1,7 @@
 package com.blackatsystems.miguardia.ui.nextevent
 
+import com.blackatsystems.miguardia.ui.EventTimeRangeStyle
+import com.blackatsystems.miguardia.ui.formatEventTimeRange
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -35,6 +37,7 @@ import com.blackatsystems.miguardia.core.domain.nextevent.TodayCardProjection
 import com.blackatsystems.miguardia.core.domain.nextevent.TodayShiftState
 import com.blackatsystems.miguardia.core.domain.nextevent.TodayShiftSummary
 import com.blackatsystems.miguardia.ui.components.HeroCard
+import com.blackatsystems.miguardia.ui.components.DateBadge
 import com.blackatsystems.miguardia.ui.components.PersistentMessage
 import java.time.Duration
 import java.time.LocalDate
@@ -42,7 +45,6 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 private val ArgentineDateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy", Locale.forLanguageTag("es-AR"))
-private val EventTimeFormatter = DateTimeFormatter.ofPattern("HH:mm", Locale.forLanguageTag("es-AR"))
 
 @Composable
 fun NextEventCard(
@@ -50,18 +52,26 @@ fun NextEventCard(
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // A refresh may temporarily remove result content. Keep the date-bound saved
+    // expansion at the stable card owner, not inside that conditional subtree.
+    var expandedDate by rememberSaveable { mutableStateOf<String?>(null) }
     val accessibility = state.result?.accessibilityDescription()
         ?: state.errorMessage
-        ?: "Hoy, cargando"
+        ?: "Eventos laborales, cargando"
     HeroCard(
-        title = "Hoy",
+        title = state.result?.cardTitle() ?: "Eventos laborales",
         compact = true,
         modifier = modifier
             .testTag("next-event-card")
             .semantics { contentDescription = accessibility },
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            state.result?.let { TodayCardContent(it) }
+            state.result?.let { result ->
+                val currentDate = result.date.toString()
+                val expanded = expandedDate == currentDate
+                TodayCardContent(result, expanded = expanded,
+                    onToggleExpanded = { expandedDate = if (expanded) null else currentDate })
+            }
             when (state.loadState) {
                 NextEventLoadState.LOADING -> Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -83,19 +93,19 @@ fun NextEventCard(
 }
 
 @Composable
-private fun TodayCardContent(result: TodayCardProjection) {
-    var expandedDate by rememberSaveable { mutableStateOf<String?>(null) }
-    val currentDate = result.date.toString()
-    val expanded = expandedDate == currentDate
+private fun TodayCardContent(result: TodayCardProjection, expanded: Boolean, onToggleExpanded: () -> Unit) {
     Column(
         modifier = Modifier.testTag("today-card-summary"),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
+        // A completed/cancelled day must not hide the next eligible journey.
+        val futureShiftShown = result.futureEvent.primaryEvent == NextEventPrimary.UPCOMING_SHIFT &&
+            result.primary != TodayCardPrimary.UPCOMING_SHIFT
+        if (futureShiftShown) FutureEventContent(result.futureEvent)
         when (result.primary) {
             TodayCardPrimary.ONGOING_SHIFT -> {
                 val primary = requireNotNull(result.primaryShift)
                 PrimaryShiftContent(
-                    title = "Jornada en curso",
                     summary = primary,
                     remainingLabel = "Termina en ${formatRemaining(result.remaining)}",
                     todayShiftCount = result.todayShiftCount,
@@ -107,7 +117,6 @@ private fun TodayCardContent(result: TodayCardProjection) {
             TodayCardPrimary.UPCOMING_SHIFT -> {
                 val primary = requireNotNull(result.primaryShift)
                 PrimaryShiftContent(
-                    title = "Próxima jornada",
                     summary = primary,
                     remainingLabel = "Comienza en ${formatRemaining(result.remaining)}",
                     todayShiftCount = result.todayShiftCount,
@@ -121,7 +130,7 @@ private fun TodayCardContent(result: TodayCardProjection) {
                 Text(
                     "Hoy: ${result.completedTodayCount} $noun",
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.SemiBold,
                 )
                 TodayShiftCount(result.todayShiftCount, result.completedTodayCount)
             }
@@ -130,21 +139,25 @@ private fun TodayCardContent(result: TodayCardProjection) {
                 Text(
                     "Hoy no tenés trabajo",
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.SemiBold,
                 )
                 TodayShiftCount(result.todayShiftCount)
-                if (result.futureEvent.primaryEvent != NextEventPrimary.NONE) {
+                if (!futureShiftShown && result.futureEvent.primaryEvent != NextEventPrimary.NONE) {
                     FutureEventContent(result.futureEvent, heading = "Próximo evento")
                 }
             }
 
-            TodayCardPrimary.FUTURE_EVENT -> FutureEventContent(result.futureEvent)
+            TodayCardPrimary.FUTURE_EVENT -> if (!futureShiftShown) FutureEventContent(result.futureEvent)
             TodayCardPrimary.EMPTY -> EmptyEventContent()
         }
 
-        if (result.canExpand) {
+        // A lone active/upcoming journey is already shown in full above. Keep
+        // expansion for other journeys and for historical summary-only states.
+        val singleJourneyAlreadyShown = result.shifts.singleOrNull()?.event?.shiftId
+            ?.let { it == result.primaryShift?.event?.shiftId } == true
+        if (result.canExpand && !singleJourneyAlreadyShown) {
             TextButton(
-                onClick = { expandedDate = if (expanded) null else currentDate },
+                onClick = onToggleExpanded,
                 modifier = Modifier.testTag("today-card-toggle"),
             ) {
                 Text(if (expanded) "Ocultar jornadas de hoy" else "Ver jornadas de hoy")
@@ -176,20 +189,19 @@ private fun TodayShiftCount(
 
 @Composable
 private fun PrimaryShiftContent(
-    title: String,
     summary: TodayShiftSummary,
     remainingLabel: String,
     todayShiftCount: Int,
     today: LocalDate,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(
-            title,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
+        DateBadge(
+            label = journeyDateLabel(today, summary.event.start.atZone(summary.event.zoneId).toLocalDate()),
+            modifier = Modifier.testTag("next-journey-date"),
         )
         Text(
             remainingLabel,
+            modifier = Modifier.testTag("next-journey-countdown"),
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.SemiBold,
         )
@@ -234,12 +246,10 @@ private fun TodayShiftRow(summary: TodayShiftSummary) {
             Text(
                 "${summary.event.placeAbbreviationSnapshot} · ${summary.event.placeNameSnapshot}",
                 style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
             )
             Text(
-                "${summary.event.ownerLocalDate.format(ArgentineDateFormatter)} · " +
-                    "Horario planificado: ${summary.event.startTimeSnapshot.format(EventTimeFormatter)}–" +
-                    summary.event.endTimeSnapshot.format(EventTimeFormatter),
+                "Horario planificado: ${summary.event.eventTimeRange(EventTimeRangeStyle.COMPACT_DATED)}",
                 style = MaterialTheme.typography.bodyMedium,
             )
             Text(
@@ -260,7 +270,8 @@ private fun ShiftIdentity(shift: NextEventItem.Shift) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(IntrinsicSize.Min),
+            .height(IntrinsicSize.Min)
+            .testTag("next-journey-identity"),
         verticalAlignment = Alignment.Top,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
@@ -277,12 +288,10 @@ private fun ShiftIdentity(shift: NextEventItem.Shift) {
             Text(
                 "${shift.placeAbbreviationSnapshot} · ${shift.placeNameSnapshot}",
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
             )
             Text(
-                "${shift.ownerLocalDate.format(ArgentineDateFormatter)} · " +
-                    "Horario planificado: ${shift.startTimeSnapshot.format(EventTimeFormatter)}–" +
-                    shift.endTimeSnapshot.format(EventTimeFormatter),
+                shift.eventTimeRange(EventTimeRangeStyle.COMPACT),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
             )
@@ -299,14 +308,14 @@ private fun FutureEventContent(
     val primary = result.primaryEvents.firstOrNull()
     when (result.primaryEvent) {
         NextEventPrimary.ONGOING_SHIFT -> FutureShiftContent(
-            title = "Jornada en curso",
+            today = result.referenceInstant.atZone(result.zoneId).toLocalDate(),
             shift = primary as NextEventItem.Shift,
             count = result.primaryEvents.count { it is NextEventItem.Shift },
             remainingLabel = "Termina en ${formatRemaining(result.remaining)}",
         )
 
         NextEventPrimary.UPCOMING_SHIFT -> FutureShiftContent(
-            title = "Próxima jornada",
+            today = result.referenceInstant.atZone(result.zoneId).toLocalDate(),
             shift = primary as NextEventItem.Shift,
             count = result.primaryEvents.count { it is NextEventItem.Shift },
             remainingLabel = "Comienza en ${formatRemaining(result.remaining)}",
@@ -368,18 +377,26 @@ private fun WorkEventCompanions(
 
 @Composable
 private fun FutureShiftContent(
-    title: String,
+    today: LocalDate,
     shift: NextEventItem.Shift,
     count: Int,
     remainingLabel: String,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        DateBadge(
+            label = journeyDateLabel(today, shift.start.atZone(shift.zoneId).toLocalDate()),
+            modifier = Modifier.testTag("next-journey-date"),
+        )
+        Text(
+            remainingLabel,
+            modifier = Modifier.testTag("next-journey-countdown"),
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+        )
         ShiftIdentity(shift)
         shift.positionSnapshot?.takeIf(String::isNotBlank)?.let { position ->
             Text("Puesto: $position", style = MaterialTheme.typography.bodyMedium)
         }
-        Text(remainingLabel, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
         if (count > 1) Text("$count jornadas comparten este estado.", style = MaterialTheme.typography.bodySmall)
     }
 }
@@ -391,12 +408,10 @@ private fun AvailabilityContent(
     remainingLabel: String,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        Text(event.labelSnapshot, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        Text(event.labelSnapshot, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
         Text(
-            "${event.ownerLocalDate.format(ArgentineDateFormatter)} · " +
-                "${event.start.atZone(event.zoneId).toLocalTime().format(EventTimeFormatter)}–" +
-                event.end.atZone(event.zoneId).toLocalTime().format(EventTimeFormatter),
+            event.eventTimeRange(EventTimeRangeStyle.COMPACT_DATED),
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.SemiBold,
         )
@@ -409,13 +424,12 @@ private fun SecondaryEventContent(event: NextEventItem) {
     when (event) {
         is NextEventItem.Shift -> Text(
             "También: Jornada · ${event.placeAbbreviationSnapshot} · " +
-                "${event.startTimeSnapshot.format(EventTimeFormatter)}–${event.endTimeSnapshot.format(EventTimeFormatter)}",
+                event.eventTimeRange(EventTimeRangeStyle.COMPACT_DATED),
             style = MaterialTheme.typography.bodySmall,
         )
         is NextEventItem.Availability -> Text(
             "También: ${event.labelSnapshot} · " +
-                "${event.start.atZone(event.zoneId).toLocalTime().format(EventTimeFormatter)}–" +
-                event.end.atZone(event.zoneId).toLocalTime().format(EventTimeFormatter),
+                event.eventTimeRange(EventTimeRangeStyle.COMPACT_DATED),
             style = MaterialTheme.typography.bodySmall,
         )
     }
@@ -432,7 +446,7 @@ private fun DayOffContent(date: LocalDate, today: LocalDate) {
             "Próximo franco",
             modifier = Modifier.weight(1f),
             style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.SemiBold,
         )
         Text(date.format(ArgentineDateFormatter), style = MaterialTheme.typography.bodyMedium)
     }
@@ -447,14 +461,27 @@ private fun EmptyEventContent() {
 
 internal fun formatRemaining(duration: Duration): String {
     val totalMinutes = duration.toMinutes().coerceAtLeast(0L)
+    if (totalMinutes == 0L) return "menos de un minuto"
     val days = totalMinutes / (24L * 60L)
     val hours = (totalMinutes % (24L * 60L)) / 60L
     val minutes = totalMinutes % 60L
     return buildList {
-        if (days > 0L) add("$days d")
-        if (hours > 0L) add("$hours h")
-        if (minutes > 0L || isEmpty()) add("$minutes min")
-    }.joinToString(" ")
+        if (days > 0L) add("$days ${if (days == 1L) "día" else "días"}")
+        if (hours > 0L) add("$hours ${if (hours == 1L) "hora" else "horas"}")
+        if (minutes > 0L) add("$minutes ${if (minutes == 1L) "minuto" else "minutos"}")
+    }.joinToString(", ")
+}
+
+internal fun journeyDateLabel(today: LocalDate, date: LocalDate): String = when (date) {
+    today -> "Hoy"
+    today.plusDays(1) -> "Mañana"
+    else -> date.format(ArgentineDateFormatter)
+}
+
+private fun TodayCardProjection.cardTitle(): String = when (futureEvent.primaryEvent) {
+    NextEventPrimary.UPCOMING_SHIFT -> "Próxima jornada"
+    NextEventPrimary.ONGOING_SHIFT -> "Jornada en curso"
+    else -> "Eventos laborales"
 }
 
 internal fun dayDistanceLabel(today: LocalDate, date: LocalDate): String =
@@ -481,6 +508,12 @@ private fun TodayShiftSummary.displayState(): String = buildList {
 }.joinToString(" · ")
 
 private fun TodayCardProjection.accessibilityDescription(): String = buildString {
+    append(cardTitle()).append(". ")
+    if (futureEvent.primaryEvent == NextEventPrimary.UPCOMING_SHIFT ||
+        futureEvent.primaryEvent == NextEventPrimary.ONGOING_SHIFT
+    ) {
+        append(futureEvent.accessibilityDescription()).append(". ")
+    }
     append("Hoy, ").append(date.format(ArgentineDateFormatter)).append(". ")
     append(
         when (primary) {
@@ -512,11 +545,7 @@ private fun TodayCardProjection.accessibilityDescription(): String = buildString
             .append(", ")
             .append(summary.event.placeNameSnapshot)
             .append(", ")
-            .append(summary.event.ownerLocalDate.format(ArgentineDateFormatter))
-            .append(", ")
-            .append(summary.event.startTimeSnapshot.format(EventTimeFormatter))
-            .append(" a ")
-            .append(summary.event.endTimeSnapshot.format(EventTimeFormatter))
+            .append(summary.event.eventTimeRange(EventTimeRangeStyle.COMPACT_DATED))
             .append(", ")
             .append(summary.displayState())
     }
@@ -525,28 +554,29 @@ private fun TodayCardProjection.accessibilityDescription(): String = buildString
 private fun NextEventResult.accessibilityDescription(): String = when (primaryEvent) {
     NextEventPrimary.ONGOING_SHIFT -> (primaryEvents.first() as NextEventItem.Shift).let { shift ->
         "Jornada en curso, ${shift.placeNameSnapshot}, " +
-            "${shift.ownerLocalDate.format(ArgentineDateFormatter)}, " +
-            "${shift.startTimeSnapshot.format(EventTimeFormatter)} a " +
-            "${shift.endTimeSnapshot.format(EventTimeFormatter)}, " +
+            "${shift.eventTimeRange(EventTimeRangeStyle.COMPACT_DATED)}, " +
             "termina en ${formatRemaining(remaining)}"
     }
     NextEventPrimary.UPCOMING_SHIFT -> (primaryEvents.first() as NextEventItem.Shift).let { shift ->
         "Próxima jornada, ${shift.placeNameSnapshot}, " +
-            "${shift.ownerLocalDate.format(ArgentineDateFormatter)}, " +
-            "${shift.startTimeSnapshot.format(EventTimeFormatter)} a " +
-            "${shift.endTimeSnapshot.format(EventTimeFormatter)}, " +
+            "${shift.eventTimeRange(EventTimeRangeStyle.COMPACT_DATED)}, " +
             "comienza en ${formatRemaining(remaining)}"
     }
     NextEventPrimary.ONGOING_AVAILABILITY ->
         (primaryEvents.first() as NextEventItem.Availability).let { availability ->
             "Disponibilidad activa, ${availability.labelSnapshot}, " +
+                "${availability.eventTimeRange(EventTimeRangeStyle.COMPACT_DATED)}, " +
                 "termina en ${formatRemaining(remaining)}"
         }
     NextEventPrimary.UPCOMING_AVAILABILITY ->
         (primaryEvents.first() as NextEventItem.Availability).let { availability ->
             "Próxima disponibilidad, ${availability.labelSnapshot}, " +
+                "${availability.eventTimeRange(EventTimeRangeStyle.COMPACT_DATED)}, " +
                 "comienza en ${formatRemaining(remaining)}"
         }
     NextEventPrimary.DAY_OFF -> "Próximo franco, ${nextDayOff?.format(ArgentineDateFormatter)}"
     NextEventPrimary.NONE -> "Sin próximos eventos"
 }
+
+private fun NextEventItem.eventTimeRange(style: EventTimeRangeStyle): String =
+    formatEventTimeRange(start, end, zoneId, style)

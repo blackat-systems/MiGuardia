@@ -128,10 +128,23 @@ data class V2ShiftBatchMutation(
     val shiftsToUpdate: List<V2ShiftWrite> = emptyList(),
     val explicitDayStatusDatesToClear: Set<LocalDate> = emptySet(),
     val actualExpectations: Map<UUID, ShiftActualExpectation> = emptyMap(),
+    val notesToInsert: List<ShiftNoteWithAttachments> = emptyList(),
+    val deletionExpectations: Map<UUID, ShiftDeletionExpectation> = emptyMap(),
+    val explicitStatusExpectations: Map<LocalDate, ExplicitDayStatus?> = emptyMap(),
 ) {
     init {
         val insertedIds = shiftsToInsert.map { it.shift.id }
         val updatedIds = shiftsToUpdate.map { it.shift.id }
+        require(notesToInsert.all { it.note.shiftId in insertedIds }) {
+            "Las notas nuevas deben pertenecer a jornadas insertadas por el mismo lote"
+        }
+        require(notesToInsert.map { it.note.id }.distinct().size == notesToInsert.size)
+        val attachments = notesToInsert.flatMap { it.attachments }
+        require(attachments.map { it.id }.distinct().size == attachments.size)
+        require(attachments.map { it.storageKey }.distinct().size == attachments.size) {
+            "Cada nota debe conservar su propia copia privada de las imágenes"
+        }
+        require(deletionExpectations.keys.all { it in shiftIdsToDelete })
         require(insertedIds.distinct().size == insertedIds.size) {
             "Una jornada V2 no puede insertarse dos veces en el mismo lote"
         }
@@ -158,3 +171,16 @@ data class V2ShiftBatchMutation(
         }
     }
 }
+
+/** Opaque CAS token plus the information required to disclose destructive consequences. */
+data class ShiftDeletionExpectation(
+    val shiftId: UUID,
+    val token: String,
+    val noteCount: Int,
+    val attachmentStorageKeys: Set<String>,
+    val hasActual: Boolean,
+    val hasSituation: Boolean,
+    val notificationCount: Int,
+    val hasRecurringOccurrence: Boolean,
+    val situationEvidenceStorageKey: String? = null,
+)

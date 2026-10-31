@@ -25,7 +25,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 
 class WeatherRuntime(
-    context: Context,
+    private val context: Context,
     val preferences: WeatherPreferencesStore,
     private val objectives: ObjectiveRepository,
     clock: Clock = Clock.systemUTC(),
@@ -39,6 +39,7 @@ class WeatherRuntime(
     val clock: Clock = clock
 
     suspend fun refreshIfEnabled(shift: Shift, force: Boolean = false): WeatherRefreshResult? {
+        com.blackatsystems.miguardia.QaInstrumentationScope.requireExternalAction(context, "weather.network")
         if (!preferences.current().enabled) return null
         return cacheLifecycleMutex.withLock {
             repositoryFor(shift)?.refreshIfStale(force)

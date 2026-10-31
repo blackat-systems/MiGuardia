@@ -13,6 +13,8 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.dp
 import com.blackatsystems.miguardia.ui.theme.*
+import com.blackatsystems.miguardia.testsupport.TestFontScale
+import com.blackatsystems.miguardia.testsupport.AndroidFontScaleTheme
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
@@ -23,14 +25,14 @@ import java.io.File
 
 class UpdatesScreenTest {
     @get:Rule val compose = createComposeRule()
-    @Test fun statesActionsAndFullTextRemainReachableInBothThemesOrientationsAndAllInternalZooms() {
-        var dark by mutableStateOf(false); var wide by mutableStateOf(false); var zoom by mutableStateOf(AppZoom.STANDARD)
+    @Test fun statesActionsAndFullTextRemainReachableInBothThemesOrientationsAndAllAndroidFontScales() {
+        var dark by mutableStateOf(false); var wide by mutableStateOf(false); var fontScale by mutableStateOf(TestFontScale.STANDARD)
         var stage by mutableStateOf(UpdateStage.IDLE)
         val installed = InstalledUpdateApp(InstalledAppIdentity("com.blackatsystems.miguardia.qa", "b".repeat(64), 1), "1.0.0", 26)
         var searches = 0; var downloads = 0; var saves = 0
         var expectedBackground = 0
         compose.setContent {
-            MiGuardiaTheme(darkTheme = dark, appZoom = zoom) {
+            AndroidFontScaleTheme(darkTheme = dark, fontScale = fontScale) {
                 expectedBackground = MaterialTheme.colorScheme.background.toArgb()
                 Box(Modifier.size(if (wide) 600.dp else 320.dp, if (wide) 320.dp else 600.dp)) {
                     UpdatesScreen(UpdatesState(open = true, installed = installed, stage = stage),
@@ -38,8 +40,8 @@ class UpdatesScreenTest {
                 }
             }
         }
-        for (theme in listOf(false, true)) for (landscape in listOf(false, true)) for (scale in AppZoom.entries) {
-            compose.runOnIdle { dark = theme; wide = landscape; zoom = scale }
+        for (theme in listOf(false, true)) for (landscape in listOf(false, true)) for (scale in TestFontScale.entries) {
+            compose.runOnIdle { dark = theme; wide = landscape; fontScale = scale }
             for ((state, tag) in listOf(UpdateStage.IDLE to "updates-search", UpdateStage.AVAILABLE to "updates-download", UpdateStage.READY to "updates-save")) {
                 compose.runOnIdle { stage = state }
                 compose.onNodeWithTag(tag).performScrollTo().assertIsDisplayed().assertHasClickAction().performClick()

@@ -63,6 +63,31 @@ class ExtractedBackup internal constructor(
 private fun BackupDatabaseSnapshot.imageMetadataTables(): List<BackupTable> =
     tables.filter { it.name == "schedule_photos" || it.name == "shift_note_attachments" }
 
+private data class ImageMetadataRecord(val row: BackupRecord, val columns: List<String>)
+
+private fun BackupDatabaseSnapshot.imageMetadataRecords(): List<ImageMetadataRecord> {
+    val regular = imageMetadataTables().flatMap { table ->
+        table.records.map { ImageMetadataRecord(it, table.columns) }
+    }
+    val situations = tables.firstOrNull { it.name == "shift_situations" } ?: return regular
+    fun index(name: String) = situations.columns.indexOf(name)
+    val evidence = situations.records.mapNotNull { record ->
+        if (record.values[index("evidenceStorageKey")] == BackupValue.Null) return@mapNotNull null
+        ImageMetadataRecord(
+            BackupRecord(
+                listOf(
+                    record.values[index("shiftId")], record.values[index("evidenceStorageKey")],
+                    record.values[index("evidenceMimeType")], record.values[index("evidenceByteSize")],
+                    record.values[index("evidencePixelWidth")], record.values[index("evidencePixelHeight")],
+                    record.values[index("evidenceSha256")],
+                ),
+            ),
+            listOf("id", "storageKey", "mimeType", "byteSize", "pixelWidth", "pixelHeight", "sha256"),
+        )
+    }
+    return regular + evidence
+}
+
 private fun File.deletePrivateFileChecked(label: String) {
     if (exists() && !delete()) throw IOException("No se pudo retirar $label.")
 }
@@ -91,7 +116,7 @@ object BackupContainer {
     ): BackupManifest {
         rejectEmptyPassword(password)
         try {
-            MiGuardiaBackupSchemaV7.requireValid(database)
+            MiGuardiaBackupSchemaV8.requireValid(database)
             require(createdAtEpochMillis > 0L)
             require(photoAssets.size <= MiGuardiaBackupContract.MAX_PHOTO_COUNT)
             if (photoMode == BackupPhotoMode.OMITTED && photoAssets.isNotEmpty()) {
@@ -243,22 +268,21 @@ object BackupContainer {
         database: BackupDatabaseSnapshot,
         assets: List<BackupPhotoAsset>,
     ): List<BackupPhotoAsset> {
-        val photoTables = database.imageMetadataTables()
+        val photoRows = database.imageMetadataRecords()
         if (photoMode == BackupPhotoMode.OMITTED) {
-            if (photoTables.any { it.records.isNotEmpty() }) {
+            if (photoRows.isNotEmpty()) {
                 throw InvalidBackupException("La copia sin fotos todavía contiene metadatos de fotos.")
             }
             return emptyList()
         }
-        val rowsByStorageKey = photoTables.flatMap { table ->
-            val columns = table.columns
-            table.records.map { record ->
+        val rowsByStorageKey = photoRows.map { image ->
+            val columns = image.columns
+            val record = image.row
                 val key = (record.values[columns.indexOf("storageKey")] as? BackupValue.Text)?.value
                     ?: throw InvalidBackupException("Una imagen no tiene una referencia de archivo válida.")
                 key to (record to columns)
-            }
         }.toMap()
-        val rowCount = photoTables.sumOf { it.records.size }
+        val rowCount = photoRows.size
         if (rowsByStorageKey.size != rowCount || assets.size != rowsByStorageKey.size) {
             throw InvalidBackupException("Los registros y archivos de fotos no coinciden.")
         }
@@ -307,22 +331,21 @@ object BackupContainer {
                 throw InvalidBackupException("La entrada ${entry.name} no supera la verificación de integridad.")
             }
         }
-        val photoTables = payload.database.imageMetadataTables()
+        val photoRows = payload.database.imageMetadataRecords()
         if (payload.photoMode == BackupPhotoMode.OMITTED) {
-            if (payload.photos.isNotEmpty() || photoTables.any { it.records.isNotEmpty() } ||
+            if (payload.photos.isNotEmpty() || photoRows.isNotEmpty() ||
                 actualNames.any { it.startsWith(PHOTO_PREFIX) }
             ) {
                 throw InvalidBackupException("Una copia declarada sin fotos contiene datos de fotografías.")
             }
             return
         }
-        val rowsByStorageKey = photoTables.flatMap { table ->
-            val columns = table.columns
-            table.records.map { row ->
+        val rowsByStorageKey = photoRows.map { image ->
+            val columns = image.columns
+            val row = image.row
                 val key = (row.values[columns.indexOf("storageKey")] as? BackupValue.Text)?.value
                     ?: throw InvalidBackupException("Una imagen no tiene una referencia válida.")
                 key to (row to columns)
-            }
         }.toMap()
         if (rowsByStorageKey.size != payload.photos.size) {
             throw InvalidBackupException("Los metadatos y registros de fotografías no coinciden.")
@@ -360,7 +383,8 @@ object BackupContainer {
         if (text("id") != photo.recordId || text("storageKey") != photo.storageKey ||
             text("mimeType") != photo.mimeType || integer("byteSize") != photo.byteSize ||
             integer("pixelWidth") != photo.pixelWidth.toLong() ||
-            integer("pixelHeight") != photo.pixelHeight.toLong()
+            integer("pixelHeight") != photo.pixelHeight.toLong() ||
+            ("sha256" in columns && text("sha256") != photo.sha256)
         ) {
             throw InvalidBackupException("Los metadatos de una fotografía no coinciden con Room.")
         }
@@ -871,7 +895,7 @@ object BackupContainer {
         "MiGuardia backup passwordless transport seal v1".toByteArray(Charsets.US_ASCII)
     private const val MAX_METADATA_BYTES = 4L * 1024L * 1024L
     private const val ZIP_EPOCH_MILLIS = 0L
-    private val SAFE_STORAGE_KEY = Regex("(?:note_)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?:_[0-9a-f]{8})?\\.(?:jpg|jpeg|png|webp)")
+    private val SAFE_STORAGE_KEY = Regex("(?:(?:note|cancel)_)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?:_[0-9a-f]{8})?\\.(?:jpg|jpeg|png|webp)")
     private val PNG_SIGNATURE = byteArrayOf(
         0x89.toByte(), 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,
     )

@@ -6,6 +6,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -30,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.role
@@ -37,6 +40,10 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.blackatsystems.miguardia.R
@@ -49,6 +56,42 @@ object MiGuardiaSpacing {
     val large = 16.dp
     val extraLarge = 24.dp
     val huge = 32.dp
+}
+
+@Composable
+fun DateBadge(label: String, modifier: Modifier = Modifier) {
+    Surface(
+        modifier = modifier,
+        shape = MaterialTheme.shapes.small,
+        color = MaterialTheme.vigiliaColors.dateContainer,
+        contentColor = MaterialTheme.vigiliaColors.onDateContainer,
+    ) {
+        Text(label, modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+            style = MaterialTheme.typography.titleMedium)
+    }
+}
+
+@Composable
+fun StatusBadge(label: String, containerColor: Color, contentColor: Color,
+    modifier: Modifier = Modifier, symbol: String? = null) {
+    val measurer = rememberTextMeasurer()
+    val style = MaterialTheme.typography.labelLarge
+    val density = LocalDensity.current
+    BoxWithConstraints(modifier) {
+        val labelWidth = measurer.measure(label, style = style, softWrap = false).size.width
+        val padding = if (labelWidth + with(density) { 16.dp.roundToPx() } <= constraints.maxWidth) 8.dp else 0.dp
+        val symbolWidth = symbol?.let { measurer.measure(it, style = style).size.width } ?: 0
+        val showSymbol = symbol != null && labelWidth + symbolWidth +
+            with(density) { (padding * 2 + 6.dp).roundToPx() } <= constraints.maxWidth
+        Surface(shape = MaterialTheme.shapes.extraSmall, color = containerColor, contentColor = contentColor) {
+            Row(Modifier.padding(horizontal = padding, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                if (showSymbol) Text(requireNotNull(symbol), Modifier.clearAndSetSemantics {}, style = style)
+                // The full text path keeps painted and accessibility layout results identical.
+                Text(AnnotatedString(label), style = style, maxLines = 1, softWrap = false)
+            }
+        }
+    }
 }
 
 @Composable
@@ -65,7 +108,7 @@ fun ScreenHeading(
             text = title,
             modifier = Modifier.semantics { heading() },
             style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.SemiBold,
         )
         supportingText?.let {
             Text(
@@ -96,7 +139,7 @@ fun SurfaceHeader(
             text = title,
             modifier = Modifier.weight(1f).semantics { heading() },
             style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.SemiBold,
         )
         TextButton(onClick = onNavigation) { Text(navigationLabel) }
     }
@@ -134,7 +177,7 @@ fun MonthNavigator(
                 monthLabel,
                 modifier = Modifier.weight(1f),
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
                 textAlign = TextAlign.Center,
             )
             TextButton(
@@ -166,7 +209,7 @@ fun SectionCard(
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
             )
             supportingText?.let {
                 Text(
@@ -190,30 +233,12 @@ fun HeroCard(
 ) {
     val colors = MaterialTheme.vigiliaColors
     val shape = MaterialTheme.shapes.large
-    val background = if (colors.isDark) {
-        Brush.linearGradient(
-            listOf(
-                colors.surfaceHero,
-                MaterialTheme.colorScheme.primary.copy(alpha = 0.24f),
-            ),
-        )
-    } else {
-        Brush.linearGradient(listOf(colors.surfaceRaised, colors.surfaceRaised))
-    }
+    val background = Brush.linearGradient(listOf(colors.surfaceHero, colors.heroEnd))
     Column(
         modifier = modifier
             .fillMaxWidth()
             .clip(shape)
             .background(background)
-            .border(
-                width = 1.dp,
-                color = if (colors.isDark) {
-                    MaterialTheme.colorScheme.primary.copy(alpha = 0.55f)
-                } else {
-                    MaterialTheme.colorScheme.outlineVariant
-                },
-                shape = shape,
-            )
             .padding(
                 horizontal = if (compact) MiGuardiaSpacing.large else MiGuardiaSpacing.extraLarge,
                 vertical = if (compact) MiGuardiaSpacing.small else MiGuardiaSpacing.extraLarge,
@@ -225,8 +250,8 @@ fun HeroCard(
         Text(
             text = title,
             style = MaterialTheme.typography.labelLarge,
-            color = if (colors.isDark) colors.active else MaterialTheme.colorScheme.primary,
-            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary,
+            fontWeight = FontWeight.SemiBold,
         )
         content()
     }
@@ -255,7 +280,7 @@ fun EmptyState(
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
                 textAlign = TextAlign.Center,
             )
             Text(
@@ -334,8 +359,13 @@ fun DestructiveAction(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
-    TextButton(onClick = onClick, enabled = enabled, modifier = modifier) {
-        Text(label, color = MaterialTheme.colorScheme.error)
+    TextButton(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier,
+        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+    ) {
+        Text(label)
     }
 }
 

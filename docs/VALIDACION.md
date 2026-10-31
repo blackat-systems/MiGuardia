@@ -22,9 +22,9 @@ Python 3.11+ y biblioteca estándar; Java/JBR compatible con el wrapper y SDK An
 
 ```powershell
 python tools/verify.py --profile local --fresh-tests
-python tools/verify.py --profile interop --website ../website --node 'C:\Program Files\nodejs\node.exe' --fresh-tests
+python tools/verify.py --profile interop --website ../../website --node 'C:\Program Files\nodejs\node.exe' --fresh-tests
 python tools/verify.py --profile build
-python tools/verify.py --profile full --website ../website --fresh-tests
+python tools/verify.py --profile full --website ../../website --fresh-tests
 ```
 
 `--website` es obligatorio para interop/full. `--node` puede indicar un ejecutable nativo o resolverse en PATH. Se comprueban transformación TypeScript y firma ECDSA/WebCrypto, y se registran HEAD, cambios e insumos relevantes de Android/web. Se usa el código web sin escribirlo ni aprovisionar un servidor. Un requisito faltante produce un fallo claro; nunca un test omitido presentado como verde.

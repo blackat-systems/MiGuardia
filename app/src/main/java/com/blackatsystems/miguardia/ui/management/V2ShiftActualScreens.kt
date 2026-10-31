@@ -1,5 +1,7 @@
 package com.blackatsystems.miguardia.ui.management
 
+import com.blackatsystems.miguardia.ui.EventTimeRangeStyle
+import com.blackatsystems.miguardia.ui.formatEventTimeRange
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -14,6 +16,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
@@ -133,20 +136,11 @@ fun V2ShiftActualDetailCard(
     rowState: V2ShiftActualRowState?,
     actions: V2ShiftActualActions,
     modifier: Modifier = Modifier,
+    embedded: Boolean = false,
 ) {
     val tagPrefix = "v2-actual-${shift.id}"
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .testTag("$tagPrefix-card")
-            .semantics {
-                contentDescription = "Horario real de la jornada $ordinal de $count, identificador ${shift.id}"
-            },
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
+    val content: @Composable () -> Unit = {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             when (rowState) {
                 null,
                 V2ShiftActualRowState.Loading,
@@ -170,9 +164,9 @@ fun V2ShiftActualDetailCard(
                     if (actual == null) {
                         Text(
                             if (rowState.canRegister) "Horario trabajado" else "Horario estipulado",
-                            fontWeight = FontWeight.Bold,
+                            fontWeight = FontWeight.SemiBold,
                         )
-                        Text(shift.timeOnlyRange())
+                        Text(shift.detailedTimeRange())
                         rowState.unavailableMessage?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
                         if (rowState.canRegister) {
                             Button(
@@ -205,14 +199,32 @@ fun V2ShiftActualDetailCard(
             }
         }
     }
+    val accessibleModifier = modifier
+        .fillMaxWidth()
+        .testTag("$tagPrefix-card")
+        .semantics {
+            contentDescription = "Horario real de la jornada $ordinal de $count, identificador ${shift.id}"
+        }
+    if (embedded) {
+        Column(
+            modifier = accessibleModifier.padding(top = 8.dp),
+            content = { content() },
+        )
+    } else {
+        Card(modifier = accessibleModifier) {
+            Column(modifier = Modifier.padding(16.dp)) { content() }
+        }
+    }
 }
 
 @Composable
 private fun ActualSummary(shift: Shift, actual: ShiftActualAggregate) {
-    Text("Horario estipulado", fontWeight = FontWeight.Bold)
-    Text(shift.timeOnlyRange())
-    Text("Horario realmente cumplido", fontWeight = FontWeight.Bold)
-    Text("${actual.record.actualStart.timeAt(shift.zoneId)} – ${actual.record.actualEnd.timeAt(shift.zoneId)}")
+    Text("Horario estipulado", fontWeight = FontWeight.SemiBold)
+    Text(shift.detailedTimeRange())
+    Text("Horario realmente cumplido", fontWeight = FontWeight.SemiBold)
+    Text(formatEventTimeRange(
+        actual.record.actualStart, actual.record.actualEnd, shift.zoneId, EventTimeRangeStyle.DETAIL,
+    ))
     Text(
         shift.humanActualDifference(actual),
         style = MaterialTheme.typography.bodySmall,
@@ -259,11 +271,8 @@ private fun Long.humanDuration(): String {
     }.joinToString(" y ")
 }
 
-private fun Shift.timeOnlyRange(): String =
-    "${startAt.timeAt(zoneId)} – ${endAt.timeAt(zoneId)}"
-
-private fun Instant.timeAt(zoneId: ZoneId): String =
-    TIME_ONLY.format(atZone(zoneId))
+private fun Shift.detailedTimeRange(): String =
+    formatEventTimeRange(startAt, endAt, zoneId, EventTimeRangeStyle.DETAIL)
 
 @Composable
 fun V2ShiftActualSurfaceHost(
@@ -299,6 +308,7 @@ fun V2ShiftActualSurfaceHost(
             dismissButton = {
                 TextButton(
                     onClick = actions.discardUnavailableRestoredDraft,
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
                     modifier = Modifier.testTag("v2-actual-restored-discard"),
                 ) { Text("Descartar borrador") }
             },
@@ -339,6 +349,7 @@ fun V2ShiftActualSurfaceHost(
                 TextButton(
                     onClick = actions.confirmDiscard,
                     enabled = !state.isSaving && !state.isRefreshingSource,
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
                     modifier = Modifier.testTag("v2-actual-confirm-discard"),
                 ) { Text("Descartar borrador") }
             },
@@ -370,7 +381,7 @@ private fun ActualEditorScreen(state: V2ShiftActualUiState, actions: V2ShiftActu
             Text(
                 "Jornada ${editor.ordinal} de ${editor.count}",
                 style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
             )
             Text("UUID: ${editor.expectation.planned.shift.id}", style = MaterialTheme.typography.bodySmall)
             editor.errorMessage?.let { PersistentMessage(it) }
@@ -952,4 +963,3 @@ private fun Long.asHoursAndMinutes(): String =
     "${this / 60} h ${this % 60} min"
 
 private val VISIBLE_DATE_TIME: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm XXX")
-private val TIME_ONLY: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")

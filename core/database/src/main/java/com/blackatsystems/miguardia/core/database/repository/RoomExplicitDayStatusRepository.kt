@@ -45,6 +45,36 @@ internal class RoomExplicitDayStatusRepository(
         dao.clear(date.toString())
     }
 
+    override suspend fun updateUndefined(
+        date: LocalDate,
+        expected: ExplicitDayStatus?,
+        mark: Boolean,
+    ) {
+        database.withTransaction {
+            val current = dao.getAll().singleOrNull { it.localDate == date.toString() }?.toDomain()
+            if (current != expected) {
+                throw ConflictingLocalWriteException("El día cambió mientras confirmabas. Revisalo nuevamente.")
+            }
+            if (mark) {
+                val conflicts = buildList {
+                    if (database.shiftDao().getStartingBetween(date.toString(), date.toString()).isNotEmpty()) add("jornadas")
+                    if (current?.type == ExplicitDayStatusType.DAY_OFF) add("Franco")
+                }
+                if (conflicts.isNotEmpty()) {
+                    throw ConflictingLocalWriteException(
+                        "No se puede marcar Sin definir porque el día conserva ${conflicts.joinToString()}.",
+                    )
+                }
+                dao.set(ExplicitDayStatus(date, ExplicitDayStatusType.UNDEFINED).toEntity())
+            } else {
+                if (current?.type != ExplicitDayStatusType.UNDEFINED) {
+                    throw ConflictingLocalWriteException("El día ya no está marcado como Sin definir.")
+                }
+                dao.clear(date.toString())
+            }
+        }
+    }
+
     override suspend fun updateDaysOff(
         expectedTimelineId: UUID,
         dates: Set<LocalDate>,

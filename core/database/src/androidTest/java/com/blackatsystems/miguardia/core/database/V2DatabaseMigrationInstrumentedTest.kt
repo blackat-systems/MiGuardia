@@ -21,6 +21,35 @@ class V2DatabaseMigrationInstrumentedTest {
     )
 
     @Test
+    fun migrationSevenToEightPreservesLegacyStatusWithoutInventingSituationMetadata() {
+        helper.createDatabase(DB_SEVEN_TO_EIGHT, 1).apply { seedEveryVersionOneTable(); close() }
+        helper.runMigrationsAndValidate(
+            DB_SEVEN_TO_EIGHT, 7, true,
+            MiGuardiaV2Database.MIGRATION_1_2,
+            MiGuardiaV2Database.MIGRATION_2_3,
+            MiGuardiaV2Database.MIGRATION_3_4,
+            MiGuardiaV2Database.MIGRATION_4_5,
+            MiGuardiaV2Database.MIGRATION_5_6,
+            MiGuardiaV2Database.MIGRATION_6_7,
+        ).apply {
+            execSQL("UPDATE shifts SET status = 'ABSENT' WHERE id = 'shift-1'")
+            close()
+        }
+        val migrated = helper.runMigrationsAndValidate(
+            DB_SEVEN_TO_EIGHT, 8, true, MiGuardiaV2Database.MIGRATION_7_8,
+        )
+        assertEquals("ABSENT", migrated.string("SELECT status FROM shifts WHERE id = 'shift-1'"))
+        assertEquals(0, migrated.scalar("SELECT COUNT(*) FROM shift_situations"))
+        assertEquals(29, migrated.scalar(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' " +
+                "AND name NOT LIKE 'android_%' AND name != 'room_master_table'",
+        ))
+        assertForeignKey(migrated, "shift_situations", "shifts", "CASCADE")
+        assertHealthy(migrated)
+        migrated.close()
+    }
+
+    @Test
     fun migrationOneToTwoPreservesEveryV2TableAndStartsRecurringTablesEmpty() {
         helper.createDatabase(DB, 1).apply {
             seedEveryVersionOneTable()
@@ -571,6 +600,7 @@ class V2DatabaseMigrationInstrumentedTest {
         const val DB_FOUR_TO_FIVE = "v2-migration-4-5-test.db"
         const val DB_FIVE_TO_SIX = "v2-migration-5-6-test.db"
         const val DB_SIX_TO_SEVEN = "v2-migration-6-7-test.db"
+        const val DB_SEVEN_TO_EIGHT = "v2-migration-7-8-test.db"
         val VERSION_ONE_TABLES = listOf(
             "objectives",
             "shifts",

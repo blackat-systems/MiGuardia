@@ -36,6 +36,7 @@ data class NoteDraft(
     val body: String = "",
     val attachments: List<ShiftNoteAttachment> = emptyList(),
     val originalAttachmentIds: Set<UUID> = emptySet(),
+    val pendingId: UUID? = null,
 )
 
 data class ExceptionsUiState(

@@ -4,6 +4,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
@@ -209,7 +210,8 @@ class VacationComposeTest {
         composeRule.onNodeWithText(
             "Esta jornada se conserva, pero no computa horas porque su fecha inicial está en vacaciones.",
         ).assertExists()
-        composeRule.onNodeWithText("Vacaciones:", substring = true).assertExists()
+        composeRule.onNodeWithText("Vacaciones · 13/08/2026 – 15/08/2026")
+            .performScrollTo().assertIsDisplayed()
         assertTrue(days.single { it.date == vacation.startDate }.shifts.isNotEmpty())
     }
 

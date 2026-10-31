@@ -7,84 +7,82 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import android.util.DisplayMetrics
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.Density
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 private val VigiliaDarkScheme = darkColorScheme(
-    primary = Color(0xFF8B5CFF),
-    onPrimary = Color(0xFF090812),
-    primaryContainer = Color(0xFF30204B),
-    onPrimaryContainer = Color(0xFFF7F2FA),
-    secondary = Color(0xFFEC63F5),
-    onSecondary = Color(0xFF090812),
-    secondaryContainer = Color(0xFF452047),
-    onSecondaryContainer = Color(0xFFFFD7FF),
-    tertiary = Color(0xFF55C2FF),
-    onTertiary = Color(0xFF090812),
-    tertiaryContainer = Color(0xFF12354A),
-    onTertiaryContainer = Color(0xFFD7F0FF),
-    background = Color(0xFF090812),
-    onBackground = Color(0xFFF7F2FA),
-    surface = Color(0xFF151125),
-    onSurface = Color(0xFFF7F2FA),
-    surfaceVariant = Color(0xFF211732),
-    onSurfaceVariant = Color(0xFFC9C2D6),
-    surfaceContainerLowest = Color(0xFF090812),
-    surfaceContainerLow = Color(0xFF100D1C),
-    surfaceContainer = Color(0xFF151125),
-    surfaceContainerHigh = Color(0xFF211732),
-    surfaceContainerHighest = Color(0xFF2A1D3D),
-    outline = Color(0xFF34254A),
-    outlineVariant = Color(0xFF34254A),
-    error = Color(0xFFFF6B7A),
-    onError = Color(0xFF090812),
-    errorContainer = Color(0xFF4B202B),
+    primary = Color(0xFFB8A2F8),
+    onPrimary = Color(0xFF15151E),
+    primaryContainer = Color(0xFF44375E),
+    onPrimaryContainer = Color(0xFFF2EFF8),
+    secondary = Color(0xFFBFDEE0),
+    onSecondary = Color(0xFF15151E),
+    secondaryContainer = Color(0xFF2D3A50),
+    onSecondaryContainer = Color(0xFFC2D3EC),
+    tertiary = Color(0xFFB0D9CB),
+    onTertiary = Color(0xFF15151E),
+    tertiaryContainer = Color(0xFF263F3B),
+    onTertiaryContainer = Color(0xFFB0D9CB),
+    background = Color(0xFF15151E),
+    onBackground = Color(0xFFF2EFF8),
+    surface = Color(0xFF23232F),
+    onSurface = Color(0xFFF2EFF8),
+    surfaceVariant = Color(0xFF2C2938),
+    onSurfaceVariant = Color(0xFFB5AFC3),
+    surfaceContainerLowest = Color(0xFF15151E),
+    surfaceContainerLow = Color(0xFF1C1C26),
+    surfaceContainer = Color(0xFF23232F),
+    surfaceContainerHigh = Color(0xFF2C2938),
+    surfaceContainerHighest = Color(0xFF353140),
+    outline = Color(0xFF91899F),
+    outlineVariant = Color(0xFF3B3749),
+    error = Color(0xFFF4A4AE),
+    onError = Color(0xFF15151E),
+    errorContainer = Color(0xFF4B2833),
     onErrorContainer = Color(0xFFFFD9DE),
-    inverseSurface = Color(0xFFF7F2FA),
-    inverseOnSurface = Color(0xFF211732),
-    inversePrimary = Color(0xFF6F3DE1),
+    inverseSurface = Color(0xFFF2EFF8),
+    inverseOnSurface = Color(0xFF2C2938),
+    inversePrimary = Color(0xFF6951B4),
 )
 
 private val VigiliaLightScheme = lightColorScheme(
-    primary = Color(0xFF6F3DE1),
+    primary = Color(0xFF6951B4),
     onPrimary = Color.White,
-    primaryContainer = Color(0xFFE9DDFF),
-    onPrimaryContainer = Color(0xFF29105F),
-    secondary = Color(0xFFB62AC8),
+    primaryContainer = Color(0xFFEBE5F7),
+    onPrimaryContainer = Color(0xFF292738),
+    secondary = Color(0xFF3E5B7C),
     onSecondary = Color.White,
-    secondaryContainer = Color(0xFFF7D8FA),
-    onSecondaryContainer = Color(0xFF4C1054),
-    tertiary = Color(0xFF00629A),
+    secondaryContainer = Color(0xFFE4EDF5),
+    onSecondaryContainer = Color(0xFF3E5B7C),
+    tertiary = Color(0xFF2A6957),
     onTertiary = Color.White,
-    tertiaryContainer = Color(0xFFD7EFFF),
-    onTertiaryContainer = Color(0xFF001D31),
-    background = Color(0xFFF7F4FA),
-    onBackground = Color(0xFF1B1524),
+    tertiaryContainer = Color(0xFFDEEEE7),
+    onTertiaryContainer = Color(0xFF2A6957),
+    background = Color(0xFFF5F4F8),
+    onBackground = Color(0xFF292738),
     surface = Color.White,
-    onSurface = Color(0xFF1B1524),
-    surfaceVariant = Color(0xFFF0EAF6),
-    onSurfaceVariant = Color(0xFF665E70),
+    onSurface = Color(0xFF292738),
+    surfaceVariant = Color(0xFFEFEDF4),
+    onSurfaceVariant = Color(0xFF665F74),
     surfaceContainerLowest = Color.White,
-    surfaceContainerLow = Color(0xFFFAF7FC),
-    surfaceContainer = Color(0xFFF7F1FA),
-    surfaceContainerHigh = Color(0xFFF0EAF6),
-    surfaceContainerHighest = Color(0xFFE8E0EE),
-    outline = Color(0xFFDDD3E7),
-    outlineVariant = Color(0xFFDDD3E7),
+    surfaceContainerLow = Color(0xFFFAF9FC),
+    surfaceContainer = Color(0xFFF5F4F8),
+    surfaceContainerHigh = Color(0xFFEFEDF4),
+    surfaceContainerHighest = Color(0xFFE5E1ED),
+    outline = Color(0xFF80778F),
+    outlineVariant = Color(0xFFE5E1ED),
     error = Color(0xFFB3263E),
     onError = Color.White,
     errorContainer = Color(0xFFFFDAD9),
     onErrorContainer = Color(0xFF410008),
-    inverseSurface = Color(0xFF322D37),
-    inverseOnSurface = Color(0xFFF7F1FA),
-    inversePrimary = Color(0xFFCDBDFF),
+    inverseSurface = Color(0xFF292738),
+    inverseOnSurface = Color(0xFFF5F4F8),
+    inversePrimary = Color(0xFFB8A2F8),
 )
 
 private val AppShapes = Shapes(
@@ -96,33 +94,34 @@ private val AppShapes = Shapes(
 )
 
 private val AppTypography = Typography(
-    displaySmall = TextStyle(fontSize = 32.sp, lineHeight = 38.sp, fontWeight = FontWeight.Bold),
-    headlineSmall = TextStyle(fontSize = 24.sp, lineHeight = 30.sp, fontWeight = FontWeight.Bold),
-    titleLarge = TextStyle(fontSize = 22.sp, lineHeight = 28.sp, fontWeight = FontWeight.Bold),
-    titleMedium = TextStyle(fontSize = 18.sp, lineHeight = 24.sp, fontWeight = FontWeight.SemiBold),
-    titleSmall = TextStyle(fontSize = 15.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold),
-    bodyLarge = TextStyle(fontSize = 16.sp, lineHeight = 24.sp),
-    bodyMedium = TextStyle(fontSize = 14.sp, lineHeight = 21.sp),
-    bodySmall = TextStyle(fontSize = 12.sp, lineHeight = 18.sp),
-    labelLarge = TextStyle(fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold),
+    labelSmall = TextStyle(fontFamily = FontFamily.SansSerif, fontFeatureSettings = "tnum", fontSize = 11.sp, lineHeight = 16.sp, fontWeight = FontWeight.Medium),
+    labelMedium = TextStyle(fontFamily = FontFamily.SansSerif, fontFeatureSettings = "tnum", fontSize = 12.sp, lineHeight = 16.sp, fontWeight = FontWeight.Medium),
+    headlineMedium = TextStyle(fontFamily = FontFamily.SansSerif, fontFeatureSettings = "tnum", fontSize = 26.sp, lineHeight = 32.sp, fontWeight = FontWeight.SemiBold),
+    headlineLarge = TextStyle(fontFamily = FontFamily.SansSerif, fontFeatureSettings = "tnum", fontSize = 28.sp, lineHeight = 34.sp, fontWeight = FontWeight.SemiBold),
+    displayMedium = TextStyle(fontFamily = FontFamily.SansSerif, fontFeatureSettings = "tnum", fontSize = 36.sp, lineHeight = 42.sp, fontWeight = FontWeight.SemiBold),
+    displayLarge = TextStyle(fontFamily = FontFamily.SansSerif, fontFeatureSettings = "tnum", fontSize = 40.sp, lineHeight = 48.sp, fontWeight = FontWeight.SemiBold),
+    displaySmall = TextStyle(fontFamily = FontFamily.SansSerif, fontFeatureSettings = "tnum", fontSize = 32.sp, lineHeight = 38.sp, fontWeight = FontWeight.SemiBold),
+    headlineSmall = TextStyle(fontFamily = FontFamily.SansSerif, fontFeatureSettings = "tnum", fontSize = 24.sp, lineHeight = 30.sp, fontWeight = FontWeight.SemiBold),
+    titleLarge = TextStyle(fontFamily = FontFamily.SansSerif, fontFeatureSettings = "tnum", fontSize = 22.sp, lineHeight = 28.sp, fontWeight = FontWeight.SemiBold),
+    titleMedium = TextStyle(fontFamily = FontFamily.SansSerif, fontFeatureSettings = "tnum", fontSize = 18.sp, lineHeight = 24.sp, fontWeight = FontWeight.SemiBold),
+    titleSmall = TextStyle(fontFamily = FontFamily.SansSerif, fontFeatureSettings = "tnum", fontSize = 15.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold),
+    bodyLarge = TextStyle(fontFamily = FontFamily.SansSerif, fontFeatureSettings = "tnum", fontSize = 16.sp, lineHeight = 24.sp),
+    bodyMedium = TextStyle(fontFamily = FontFamily.SansSerif, fontFeatureSettings = "tnum", fontSize = 14.sp, lineHeight = 21.sp),
+    bodySmall = TextStyle(fontFamily = FontFamily.SansSerif, fontFeatureSettings = "tnum", fontSize = 12.sp, lineHeight = 18.sp),
+    labelLarge = TextStyle(fontFamily = FontFamily.SansSerif, fontFeatureSettings = "tnum", fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold),
 )
 
-@Suppress("UNUSED_PARAMETER")
 @Composable
 fun MiGuardiaTheme(
     darkTheme: Boolean = true,
-    appZoom: AppZoom = AppZoom.STANDARD,
     content: @Composable () -> Unit,
 ) {
+    // Inherit Android's density and SP converter, including its native font scaling.
     CompositionLocalProvider(
-        LocalDensity provides Density(
-            density = DEFAULT_DISPLAY_DENSITY * appZoom.scale,
-            fontScale = DEFAULT_FONT_SCALE,
-        ),
         LocalVigiliaColors provides if (darkTheme) VigiliaDarkColors else VigiliaLightColors,
     ) {
         MaterialTheme(
-            colorScheme = if (darkTheme) VigiliaDarkScheme else VigiliaLightScheme,
+            colorScheme = vigiliaColorScheme(darkTheme),
             shapes = AppShapes,
             typography = AppTypography,
             content = content,
@@ -130,6 +129,4 @@ fun MiGuardiaTheme(
     }
 }
 
-private const val DEFAULT_FONT_SCALE = 1f
-private val DEFAULT_DISPLAY_DENSITY =
-    DisplayMetrics.DENSITY_DEVICE_STABLE.toFloat() / DisplayMetrics.DENSITY_DEFAULT
+internal fun vigiliaColorScheme(darkTheme: Boolean) = if (darkTheme) VigiliaDarkScheme else VigiliaLightScheme

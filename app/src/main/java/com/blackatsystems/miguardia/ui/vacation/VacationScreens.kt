@@ -12,6 +12,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
@@ -98,7 +99,7 @@ fun VacationSurfaceHost(
     actions: VacationActions,
 ) {
     BackHandler(onBack = actions.requestBack)
-    TransientConfirmation(state.infoMessage, actions.clearMessage) {
+    TransientConfirmation(state.infoMessage, actions.clearMessage, reserveSpace = true) {
         Surface(
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background,
@@ -137,7 +138,8 @@ fun VacationSurfaceHost(
             title = { Text("Descartar cambios") },
             text = { Text("Los cambios todavía no fueron guardados. ¿Querés descartarlos?") },
             confirmButton = {
-                TextButton(onClick = actions.confirmDiscard) { Text("Descartar") }
+                TextButton(onClick = actions.confirmDiscard,
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) { Text("Descartar") }
             },
             dismissButton = {
                 TextButton(onClick = actions.dismissDiscard) { Text("Seguir editando") }
@@ -151,7 +153,8 @@ fun VacationSurfaceHost(
             title = { Text("Eliminar vacaciones") },
             text = { Text("Se eliminará este período completo. Las guardias y demás datos no serán modificados.") },
             confirmButton = {
-                TextButton(onClick = actions.confirmDelete) { Text("Eliminar") }
+                TextButton(onClick = actions.confirmDelete,
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) { Text("Eliminar") }
             },
             dismissButton = {
                 TextButton(onClick = actions.dismissDelete) { Text("Cancelar") }
@@ -221,7 +224,7 @@ private fun VacationCard(vacation: Vacation, actions: VacationActions) {
         ) {
             Text(
                 "${vacation.startDate.displayName()} – ${vacation.endDateInclusive.displayName()}",
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
             )
             Text(dayCountLabel(days))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

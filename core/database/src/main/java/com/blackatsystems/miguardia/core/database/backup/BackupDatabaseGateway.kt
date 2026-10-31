@@ -16,7 +16,7 @@ import com.blackatsystems.miguardia.core.domain.backup.BackupTableSpec
 import com.blackatsystems.miguardia.core.domain.backup.BackupValue
 import com.blackatsystems.miguardia.core.domain.backup.InvalidBackupException
 import com.blackatsystems.miguardia.core.domain.backup.MiGuardiaBackupContract
-import com.blackatsystems.miguardia.core.domain.backup.MiGuardiaBackupSchemaV7
+import com.blackatsystems.miguardia.core.domain.backup.MiGuardiaBackupSchemaV8
 import java.io.File
 import java.io.IOException
 import java.time.LocalDate
@@ -45,7 +45,7 @@ class BackupDatabaseGateway internal constructor(
     }
 
     suspend fun replace(snapshot: BackupDatabaseSnapshot) {
-        MiGuardiaBackupSchemaV7.requireValid(snapshot)
+        MiGuardiaBackupSchemaV8.requireValid(snapshot)
         database.withTransaction {
             val sqlite = database.openHelper.writableDatabase
             requireExpectedSchema(sqlite)
@@ -68,8 +68,8 @@ class BackupDatabaseGateway internal constructor(
         beforeReplace: suspend (BackupDatabaseSnapshot) -> Unit,
         afterReplace: suspend () -> Unit,
     ) {
-        MiGuardiaBackupSchemaV7.requireValid(expectedCurrent)
-        MiGuardiaBackupSchemaV7.requireValid(replacement)
+        MiGuardiaBackupSchemaV8.requireValid(expectedCurrent)
+        MiGuardiaBackupSchemaV8.requireValid(replacement)
         BackupMemoryBudget.requireSnapshotFits(expectedCurrent, decodedMemoryLimitBytes)
         BackupMemoryBudget.requireSnapshotFits(replacement, decodedMemoryLimitBytes)
         database.withTransaction {
@@ -95,7 +95,7 @@ class BackupDatabaseGateway internal constructor(
         snapshot: BackupDatabaseSnapshot,
         decodedMemoryLimitBytes: Long = BackupMemoryBudget.operationalHeapBytes(),
     ) {
-        MiGuardiaBackupSchemaV7.requireValid(snapshot)
+        MiGuardiaBackupSchemaV8.requireValid(snapshot)
         BackupMemoryBudget.requireSnapshotFits(snapshot, decodedMemoryLimitBytes)
         val candidateName = "miguardia-backup-candidate-${UUID.randomUUID()}.db"
         val candidate = MiGuardiaV2Database.build(context, candidateName)
@@ -186,6 +186,16 @@ class BackupDatabaseGateway internal constructor(
             tables = snapshot.tables.map { table ->
                 when {
                     table.name in PHOTO_METADATA_TABLES -> table.copy(records = emptyList())
+                    table.name == "shift_situations" -> table.copy(
+                        records = table.records.map { record ->
+                            val values = record.values.toMutableList()
+                            listOf(
+                                "evidenceStorageKey", "evidenceMimeType", "evidenceByteSize",
+                                "evidencePixelWidth", "evidencePixelHeight", "evidenceSha256",
+                            ).forEach { column -> values[table.columns.indexOf(column)] = BackupValue.Null }
+                            record.copy(values = values)
+                        },
+                    )
                     table.name == "shift_notes" -> table.copy(
                         records = table.records.filter { record ->
                             (record.values[bodyIndex] as? BackupValue.Text)?.value?.isNotBlank() == true
@@ -194,7 +204,7 @@ class BackupDatabaseGateway internal constructor(
                     else -> table
                 }
             },
-        ).also(MiGuardiaBackupSchemaV7::requireValid)
+        ).also(MiGuardiaBackupSchemaV8::requireValid)
     }
 
     private fun captureInsideTransaction(
@@ -204,9 +214,9 @@ class BackupDatabaseGateway internal constructor(
         val estimator = BackupDatabaseMemoryEstimator(decodedMemoryLimitBytes)
         estimator.consumeSnapshotObject()
         estimator.consumeString(MiGuardiaBackupContract.ROOM_IDENTITY_HASH)
-        estimator.consumeTableReferences(MiGuardiaBackupSchemaV7.tables.size)
+        estimator.consumeTableReferences(MiGuardiaBackupSchemaV8.tables.size)
         var totalRows = 0
-        val tables = MiGuardiaBackupSchemaV7.tables.map { spec ->
+        val tables = MiGuardiaBackupSchemaV8.tables.map { spec ->
             estimator.consumeTableMetadata(spec.name, spec.columns, spec.primaryKey)
             val query = buildString {
                 append("SELECT ")
@@ -242,7 +252,7 @@ class BackupDatabaseGateway internal constructor(
         val timelineId = (roots.records.singleOrNull()?.values?.get(timelineIndex) as? BackupValue.Text)?.value
         timelineId?.let(estimator::consumeString)
         return BackupDatabaseSnapshot(timelineId = timelineId, tables = tables).also(
-            MiGuardiaBackupSchemaV7::requireValid,
+            MiGuardiaBackupSchemaV8::requireValid,
         )
     }
 
@@ -251,10 +261,10 @@ class BackupDatabaseGateway internal constructor(
         snapshot: BackupDatabaseSnapshot,
     ) {
         sqlite.execSQL("PRAGMA defer_foreign_keys = ON")
-        MiGuardiaBackupSchemaV7.tables.asReversed().forEach { spec ->
+        MiGuardiaBackupSchemaV8.tables.asReversed().forEach { spec ->
             sqlite.execSQL("DELETE FROM ${spec.name.quoted()}")
         }
-        MiGuardiaBackupSchemaV7.tables.forEach { spec ->
+        MiGuardiaBackupSchemaV8.tables.forEach { spec ->
             val table = snapshot.table(spec.name)
             val contracts = readColumnContracts(sqlite, spec)
             val statement = sqlite.compileStatement(insertSql(spec))
@@ -275,9 +285,9 @@ class BackupDatabaseGateway internal constructor(
             "SELECT identity_hash FROM room_master_table WHERE id = 42 LIMIT 1",
         ).use { cursor -> if (cursor.moveToFirst()) cursor.getString(0) else null }
         if (identity != MiGuardiaBackupContract.ROOM_IDENTITY_HASH) {
-            throw InvalidBackupException("La identidad de la base Room V7 no coincide.")
+            throw InvalidBackupException("La identidad de la base Room V8 no coincide.")
         }
-        MiGuardiaBackupSchemaV7.tables.forEach { spec -> readColumnContracts(sqlite, spec) }
+        MiGuardiaBackupSchemaV8.tables.forEach { spec -> readColumnContracts(sqlite, spec) }
     }
 
     private fun readColumnContracts(
@@ -364,6 +374,28 @@ class BackupDatabaseGateway internal constructor(
         if (spec.name == "shifts") {
             requireEnumText(value("status"), setOf("PLANNED", "CANCELLED", "ABSENT"), spec.name)
         }
+        if (spec.name == "shift_situations") {
+            val status = (value("status") as? BackupValue.Text)?.value
+            requireEnumText(value("status"), setOf("CANCELLED", "ABSENT"), spec.name)
+            val reason = (value("reason") as? BackupValue.Text)?.value
+            val actor = (value("cancellationActor") as? BackupValue.Text)?.value
+            val notified = value("notifiedAtEpochMillis")
+            val evidence = listOf(
+                value("evidenceStorageKey"), value("evidenceMimeType"),
+                value("evidenceByteSize"), value("evidencePixelWidth"),
+                value("evidencePixelHeight"), value("evidenceSha256"),
+            )
+            if (status == "CANCELLED") {
+                if (reason.isNullOrBlank() || actor !in setOf("NOT_REPORTED", "EMPLOYER", "ME", "OTHER") || notified !is BackupValue.Integer) {
+                    throw InvalidBackupException("Una cancelación no conserva sus metadatos obligatorios.")
+                }
+            } else if (actor != null || notified != BackupValue.Null || evidence.any { it != BackupValue.Null }) {
+                throw InvalidBackupException("Una ausencia contiene metadatos de cancelación incompatibles.")
+            }
+            if (evidence.any { it != BackupValue.Null } && evidence.any { it == BackupValue.Null }) {
+                throw InvalidBackupException("La evidencia de cancelación está incompleta.")
+            }
+        }
         if (spec.name in PHOTO_METADATA_TABLES) {
             val mime = (value("mimeType") as? BackupValue.Text)?.value
             val size = (value("byteSize") as? BackupValue.Integer)?.value ?: -1
@@ -427,8 +459,6 @@ class BackupDatabaseGateway internal constructor(
         val overlappingSituations = sqlite.longScalar(
             """
             SELECT
-                (SELECT COUNT(*) FROM medical_leaves a JOIN medical_leaves b
-                    ON a.id < b.id AND a.startDate <= b.endDateInclusive AND b.startDate <= a.endDateInclusive) +
                 (SELECT COUNT(*) FROM vacations a JOIN vacations b
                     ON a.id < b.id AND a.startDate <= b.endDateInclusive AND b.startDate <= a.endDateInclusive) +
                 (SELECT COUNT(*) FROM medical_leaves m JOIN vacations v
@@ -437,6 +467,18 @@ class BackupDatabaseGateway internal constructor(
         )
         if (overlappingSituations != 0L) {
             throw InvalidBackupException("La copia contiene situaciones especiales superpuestas.")
+        }
+        val invalidShiftSituations = sqlite.longScalar(
+            """SELECT COUNT(*) FROM shift_situations s
+                JOIN shifts sh ON sh.id = s.shiftId
+                WHERE s.status != sh.status OR s.status NOT IN ('ABSENT','CANCELLED')
+                   OR (s.status = 'CANCELLED' AND (s.reason IS NULL OR trim(s.reason) = ''
+                       OR s.cancellationActor IS NULL OR s.notifiedAtEpochMillis IS NULL))
+                   OR (s.status = 'ABSENT' AND (s.cancellationActor IS NOT NULL
+                       OR s.notifiedAtEpochMillis IS NOT NULL OR s.evidenceStorageKey IS NOT NULL))""".trimIndent(),
+        )
+        if (invalidShiftSituations != 0L) {
+            throw InvalidBackupException("La copia contiene situaciones de jornada incoherentes.")
         }
     }
 

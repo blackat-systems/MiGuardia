@@ -81,7 +81,7 @@ class BackupComposeTest {
         compose.onNodeWithTag("backup-choose-merge").performScrollTo().assertIsNotEnabled()
         compose.onNodeWithTag("backup-choose-replace").assertIsEnabled()
         compose.onNodeWithText("La línea temporal es distinta: combinar está bloqueado.").assertIsDisplayed()
-        compose.onNodeWithText("Formato de copia V1 · datos internos Room V7").assertIsDisplayed()
+        compose.onNodeWithText("Formato de copia V1 · datos internos Room V8").assertIsDisplayed()
     }
 
     @Test

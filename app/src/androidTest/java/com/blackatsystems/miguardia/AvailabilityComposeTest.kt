@@ -7,6 +7,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertTextEquals
+import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
@@ -42,8 +45,8 @@ import com.blackatsystems.miguardia.ui.availability.AvailabilityWindowDraftState
 import com.blackatsystems.miguardia.ui.MiGuardiaApp
 import com.blackatsystems.miguardia.ui.calendar.CalendarLoadState
 import com.blackatsystems.miguardia.ui.calendar.CalendarUiState
-import com.blackatsystems.miguardia.ui.theme.AppZoom
-import com.blackatsystems.miguardia.ui.theme.MiGuardiaTheme
+import com.blackatsystems.miguardia.testsupport.TestFontScale
+import com.blackatsystems.miguardia.testsupport.AndroidFontScaleTheme
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -68,7 +71,7 @@ class AvailabilityComposeTest {
             ),
         )
         compose.setContent {
-            MiGuardiaTheme {
+            AndroidFontScaleTheme {
                 AvailabilitySurfaceHost(
                     state,
                     AvailabilityActions(updateConfiguration = { selected = it }),
@@ -92,11 +95,47 @@ class AvailabilityComposeTest {
     }
 
     @Test
+    fun configurationSelectionIsExplicitAndKeepsOneActionAcrossThemesAndFontScales() {
+        var state by mutableStateOf(contentState().copy(
+            surface = AvailabilitySurface.CONFIG_EDITOR,
+            configurationDraft = AvailabilityConfigurationDraft(null, OWNER.toString()),
+        ))
+        var dark by mutableStateOf(false)
+        var fontScale by mutableStateOf(TestFontScale.STANDARD)
+        var changes = 0
+        compose.setContent {
+            AndroidFontScaleTheme(darkTheme = dark, fontScale = fontScale) {
+                AvailabilitySurfaceHost(state, AvailabilityActions(updateConfiguration = {
+                    changes++
+                    state = state.copy(configurationDraft = it)
+                }))
+            }
+        }
+        for (theme in listOf(false, true)) for (scale in TestFontScale.entries) {
+            compose.runOnIdle {
+                dark = theme
+                fontScale = scale
+                state = state.copy(configurationDraft = state.configurationDraft?.copy(label = null))
+            }
+            compose.onNodeWithTag("availability-label-none").performScrollTo().assertIsSelected()
+            compose.onNodeWithTag("availability-label-AVAILABLE_FOR_CALL")
+                .performScrollTo().assertIsNotSelected().performClick().assertIsSelected()
+            compose.onNodeWithText("✓ Disponible para llamado").assertIsDisplayed()
+            compose.onNodeWithTag("availability-label-none").assertIsNotSelected()
+            compose.runOnIdle {
+                assertEquals(AvailabilityLabel.AVAILABLE_FOR_CALL, state.configurationDraft?.label)
+                assertEquals(OWNER.toString(), state.configurationDraft?.effectiveDate)
+            }
+        }
+        compose.runOnIdle { assertEquals(6, changes) }
+    }
+
+    @Test
     fun dayUsesCalendarDateHidesCreateWhenDisabledAndShowsTextualAccessibleIndicatorWhenEnabled() {
         var created: LocalDate? = null
         var state by mutableStateOf(contentState())
         compose.setContent {
-            MiGuardiaTheme(darkTheme = true, appZoom = AppZoom.EXTRA_LARGE) {
+            AndroidFontScaleTheme(darkTheme = true, fontScale = TestFontScale.EXTRA_LARGE) {
                 AvailabilityDaySection(
                     date = OWNER,
                     state = state,
@@ -118,13 +157,32 @@ class AvailabilityComposeTest {
     @Test
     fun hoursShowsAvailabilitySeparatelyWithoutCallingItWorkedTime() {
         compose.setContent {
-            MiGuardiaTheme(appZoom = AppZoom.LARGE) {
+            AndroidFontScaleTheme(fontScale = TestFontScale.LARGE) {
                 Column { AvailabilityHoursSection(contentState()) }
             }
         }
         compose.onNodeWithText("Disponibilidad").assertIsDisplayed()
         compose.onNodeWithText("Programada: 4 h 0 min").assertIsDisplayed()
         compose.onNodeWithText("Este detalle no altera el avance de horas trabajadas.").assertIsDisplayed()
+    }
+
+    @Test
+    fun availabilityWindowKeepsBothCivilDatesAcrossYearBoundary() {
+        val record = record().copy(
+            ownerLocalDate = LocalDate.of(2026, 12, 31),
+            start = Instant.parse("2026-12-31T22:30:00Z"),
+            end = Instant.parse("2027-01-01T06:15:00Z"),
+        )
+        val state = contentState().let { original ->
+            original.copy(source = original.source!!.copy(windows = listOf(record)))
+        }
+        compose.setContent {
+            AndroidFontScaleTheme {
+                AvailabilityDaySection(record.ownerLocalDate, state, AvailabilityActions())
+            }
+        }
+        compose.onNodeWithTag("availability-window-${record.id}")
+            .assertTextEquals("31/12/2026 22:30 – 01/01/2027 06:15")
     }
 
     @Test
@@ -144,7 +202,7 @@ class AvailabilityComposeTest {
             loadState = CalendarLoadState.CONTENT,
         )
         compose.setContent {
-            MiGuardiaTheme {
+            AndroidFontScaleTheme {
                 MiGuardiaApp(
                     calendarState = calendar,
                     onPreviousMonth = {},
@@ -168,7 +226,7 @@ class AvailabilityComposeTest {
             AvailabilityUiState(surface = AvailabilitySurface.OVERVIEW),
         )
         compose.setContent {
-            MiGuardiaTheme {
+            AndroidFontScaleTheme {
                 AvailabilitySurfaceHost(state, AvailabilityActions(retry = { retries++ }))
             }
         }
@@ -182,7 +240,7 @@ class AvailabilityComposeTest {
     }
 
     @Test
-    fun editorRemainsReachableInLandscapeSizedViewportAtTwoHundredPercentZoom() {
+    fun editorRemainsReachableInLandscapeSizedViewportAtTwoHundredPercentFontScale() {
         val draft = AvailabilityWindowDraftState(
             ownerDate = OWNER,
             startTime = "08:00",
@@ -190,7 +248,7 @@ class AvailabilityComposeTest {
             endTime = "12:00",
         )
         compose.setContent {
-            MiGuardiaTheme(darkTheme = true, appZoom = AppZoom.EXTRA_LARGE) {
+            AndroidFontScaleTheme(darkTheme = true, fontScale = TestFontScale.EXTRA_LARGE) {
                 Box(Modifier.requiredSize(width = 800.dp, height = 360.dp)) {
                     AvailabilitySurfaceHost(
                         contentState().copy(
@@ -223,7 +281,7 @@ class AvailabilityComposeTest {
             ),
         )
         compose.setContent {
-            MiGuardiaTheme {
+            AndroidFontScaleTheme {
                 AvailabilitySurfaceHost(
                     state,
                     AvailabilityActions(confirmDiscard = { discarded++ }),

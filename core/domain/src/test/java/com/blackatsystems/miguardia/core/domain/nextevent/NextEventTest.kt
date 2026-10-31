@@ -17,6 +17,18 @@ import org.junit.Test
 
 class NextEventTest {
     @Test
+    fun `weather excludes medical leave absence and cancellation and reacts when leave is removed`() {
+        val planned = testWrite(901, "2027-01-07T10:00:00Z", "2027-01-07T14:00:00Z").shift
+        val now = Instant.parse("2027-01-07T08:00:00Z")
+        val leave = testMedicalLeave(902, "2027-01-07", "2027-01-07")
+
+        assertFalse(planned.isEligibleForWeather(now, emptyList(), listOf(leave)))
+        assertTrue(planned.isEligibleForWeather(now, emptyList(), emptyList()))
+        assertFalse(planned.copy(status = ShiftStatus.ABSENT).isEligibleForWeather(now, emptyList(), emptyList()))
+        assertFalse(planned.copy(status = ShiftStatus.CANCELLED).isEligibleForWeather(now, emptyList(), emptyList()))
+    }
+
+    @Test
     fun `manual and materialized shifts use their complete historical snapshots exactly once`() {
         val manual = testWrite(
             id = 1,

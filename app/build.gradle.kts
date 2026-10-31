@@ -3,6 +3,33 @@ plugins {
     alias(libs.plugins.compose.compiler)
 }
 
+abstract class GenerateStage12Pins : org.gradle.api.DefaultTask() {
+    @get:org.gradle.api.tasks.Input
+    abstract val runnerEnabled: org.gradle.api.provider.Property<Boolean>
+    @get:org.gradle.api.tasks.Input
+    abstract val qaSha256: org.gradle.api.provider.Property<String>
+    @get:org.gradle.api.tasks.OutputDirectory
+    abstract val generatedDirectory: org.gradle.api.file.DirectoryProperty
+
+    @org.gradle.api.tasks.TaskAction
+    fun generate() {
+        val admitted = runnerEnabled.get()
+        val hash = qaSha256.get()
+        require(!admitted || hash.matches(Regex("[0-9a-f]{64}"))) {
+            "Stage12 requires the exact QA APK SHA-256 before compiling its runner"
+        }
+        val output = generatedDirectory.file("com/blackatsystems/miguardia/stage12/Stage12BuildPins.kt").get().asFile
+        check(output.parentFile.isDirectory || output.parentFile.mkdirs())
+        output.writeText("""
+            package com.blackatsystems.miguardia.stage12
+            internal object Stage12BuildPins {
+                const val ENABLED: Boolean = $admitted
+                const val QA_SHA256: String = "$hash"
+            }
+        """.trimIndent() + "\n")
+    }
+}
+
 android {
     namespace = "com.blackatsystems.miguardia"
     compileSdk = 37
@@ -14,7 +41,31 @@ android {
         versionCode = 6
         versionName = "2.0.2"
 
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // Explicit test-only opt-in; normal app/test defaults remain unchanged.
+        val stage10Runner = providers.gradleProperty("miguardia.stage10Runner").orNull
+        val stage11Runner = providers.gradleProperty("miguardia.stage11Runner").orNull
+        val stage12Runner = providers.gradleProperty("miguardia.stage12Runner").orNull
+        val stage12NormalRunner = providers.gradleProperty("miguardia.stage12NormalRunner").orNull
+        require(stage10Runner == null || stage10Runner == "true")
+        require(stage11Runner == null || stage11Runner == "true")
+        require(stage12Runner == null || stage12Runner == "true")
+        require(stage12NormalRunner == null || stage12NormalRunner == "true")
+        require(stage12Runner != "true" || providers.gradleProperty("miguardia.stage12Harness").orNull == "true") {
+            "Stage12 runner requires its explicit QA bootstrap harness"
+        }
+        require(listOf(stage10Runner, stage11Runner, stage12Runner, stage12NormalRunner).count { it == "true" } <= 1)
+        require(stage12NormalRunner != "true" || providers.gradleProperty("miguardia.stage12Harness").orNull != "true") {
+            "Normal Stage12 QA uses the ordinary QA Application, not the neutral harness"
+        }
+        testInstrumentationRunner = if (stage10Runner == "true")
+            "com.blackatsystems.miguardia.upgrade.Stage10UpgradeRunner"
+        else if (stage11Runner == "true")
+            "com.blackatsystems.miguardia.backup.Stage11RestoreRunner"
+        else if (stage12Runner == "true")
+            "com.blackatsystems.miguardia.stage12.Stage12Runner"
+        else if (stage12NormalRunner == "true")
+            "com.blackatsystems.miguardia.stage12.Stage12NormalQaRunner"
+        else "androidx.test.runner.AndroidJUnitRunner"
     }
 
     val localDebugKeystore = providers.gradleProperty("miguardia.debugKeystore")
@@ -37,6 +88,10 @@ android {
             initWith(getByName("debug"))
             applicationIdSuffix = ".qa"
             matchingFallbacks += listOf("debug")
+            val stage12Harness = providers.gradleProperty("miguardia.stage12Harness").orNull
+            require(stage12Harness == null || stage12Harness == "true")
+            manifestPlaceholders["stage12BootstrapProvidersEnabled"] = stage12Harness != "true"
+            manifestPlaceholders["stage12HarnessEnabled"] = stage12Harness == "true"
         }
     }
 
@@ -53,6 +108,16 @@ android {
     }
 }
 
+// Pins live only in the test APK. Changing a run UUID or round never rebuilds QA.
+val generateStage12Pins = tasks.register<GenerateStage12Pins>("generateStage12Pins") {
+    runnerEnabled.set(providers.provider {
+        providers.gradleProperty("miguardia.stage12Runner").orNull == "true" ||
+            providers.gradleProperty("miguardia.stage12NormalRunner").orNull == "true"
+    })
+    qaSha256.set(providers.gradleProperty("miguardia.stage12QaSha256").orElse(""))
+    generatedDirectory.set(layout.buildDirectory.dir("generated/stage12Pins"))
+}
+
 androidComponents {
     // AGP 9 creates only Debug unit tests by default; audit Release explicitly.
     beforeVariants(selector().withBuildType("release")) { variantBuilder ->
@@ -62,6 +127,11 @@ androidComponents {
     }
     beforeVariants(selector().withBuildType("qa")) { variantBuilder ->
         variantBuilder.enableAndroidTest = true
+    }
+    onVariants { variant ->
+        variant.androidTest?.sources?.kotlin?.addGeneratedSourceDirectory(generateStage12Pins) {
+            it.generatedDirectory
+        }
     }
 }
 
@@ -130,6 +200,7 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     add("qaImplementation", libs.androidx.compose.ui.test.manifest)
     testImplementation(libs.junit4)
+    testImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.androidx.test.runner)

@@ -1,5 +1,6 @@
 package com.blackatsystems.miguardia.ui.theme
 
+/** Legacy value retained only to preserve existing portable Copias preferences. UI ignores it. */
 enum class AppZoom(
     val percent: Int,
     val scale: Float,

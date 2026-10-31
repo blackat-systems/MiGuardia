@@ -1,5 +1,7 @@
 package com.blackatsystems.miguardia.ui.management
 
+import com.blackatsystems.miguardia.ui.EventTimeRangeStyle
+import com.blackatsystems.miguardia.ui.formatEventTimeRange
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -26,6 +28,7 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -140,6 +143,7 @@ fun V2DayEditEntry(
     onBegin: () -> Unit,
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
+    label: String = "Editar este día",
 ) {
     val inspection = if (state.date == date) state.inspectionState else V2ShiftDayInspectionState.LOADING
     when (inspection) {
@@ -170,7 +174,7 @@ fun V2DayEditEntry(
                     .heightIn(min = 48.dp)
                     .testTag("v2-edit-day-action"),
             ) {
-                Text("Editar este día")
+                Text(label)
             }
         }
     }
@@ -289,7 +293,7 @@ private fun EditSurfaceHeader(state: V2ShiftEditUiState, onBack: () -> Unit) {
             },
             modifier = Modifier.weight(1f),
             style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.SemiBold,
         )
     }
 }
@@ -367,7 +371,7 @@ private fun DayActionCard(
             modifier = Modifier.padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Text(identity, fontWeight = FontWeight.Bold)
+            Text(identity, fontWeight = FontWeight.SemiBold)
             HistoricalSummary(write = V2ShiftWrite(row.shift, row.snapshot))
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -419,7 +423,7 @@ private fun EditorStep(state: V2ShiftEditUiState, actions: V2ShiftEditActions) {
             fontWeight = FontWeight.SemiBold,
         )
     }
-    Text("Jornada original", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+    Text("Jornada original", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
     SummaryCard(
         modifier = Modifier.testTag("v2-shift-original-summary"),
     ) {
@@ -450,7 +454,7 @@ private fun EditorStep(state: V2ShiftEditUiState, actions: V2ShiftEditActions) {
             }
         }
     }
-    Text("Plantilla", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+    Text("Plantilla", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
     Text(
         "Podés mantener la fotografía histórica o elegir una plantilla activa compatible.",
         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -519,7 +523,7 @@ private fun HistoricalTemplateOption(
         contentDescription = "Mantener plantilla histórica. ${original.shift.visibleSummary(original.snapshot.workTypeNameSnapshot)}",
         testTag = "v2-shift-historical-template-${original.snapshot.templateId}",
     ) {
-        Text("Mantener plantilla histórica", fontWeight = FontWeight.Bold)
+        Text("Mantener plantilla histórica", fontWeight = FontWeight.SemiBold)
         Text(
             "${original.shift.objectiveNameSnapshot} " +
                 "(${original.shift.objectiveAbbreviationSnapshot})",
@@ -576,12 +580,13 @@ private fun TemplateOption(
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
                     "${option.objective.fullName} (${option.objective.abbreviation})",
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.SemiBold,
                 )
                 option.objective.address?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
                 Text(option.workType.name, fontWeight = FontWeight.SemiBold)
                 Text("${option.template.startTime.format(TIME_FORMATTER)}–${option.template.endTime.format(TIME_FORMATTER)}")
-                if (selected) Text("Seleccionada", color = MaterialTheme.vigiliaColors.active)
+                if (selected) Text("Seleccionada",
+                    color = if (enabled) MaterialTheme.vigiliaColors.active else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f))
             }
         }
     }
@@ -604,14 +609,23 @@ private fun SelectableTemplateSurface(
             .semantics { this.contentDescription = contentDescription }
             .testTag(testTag),
         color = if (selected) {
-            MaterialTheme.vigiliaColors.active.copy(alpha = 0.16f)
+            MaterialTheme.vigiliaColors.selection
         } else {
             MaterialTheme.colorScheme.surfaceContainer
+        },
+        contentColor = when {
+            !enabled -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+            selected -> MaterialTheme.vigiliaColors.onSelection
+            else -> MaterialTheme.colorScheme.onSurface
         },
         shape = MaterialTheme.shapes.medium,
         border = BorderStroke(
             if (selected) 2.dp else 1.dp,
-            if (selected) MaterialTheme.vigiliaColors.active else MaterialTheme.colorScheme.outlineVariant,
+            when {
+                !enabled -> MaterialTheme.colorScheme.outline.copy(alpha = 0.38f)
+                selected -> MaterialTheme.vigiliaColors.active
+                else -> MaterialTheme.colorScheme.outline
+            },
         ),
     ) {
         Column(
@@ -625,9 +639,9 @@ private fun SelectableTemplateSurface(
 @Composable
 private fun ReviewStep(state: V2ShiftEditUiState, actions: V2ShiftEditActions) {
     val original = state.originalWrite ?: return
-    Text("Revisá antes de guardar", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+    Text("Revisá antes de guardar", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
     SummaryCard(modifier = Modifier.testTag("v2-shift-final-summary")) {
-        Text("Fecha fija: ${original.shift.localStartDate.fullDate()}", fontWeight = FontWeight.Bold)
+        Text("Fecha fija: ${original.shift.localStartDate.fullDate()}", fontWeight = FontWeight.SemiBold)
         val option = state.selectedOption
         if (state.usesHistoricalTemplate || option == null) {
             Text(
@@ -754,7 +768,7 @@ private fun EditScopeDialog(state: V2ShiftEditUiState, actions: V2ShiftEditActio
         title = { Text("¿Qué querés cambiar?") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(date.fullDate(), fontWeight = FontWeight.Bold)
+                Text(date.fullDate(), fontWeight = FontWeight.SemiBold)
                 Text("Esta jornada pertenece a un plan recurrente.")
                 Text("Cambiar sólo esta jornada la dejará personalizada y no modificará las demás.")
             }
@@ -790,7 +804,7 @@ private fun DeleteScopeDialog(state: V2ShiftEditUiState, actions: V2ShiftEditAct
         title = { Text("¿Qué querés eliminar?") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(date.fullDate(), fontWeight = FontWeight.Bold)
+                Text(date.fullDate(), fontWeight = FontWeight.SemiBold)
                 Text("Eliminar sólo esta jornada conservará una exclusión para que no reaparezca.")
                 Text("Finalizar desde esta fecha conservará pasado, personalizaciones, notas, avisos y estados protegidos.")
             }
@@ -799,15 +813,17 @@ private fun DeleteScopeDialog(state: V2ShiftEditUiState, actions: V2ShiftEditAct
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 TextButton(
                     onClick = actions.deleteOnlyThisOccurrence,
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
                     modifier = Modifier.testTag("v2-shift-delete-only-this"),
-                ) { Text("Eliminar sólo esta jornada", color = MaterialTheme.colorScheme.error) }
+                ) { Text("Eliminar sólo esta jornada") }
                 TextButton(
                     onClick = {
                         actions.handoffToRecurring()
                         actions.finalizeSeriesFrom(occurrence.planId, date)
                     },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
                     modifier = Modifier.testTag("v2-shift-finalize-from-date"),
-                ) { Text("Finalizar desde esta fecha", color = MaterialTheme.colorScheme.error) }
+                ) { Text("Finalizar desde esta fecha") }
             }
         },
         dismissButton = {
@@ -831,7 +847,7 @@ private fun DeleteDialog(state: V2ShiftEditUiState, actions: V2ShiftEditActions)
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 if (original != null) {
-                    Text(original.shift.localStartDate.fullDate(), fontWeight = FontWeight.Bold)
+                    Text(original.shift.localStartDate.fullDate(), fontWeight = FontWeight.SemiBold)
                     HistoricalSummary(original)
                 } else {
                     Text("Releyendo la jornada exacta…")
@@ -858,9 +874,10 @@ private fun DeleteDialog(state: V2ShiftEditUiState, actions: V2ShiftEditActions)
             TextButton(
                 onClick = actions.confirmDelete,
                 enabled = original != null && !state.isLoading && !state.isSaving,
+                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
                 modifier = Modifier.testTag("v2-shift-confirm-delete"),
             ) {
-                Text("Eliminar esta jornada", color = MaterialTheme.colorScheme.error)
+                Text("Eliminar esta jornada")
             }
         },
         dismissButton = {
@@ -885,6 +902,7 @@ private fun DiscardDialog(state: V2ShiftEditUiState, actions: V2ShiftEditActions
             TextButton(
                 onClick = actions.confirmDiscard,
                 enabled = !state.isSaving,
+                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
                 modifier = Modifier.testTag("v2-shift-confirm-discard"),
             ) {
                 Text("Descartar")
@@ -929,7 +947,7 @@ private fun Shift.visibleSummary(workTypeName: String?): String = buildString {
 }
 
 private fun Shift.timeRange(): String =
-    "${startTimeSnapshot.format(TIME_FORMATTER)}–${endTimeSnapshot.format(TIME_FORMATTER)}"
+    formatEventTimeRange(startAt, endAt, zoneId, EventTimeRangeStyle.DETAIL)
 
 private fun LocalDate.fullDate(): String = format(FULL_DATE_FORMATTER)
 

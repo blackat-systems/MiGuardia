@@ -11,13 +11,13 @@ object BackupComparator {
         currentPreferences: List<BackupPreference> = emptyList(),
         incomingPreferences: List<BackupPreference> = emptyList(),
     ): BackupComparison {
-        MiGuardiaBackupSchemaV7.requireValid(current)
-        MiGuardiaBackupSchemaV7.requireValid(incoming)
+        MiGuardiaBackupSchemaV8.requireValid(current)
+        MiGuardiaBackupSchemaV8.requireValid(incoming)
         val timelineCompatible = current.timelineId == null || current.timelineId == incoming.timelineId
         val newDatabaseKeys = mutableSetOf<BackupRecordKey>()
         var identicalRecords = 0
         val conflicts = ConflictCollector()
-        MiGuardiaBackupSchemaV7.tables.forEach { spec ->
+        MiGuardiaBackupSchemaV8.tables.forEach { spec ->
             val currentTable = current.table(spec.name)
             val incomingTable = incoming.table(spec.name)
             val currentByKey = currentTable.records.associateBy { it.backupKey(spec) }
@@ -83,8 +83,8 @@ object BackupComparator {
         conflicts: List<BackupConflict>,
         resolutions: List<ResolvedBackupConflict>,
     ): BackupDatabaseSnapshot {
-        MiGuardiaBackupSchemaV7.requireValid(current)
-        MiGuardiaBackupSchemaV7.requireValid(incoming)
+        MiGuardiaBackupSchemaV8.requireValid(current)
+        MiGuardiaBackupSchemaV8.requireValid(incoming)
         if (current.timelineId != null && current.timelineId != incoming.timelineId) {
             throw UnresolvedBackupConflictException(
                 "Sólo se pueden combinar datos vacíos o pertenecientes a la misma línea temporal.",
@@ -154,7 +154,7 @@ object BackupComparator {
                 "Las resoluciones elegidas se contradicen entre sí. Revisá los conflictos relacionados.",
             )
         }
-        val tables = MiGuardiaBackupSchemaV7.tables.map { spec ->
+        val tables = MiGuardiaBackupSchemaV8.tables.map { spec ->
             val currentRecords = current.table(spec.name).records
                 .filterNot { it.backupKey(spec) in aggregateRemovalsFromCurrent }
             val incomingRecords = incoming.table(spec.name).records
@@ -183,7 +183,7 @@ object BackupComparator {
         val timelineIndex = roots.columns.indexOf("timelineId")
         val timeline = (roots.records.singleOrNull()?.values?.get(timelineIndex) as? BackupValue.Text)?.value
         return BackupDatabaseSnapshot(timelineId = timeline, tables = tables).also(
-            MiGuardiaBackupSchemaV7::requireValid,
+            MiGuardiaBackupSchemaV8::requireValid,
         )
     }
 
@@ -364,8 +364,8 @@ object BackupComparator {
         conflicts: ConflictCollector,
     ) {
         if (!conflicts.accepting) return
-        val currentSpec = MiGuardiaBackupSchemaV7.byName.getValue(current.name)
-        val incomingSpec = MiGuardiaBackupSchemaV7.byName.getValue(incoming.name)
+        val currentSpec = MiGuardiaBackupSchemaV8.byName.getValue(current.name)
+        val incomingSpec = MiGuardiaBackupSchemaV8.byName.getValue(incoming.name)
         val currentIndex = IntervalIndex.from(
             current.records.mapNotNull { record ->
                 record.dateInterval(currentSpec, "startDate", "endDateInclusive")?.let { (start, end) ->
@@ -605,11 +605,11 @@ object BackupComparator {
         seeds: Set<BackupRecordKey>,
     ): Set<BackupRecordKey> {
         if (seeds.isEmpty()) return emptySet()
-        val recordsByTable = MiGuardiaBackupSchemaV7.tables.associate { spec ->
+        val recordsByTable = MiGuardiaBackupSchemaV8.tables.associate { spec ->
             spec.name to table(spec.name).records.associateBy { record -> record.backupKey(spec) }
         }
         val childrenByRelationship = aggregateRelationships.associateWith { relationship ->
-            val childSpec = MiGuardiaBackupSchemaV7.byName.getValue(relationship.childTable)
+            val childSpec = MiGuardiaBackupSchemaV8.byName.getValue(relationship.childTable)
             table(relationship.childTable).records.groupBy(
                 keySelector = { child -> child.relationshipValues(childSpec, relationship.childColumns) },
                 valueTransform = { child -> child.backupKey(childSpec) },
@@ -622,7 +622,7 @@ object BackupComparator {
             val removedParentKey = pending.removeFirst()
             val parentRecord = recordsByTable[removedParentKey.table]?.get(removedParentKey) ?: continue
             relationshipsByParent[removedParentKey.table].orEmpty().forEach { relationship ->
-                val parentSpec = MiGuardiaBackupSchemaV7.byName.getValue(relationship.parentTable)
+                val parentSpec = MiGuardiaBackupSchemaV8.byName.getValue(relationship.parentTable)
                 val relationshipKey = parentRecord.relationshipValues(parentSpec, relationship.parentColumns)
                 childrenByRelationship.getValue(relationship)[relationshipKey].orEmpty().forEach { childKey ->
                     if (removals.add(childKey)) {
@@ -635,7 +635,7 @@ object BackupComparator {
     }
 
     private fun BackupDatabaseSnapshot.allRecordKeys(): Set<BackupRecordKey> = buildSet {
-        MiGuardiaBackupSchemaV7.tables.forEach { spec ->
+        MiGuardiaBackupSchemaV8.tables.forEach { spec ->
             table(spec.name).records.forEach { record -> add(record.backupKey(spec)) }
         }
     }
@@ -689,6 +689,7 @@ object BackupComparator {
         relation("shifts", listOf("id"), "shift_work_snapshots", listOf("shiftId")),
         relation("shift_work_snapshots", listOf("shiftId"), "shifts", listOf("id")),
         relation("shifts", listOf("id"), "shift_notes", listOf("shiftId")),
+        relation("shifts", listOf("id"), "shift_situations", listOf("shiftId")),
         relation("shift_notes", listOf("id"), "shift_note_attachments", listOf("noteId")),
         relation("shifts", listOf("id"), "shift_notification_configs", listOf("shiftId")),
         relation("shifts", listOf("id"), "recurring_occurrences", listOf("shiftId")),

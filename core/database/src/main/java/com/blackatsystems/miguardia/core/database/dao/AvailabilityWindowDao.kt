@@ -34,6 +34,9 @@ internal interface AvailabilityWindowDao {
     @Query("SELECT * FROM availability_windows ORDER BY timelineId, sector, startEpochMillis, id")
     suspend fun getAll(): List<AvailabilityWindowEntity>
 
+    @Query("SELECT * FROM availability_windows WHERE ownerLocalDate = :ownerLocalDate ORDER BY id")
+    suspend fun getOn(ownerLocalDate: String): List<AvailabilityWindowEntity>
+
     @Query(
         """SELECT * FROM availability_windows
             WHERE timelineId = :timelineId

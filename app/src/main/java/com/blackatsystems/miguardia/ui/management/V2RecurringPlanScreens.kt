@@ -21,6 +21,7 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
@@ -64,6 +65,7 @@ import com.blackatsystems.miguardia.ui.components.AdvancedOptionsSection
 import com.blackatsystems.miguardia.ui.components.ContextHelp
 import com.blackatsystems.miguardia.ui.components.PersistentMessage
 import com.blackatsystems.miguardia.ui.components.removedOnlyAutomaticSeparator
+import com.blackatsystems.miguardia.ui.theme.vigiliaColors
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -196,6 +198,7 @@ fun V2RecurringPlanSurfaceHost(
             confirmButton = {
                 TextButton(
                     onClick = actions.confirmDiscard,
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
                     modifier = Modifier.testTag("v2-recurring-confirm-discard"),
                 ) { Text("Descartar") }
             },
@@ -230,7 +233,7 @@ private fun RecurringHeader(state: V2RecurringUiState, onBack: () -> Unit) {
                 }
             },
             style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.SemiBold,
         )
     }
 }
@@ -259,7 +262,7 @@ private fun PlansStep(state: V2RecurringUiState, actions: V2RecurringActions) {
                 modifier = Modifier.padding(14.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                Text(latest.objectiveNameSnapshot, fontWeight = FontWeight.Bold)
+                Text(latest.objectiveNameSnapshot, fontWeight = FontWeight.SemiBold)
                 Text(describeRecurringPattern(latest.pattern))
                 Text("${latest.startTimeSnapshot}–${latest.endTimeSnapshot} · hasta ${latest.endDateInclusive.fullDate()}")
                 Text(
@@ -275,7 +278,7 @@ private fun PlansStep(state: V2RecurringUiState, actions: V2RecurringActions) {
 private fun PlanDetailStep(state: V2RecurringUiState, actions: V2RecurringActions) {
     val plan = state.selectedPlan ?: return
     val latest = plan.latestRevision
-    Text(latest.objectiveNameSnapshot, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+    Text(latest.objectiveNameSnapshot, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
     RevisionSummary(latest)
     Text(
         if (latest.kind == RecurringPlanRevisionKind.FINALIZED) "Estado: finalizado" else "Estado: activo",
@@ -327,10 +330,10 @@ private fun EditorStep(state: V2RecurringUiState, actions: V2RecurringActions) {
     }
     state.cutDate?.let { cut ->
         Text("Fecha de corte fija", style = MaterialTheme.typography.labelLarge)
-        Text(cut.fullDate(), fontWeight = FontWeight.Bold, modifier = Modifier.testTag("v2-recurring-cut-date"))
+        Text(cut.fullDate(), fontWeight = FontWeight.SemiBold, modifier = Modifier.testTag("v2-recurring-cut-date"))
         Text("El pasado y las excepciones no se modificarán.", color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
-    Text("1. Elegí un horario", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+    Text("1. Elegí un horario", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
     Column(modifier = Modifier.selectableGroup(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         state.templateOptions.forEach { option ->
             val selected = option.template.id == state.selectedTemplateId
@@ -346,8 +349,10 @@ private fun EditorStep(state: V2RecurringUiState, actions: V2RecurringActions) {
                     .testTag("v2-recurring-template-${option.template.id}"),
                 border = BorderStroke(
                     if (selected) 2.dp else 1.dp,
-                    if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
+                    if (selected) MaterialTheme.vigiliaColors.active else MaterialTheme.colorScheme.outline,
                 ),
+                color = if (selected) MaterialTheme.vigiliaColors.selection else MaterialTheme.colorScheme.surfaceContainer,
+                contentColor = if (selected) MaterialTheme.vigiliaColors.onSelection else MaterialTheme.colorScheme.onSurface,
                 shape = MaterialTheme.shapes.medium,
             ) {
                 Row(
@@ -355,7 +360,7 @@ private fun EditorStep(state: V2RecurringUiState, actions: V2RecurringActions) {
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    RadioButton(selected = selected, onClick = null)
+                    RadioButton(selected = selected, onClick = null, enabled = !state.isLoading && !state.isSaving)
                     Column(modifier = Modifier.weight(1f)) {
                         Text(option.objective.fullName, fontWeight = FontWeight.SemiBold)
                         Text("${option.workType.name} · ${option.template.startTime}–${option.template.endTime}")
@@ -370,7 +375,7 @@ private fun EditorStep(state: V2RecurringUiState, actions: V2RecurringActions) {
             }
         }
     }
-    Text("2. Elegí los días", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+    Text("2. Elegí los días", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
     if (state.patternKind == V2RecurringPatternKind.WEEKDAYS) {
         Text("Marcá los días de la semana en los que trabajás.", color = MaterialTheme.colorScheme.onSurfaceVariant)
         DayOfWeek.entries.forEach { day ->
@@ -389,7 +394,7 @@ private fun EditorStep(state: V2RecurringUiState, actions: V2RecurringActions) {
         )
     }
 
-    Text("3. Elegí desde cuándo y hasta cuándo", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+    Text("3. Elegí desde cuándo y hasta cuándo", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
     AutomaticRecurringDateField(
         value = state.startDateText,
         onValueChange = actions.updateStartDate,
@@ -543,14 +548,14 @@ internal fun advancedRecurringRequirementMessage(state: V2RecurringUiState): Str
 private fun PreviewStep(state: V2RecurringUiState, actions: V2RecurringActions) {
     val preview = state.preview ?: return
     val option = state.selectedOption
-    Text(preview.patternDescription, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+    Text(preview.patternDescription, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
     option?.let {
         Text("${it.objective.fullName} · ${it.workType.name}")
         Text("${it.template.startTime}–${it.template.endTime} · color ${it.template.colorArgb.toArgbLabel()}")
         Text("Puesto: ${state.position.ifBlank { "sin puesto" }}")
     }
     Text("Inicio ${state.startDateText} · final ${state.endDateText}")
-    Text("Cantidad total de fechas: ${preview.dates.size}", fontWeight = FontWeight.Bold)
+    Text("Cantidad total de fechas: ${preview.dates.size}", fontWeight = FontWeight.SemiBold)
     if (preview.medicalLeaveDates.isNotEmpty()) {
         Text(
             "Carpeta médica: ${preview.medicalLeaveDates.sorted().joinToString { it.fullDate() }}",
@@ -635,7 +640,7 @@ private fun PreviewStep(state: V2RecurringUiState, actions: V2RecurringActions) 
 @Composable
 private fun WarningList(preview: RecurringMutationPreview) {
     if (preview.warnings.isEmpty()) return
-    Text("Advertencias", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+    Text("Advertencias", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
     preview.warnings.forEach { warning ->
         Text(
             "• ${warning.visibleName()}",
