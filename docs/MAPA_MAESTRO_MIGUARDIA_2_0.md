@@ -2,7 +2,7 @@
 
 Resumen del producto aprobado. Reglas completas: `docs/PLANIFICACION_MIGUARDIA_2_0.md`. Estado actual, evidencias y siguiente paso: únicamente `docs/STATUS.md`.
 
-El [flowchart de orquestación](ORQUESTACION_MAIN.md) conserva la construcción histórica de 2.0. MAIN despacha 3.0 únicamente por STATUS y su contrato vigente. Este mapa resume el producto; no define otra secuencia de ejecución.
+El [archivo](archive/README.md) conserva la construcción histórica de 2.0. MAIN despacha 3.0 únicamente por STATUS y su contrato vigente. Este mapa resume el producto; no define otra secuencia de ejecución.
 
 MiGuardia es una aplicación Android personal para organizar jornadas y horas. Comparte Calendario y capacidades locales entre Vigilancia privada, Policía, Enfermería y Medicina. El sector cambia vocabulario y ejemplos; cada persona configura cómo trabaja. Hay una sola configuración laboral, con historia por fecha, sin perfiles simultáneos ni sector `Otro`.
 

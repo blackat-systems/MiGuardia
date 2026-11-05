@@ -31,6 +31,7 @@ import java.time.LocalTime
 import java.time.ZoneId
 import java.util.UUID
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -52,6 +53,110 @@ class CalendarViewModelStage2Test {
 
     @Before fun setUp() = Dispatchers.setMain(dispatcher)
     @After fun tearDown() = Dispatchers.resetMain()
+
+    @Test
+    fun medicalSaveReportsSuccessOnlyAfterTheWriteAndAfterUnlocking() = runTest(dispatcher) {
+        val repository = DeferredMedicalRepository()
+        val viewModel = medicalViewModel(repository)
+        val results = mutableListOf<Pair<Boolean, Boolean>>()
+        val start = LocalDate.of(2026, 10, 23)
+        viewModel.saveMedicalLeave(null, start, start.plusDays(2), "  Nota propia  ") {
+            results += it to viewModel.uiState.value.stage2Busy
+        }
+        assertTrue(viewModel.uiState.value.stage2Busy)
+        assertTrue(results.isEmpty())
+        assertEquals(null, repository.persisted)
+        val submitted = requireNotNull(repository.submitted)
+        assertEquals(start, submitted.startDate)
+        assertEquals(start.plusDays(2), submitted.endDateInclusive)
+        assertEquals("Nota propia", submitted.privateNote)
+        repository.release.complete(Unit)
+        awaitIdle(viewModel)
+        assertEquals(submitted, repository.persisted)
+        assertEquals(listOf(true to false), results)
+    }
+
+    @Test
+    fun rejectedMedicalSaveReturnsFailureWithoutReplacingTheExistingEntity() = runTest(dispatcher) {
+        val previous = MedicalLeave(UUID.randomUUID(), LocalDate.of(2026, 10, 23),
+            LocalDate.of(2026, 10, 25), "Anterior", Instant.EPOCH, Instant.EPOCH)
+        val repository = DeferredMedicalRepository(previous, reject = true)
+        val viewModel = medicalViewModel(repository)
+        val results = mutableListOf<Pair<Boolean, Boolean>>()
+        viewModel.saveMedicalLeave(previous, previous.startDate, previous.endDateInclusive, "Borrador") {
+            results += it to viewModel.uiState.value.stage2Busy
+        }
+        assertTrue(results.isEmpty())
+        assertEquals(previous, repository.expected)
+        val submitted = requireNotNull(repository.submitted)
+        assertEquals(previous.id, submitted.id)
+        assertEquals(previous.createdAt, submitted.createdAt)
+        assertEquals("Borrador", submitted.privateNote)
+        assertTrue(submitted.updatedAt > previous.updatedAt)
+        repository.release.complete(Unit)
+        awaitIdle(viewModel)
+        assertEquals(previous, repository.persisted)
+        assertEquals(listOf(false to false), results)
+        assertEquals("Conflicto médico controlado", viewModel.uiState.value.stage2Message)
+    }
+
+    @Test
+    fun aMedicalSubmissionWhileBusyIsRejectedWithoutQueuingAnotherWrite() = runTest(dispatcher) {
+        val repository = DeferredMedicalRepository()
+        val viewModel = medicalViewModel(repository)
+        val date = LocalDate.of(2026, 10, 23)
+        val first = mutableListOf<Boolean>()
+        val second = mutableListOf<Boolean>()
+        viewModel.saveMedicalLeave(null, date, date, "Primera", first::add)
+        viewModel.saveMedicalLeave(null, date.plusDays(1), date.plusDays(1), "Segunda", second::add)
+        assertEquals(listOf(false), second)
+        assertEquals(1, repository.calls)
+        assertEquals("Primera", repository.submitted?.privateNote)
+        repository.release.complete(Unit)
+        awaitIdle(viewModel)
+        assertEquals(listOf(true), first)
+        assertEquals(1, repository.calls)
+    }
+
+    @Test
+    fun invertedMedicalRangeReportsFailureBeforeCallingTheRepository() = runTest(dispatcher) {
+        val repository = DeferredMedicalRepository()
+        val viewModel = medicalViewModel(repository)
+        val date = LocalDate.of(2026, 10, 23)
+        val results = mutableListOf<Boolean>()
+        viewModel.saveMedicalLeave(null, date.plusDays(1), date, "Borrador", results::add)
+        awaitIdle(viewModel)
+        assertEquals(listOf(false), results)
+        assertEquals(0, repository.calls)
+        assertEquals(null, repository.persisted)
+    }
+
+    private fun medicalViewModel(repository: MedicalLeaveRepository) = CalendarViewModel(
+        shiftRepository = EmptyShifts,
+        explicitDayStatusRepository = EmptyStatuses,
+        medicalLeaveRepository = repository,
+        clock = CLOCK,
+        savedStateHandle = SavedStateHandle(),
+    )
+
+    private class DeferredMedicalRepository(initial: MedicalLeave? = null, val reject: Boolean = false) :
+        MedicalLeaveRepository by EmptyMedical {
+        val release = CompletableDeferred<Unit>()
+        var calls = 0
+        var expected: MedicalLeave? = null
+        var submitted: MedicalLeave? = null
+        var persisted: MedicalLeave? = initial
+        override suspend fun create(medicalLeave: MedicalLeave) = write(null, medicalLeave)
+        override suspend fun updateExpected(expected: MedicalLeave, replacement: MedicalLeave) = write(expected, replacement)
+        private suspend fun write(previous: MedicalLeave?, value: MedicalLeave) {
+            calls++
+            expected = previous
+            submitted = value
+            release.await()
+            if (reject) throw ConflictingLocalWriteException("Conflicto médico controlado")
+            persisted = value
+        }
+    }
 
     @Test
     fun stage3PreviewAndApplyFinishSelectionOnlyAfterTheAtomicWrite() = runTest(dispatcher) {

@@ -1,8 +1,50 @@
 package com.blackatsystems.miguardia.stage12
 
-/** Explicit reviewed UI-only fixtures. No class wildcards or legacy destructive Activity fixtures. */
+/** Explicit reviewed fixtures. No class wildcards or legacy destructive Activity fixtures. */
 internal object Stage12B1Selectors {
     const val OWNED_LOAD_EDIT = "com.blackatsystems.miguardia.stage12.Stage12WorkCalendarNativeTest#ownDayAndOvernightLoadRecreateEditCancelAndReopenPreserveReceivedRows"
+    val ownedWorkFamily: Set<String> = setOf(
+        "com.blackatsystems.miguardia.stage12.Stage12OwnedWorkFamilyTest#privateSecurityOwnWorkFamily",
+        "com.blackatsystems.miguardia.stage12.Stage12OwnedWorkFamilyTest#policeOwnWorkFamily",
+        "com.blackatsystems.miguardia.stage12.Stage12OwnedWorkFamilyTest#nursingOwnWorkFamily",
+        "com.blackatsystems.miguardia.stage12.Stage12OwnedWorkFamilyTest#medicineOwnWorkFamily",
+    )
+    val selectionBatchFamily: Set<String> = setOf(
+        "com.blackatsystems.miguardia.stage12.Stage12SelectionBatchTest#selectionContextsBackAndCompleteDraftKeepOnlyFinalDates",
+        "com.blackatsystems.miguardia.stage12.Stage12SelectionBatchTest#occupiedPoliciesBackfillAndExplicitDayStatesPreserveNeighbours",
+        "com.blackatsystems.miguardia.stage12.Stage12SelectionBatchTest#mixedClearAndPostReviewChangesRejectWholeBatches",
+        "com.blackatsystems.miguardia.stage12.Stage12SelectionBatchTest#doubleTouchAndLostCommitResponseRecoverExactRowsAndBytes",
+    )
+    val recurringLifecycleFamily: Set<String> = setOf(
+        "com.blackatsystems.miguardia.stage12.Stage12RecurringLifecycleTest#mixedOccupancyPoliciesUseExactPreviewsAndAtomicRealWrites",
+        "com.blackatsystems.miguardia.stage12.Stage12RecurringLifecycleTest#individualOccurrencesAndRealSeriesHandoffsPreserveAllAssociates",
+        "com.blackatsystems.miguardia.stage12.Stage12RecurringLifecycleTest#changesAndFinalizationFromTodayKeepHistoryAndRollbackConflicts",
+    )
+    val calendarExceptionsFamily: Set<String> = setOf(
+        "com.blackatsystems.miguardia.stage12.Stage12CalendarExceptionsTest#medicalRangesErrorsEditsAndDeletionKeepTheCompleteStore",
+        "com.blackatsystems.miguardia.stage12.Stage12CalendarExceptionsTest#absenceCancellationAndConsciousRestorationKeepOnlyDeclaredDeltas",
+        "com.blackatsystems.miguardia.stage12.Stage12CalendarExceptionsTest#holidaySelectionPoliciesAndIdentityChangesAreAtomicAndPersistent",
+        "com.blackatsystems.miguardia.stage12.Stage12CalendarExceptionsTest#vacationRangesConflictsAndConsciousCasRecoveryKeepTheWinner",
+    )
+    const val TEMPORAL_RESUMPTION = "com.blackatsystems.miguardia.stage12.Stage12TemporalLiteralAndroidTest#availabilityResumptionKeepsOwnerAndUuidThroughRealWidgetTouch"
+    val calendarPrivacyComplements: Set<String> = setOf(
+        "com.blackatsystems.miguardia.stage12.Stage12CalendarExceptionsTest#pendingCancellationEvidenceSurvivesPickerCancellation",
+        "com.blackatsystems.miguardia.stage12.Stage12CalendarExceptionsTest#medicalNotePrivacyUsesRealWidgetAndReportBoundaries",
+    )
+    val temporalLiteralFamily: Set<String> = setOf(
+        "com.blackatsystems.miguardia.stage12.Stage12TemporalLiteralAndroidTest#shiftEndpointsAndHistoricalDetailStayExact",
+        "com.blackatsystems.miguardia.stage12.Stage12TemporalLiteralAndroidTest#availabilityDurationsKeepFullEndpointsAndReadback",
+        TEMPORAL_RESUMPTION,
+    )
+    val availabilityLifecycleFamily: Set<String> = setOf(
+        "com.blackatsystems.miguardia.stage12.Stage12AvailabilityLifecycleTest#configurationHistoryPreservesWindowsAndReferences",
+        "com.blackatsystems.miguardia.stage12.Stage12AvailabilityLifecycleTest#protectedReviewsUseFreshSourcesAndExactBreakdowns",
+        "com.blackatsystems.miguardia.stage12.Stage12AvailabilityLifecycleTest#conflictsErrorsAndConsciousDiscardPreserveTheWholeStore",
+    )
+    val medicalDraftRegression: Set<String> = setOf(
+        "com.blackatsystems.miguardia.MedicalLeaveDraftComposeTest#deferredMedicalRejectionKeepsFieldsAndOnlySuccessDismisses",
+        "com.blackatsystems.miguardia.MedicalLeaveDraftComposeTest#abandonedMedicalEditorIgnoresItsLateResultAfterAnotherOpening",
+    )
     val compose: Set<String> = setOf(
         "com.blackatsystems.miguardia.CalendarComposeTest#controlsAndHorizontalGestureKeepCalendarNavigation",
         "com.blackatsystems.miguardia.CalendarComposeTest#loadingAndRecoverableErrorRemainBlockingAndHonest",

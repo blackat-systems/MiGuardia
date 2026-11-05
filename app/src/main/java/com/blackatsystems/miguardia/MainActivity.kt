@@ -75,20 +75,55 @@ import java.util.UUID
 import com.blackatsystems.miguardia.updates.*
 
 class MainActivity : FragmentActivity() {
+
+    private var ownMainGraph: QaMainActivityGraph? = null
+    private fun activeMainGraph(): QaMainActivityGraph? = QaInstrumentationScope.mainActivityGraph(this, ownMainGraph)
+    private suspend fun observeOwnCompositionJob() {
+        val graph = ownMainGraph ?: return
+        graph.observeCompositionJob(this, checkNotNull(kotlinx.coroutines.currentCoroutineContext()[kotlinx.coroutines.Job]))
+    }
+    private fun activityFactory(
+        own: ((QaMainActivityGraph) -> androidx.lifecycle.ViewModelProvider.Factory)?,
+        ordinary: () -> androidx.lifecycle.ViewModelProvider.Factory,
+    ): androidx.lifecycle.ViewModelProvider.Factory {
+        val graph = activeMainGraph()
+        if (graph == null) return ordinary()
+        graph.requireStoreWitness(this)
+        return graph.guardedFactory(this, if (own == null) ordinary() else own(graph))
+    }
+    private val activityDataStore: com.blackatsystems.miguardia.core.database.LocalDataStore
+        get() {
+            val graph = activeMainGraph()
+            return if (graph == null) (application as MiGuardiaApplication).localDataStore else graph.store
+        }
+    private val activityPendingDestinations: PendingMainDestinationCoordinator
+        get() {
+            val graph = activeMainGraph()
+            return if (graph == null) (application as MiGuardiaApplication).pendingMainDestinations else graph.pendingDestinations
+        }
+    private fun refreshNotificationSurface() {
+        val graph = activeMainGraph()
+        if (graph == null) notificationViewModel.refreshSystemAccess()
+        else graph.event(QaMainActivityGraph.Event.NOTIFICATION_REFRESH_EXCLUDED)
+    }
     override fun attachBaseContext(newBase: android.content.Context) {
         QaInstrumentationScope.requireProductActivity(newBase)
-        super.attachBaseContext(QaInstrumentationScope.wrapActivity(newBase))
+        super.attachBaseContext(QaInstrumentationScope.wrapMainActivity(this, newBase))
     }
 
     override fun startActivityForResult(intent: Intent, requestCode: Int, options: Bundle?) {
+        if (ownMainGraph != null) activeMainGraph()
         QaInstrumentationScope.requireActivityLaunch(this, intent)
         super.startActivityForResult(intent, requestCode, options)
     }
     private var directionsConsent by mutableStateOf<DirectionsConsent?>(null)
     private fun cancelDirections() { directionsConsent?.cancel(); directionsConsent = null }
-    private val updatesViewModel: UpdatesViewModel by viewModels {
-        UpdatesViewModel.Factory((application as MiGuardiaApplication).updateOperations)
+    private val updatesViewModelReference = viewModels<UpdatesViewModel> {
+        activityFactory(null) {
+            UpdatesViewModel.Factory((application as MiGuardiaApplication).updateOperations)
+        }
     }
+    private val updatesViewModel: UpdatesViewModel get() = updatesViewModelReference.value
     private val updateDocumentLauncher = registerForActivityResult(CreateUpdateDocument()) { uri ->
         updatesViewModel.documentReturned(uri?.let { AndroidUpdateDocument(applicationContext, it) })
     }
@@ -102,236 +137,277 @@ class MainActivity : FragmentActivity() {
     )
 
     private val notificationViewModel: NotificationViewModel by viewModels {
-        val application = application as MiGuardiaApplication
-        NotificationViewModel.Factory(
-            preferencesStore = application.notificationPreferences,
-            configs = application.localDataStore.shiftNotificationConfigs,
-            systemAccess = NotificationSystemAccess(application),
-            runtime = application.notificationRuntime,
-        )
+        activityFactory({ it.factories.notifications }) {
+            val application = application as MiGuardiaApplication
+            NotificationViewModel.Factory(
+                preferencesStore = application.notificationPreferences,
+                configs = application.localDataStore.shiftNotificationConfigs,
+                systemAccess = NotificationSystemAccess(application),
+                runtime = application.notificationRuntime,
+            )
+        }
     }
     private val helpViewModel: HelpViewModel by viewModels {
-        val application = application as MiGuardiaApplication
-        HelpViewModel.Factory(application.onboardingPreferences)
+        activityFactory({ it.factories.help }) {
+            val application = application as MiGuardiaApplication
+            HelpViewModel.Factory(application.onboardingPreferences)
+        }
     }
     private val backupViewModel: BackupViewModel by viewModels {
-        val application = application as MiGuardiaApplication
-        BackupViewModel.Factory(
-            application.backupCoordinator,
-            application.startupRecoveryGate,
-            application.backupCoordinator::discardIncompleteDocument,
-        )
+        activityFactory(null) {
+            val application = application as MiGuardiaApplication
+            BackupViewModel.Factory(
+                application.backupCoordinator,
+                application.startupRecoveryGate,
+                application.backupCoordinator::discardIncompleteDocument,
+            )
+        }
     }
     private val weatherViewModel: WeatherViewModel by viewModels {
-        val application = application as MiGuardiaApplication
-        WeatherViewModel.Factory(
-            runtime = application.weatherRuntime,
-            shifts = application.localDataStore.shifts,
-            vacations = application.localDataStore.vacations,
-            medicalLeaves = application.localDataStore.medicalLeaves,
-        )
+        activityFactory({ it.factories.weather }) {
+            val application = application as MiGuardiaApplication
+            WeatherViewModel.Factory(
+                runtime = application.weatherRuntime,
+                shifts = application.localDataStore.shifts,
+                vacations = application.localDataStore.vacations,
+                medicalLeaves = application.localDataStore.medicalLeaves,
+            )
+        }
     }
     private val widgetViewModel: WidgetViewModel by viewModels {
-        val application = application as MiGuardiaApplication
-        WidgetViewModel.Factory(
-            context = application,
-            preferences = application.widgetPreferences,
-            runtime = application.widgetRuntime,
-        )
+        activityFactory(null) {
+            val application = application as MiGuardiaApplication
+            WidgetViewModel.Factory(
+                context = application,
+                preferences = application.widgetPreferences,
+                runtime = application.widgetRuntime,
+            )
+        }
     }
     private val nextEventViewModel: NextEventViewModel by viewModels {
-        val dataStore = (application as MiGuardiaApplication).localDataStore
-        NextEventViewModel.Factory(
-            shifts = dataStore.v2Shifts,
-            availabilityWindows = dataStore.availabilityWindows,
-            explicitDayStatuses = dataStore.explicitDayStatuses,
-            vacations = dataStore.vacations,
-            medicalLeaves = dataStore.medicalLeaves,
-            shiftActuals = dataStore.shiftActuals,
-            independentExtras = dataStore.independentExtraWork,
-            workConfiguration = dataStore.workConfiguration,
-        )
+        activityFactory({ it.factories.nextEvent }) {
+            val dataStore = (application as MiGuardiaApplication).localDataStore
+            NextEventViewModel.Factory(
+                shifts = dataStore.v2Shifts,
+                availabilityWindows = dataStore.availabilityWindows,
+                explicitDayStatuses = dataStore.explicitDayStatuses,
+                vacations = dataStore.vacations,
+                medicalLeaves = dataStore.medicalLeaves,
+                shiftActuals = dataStore.shiftActuals,
+                independentExtras = dataStore.independentExtraWork,
+                workConfiguration = dataStore.workConfiguration,
+            )
+        }
     }
     private val photosViewModel: PhotosViewModel by viewModels {
-        val miGuardiaApplication = application as MiGuardiaApplication
-        val dataStore = miGuardiaApplication.localDataStore
-        PhotosViewModel.Factory(
-            dataStore.schedulePhotos,
-            dataStore.objectives,
-            SchedulePhotoFileStore(applicationContext),
-            miGuardiaApplication.localDataMutationGate,
-        )
+        activityFactory({ it.factories.photos }) {
+            val miGuardiaApplication = application as MiGuardiaApplication
+            val dataStore = miGuardiaApplication.localDataStore
+            PhotosViewModel.Factory(
+                dataStore.schedulePhotos,
+                dataStore.objectives,
+                SchedulePhotoFileStore(applicationContext),
+                miGuardiaApplication.localDataMutationGate,
+            )
+        }
     }
     private val calendarViewModel: CalendarViewModel by viewModels {
-        val dataStore = (application as MiGuardiaApplication).localDataStore
-        CalendarViewModel.Factory(
-            shiftRepository = dataStore.shifts,
-            explicitDayStatusRepository = dataStore.explicitDayStatuses,
-            medicalLeaveRepository = dataStore.medicalLeaves,
-            holidayRepository = dataStore.holidays,
-            vacationRepository = dataStore.vacations,
-            shiftSituationRepository = dataStore.shiftSituations,
-            evidenceFileStore = SchedulePhotoFileStore(applicationContext),
-            mutationGate = (application as MiGuardiaApplication).localDataMutationGate,
-            calendarBatchRepository = dataStore.calendarBatches,
-            clock = QaInstrumentationScope.calendarClock(this)
-                ?: java.time.Clock.system(com.blackatsystems.miguardia.core.domain.AppDefaults.zoneId()),
-        )
+        activityFactory({ it.factories.calendar }) {
+            val dataStore = (application as MiGuardiaApplication).localDataStore
+            CalendarViewModel.Factory(
+                shiftRepository = dataStore.shifts,
+                explicitDayStatusRepository = dataStore.explicitDayStatuses,
+                medicalLeaveRepository = dataStore.medicalLeaves,
+                holidayRepository = dataStore.holidays,
+                vacationRepository = dataStore.vacations,
+                shiftSituationRepository = dataStore.shiftSituations,
+                evidenceFileStore = SchedulePhotoFileStore(applicationContext),
+                mutationGate = (application as MiGuardiaApplication).localDataMutationGate,
+                calendarBatchRepository = dataStore.calendarBatches,
+                clock = QaInstrumentationScope.calendarClock(this)
+                    ?: java.time.Clock.system(com.blackatsystems.miguardia.core.domain.AppDefaults.zoneId()),
+            )
+        }
     }
 
     private val vacationViewModel: VacationViewModel by viewModels {
-        val dataStore = (application as MiGuardiaApplication).localDataStore
-        VacationViewModel.Factory(dataStore.vacations)
+        activityFactory({ it.factories.vacation }) {
+            val dataStore = (application as MiGuardiaApplication).localDataStore
+            VacationViewModel.Factory(dataStore.vacations)
+        }
     }
 
     private val v2ManualShiftLoadViewModel: V2ManualShiftLoadViewModel by viewModels {
-        val dataStore = (application as MiGuardiaApplication).localDataStore
-        V2ManualShiftLoadViewModel.Factory(
-            calendarBatchRepository = dataStore.calendarBatches,
-            noteFiles = com.blackatsystems.miguardia.ui.management.ManualLoadNotes(applicationContext, dataStore.shiftNotes, dataStore.shiftSituations,
-                (application as MiGuardiaApplication).localDataMutationGate),
-            configurationRepository = dataStore.workConfiguration,
-            catalogRepository = dataStore.workCatalog,
-            objectiveRepository = dataStore.objectives,
-            shiftRepository = dataStore.shifts,
-            medicalLeaveRepository = dataStore.medicalLeaves,
-            v2ShiftRepository = dataStore.v2Shifts,
-            shiftActualRepository = dataStore.shiftActuals,
-            explicitDayStatusRepository = dataStore.explicitDayStatuses,
-        )
+        activityFactory({ it.factories.manual }) {
+            val dataStore = (application as MiGuardiaApplication).localDataStore
+            V2ManualShiftLoadViewModel.Factory(
+                calendarBatchRepository = dataStore.calendarBatches,
+                noteFiles = com.blackatsystems.miguardia.ui.management.ManualLoadNotes(applicationContext, dataStore.shiftNotes, dataStore.shiftSituations,
+                    (application as MiGuardiaApplication).localDataMutationGate),
+                configurationRepository = dataStore.workConfiguration,
+                catalogRepository = dataStore.workCatalog,
+                objectiveRepository = dataStore.objectives,
+                shiftRepository = dataStore.shifts,
+                medicalLeaveRepository = dataStore.medicalLeaves,
+                v2ShiftRepository = dataStore.v2Shifts,
+                shiftActualRepository = dataStore.shiftActuals,
+                explicitDayStatusRepository = dataStore.explicitDayStatuses,
+            )
+        }
     }
 
     private val v2ShiftEditViewModel: V2ShiftEditViewModel by viewModels {
-        val dataStore = (application as MiGuardiaApplication).localDataStore
-        V2ShiftEditViewModel.Factory(
-            configurationRepository = dataStore.workConfiguration,
-            catalogRepository = dataStore.workCatalog,
-            objectiveRepository = dataStore.objectives,
-            shiftRepository = dataStore.shifts,
-            medicalLeaveRepository = dataStore.medicalLeaves,
-            v2ShiftRepository = dataStore.v2Shifts,
-            shiftActualRepository = dataStore.shiftActuals,
-            recurringPlanRepository = dataStore.recurringPlans,
-        )
+        activityFactory({ it.factories.edit }) {
+            val dataStore = (application as MiGuardiaApplication).localDataStore
+            V2ShiftEditViewModel.Factory(
+                configurationRepository = dataStore.workConfiguration,
+                catalogRepository = dataStore.workCatalog,
+                objectiveRepository = dataStore.objectives,
+                shiftRepository = dataStore.shifts,
+                medicalLeaveRepository = dataStore.medicalLeaves,
+                v2ShiftRepository = dataStore.v2Shifts,
+                shiftActualRepository = dataStore.shiftActuals,
+                recurringPlanRepository = dataStore.recurringPlans,
+            )
+        }
     }
 
     private val v2ShiftActualViewModel: V2ShiftActualViewModel by viewModels {
-        val dataStore = (application as MiGuardiaApplication).localDataStore
-        V2ShiftActualViewModel.Factory(
-            repository = dataStore.shiftActuals,
-            clock = Clock.systemUTC(),
-        )
+        activityFactory({ it.factories.actual }) {
+            val dataStore = (application as MiGuardiaApplication).localDataStore
+            V2ShiftActualViewModel.Factory(
+                repository = dataStore.shiftActuals,
+                clock = Clock.systemUTC(),
+            )
+        }
     }
 
     private val v2RecurringPlanViewModel: V2RecurringPlanViewModel by viewModels {
-        val dataStore = (application as MiGuardiaApplication).localDataStore
-        V2RecurringPlanViewModel.Factory(
-            configurationRepository = dataStore.workConfiguration,
-            catalogRepository = dataStore.workCatalog,
-            objectiveRepository = dataStore.objectives,
-            shiftRepository = dataStore.shifts,
-            medicalLeaveRepository = dataStore.medicalLeaves,
-            recurringPlanRepository = dataStore.recurringPlans,
-            recurringShiftRepository = dataStore.recurringShiftWriter,
-        )
+        activityFactory({ it.factories.recurring }) {
+            val dataStore = (application as MiGuardiaApplication).localDataStore
+            V2RecurringPlanViewModel.Factory(
+                configurationRepository = dataStore.workConfiguration,
+                catalogRepository = dataStore.workCatalog,
+                objectiveRepository = dataStore.objectives,
+                shiftRepository = dataStore.shifts,
+                medicalLeaveRepository = dataStore.medicalLeaves,
+                recurringPlanRepository = dataStore.recurringPlans,
+                recurringShiftRepository = dataStore.recurringShiftWriter,
+            )
+        }
     }
 
     private val workSetupViewModel: WorkSetupViewModel by viewModels {
-        val miGuardiaApplication = application as MiGuardiaApplication
-        val dataStore = miGuardiaApplication.localDataStore
-        WorkSetupViewModel.Factory(
-            configurationRepository = dataStore.workConfiguration,
-            catalogRepository = dataStore.workCatalog,
-            objectiveRepository = dataStore.objectives,
-            clock = Clock.system(AppDefaults.zoneId()),
-            clearWeatherCacheForObjective = { objectiveId ->
-                miGuardiaApplication.weatherRuntime.clearCacheForObjective(objectiveId)
-            },
-        )
+        activityFactory({ it.factories.work }) {
+            val miGuardiaApplication = application as MiGuardiaApplication
+            val dataStore = miGuardiaApplication.localDataStore
+            WorkSetupViewModel.Factory(
+                configurationRepository = dataStore.workConfiguration,
+                catalogRepository = dataStore.workCatalog,
+                objectiveRepository = dataStore.objectives,
+                clock = Clock.system(AppDefaults.zoneId()),
+                clearWeatherCacheForObjective = { objectiveId ->
+                    miGuardiaApplication.weatherRuntime.clearCacheForObjective(objectiveId)
+                },
+            )
+        }
     }
 
     private val hoursAndExtrasViewModel: HoursAndExtrasViewModel by viewModels {
-        val dataStore = (application as MiGuardiaApplication).localDataStore
-        HoursAndExtrasViewModel.Factory(
-            configurationRepository = dataStore.workConfiguration,
-            catalogRepository = dataStore.workCatalog,
-            objectiveRepository = dataStore.objectives,
-            shiftRepository = dataStore.v2Shifts,
-            shiftActualRepository = dataStore.shiftActuals,
-            independentExtraRepository = dataStore.independentExtraWork,
-            medicalLeaveRepository = dataStore.medicalLeaves,
-            vacationRepository = dataStore.vacations,
-            clock = Clock.systemUTC(),
-            zoneId = AppDefaults.zoneId(),
-        )
+        activityFactory({ it.factories.hours }) {
+            val dataStore = (application as MiGuardiaApplication).localDataStore
+            HoursAndExtrasViewModel.Factory(
+                configurationRepository = dataStore.workConfiguration,
+                catalogRepository = dataStore.workCatalog,
+                objectiveRepository = dataStore.objectives,
+                shiftRepository = dataStore.v2Shifts,
+                shiftActualRepository = dataStore.shiftActuals,
+                independentExtraRepository = dataStore.independentExtraWork,
+                medicalLeaveRepository = dataStore.medicalLeaves,
+                vacationRepository = dataStore.vacations,
+                clock = Clock.systemUTC(),
+                zoneId = AppDefaults.zoneId(),
+            )
+        }
     }
 
     private val availabilityViewModel: AvailabilityViewModel by viewModels {
-        val dataStore = (application as MiGuardiaApplication).localDataStore
-        AvailabilityViewModel.Factory(
-            configurationRepository = dataStore.workConfiguration,
-            repository = dataStore.availabilityWindows,
-            shiftRepository = dataStore.v2Shifts,
-            shiftActualRepository = dataStore.shiftActuals,
-            independentExtraRepository = dataStore.independentExtraWork,
-            medicalLeaveRepository = dataStore.medicalLeaves,
-            vacationRepository = dataStore.vacations,
-            clock = Clock.systemUTC(),
-            zoneId = AppDefaults.zoneId(),
-        )
+        activityFactory({ it.factories.availability }) {
+            val dataStore = (application as MiGuardiaApplication).localDataStore
+            AvailabilityViewModel.Factory(
+                configurationRepository = dataStore.workConfiguration,
+                repository = dataStore.availabilityWindows,
+                shiftRepository = dataStore.v2Shifts,
+                shiftActualRepository = dataStore.shiftActuals,
+                independentExtraRepository = dataStore.independentExtraWork,
+                medicalLeaveRepository = dataStore.medicalLeaves,
+                vacationRepository = dataStore.vacations,
+                clock = Clock.systemUTC(),
+                zoneId = AppDefaults.zoneId(),
+            )
+        }
     }
 
     private val summaryViewModel: SummaryViewModel by viewModels {
-        val application = application as MiGuardiaApplication
-        val dataStore = application.localDataStore
-        val clock = Clock.systemUTC()
-        val zoneId = AppDefaults.zoneId()
-        SummaryViewModel.Factory(
-            observer = SummaryObserver(
-                configurations = dataStore.workConfiguration,
-                catalogs = dataStore.workCatalog,
-                shifts = dataStore.v2Shifts,
-                actuals = dataStore.shiftActuals,
-                extras = dataStore.independentExtraWork,
-                availability = dataStore.availabilityWindows,
-                holidays = dataStore.holidays,
-                medicalLeaves = dataStore.medicalLeaves,
-                vacations = dataStore.vacations,
-                explicitStatuses = dataStore.explicitDayStatuses,
+        activityFactory({ it.factories.summary }) {
+            val application = application as MiGuardiaApplication
+            val dataStore = application.localDataStore
+            val clock = Clock.systemUTC()
+            val zoneId = AppDefaults.zoneId()
+            SummaryViewModel.Factory(
+                observer = SummaryObserver(
+                    configurations = dataStore.workConfiguration,
+                    catalogs = dataStore.workCatalog,
+                    shifts = dataStore.v2Shifts,
+                    actuals = dataStore.shiftActuals,
+                    extras = dataStore.independentExtraWork,
+                    availability = dataStore.availabilityWindows,
+                    holidays = dataStore.holidays,
+                    medicalLeaves = dataStore.medicalLeaves,
+                    vacations = dataStore.vacations,
+                    explicitStatuses = dataStore.explicitDayStatuses,
+                    clock = clock,
+                    zoneId = zoneId,
+                ),
+                preferencesStore = application.summaryPreferences,
                 clock = clock,
                 zoneId = zoneId,
-            ),
-            preferencesStore = application.summaryPreferences,
-            clock = clock,
-            zoneId = zoneId,
-        )
+            )
+        }
     }
 
     private val reportsViewModel: ReportsViewModel by viewModels {
-        val application = application as MiGuardiaApplication
-        ReportsViewModel.Factory(
-            generator = application.reportGenerator,
-            destinationWriter = ReportDestinationWriter(application.contentResolver),
-            photoRepository = application.localDataStore.schedulePhotos,
-            profileStore = application.guardProfile,
-            clock = Clock.systemUTC(),
-            zoneId = AppDefaults.zoneId(),
-        )
+        activityFactory({ it.factories.reports }) {
+            val application = application as MiGuardiaApplication
+            ReportsViewModel.Factory(
+                generator = application.reportGenerator,
+                destinationWriter = ReportDestinationWriter(application.contentResolver),
+                photoRepository = application.localDataStore.schedulePhotos,
+                profileStore = application.guardProfile,
+                clock = Clock.systemUTC(),
+                zoneId = AppDefaults.zoneId(),
+            )
+        }
     }
 
     private val exceptionsViewModel: ExceptionsViewModel by viewModels {
-        val dataStore = (application as MiGuardiaApplication).localDataStore
-        ExceptionsViewModel.Factory(
-            holidays = dataStore.holidays,
-            notes = dataStore.shiftNotes,
-            shifts = dataStore.shifts,
-            imageStore = SchedulePhotoFileStore(applicationContext),
-            mutationGate = (application as MiGuardiaApplication).localDataMutationGate,
-        )
+        activityFactory({ it.factories.exceptions }) {
+            val dataStore = (application as MiGuardiaApplication).localDataStore
+            ExceptionsViewModel.Factory(
+                holidays = dataStore.holidays,
+                notes = dataStore.shiftNotes,
+                shifts = dataStore.shifts,
+                imageStore = SchedulePhotoFileStore(applicationContext),
+                mutationGate = (application as MiGuardiaApplication).localDataMutationGate,
+            )
+        }
     }
 
     @Suppress("DEPRECATION")
     override fun onCreate(savedInstanceState: Bundle?) {
+        ownMainGraph = QaInstrumentationScope.attachedMainActivityGraph(this)
+        QaInstrumentationScope.beginMainActivity(this, savedInstanceState != null)
+        ownMainGraph?.installStoreWitness(this)
         super.onCreate(savedInstanceState)
         calendarNavigationRequest = savedInstanceState?.getLong("calendar-navigation-request", 0L) ?: 0L
         val miGuardiaApplication = application as MiGuardiaApplication
@@ -348,19 +424,25 @@ class MainActivity : FragmentActivity() {
         )
         deviceAuthenticationCapability = deviceAuthenticator.capability()
         captureIncomingDestination(intent)
-        setContent {
+        setContent(parent = activeMainGraph()?.compositionParent(this)) {
             val preferences = remember {
-                getSharedPreferences(DISPLAY_PREFERENCES, MODE_PRIVATE)
+                val graph = activeMainGraph()
+                if (graph == null) getSharedPreferences(DISPLAY_PREFERENCES, MODE_PRIVATE) else null
+            }
+            fun storedThemeMode(): AppThemeMode {
+                val graph = activeMainGraph()
+                return if (graph == null) AppThemeMode.fromStorage(checkNotNull(preferences).getString(APP_THEME_MODE, null))
+                    else graph.capturedThemeMode
             }
             var appThemeMode by remember {
                 mutableStateOf(
-                    AppThemeMode.fromStorage(preferences.getString(APP_THEME_MODE, null)),
+                    storedThemeMode(),
                 )
             }
             val recoveryState by miGuardiaApplication.startupRecoveryGate.state.collectAsStateWithLifecycle()
             val accessLockState by miGuardiaApplication.accessLockCoordinator.state.collectAsStateWithLifecycle()
             val pendingDestinationRequest by
-                miGuardiaApplication.pendingMainDestinations.state.collectAsStateWithLifecycle()
+                activityPendingDestinations.state.collectAsStateWithLifecycle()
             val backupState by backupViewModel.uiState.collectAsStateWithLifecycle()
             val updatesState by updatesViewModel.state.collectAsStateWithLifecycle()
             val workContentState = androidx.compose.runtime.saveable.rememberSaveableStateHolder()
@@ -372,6 +454,7 @@ class MainActivity : FragmentActivity() {
             }
             val sensitiveContentReady = dataAccessReady && accessLockState.allowsSensitiveContent
             LaunchedEffect(sensitiveContentReady, helpState.canConsumePendingDestination) {
+                observeOwnCompositionJob()
                 if (!sensitiveContentReady || !helpState.canConsumePendingDestination) cancelDirections()
             }
             val pendingManualLoad = if (sensitiveContentReady) {
@@ -381,12 +464,13 @@ class MainActivity : FragmentActivity() {
                 workSetupViewModel.uiState.collectAsStateWithLifecycle().value
             } else null
             LaunchedEffect(backupState.successSequence, sensitiveContentReady) {
+                observeOwnCompositionJob()
                 if (sensitiveContentReady && backupState.successSequence > 0) {
                     backupState.restoredTheme?.let { appThemeMode = it }
                     workSetupViewModel.refreshReferenceDate()
                     hoursAndExtrasViewModel.refresh()
                     availabilityViewModel.refresh()
-                    notificationViewModel.refreshSystemAccess()
+                    refreshNotificationSurface()
                     widgetViewModel.refresh()
                 }
             }
@@ -399,11 +483,12 @@ class MainActivity : FragmentActivity() {
                 pendingManualLoad,
                 updatesState.open,
             ) {
+                observeOwnCompositionJob()
                 val request = pendingDestinationRequest
                 if (sensitiveContentReady && !pendingManualLoad && !updatesState.open && helpState.canConsumePendingDestination && request != null) {
-                    val consumed = miGuardiaApplication.pendingMainDestinations.consume(request) {
+                    val consumed = activityPendingDestinations.consume(request) {
                         handlePendingDestination(it) {
-                            miGuardiaApplication.pendingMainDestinations.state.value == request &&
+                            activityPendingDestinations.state.value == request &&
                                 !v2ManualShiftLoadViewModel.uiState.value.isActive
                         }
                     }
@@ -413,15 +498,15 @@ class MainActivity : FragmentActivity() {
                 }
             }
             LaunchedEffect(recoveryState, sensitiveContentReady) {
+                observeOwnCompositionJob()
                 if (sensitiveContentReady) {
-                    appThemeMode = AppThemeMode.fromStorage(
-                        preferences.getString(APP_THEME_MODE, null),
-                    )
+                    appThemeMode = storedThemeMode()
                     refreshActiveSurfaces()
                 }
             }
             val useDarkTheme = appThemeMode.resolve(isSystemInDarkTheme())
             LaunchedEffect(useDarkTheme, sensitiveContentReady) {
+                observeOwnCompositionJob()
                 if (sensitiveContentReady) miGuardiaApplication.widgetRuntime.refreshAll()
             }
             val systemBarStyle = vigiliaSystemBarStyle(useDarkTheme)
@@ -525,8 +610,9 @@ class MainActivity : FragmentActivity() {
                     calendarNavigationRequest = calendarNavigationRequest,
                     appThemeMode = appThemeMode,
                     onAppThemeModeChange = { selected ->
+                        activeMainGraph()?.rejectExternal("display.preference-write")
                         appThemeMode = selected
-                        preferences.edit { putString(APP_THEME_MODE, selected.name) }
+                        checkNotNull(preferences).edit { putString(APP_THEME_MODE, selected.name) }
                     },
                     onWidgetReconfigure = ::openWidgetConfiguration,
                     accessLockState = accessLockState,
@@ -544,14 +630,20 @@ class MainActivity : FragmentActivity() {
                 finishAndRemoveTask()
             }
         }
+        activeMainGraph()?.contentInstalled(this)
     }
 
     override fun onNewIntent(intent: Intent) {
+        activeMainGraph()?.let { graph ->
+            graph.requireStoreWitness(this)
+            graph.event(QaMainActivityGraph.Event.NEW_INTENT)
+        }
         super.onNewIntent(intent)
         captureIncomingDestination(intent)
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
+        activeMainGraph()
         outState.putLong("calendar-navigation-request", calendarNavigationRequest)
         outState.putString(ACCESS_LOCK_AUTHENTICATION_HOST_ID, accessLockAuthenticationHostId)
         super.onSaveInstanceState(outState)
@@ -559,12 +651,14 @@ class MainActivity : FragmentActivity() {
 
     @Suppress("DEPRECATION")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        activeMainGraph()
         if (!deviceAuthenticator.handleActivityResult(requestCode, resultCode)) {
             super.onActivityResult(requestCode, resultCode, data)
         }
     }
 
     override fun onStart() {
+        activeMainGraph()
         val application = application as MiGuardiaApplication
         refreshDeviceAuthenticationCapability()
         application.accessLockCoordinator.activityStarted(
@@ -575,6 +669,7 @@ class MainActivity : FragmentActivity() {
     }
 
     override fun onResume() {
+        activeMainGraph()
         super.onResume()
         accessLockActivityResumed = true
         val application = application as MiGuardiaApplication
@@ -590,8 +685,9 @@ class MainActivity : FragmentActivity() {
     }
 
     override fun onPause() {
+        QaInstrumentationScope.requireMainActivityTeardown(this, ownMainGraph)
         cancelDirections()
-        updatesViewModel.pauseHost()
+        if (ownMainGraph == null || updatesViewModelReference.isInitialized()) updatesViewModel.pauseHost()
         accessLockActivityResumed = false
         val application = application as MiGuardiaApplication
         application.accessLockCoordinator.activityPausedForPrivacy()
@@ -600,7 +696,8 @@ class MainActivity : FragmentActivity() {
     }
 
     override fun onStop() {
-        updatesViewModel.onBackground(isChangingConfigurations)
+        QaInstrumentationScope.requireMainActivityTeardown(this, ownMainGraph)
+        if (ownMainGraph == null || updatesViewModelReference.isInitialized()) updatesViewModel.onBackground(isChangingConfigurations)
         (application as MiGuardiaApplication).accessLockCoordinator.activityStopped(
             accessLockActivityToken,
             isChangingConfigurations,
@@ -616,7 +713,8 @@ class MainActivity : FragmentActivity() {
     }
 
     override fun onDestroy() {
-        updatesViewModel.detachHost(this)
+        QaInstrumentationScope.requireMainActivityTeardown(this, ownMainGraph)
+        if (ownMainGraph == null || updatesViewModelReference.isInitialized()) updatesViewModel.detachHost(this)
         if (isFinishing && ::deviceAuthenticator.isInitialized) {
             val token = deviceAuthenticator.attachedAuthenticationToken()
             if (token != null) {
@@ -628,18 +726,21 @@ class MainActivity : FragmentActivity() {
             }
         }
         super.onDestroy()
+        QaInstrumentationScope.mainActivityDestroyed(this, ownMainGraph)
     }
 
     private fun refreshActiveSurfaces() {
+        activeMainGraph()
         workSetupViewModel.refreshReferenceDate()
         hoursAndExtrasViewModel.refresh()
         availabilityViewModel.refresh()
-        notificationViewModel.refreshSystemAccess()
+        refreshNotificationSurface()
         weatherViewModel.onResume()
         widgetViewModel.refresh()
     }
 
     private suspend fun handlePendingDestination(source: PendingMainDestination, isCurrent: () -> Boolean) {
+        activeMainGraph()
         val application = application as MiGuardiaApplication
         if (!application.startupRecoveryGate.isReady ||
             !application.accessLockCoordinator.state.value.allowsSensitiveContent ||
@@ -669,14 +770,15 @@ class MainActivity : FragmentActivity() {
             ?: return
         val shift = try {
             when (
-                val lookup = application.localDataStore.v2Shifts.getShift(shiftId)
+                val lookup = activityDataStore.v2Shifts.getShift(shiftId)
             ) {
                 is V2ShiftLookup.V2 -> lookup.write.shift
                 V2ShiftLookup.Missing -> null
             }
         } catch (cancelled: CancellationException) {
             throw cancelled
-        } catch (_: Exception) {
+        } catch (failure: Exception) {
+            ownMainGraph?.lease?.reject(failure)
             if (!isCurrent() ||
                 !application.accessLockCoordinator.state.value.allowsSensitiveContent || !application.startupRecoveryGate.isReady) throw CancellationException("Destination superseded")
             calendarViewModel.clearSelectedDate()
@@ -712,6 +814,17 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun captureIncomingDestination(source: Intent?) {
+        activeMainGraph()?.let { graph ->
+            try {
+                graph.incomingDestination(this, QaMainActivityGraph.IncomingDestination(
+                    source?.action, source?.component?.packageName, source?.component?.className,
+                    source?.dataString, source?.flags ?: 0,
+                    source?.hasExtra(EXTRA_OWNER_LOCAL_DATE) == true, source?.getStringExtra(EXTRA_OWNER_LOCAL_DATE),
+                    source?.hasExtra(EXTRA_SHIFT_ID) == true,
+                    java.util.Collections.unmodifiableSet(source?.extras?.keySet()?.toSet() ?: emptySet()),
+                ))
+            } catch (failure: Throwable) { graph.lease.reject(failure) }
+        }
         cancelDirections()
         val captured = PendingMainDestination.from(source) ?: run {
             setIntent(
@@ -723,7 +836,7 @@ class MainActivity : FragmentActivity() {
             )
             return
         }
-        (application as MiGuardiaApplication).pendingMainDestinations.capture(captured)
+        activityPendingDestinations.capture(captured)
         setIntent(captured.toSanitizedIntent(this))
     }
 

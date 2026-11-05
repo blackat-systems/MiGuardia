@@ -123,7 +123,9 @@ class Stage12NativeReceiptFilesTest {
 
     @Test fun nativeCompletionReceiptsHaveOnlyTheirOwnExplicitNamesAndPublishExclusively() {
         val files = temporary.newFolder("completion-files")
-        for (name in listOf("c090-identical-shifts", "w010-applied-widget", "x015-query-conservation")) {
+        for (name in listOf("c090-identical-shifts", "w010-applied-widget", "x015-query-conservation", "b1-owned-load-edit",
+            "owned-work-private-security", "owned-work-police", "owned-work-nursing", "owned-work-medicine",
+            "selection-batch-draft", "selection-batch-policies", "selection-batch-clear-cas", "selection-batch-recovery")) {
             val output = Stage12NativeReceiptFiles.prepareOutput(files, uuid, "exact-owner", name)
             assertEquals("$name.json", output.name)
             Stage12NativeReceiptFiles.publish(output, "safe-$name", null)
@@ -134,6 +136,63 @@ class Stage12NativeReceiptFilesTest {
         }
         assertThrows(IllegalArgumentException::class.java) {
             Stage12NativeReceiptFiles.prepareOutput(files, uuid, "exact-owner", "w023-unadmitted-resource")
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            Stage12NativeReceiptFiles.prepareOutput(files, uuid, "exact-owner", "owned-work-unreviewed")
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            Stage12NativeReceiptFiles.prepareOutput(files, uuid, "exact-owner", "selection-batch-unreviewed")
+        }
+    }
+
+    @Test fun recurringLifecycleReceiptsUseThreeExclusiveClosedSlots() {
+        val files = temporary.newFolder("recurring-files")
+        for (name in listOf("recurring-policies", "recurring-occurrences", "recurring-lifecycle")) {
+            val output = Stage12NativeReceiptFiles.prepareOutput(files, uuid, "exact-owner", name)
+            assertEquals("$name.json", output.name)
+            Stage12NativeReceiptFiles.publish(output, "safe-$name", null)
+            assertEquals("safe-$name", output.readText())
+            assertThrows(IllegalStateException::class.java) {
+                Stage12NativeReceiptFiles.prepareOutput(files, uuid, "exact-owner", name)
+            }
+        }
+        for (name in listOf("recurring-unreviewed", "recurring-policies/../other"))
+            assertThrows(IllegalArgumentException::class.java) {
+                Stage12NativeReceiptFiles.prepareOutput(files, uuid, "exact-owner", name)
+            }
+    }
+
+    @Test fun calendarExceptionReceiptsUseFourExclusiveClosedSlotsWithoutNativeAliases() {
+        val files = temporary.newFolder("calendar-exceptions-files")
+        for (name in listOf("calendar-medical", "calendar-situations", "calendar-holidays", "calendar-vacations")) {
+            val output = Stage12NativeReceiptFiles.prepareOutput(files, uuid, "exact-owner", name)
+            assertEquals("$name.json", output.name)
+            Stage12NativeReceiptFiles.publish(output, "safe-$name", null)
+            assertEquals("safe-$name", output.readText())
+            assertThrows(IllegalStateException::class.java) {
+                Stage12NativeReceiptFiles.prepareOutput(files, uuid, "exact-owner", name)
+            }
+        }
+        for (name in listOf("calendar-unreviewed", "calendar-medical/../other"))
+            assertThrows(IllegalArgumentException::class.java) {
+                Stage12NativeReceiptFiles.prepareOutput(files, uuid, "exact-owner", name)
+            }
+    }
+    @Test fun availabilityLifecycleReceiptsUseExactSlotsAndRejectReuse() {
+        val files = temporary.newFolder("availability-files")
+        for (name in listOf("availability-history", "availability-reviews", "availability-conflicts")) {
+            val receipt = Stage12NativeReceiptFiles.prepareOutput(files, uuid, "exact-owner", name)
+            assertEquals("$name.json", receipt.name)
+            Stage12NativeReceiptFiles.publish(receipt, "safe-$name", null)
+            assertEquals("safe-$name", receipt.readText())
+            assertThrows(IllegalStateException::class.java) {
+                Stage12NativeReceiptFiles.prepareOutput(files, uuid, "exact-owner", name)
+            }
+        }
+        for (name in listOf("availability-unreviewed", "availability-history/../other")) {
+            assertThrows(IllegalArgumentException::class.java) {
+                Stage12NativeReceiptFiles.prepareOutput(files, uuid, "exact-owner", name)
+            }
         }
     }
 

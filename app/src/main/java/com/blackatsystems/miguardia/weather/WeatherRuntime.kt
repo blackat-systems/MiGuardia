@@ -39,10 +39,11 @@ class WeatherRuntime(
     val clock: Clock = clock
 
     suspend fun refreshIfEnabled(shift: Shift, force: Boolean = false): WeatherRefreshResult? {
-        com.blackatsystems.miguardia.QaInstrumentationScope.requireExternalAction(context, "weather.network")
         if (!preferences.current().enabled) return null
         return cacheLifecycleMutex.withLock {
-            repositoryFor(shift)?.refreshIfStale(force)
+            val repository = repositoryFor(shift) ?: return@withLock null
+            com.blackatsystems.miguardia.QaInstrumentationScope.requireExternalAction(context, "weather.network")
+            repository.refreshIfStale(force)
         }
     }
 

@@ -6,7 +6,7 @@
 - Fecha: 2026-08-20
 
 > Actualización 2026-08-22: PLANIFICACIÓN quedó cerrada y MAIN está activo bajo
-> `docs/PROMPT_MAESTRO_MAIN_2_0.md`. La pausa anterior quedó superada; esta ADR
+> `PROMPT_MAESTRO_MAIN_2_0.md` (antecedente en el archivo). La pausa anterior quedó superada; esta ADR
 > continúa definiendo únicamente la base aislada y protegida de MiGuardia 2.0.
 >
 > Actualización 2026-08-23: 1.0 continúa siendo la base de código, pero nunca

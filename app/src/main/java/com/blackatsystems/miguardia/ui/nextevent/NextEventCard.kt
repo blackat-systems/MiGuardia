@@ -27,6 +27,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.blackatsystems.miguardia.core.domain.nextevent.NextEventItem
@@ -291,7 +292,7 @@ private fun ShiftIdentity(shift: NextEventItem.Shift) {
                 fontWeight = FontWeight.SemiBold,
             )
             Text(
-                shift.eventTimeRange(EventTimeRangeStyle.COMPACT),
+                AnnotatedString(shift.eventTimeRange(EventTimeRangeStyle.COMPACT)),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
             )
@@ -411,7 +412,7 @@ private fun AvailabilityContent(
         Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
         Text(event.labelSnapshot, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
         Text(
-            event.eventTimeRange(EventTimeRangeStyle.COMPACT_DATED),
+            AnnotatedString(event.eventTimeRange(EventTimeRangeStyle.COMPACT_DATED)),
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.SemiBold,
         )

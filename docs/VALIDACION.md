@@ -6,7 +6,7 @@ Este catálogo define qué ejecutar y cómo registrar evidencia. El alcance auto
 
 Python 3.11+ y biblioteca estándar; Java/JBR compatible con el wrapper y SDK Android 37. No se instalan herramientas ni se cambian versiones automáticamente. `local.properties` y firmas permanecen privados.
 
-| Cambio | Comprobación necesaria |
+| Cambio | Comprobación necesaria para el cierre |
 |---|---|
 | Sólo documentos/índices | `python tools/docs_check.py` y diff del alcance; no compilar Android por ritual |
 | Herramientas Python | `python -m unittest discover -s tools/tests -v`, planes y casos de rechazo pertinentes |
@@ -15,6 +15,8 @@ Python 3.11+ y biblioteca estándar; Java/JBR compatible con el wrapper y SDK An
 | Kotlin/Compose/Gradle/recursos | Perfil local y `build`; revisión dirigida y QA por superficie si cambia comportamiento |
 | Room/migración | Lo anterior más esquema e instrumentación de base autorizada; no aceptar sólo compilación |
 | Candidato transversal/Release | `full` y matriz de superficie; verificaciones específicas del contrato Release |
+
+Durante la iteración, usar pruebas dirigidas y compilaciones de lo afectado, registrando insumos, resultado, alcance y pendientes. Estos controles no cierran la capacidad ni sustituyen obligaciones. Al cerrar la capacidad o candidata, completar el perfil exigido por impacto o justificar qué evidencia vigente se reutiliza; una entrega parcial conserva sus pendientes y siguiente dueño. Una prueba mínima no modifica admisiones, permisos ni protocolos QA vigentes.
 
 `local` ejecuta las pruebas Debug de dominio, database y app. La categoría JUnit `WebCryptoInterop` se ejecuta sólo en `interop`; se mantiene fuera de las pruebas locales para que éstas sean autosuficientes. No presentar `local` como interoperabilidad completa.
 

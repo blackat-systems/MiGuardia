@@ -316,8 +316,10 @@ class CalendarViewModel(
         }
     }
 
-    fun saveMedicalLeave(previous: MedicalLeave?, start: LocalDate, end: LocalDate, note: String?) {
-        launchStage2 {
+    fun saveMedicalLeave(previous: MedicalLeave?, start: LocalDate, end: LocalDate, note: String?,
+        onResult: (Boolean) -> Unit = {},
+    ) {
+        launchStage2(onResult) {
             require(!end.isBefore(start)) { "La fecha final no puede ser anterior a la inicial." }
             val now = Instant.ofEpochMilli(clock.millis())
             val value = MedicalLeave(
@@ -434,16 +436,21 @@ class CalendarViewModel(
         }
     }
 
-    private fun launchStage2(block: suspend () -> String) {
-        if (_uiState.value.stage2Busy) return
+    private fun launchStage2(onResult: (Boolean) -> Unit = {}, block: suspend () -> String) {
+        if (_uiState.value.stage2Busy) {
+            onResult(false)
+            return
+        }
+        _uiState.update { it.copy(stage2Busy = true, stage2Message = null) }
         viewModelScope.launch {
-            _uiState.update { it.copy(stage2Busy = true, stage2Message = null) }
+            var succeeded = false
             val message = try {
-                block()
+                block().also { succeeded = true }
             } catch (error: Exception) {
                 error.message ?: "No se pudo guardar el cambio. Revisá los datos e intentá nuevamente."
             }
             _uiState.update { it.copy(stage2Busy = false, stage2Message = message) }
+            onResult(succeeded)
         }
     }
 

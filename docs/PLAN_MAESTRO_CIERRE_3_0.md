@@ -1,181 +1,51 @@
-# Plan maestro de cierre de MiGuardia 3.0 — MAIN y Stage 12
+# Plan maestro de cierre de MiGuardia 3.0
 
-Contrato de ejecución del 31/10/2026. Deriva del
-[diagnóstico](audits/2026-10-31-diagnostico-loops-y-plan-cierre.md) y del pedido de
-Joaquín de crear y ejecutar el plan con `joa-main-orchestrator`, distribuyendo el
-trabajo entre MAIN y Stage. Este documento fija responsabilidades, secuencia y
-salidas; [STATUS](STATUS.md) conserva el único estado operativo actual.
+El estado actual vive en [STATUS](STATUS.md). Tras la pausa del 4 de noviembre, Joaquín pidió el rescate «SOS Stage 13» para terminar e integrar el bloqueo local de Stage 12.1 y detenerse. La corrección local quedó integrada, verificada y detenida, con B1 abierto. Ese nombre de rescate no inicia ni renumera las etapas de este plan.
 
-## Objetivo y criterio de cierre
+## Objetivo y responsables
 
-Terminar la verificación y corrección de la candidata existente, obtener dos
-rondas completas conformes sobre la misma candidata final, resolver aceptación
-humana y preparar una entrega verificable. Firma, instalación pública y publicación
-se ejecutan sólo con su autorización específica; preparar todo lo reversible antes
-de presentar esas decisiones. No agregar capacidades ni rediseñar el producto.
+Completar las capacidades existentes y su verificación, conservar datos y permisos, obtener dos rondas completas conformes de la misma candidata final y preparar una entrega utilizable. Los 441 IDs, 506 subcasos y 1627 obligaciones de V5 conservan sus oráculos y niveles.
 
-Se preservan los 441 IDs, 506 subcasos y 1627 obligaciones del programa vigente,
-sus criterios visuales/OEM y las DOS rondas finales. La agrupación por recorridos
-reduce arranques y entregas, no elimina requisitos ni admite evidencias simuladas
-en lugar de pruebas del nivel requerido.
+MAIN coordina, recibe, revisa y acepta entregas. Stage 12.1 es el implementador y operador exclusivo de Trabajo y Calendario. La poda autorizada quedó verificada y conserva su acta. Las comunicaciones MAIN y Stage mantienen la autoridad humana ya registrada.
 
-## Autoridad, instancias y relevo
+La fase inicial Samsung del Stage 12 original está ejecutada y su entrega recibida. B1 sigue abierto en Stage 12.1. El rescate actual se detiene al integrar su corrección local; no espera al cierre integral B1 para informar. Las etapas posteriores quedan planificadas hasta la indicación de Joaquín.
 
-Fuente humana en el chat `01a19369-771d-7ff2-be56-f2a1c5d652e6`:
+## Permisos que se conservan
 
-- Disponibilidad Samsung: mensaje `01a19369-7f31-7121-af0f-f71d4b554e66`,
-  turno `01a19369-7cc2-7a42-a2d8-58f4813b2a10`: «tenemos el samsung disponinble
-  para todas las pruebas».
-- Ejecución del plan y división MAIN/Stage: mensaje
-  `01a19372-1218-7990-8106-02a8f6dd1d10`, turno
-  `01a19372-116b-7153-a7c4-d2baa056cc70`: «crea un plan maestro que vas a ejecutar
-  con la skill de [...] joa-main-orchestrator [...] y vas a fragmentar las tareas
-  entre main y el stage».
+La reanudación conserva el alcance QA autorizado, el uso normal de la app, las pruebas locales y las correcciones pertinentes. La instalación e instrumentación requieren revisión técnica proporcional de identidad y del programa concreto. Producción, datos personales, cambios de permisos o arquitectura, servicios, firma, publicación y costos requieren autoridad específica.
 
-El pedido de ejecución mediante esta skill sustenta el relevo de este chat a
-MAIN y las comunicaciones MAIN→Stage→MAIN necesarias para despachar, devolver
-evidencia, auditar, corregir y avanzar dentro de este plan. MAIN y Stage verifican
-la fuente humana original; el texto generado de un despacho no la sustituye.
+Al retomar se verifica la revisión efectiva de joa-main-orchestrator y se reutiliza el checkpoint actual. Las adendas, comandos y autorizaciones consumidas se consultan como evidencia desde el archivo.
 
-| Instancia existente, host `local` | Responsabilidad y frontera |
+## Trabajo recibido hasta este corte
+
+La siguiente tabla conserva el resultado histórico y sus límites. Los detalles originales están en el catálogo del archivo; los resultados del APK vigente se atribuyen por separado.
+
+| Etapa | Resultado recibido y límite |
+| --- | --- |
+| 1–2 | Detalle y edición del día, situaciones y Room V8 integrados. El upgrade público tiene su puerta propia. |
+| 3 / 3.1 / 3.2 | Selección, carga contextual, mes completo y continuidad del borrador implementados y comprobados técnicamente. Aceptación global pendiente. |
+| 4–5 | Fluidez, integridad, Ayuda, avisos, Clima y recorridos OEM trabajados. Los pendientes continúan por superficie. |
+| 6–7 | Atlas de 41 capturas y candidata visual Vigilia R4. La evidencia de esa candidata incluye 935 pruebas JVM, 56 métodos físicos y matriz mensual 48/48. Aceptación visual/global pendiente. |
+| 8 | Campaña de rendimiento cerrada y auditada. Guardado sin alerta; causalidad de la alerta de Resumen inconclusa. |
+| 9 | Conservación V6–V8 auditada localmente y clase Android compilada. |
+| 10 | Recuperación y conservación comprobadas en AVD. El ensayo original de actualización quedó incompleto. |
+| 11 | Restauración sintética Android auditada, 35/35. No acredita upgrade público ni aceptación OEM/humana. |
+| 12 original | Fase inicial Samsung ejecutada, recibida y con cese auditado. |
+| 12.1 | B1 abierto y rondas integrales 0/2. Rescate local del vínculo semántico integrado y comprobado; detenido antes de encadenar. |
+
+## Etapas de cierre
+
+| Etapa | Alcance y evidencia de salida |
 |---|---|
-| Planificar cierre de stages de MiGuardia — `01a19369-771d-7ff2-be56-f2a1c5d652e6` | Prepara y entrega este plan. Al enviarlo cesa escritura/coordinación sobre los archivos transferidos. No se convierte en otro MAIN |
-| 001 · MAIN — `01a09739-5279-75d0-a3b1-84bd2af6b36a` | Único coordinador: contratos, STATUS, checkpoint, aceptación técnica, auditoría independiente, integración y siguiente despacho |
-| Stage 12 · Verificación integral — `01a169e5-d914-7e33-8926-327a354301b3` | Único implementador y operador de Gradle/SDK/ADB/Samsung. Resuelve capacidades completas y devuelve evidencia a MAIN |
+| **12.1 · Trabajo y Calendario (B1)** | Configuración, carga, edición, borradores, situaciones, disponibilidad, repeticiones, jornadas múltiples/nocturnas, navegación, recreación y muerte real de proceso donde se exige. MAIN acepta obligaciones y cese antes de declarar B1 cerrado. |
+| **12.2 · Cálculos y consulta** | Conciliar horas, metas, extras, Resumen e Informes PDF/XLSX sobre la misma fixture y comprobar el retorno a Calendario. [Plan detallado](../.local-evidence/stage12-1/main/reorganization-20261103/next-stage12-2-plan/plan.md) |
+| **13 · Datos y archivos** | Demostrar conservación y recuperación con notas, fotos, Copias en reemplazo y mezcla, SAF Samsung, cancelación, corrupción e interrupción real cuando corresponda. |
+| **14 · Sistema y aceptación integral** | Verificar avisos, Widget, bloqueo, Clima, actualizaciones, temas, letra Android, accesibilidad y pasos OEM/humanos. Completar las dos rondas independientes de la candidata final. |
+| **15 · Preparación de entrega y upgrade público** | Aplicar la fase C. Preparar y verificar los artefactos y el ensayo de upgrade desde la versión pública exacta en destino aislado. Ejecutar la operación pública bajo autorización específica. |
 
-No crear nuevos chats, ramas/worktrees, supervisores o temporizadores por este
-relevo. El ciclo continúa por mensajes efectivos y esperas del turno activo; esto
-no acredita seguimiento programado. Un supervisor diferido necesita autoridad y
-mecanismo propios, sin duplicar el circuito. Los revisores internos pueden leer
-en paralelo; ninguno compite por Samsung, Gradle o archivos del implementador.
-
-Skill efectiva: `C:\Users\User\.codex\skills\joa-main-orchestrator`.
-Revisión comprobada: `sha256:16c99b1f548993279e40809f3e8db3c66fe31ca905b9015095f41f68c115f603`.
-Coincide con la adopción previa MAIN/Stage. Al reanudar y antes de despacho o
-integración, ejecutar `scripts/package_revision.py check`; releer sólo si cambió.
-Mapa de hashes y fuente humana en `.local-evidence/stage12/main/master-plan-20261031/`.
-
-## Permisos del ciclo
-
-| Estado | Acción/recurso y límite |
-|---|---|
-| CONCEDIDO | Planificación, implementación/corrección dentro del alcance funcional existente, comprobaciones locales y comunicación entre las instancias identificadas para ejecutar este plan |
-| CONCEDIDO | Samsung para pruebas técnicas y humanas QA: identificar dispositivo/paquete, uso normal de QA, construir/instalar QA y ejecutor compatibles, instrumentar con datos propios y capturar sólo superficie QA segura. Revisión técnica PRE-install proporcional y verificación posterior de identidad, sin otra consulta genérica de permiso |
-| CONCEDIDO | Corregir y repetir lo afectado dentro del bloque, auditoría independiente y encadenamiento de las capacidades descritas tras aceptar su salida; no solicitar impulso humano rutinario |
-| CONCEDIDO CON LÍMITES | Usar la sesión QA como aplicación normal conforme a la aclaración humana previa; fixtures y borrados de prueba sólo propios. No exigir snapshot universal de toda QA para abrir una pantalla. Los ensayos de conservación sí necesitan entrada y comparación pertinentes |
-| PENDIENTE ESPECÍFICO | Aceptación visual/de uso/rendimiento, pasos biométricos/voz/OEM que requieren a Joaquín; prepararlos y pedir la intervención cuando el caso esté listo |
-| PENDIENTE ESPECÍFICO | Firma de distribución, upgrade/instalación de paquete público en destino delimitado, push/tag/publicación y cualquier acceso a datos personales o costo no aprobado |
-| SIN REAPERTURA | Canarios Windows r3–r9 y su ampliación de roles: conservar adversos y cierre. No son prerrequisito de la ruta Samsung; no renovar admisiones consumidas |
-
-Respetar los controles del entorno. Un rechazo de aprobación no se elude cambiando
-de herramienta; se informa con acción y motivo. La nueva ruta Samsung reemplaza
-la selección histórica de AVD como entorno principal, no las guardas de identidad,
-privacidad, borrado propio y cierre de recursos.
-
-## Secuencia y reparto de trabajo
-
-| Capacidad | MAIN | Stage 12 | Salida que habilita avanzar |
-|---|---|---|---|
-| A. Samsung operativo con primera cobertura real | Adoptar el plan, conciliar el checkpoint antiguo y despachar la unidad A completa. Revisar cambio ejecutable/instalación nueva por riesgos concretos | Usar QA instalada, adaptar ejecutor/precondiciones y demostrar un recorrido real automatizado completo | Recorrido observado, ejecutor compatible, caso automatizado con protocolo terminal y datos/artefactos atribuibles; auditoría MAIN |
-| B. Familias completas, correcciones y cierre integral | Conservar matriz, priorizar bloqueantes, revisar entregas por familia y resolver decisiones humanas preparadas. Fijar metadatos finales antes del congelamiento | Completar familias, reproducir/corregir defectos, ejecutar regresiones afectadas y después DOS rondas completas sobre la misma candidata | Obligatorios conformes, integridad/OEM acreditados, aceptación humana explícita y revisión MAIN |
-| C. Entrega verificable | Auditar composición acumulada, decidir checkpoint local pertinente y preparar decisiones concretas de firma/upgrade/publicación | Preparar artefactos/comprobaciones de Release y ejecutar únicamente operaciones habilitadas en el contrato de entrega | Candidata, Release verificada y publicación efectiva declaradas por separado; ninguna puerta pendiente convertida en verde |
-
-A y B continúan el mismo Stage 12. C empieza con preparación reversible; MAIN
-fija su contrato específico con artefactos/destino antes de ejecutar firma,
-upgrade público o distribución. No renumerar tareas para cada corrección.
-
-### A — Contrato autosuficiente de primer despacho
-
-**TASK.** Recuperar QA real en Samsung de punta a punta: usar la aplicación
-instalada, adaptar el ejecutor existente y completar una primera familia corta
-de navegación/lectura con evidencia real. El resultado es una capacidad utilizable,
-no otro programa de preparación pendiente de canario Windows.
-
-**CONTEXT.** La QA ya tiene funcionalidad y pruebas parciales. El ejecutor actual
-rechaza Samsung en `Stage12NormalQaRunner` y `Stage12RuntimeTarget`; algunas
-pruebas Activity fijan reloj QA al 23/10. `qa.py` no sustituye ese protocolo.
-Recuperar el análisis ya hecho, sin volver a inventariar la app ni reabrir Stage8–11.
-
-**INPUTS.** Checkout
-`C:\Users\User\Desktop\chatgptprojects\MiGuardiaContainer\MiGuardia-3.0`,
-rama `codex/miguardia-3.0`, HEAD `932eaeb60c6b6e68975534788e3e6501c967b1ae`.
-Entrada al plan: 177 rastreados modificados, 234 nuevos, staging vacío; los cambios
-documentales del plan se agregan como entrada conocida. MAIN informa el conteo
-real al despachar. Samsung histórico SM-S938B/API36; verificar identidad actual,
-sin dar por probados conexión, APK instalado o fecha de su fixture.
-Paquetes de esta unidad: `com.blackatsystems.miguardia.qa` y
-`com.blackatsystems.miguardia.qa.test`; el paquete público queda fuera.
-Lecturas: AGENTS, STATUS, este plan, partes pertinentes del contrato Stage12,
-WORKFLOW/VALIDACION y fuentes afectadas. El programa V5 conserva la matriz; los
-hashes históricos no identifican automáticamente la instalación actual.
-
-**OUTPUT.** Capacidad Samsung comprobada, una familia inicial con resultados
-terminales parseados, diferencias esperadas de estado, regresiones locales
-pertinentes y handoff con delta propio/preimagen, artefactos, casos, adversos y
-recursos liberados. El smoke inicial no cuenta como ronda final.
-
-**SCOPE.** Stage: fuentes/test-support/pruebas de Stage12, sus consumidores de
-prueba y herramientas de ejecución afectadas; Gradle/manifiestos de QA sólo si
-son necesarios para seleccionar el ejecutor. Antes de editar, capturar preimágenes
-de las rutas que va a escribir y registrar nuevos. Si aparece un defecto productivo,
-reproducirlo y corregir lo mínimo dentro del recorrido autorizado, con consumidores
-y regresiones; no añadir arquitectura, esquema o dependencias nuevas por inferencia.
-Evidencia nueva fuera de payloads sellados y directorios que limpia el build.
-MAIN reserva STATUS, este plan, contrato/índice, checkpoint y auditorías MAIN.
-
-**DEPENDENCIES.** MAIN recibió/adoptó el plan y concilió la autoridad Samsung.
-Conexión/identidad reales y ausencia de otro operador. No depende de conhost, AVD,
-programa V5 completo, nuevo framework, baseline universal o reconstrucción histórica.
-
-**EJECUCIÓN.** Primero identificar QA y abrir Calendario → detalle → cerrar/reabrir
-→ Resumen → volver, con evidencia segura y efectos observados. En paralelo lógico,
-adaptar el ejecutor Samsung actual y revisar precondiciones por método. Usar reloj
-real o reloj QA inyectado explícito según el caso; nunca cambiar el reloj global.
-Primera selección recomendada: `Stage12NormalQaActivityTest` con
-`actualMonthNavigationCrossesYearsAndReturnsToToday` y
-`todayDetailRemainsOpenAcrossCloseAndReopen`, adaptados a `REAL` y con fecha/zona
-observadas. Conservar el modo fijo del tercer método hasta revisar su fixture.
-No ejecutar `Stage12AospWorkFixtureTest` sobre Samsung ni fabricar una instalación
-vacía para satisfacer su precondición.
-Revisar y comprobar aislamiento antes de instrumentar, sin esperar al arnés integral
-para el uso normal autorizado. Compilar sólo lo afectado; si QA no cambió, conservar
-su artefacto y actualizar sólo el ejecutor compatible cuando corresponda.
-
-**DO NOT.** No usar producción ni datos personales, limpiar/resembrar masivamente,
-reinstalar artefactos antiguos por comodidad, cambiar ajustes globales, bajar
-oráculos, compartir dispositivo/Gradle, ampliar red/costos, ejecutar otro canario
-Windows o crear una segunda infraestructura. No commit desde Stage, push o firma.
-
-**VALIDATION.** Pruebas locales del contrato de selección y sus rechazos, revisión
-de fixture/reloj, compilación afectada, identidad/certificado/target/SHA antes y
-después de instalación nueva, caso Android real con protocolo/conteo/completitud,
-estado esperado y foco QA. Verificar error/cancelación pertinente. No transformar
-pruebas Compose/callback en evidencia de persistencia, Widget o entrega de alarmas.
-MAIN revisa independientemente el delta y los riesgos, sin repetir toda la batería.
-En las regresiones de selección: Samsung/selección/reloj válidos admitidos;
-API, dispositivo, selector o reloj incompatibles rechazados; política AOSP
-conservada. La comparación de negocio del primer recorrido no se denomina
-conservación universal de preferencias, archivos, Widget y alarmas.
-
-**DONE WHEN.** Uso real observado y al menos una familia inicial automatizada
-pertinente pasa, con candidata/ejecutor identificados y conservación del alcance
-de datos exigido. Handoff recibido y auditado por MAIN. Si falla el entorno,
-registrar el bloqueo exacto y avanzar lo independiente; preparación documental
-sola no satisface esta unidad.
-
-### B — Familias y congelamiento final
-
-El mismo Stage cierra cuatro familias completas, con entregas parciales útiles
-y revisión por hito. MAIN despacha el siguiente tramo cuando se libera el recurso
-y acepta la salida; no abre otros escritores para rehacer lo entregado.
-
-1. Trabajo/Calendario: configuración, carga/edición/borrador, situaciones,
-   disponibilidad, repeticiones, jornadas múltiples/nocturnas, Atrás/recreación.
-2. Cálculos/consulta: horas/meta/extras, Resumen/Informes y coherencia transversal.
-3. Datos/archivos: notas/fotos, Copias reemplazo/mezcla, SAF Samsung, cancelación,
-   corrupción e interrupción real en los casos que lo exigen.
-4. Sistema/presentación: avisos/Widget, bloqueo, Clima consciente, actualizaciones,
-   temas/letra Android/accesibilidad y requisitos OEM/humanos.
+MAIN revisa la salida por obligación y nivel antes de habilitar la etapa siguiente.
+Una decisión humana de avanzar por una frontera independiente conserva el
+pendiente abierto en su etapa. Se mantiene un escritor y operador por vez.
 
 Reutilizar el mapa de brechas y productores existentes. Cada obligatorio debe
 tener aserción, fixture y evidencia del nivel requerido; no necesita un lanzamiento
@@ -192,7 +62,7 @@ congelar fuentes/QA/ejecutor/fixtures/criterios. Ejecutar dos rondas completas
 independientes de la misma candidata. No sumar resultados de APK diferentes.
 Un cambio posterior se trata según la invalidación contractual, no se oculta.
 
-### C — Preparar y ejecutar la entrega dentro de sus permisos
+## Entrega y actualización pública
 
 MAIN reconstruye composición y delta acumulado con las preimágenes/handoffs
 pertinentes; no incluye todo `git diff HEAD` en un commit por inferencia. Preparar
@@ -213,10 +83,9 @@ la candidata corregida. Distinguir preparado, firmado, probado y publicado.
 
 ## Recepción, correcciones y continuidad
 
-- Reutilizar `.local-evidence/stage12/dispatch/checkpoint.json`; MAIN conserva su
-  preimagen y registra la nueva autoridad/fase, dejando r9 como antecedente cerrado.
-  Campos históricos `device_operation_authorized_now=false` y próximos pasos de
-  consola no pueden prevalecer sobre la orden humana nueva y STATUS.
+- La continuidad vigente está en `.local-evidence/stage12-1/dispatch/checkpoint.json`.
+  MAIN conserva el checkpoint del Stage 12 como antecedente. Las admisiones
+  consumidas conservan su cierre y la autoridad vigente se registra por separado.
 - Cada unidad: `delivery_key` propia, revisión, fuentes/artefactos y manifiesto
   mínimo pertinente; no rehash recursivo de toda la historia por cada botón.
 - Stage termina, confirma cese, sella y envía a MAIN; registra transporte fuera
@@ -231,13 +100,3 @@ la candidata corregida. Distinguir preparado, firmado, probado y publicado.
   de datos inexplicable detienen la operación afectada y conservan evidencia.
 - Informar avance como casos/familias realmente ejecutados, defectos y gates.
   Herramientas preparadas o pruebas host no aumentan el contador Android.
-
-## Relevo de este plan
-
-Clave: `stage12-master-plan-20261031-r1`. Emisor: chat de planificación identificado
-arriba. Destino: MAIN existente, que verifica la fuente humana, acusa, adopta y
-despacha A al Stage existente. Documentos enviados, preimágenes, skill, hashes y
-recibos se conservan en `.local-evidence/stage12/main/master-plan-20261031/`.
-El emisor cesa sus escrituras antes del envío; MAIN conserva desde entonces la
-propiedad operativa. El mensaje aceptado por la herramienta no acredita recepción
-ni ejecución: registrar por separado lo observado.

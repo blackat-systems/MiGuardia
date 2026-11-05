@@ -6,15 +6,9 @@ import android.database.sqlite.SQLiteDatabase
 import android.os.Build
 import android.util.Base64
 import java.io.File
+import java.nio.file.Files
 import org.w3c.dom.Element
 import org.w3c.dom.Node
-
-internal data class Stage12TableSnapshot(val columns: List<String>, val rows: List<List<String>>)
-internal data class Stage12StoreSnapshot(
-    val tables: Map<String, Stage12TableSnapshot>,
-    val preferences: Map<String, String>,
-    val files: Map<String, Stage12FileSnapshot>,
-)
 
 /** Independent, read-only QA observation. Values remain in memory; receipts use only digests/counts. */
 internal object Stage12FullStoreReadback {
@@ -24,45 +18,116 @@ internal object Stage12FullStoreReadback {
     fun text(value: String): String = "T:" + base64(value.toByteArray(Charsets.UTF_8))
     fun integer(value: Long): String = "I:$value"
 
-    fun capture(context: Context): Stage12StoreSnapshot = try {
-        captureChecked(context)
+    /** Same complete typed reader, bound to the temporal RUN, exact variant and fixture role. */
+    fun captureTemporalOwned(
+        context: Context,
+        run: String,
+        scope: Stage12TemporalScope,
+        binding: Stage12TemporalPaths,
+        observe: (Stage12NativeDiagnostics.ReadbackPhase) -> Unit = {},
+    ): Stage12StoreSnapshot = run {
+        observe(Stage12NativeDiagnostics.ReadbackPhase.CONTEXT)
+        check(context.packageName == QA) { "READBACK_CONTEXT_NOT_QA" }
+        check(binding.run == run && binding.scope == scope) { "TEMPORAL_READBACK_BINDING_FOREIGN" }
+        binding.requireStored(stage12RecurringPathAccess(context))
+        observe(Stage12NativeDiagnostics.ReadbackPhase.INVENTORY_BEFORE)
+        val inventory = Stage12PrivateInventory(binding.privateRoot, null)
+        val before = inventory.capture()
+        observe(Stage12NativeDiagnostics.ReadbackPhase.PREFERENCES)
+        val preferences = readPreferences(inventory, before)
+        val tables = readDatabase(binding.database.canonicalFile, observe)
+        observe(Stage12NativeDiagnostics.ReadbackPhase.INVENTORY_AFTER)
+        val after = inventory.capture()
+        observe(Stage12NativeDiagnostics.ReadbackPhase.INVENTORY_COMPARE)
+        check(before == after) { "READBACK_FILES_CHANGED_DURING_SNAPSHOT" }
+        Stage12StoreSnapshot(tables, preferences, after)
+    }
+
+    /** Same typed SQL reader, explicitly fenced to this RUN's synthetic recurring fixture. */
+    fun captureRecurringOwned(
+        context: Context,
+        run: String,
+        variant: String,
+        binding: Stage12RecurringPaths,
+        observe: (Stage12NativeDiagnostics.ReadbackPhase) -> Unit = {},
+    ): Stage12StoreSnapshot = run {
+        observe(Stage12NativeDiagnostics.ReadbackPhase.CONTEXT)
+        check(context.packageName == QA) { "READBACK_CONTEXT_NOT_QA" }
+        val ownCase = Stage12RecurringCase.fromWire(variant)
+        check(binding.run == run && binding.ownCase == ownCase)
+        binding.requireStored(stage12RecurringPathAccess(context))
+        val database = binding.database
+        val ownRoot = binding.privateRoot
+        observe(Stage12NativeDiagnostics.ReadbackPhase.INVENTORY_BEFORE)
+        val inventory = Stage12PrivateInventory(ownRoot, null)
+        val before = inventory.capture()
+        observe(Stage12NativeDiagnostics.ReadbackPhase.PREFERENCES)
+        val preferences = readPreferences(inventory, before)
+        val tables = readDatabase(database.canonicalFile, observe)
+        observe(Stage12NativeDiagnostics.ReadbackPhase.INVENTORY_AFTER)
+        val after = inventory.capture()
+        observe(Stage12NativeDiagnostics.ReadbackPhase.INVENTORY_COMPARE)
+        check(before == after) { "READBACK_FILES_CHANGED_DURING_SNAPSHOT" }
+        Stage12StoreSnapshot(tables, preferences, after)
+    }
+
+    fun capture(
+        context: Context,
+        observe: (Stage12NativeDiagnostics.ReadbackPhase) -> Unit = {},
+        changedFiles: (Map<String, Stage12FileSnapshot>, Map<String, Stage12FileSnapshot>) -> Unit = { _, _ -> },
+    ): Stage12StoreSnapshot = try {
+        captureChecked(context, observe, changedFiles)
     } catch (error: Exception) {
         // JUnit prints exception causes/suppressed entries. Keep paths, SQL and preference
         // values private even when Android/NIO/parser errors contain them in messages.
-        val code = error.message?.takeIf { it.matches(Regex("READBACK_[A-Z0-9_]+")) }
-            ?: "READBACK_CAPTURE_FAILED"
-        throw IllegalStateException(code)
+        throw IllegalStateException(Stage12NativeDiagnostics.readbackCode(error.message))
     }
 
-    private fun captureChecked(context: Context): Stage12StoreSnapshot {
+    private fun captureChecked(
+        context: Context,
+        observe: (Stage12NativeDiagnostics.ReadbackPhase) -> Unit,
+        changedFiles: (Map<String, Stage12FileSnapshot>, Map<String, Stage12FileSnapshot>) -> Unit,
+    ): Stage12StoreSnapshot {
+        observe(Stage12NativeDiagnostics.ReadbackPhase.CONTEXT)
         check(context.packageName == QA) { "READBACK_CONTEXT_NOT_QA" }
+        observe(Stage12NativeDiagnostics.ReadbackPhase.INVENTORY_ROOT)
         val root = File(context.applicationInfo.dataDir).canonicalFile
         val inventory = Stage12PrivateInventory(root, context.applicationInfo.nativeLibraryDir?.let(::File))
         val database = inventory.databaseFile()
         check(context.getDatabasePath(DATABASE).canonicalFile == database) { "READBACK_DATABASE_NOT_EXISTING" }
+        observe(Stage12NativeDiagnostics.ReadbackPhase.INVENTORY_BEFORE)
         val first = inventory.capture()
+        observe(Stage12NativeDiagnostics.ReadbackPhase.PREFERENCES)
         val preferences = readPreferences(inventory, first)
-        val tables = readDatabase(database)
+        val tables = readDatabase(database, observe)
+        observe(Stage12NativeDiagnostics.ReadbackPhase.INVENTORY_REVERIFY)
         inventory.databaseFile()
+        observe(Stage12NativeDiagnostics.ReadbackPhase.INVENTORY_AFTER)
         val second = inventory.capture()
+        observe(Stage12NativeDiagnostics.ReadbackPhase.INVENTORY_COMPARE)
+        if (first != second) changedFiles(first, second)
         check(first == second) { "READBACK_FILES_CHANGED_DURING_SNAPSHOT" }
         return Stage12StoreSnapshot(tables, preferences, second)
     }
 
-    private fun readDatabase(file: File): Map<String, Stage12TableSnapshot> {
+    private fun readDatabase(file: File, observe: (Stage12NativeDiagnostics.ReadbackPhase) -> Unit): Map<String, Stage12TableSnapshot> {
+        observe(Stage12NativeDiagnostics.ReadbackPhase.DATABASE_OPEN)
         val db = SQLiteDatabase.openDatabase(file.path, null,
             SQLiteDatabase.OPEN_READONLY or SQLiteDatabase.NO_LOCALIZED_COLLATORS)
-        check(db.isReadOnly) { "READBACK_DATABASE_NOT_READONLY" }
         var primary: Throwable? = null
         try {
+            check(db.isReadOnly) { "READBACK_DATABASE_NOT_READONLY" }
             // API 35+ exposes a real read-only DEFERRED transaction. execSQL("BEGIN ...")
             // may be intercepted by SQLiteSession with different transaction semantics.
+            observe(Stage12NativeDiagnostics.ReadbackPhase.DATABASE_TRANSACTION)
             check(Build.VERSION.SDK_INT >= 35) { "READBACK_READONLY_TRANSACTION_API_UNAVAILABLE" }
             db.beginTransactionReadOnly()
+            observe(Stage12NativeDiagnostics.ReadbackPhase.DATABASE_SCHEMA)
             val names = db.rawQuery("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name", null).use { cursor ->
                 buildList { while (cursor.moveToNext()) add(cursor.getString(0)) }
             }
             check(names.isNotEmpty() && "shifts" in names && "shift_work_snapshots" in names) { "READBACK_WRONG_DATABASE_SCHEMA" }
+            observe(Stage12NativeDiagnostics.ReadbackPhase.DATABASE_ROWS)
             val result = linkedMapOf<String, Stage12TableSnapshot>()
             (names + "sqlite_master").distinct().sorted().forEach { name ->
                 val escaped = name.replace("\"", "\"\"")
@@ -73,6 +138,7 @@ internal object Stage12FullStoreReadback {
                     Stage12TableSnapshot(cursor.columnNames.toList(), rows)
                 }
             }
+            observe(Stage12NativeDiagnostics.ReadbackPhase.DATABASE_TRANSACTION_END)
             db.setTransactionSuccessful()
             db.endTransaction()
             return result
@@ -81,9 +147,17 @@ internal object Stage12FullStoreReadback {
             try { if (db.inTransaction()) db.endTransaction() } catch (secondary: Throwable) { retain(error, secondary) }
             throw error
         } finally {
+            var observationFailure: Throwable? = null
+            try { if (primary == null) observe(Stage12NativeDiagnostics.ReadbackPhase.DATABASE_CLOSE) }
+            catch (error: Throwable) { observationFailure = error }
             try { db.close() } catch (secondary: Throwable) {
-                if (primary == null) throw secondary else retain(primary, secondary)
+                when {
+                    primary != null -> retain(primary, secondary)
+                    observationFailure != null -> retain(observationFailure, secondary)
+                    else -> throw secondary
+                }
             }
+            observationFailure?.let { throw it }
         }
     }
 

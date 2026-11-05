@@ -31,6 +31,36 @@ class Stage12NormalQaRunner : AndroidJUnitRunner() {
     private var sanitizedReadinessFailure = false
     private var lastSafeReadinessFailure: Stage12ActivityAdmission? = null
     private var summaryReport: Stage12SummaryObservation? = null
+    private var activeSelector: String? = null
+    private var temporalMainGraph: com.blackatsystems.miguardia.QaMainActivityGraph? = null
+    private var temporalMainMethodComplete = false
+    private var humanSessionActive: com.blackatsystems.miguardia.QaExplicitHumanActionSession? = null
+    private var humanSessionMounts = 0
+    private var humanSessionClosures = 0
+    private var c026Diagnostic: Stage12C026PrivateFailure? = null
+
+    private fun c026Context() = Stage12C026PrivateFailure.Context(Stage12C026PrivateFailure.SELECTOR, runId, qaHash, runnerHash)
+
+    @Synchronized internal fun captureC026Failure(selector: String, original: Throwable) {
+        try {
+            if (admitted && !finished && selector == Stage12C026PrivateFailure.SELECTOR)
+                c026Diagnostic?.capture(c026Context(), activeSelector, original)
+        } catch (_: Throwable) { /* Private diagnostics must never replace the original test failure. */ }
+    }
+
+    internal fun reserveTemporalMainGraph(graph: com.blackatsystems.miguardia.QaMainActivityGraph) {
+        check(admitted && !finished && activeSelector == TEMPORAL_RECEIVER && calendarClockMode == "REAL" && expected == setOf(TEMPORAL_RECEIVER))
+        check(temporalMainGraph == null && graph.lease.run == runId)
+        com.blackatsystems.miguardia.QaInstrumentationScope.reserveMainActivityGraph(this, runId, graph)
+        temporalMainGraph = graph
+    }
+
+    internal fun releaseTemporalMainGraph(activity: com.blackatsystems.miguardia.MainActivity,
+        graph: com.blackatsystems.miguardia.QaMainActivityGraph, resourcesQuiescent: Boolean) {
+        check(admitted && !finished && activeSelector == TEMPORAL_RECEIVER && temporalMainGraph === graph)
+        com.blackatsystems.miguardia.QaInstrumentationScope.releaseMainActivityGraph(this, activity, graph, resourcesQuiescent)
+        temporalMainGraph = null
+    }
 
     private fun runtimeTarget() = Stage12RuntimeTarget.identify(
         android.os.Build.VERSION.SDK_INT, android.os.Build.MODEL, android.os.Build.MANUFACTURER,
@@ -93,24 +123,53 @@ class Stage12NormalQaRunner : AndroidJUnitRunner() {
             }
             override fun calendarDateSelectionCount(date: java.time.LocalDate): Int = selections[date]?.get() ?: 0
         }, "normal-qa")
+        if (expected == setOf(Stage12C026PrivateFailure.SELECTOR)) c026Diagnostic = Stage12C026PrivateFailure(c026Context())
         admitted = true
         super.onCreate(arguments)
     }
 
     override fun newActivity(cl: ClassLoader, className: String, intent: Intent): Activity {
         check(admitted)
+        if(className == "com.blackatsystems.miguardia.stage12.Stage12HumanSessionActivity")
+            check(!finished && expected == setOf(Stage12B1HumanSession.SELECTOR) && activeSelector == Stage12B1HumanSession.SELECTOR && calendarClockMode == "REAL")
+        return Stage12TemporalMainCreation.construct(
+            className == "com.blackatsystems.miguardia.MainActivity", expected.contains(TEMPORAL_RECEIVER),
+            expected == setOf(TEMPORAL_RECEIVER), activeSelector == TEMPORAL_RECEIVER, finished, temporalMainGraph != null,
+        ) {
         check(intent.component == ComponentName(QA, className)) { "Activity component differs from the owned manifest entry" }
         @Suppress("DEPRECATION")
         val info = targetContext.packageManager.getActivityInfo(ComponentName(QA, className), 0)
         check(info.packageName == QA && info.applicationInfo.uid == targetContext.applicationInfo.uid)
-        return super.newActivity(cl, className, intent)
+        val activity = super.newActivity(cl, className, intent)
+        if (activity is com.blackatsystems.miguardia.MainActivity)
+            com.blackatsystems.miguardia.QaInstrumentationScope.mainActivityConstructed(this, activity)
+        activity
+        }
     }
 
     @Synchronized override fun sendStatus(resultCode: Int, results: Bundle) {
         check(!finished) { "Status after runner finish" }
+        // Incoming private fields are never trusted or forwarded, including START/other selectors.
+        var forwarded = if (results.containsKey(Stage12C026PrivateFailure.KEY))
+            Bundle(results).apply { remove(Stage12C026PrivateFailure.KEY) } else results
         if (admitted) {
             val id = "${results.getString("class")}#${results.getString("test")}"
             counts.observe(id, results.getInt("numtests", -1), resultCode, !results.getString("stack").isNullOrBlank())
+            if (resultCode == 1) {
+                activeSelector = id
+                if (id == TEMPORAL_RECEIVER)
+                    com.blackatsystems.miguardia.QaInstrumentationScope.expectOwnedMainMethod(this, runId)
+            } else {
+                c026Diagnostic?.consume(c026Context(), activeSelector, id, results.getInt("numtests", -1),
+                    resultCode, !results.getString("stack").isNullOrBlank(), results.containsKey(Stage12C026PrivateFailure.KEY))?.let { wire ->
+                    forwarded = Bundle(results).apply { putString(Stage12C026PrivateFailure.KEY, wire) }
+                }
+                if (id == TEMPORAL_RECEIVER) {
+                    val closed = com.blackatsystems.miguardia.QaInstrumentationScope.completeOwnedMainMethod(this, runId)
+                    temporalMainMethodComplete = resultCode == 0 && temporalMainGraph == null && closed
+                }
+                activeSelector = null
+            }
             if (resultCode == 1 && !admissionOnly) readiness = null
         }
         summaryReport?.let { report ->
@@ -135,7 +194,31 @@ class Stage12NormalQaRunner : AndroidJUnitRunner() {
             }
             super.sendStatus(resultCode, safeBundle(Stage12AdmissionProjection.status(selector,
                 mapOf("numtests" to results.getInt("numtests", -1), "stack" to results.getString("stack")), resultCode, report)))
-        } else super.sendStatus(resultCode, results)
+        } else super.sendStatus(resultCode, forwarded)
+    }
+
+
+    /** Separate closed progress frame; never fed into the JUnit counter or used as a test result. */
+    @Synchronized internal fun registerB1HumanSession(owner: Activity, session: com.blackatsystems.miguardia.QaExplicitHumanActionSession) {
+        check(admitted && !finished && expected == setOf(Stage12B1HumanSession.SELECTOR) && activeSelector == Stage12B1HumanSession.SELECTOR && calendarClockMode == "REAL")
+        check(session.runId == runId && humanSessionActive == null)
+        com.blackatsystems.miguardia.QaInstrumentationScope.beginExplicitHumanSession(this,runId,owner,session)
+        humanSessionActive = session; humanSessionMounts++
+    }
+    @Synchronized internal fun releaseB1HumanSession(owner: Activity, session: com.blackatsystems.miguardia.QaExplicitHumanActionSession, closed: Boolean) {
+        check(admitted && !finished && humanSessionActive === session && session.runId == runId)
+        com.blackatsystems.miguardia.QaInstrumentationScope.endExplicitHumanSession(this,session,owner,closed)
+        humanSessionActive = null; humanSessionClosures++
+    }
+    @Synchronized internal fun publishB1HumanStep(step: String, ordinal: Int) {
+        check(admitted && expected == setOf(Stage12B1HumanSession.SELECTOR) && activeSelector == Stage12B1HumanSession.SELECTOR)
+        check(step in Stage12B1HumanSession.HumanStep.entries.map { it.name } && ordinal in 1..6)
+        super.sendStatus(2, Bundle().apply {
+            putString("stage12HumanSchema", "stage12-b1-human-step-v1")
+            putString("stage12HumanRun", runId)
+            putString("stage12HumanStep", step)
+            putInt("stage12HumanOrdinal", ordinal)
+        })
     }
 
     @Synchronized internal fun beginReadiness(report: Stage12ActivityAdmission) {
@@ -165,9 +248,14 @@ class Stage12NormalQaRunner : AndroidJUnitRunner() {
             else -> Bundle(results)
         }
         if (report != null) terminal.putString("stage12ActivityAdmission", report.wire())
-        val snapshot = if (admitted) counts.finish(resultCode == Activity.RESULT_OK) else null
+        val humanSelected = selected == setOf(Stage12B1HumanSession.SELECTOR)
+        val humanClosed = humanSessionActive == null && humanSessionMounts > 0 && humanSessionMounts == humanSessionClosures
+        if(humanSelected) terminal.putString("stage12HumanSessionLoan", if(humanClosed) "CLOSED" else "HOLD")
+        val temporalSelected = TEMPORAL_RECEIVER in selected
+        val snapshot = if (admitted) counts.finish(resultCode == Activity.RESULT_OK && (!temporalSelected || temporalMainMethodComplete) && (!humanSelected || humanClosed)) else null
         val complete = snapshot?.complete == true
         terminal.putString("stage12NormalStatus", if (complete) "COMPLETE" else "INCOMPLETE")
+        if (temporalSelected) terminal.putString("stage12TemporalMainLoan", if (temporalMainMethodComplete) "CLOSED" else "HOLD")
         if (admitted) {
             terminal.putString("stage12RunId", runId)
             terminal.putString("stage12QaSha256", qaHash)
@@ -201,6 +289,7 @@ class Stage12NormalQaRunner : AndroidJUnitRunner() {
     }
 
     companion object {
+        private const val TEMPORAL_RECEIVER = Stage12B1Selectors.TEMPORAL_RESUMPTION
         private const val QA = "com.blackatsystems.miguardia.qa"
         private const val CERT = "b6910698d7d1e4524feb80ee1a60015dd931efda7a7c1854d432c0e3eb627617"
     }

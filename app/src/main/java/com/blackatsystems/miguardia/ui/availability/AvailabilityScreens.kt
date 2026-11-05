@@ -29,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.blackatsystems.miguardia.core.domain.model.AvailabilityBreakdown
@@ -285,9 +286,9 @@ private fun WindowReview(state: AvailabilityUiState, actions: AvailabilityAction
             title = record.labelSnapshot,
             supportingText = "Confirmá fecha, inicio y final exactos.",
         ) {
-            Text("Inicio: ${record.start.atZone(record.zoneId).format(LocalDateTimeFormatter)}")
-            Text("Final: ${record.end.atZone(record.zoneId).format(LocalDateTimeFormatter)}")
-            Text("Duración programada: ${minutesLabel(record.durationMinutes)}")
+            Text(AnnotatedString("Inicio: ${record.start.atZone(record.zoneId).format(LocalDateTimeFormatter)}"))
+            Text(AnnotatedString("Final: ${record.end.atZone(record.zoneId).format(LocalDateTimeFormatter)}"))
+            Text(AnnotatedString("Duración programada: ${minutesLabel(record.durationMinutes)}"))
         }
         AvailabilityResultLines(review.breakdown)
         if (review.isProtected) {
@@ -443,7 +444,7 @@ private fun AvailabilityResultLines(result: AvailabilityBreakdown) {
 
 @Composable
 private fun ResultLine(label: String, minutes: Long) {
-    Text("$label: ${minutesLabel(minutes)}")
+    Text(AnnotatedString("$label: ${minutesLabel(minutes)}"))
 }
 
 private fun resultShortLabel(result: AvailabilityBreakdown): String = when (result.state) {

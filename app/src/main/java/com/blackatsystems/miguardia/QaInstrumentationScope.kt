@@ -26,6 +26,12 @@ internal object QaInstrumentationScope {
     private const val CERT = "b6910698d7d1e4524feb80ee1a60015dd931efda7a7c1854d432c0e3eb627617"
     @Volatile private var binding: QaInstrumentationContext? = null
     @Volatile private var mode: String? = null
+    private var runnerIdentity: Instrumentation? = null
+    private val mainActivityLoans = QaMainActivityLoans()
+    private val mainContexts = java.util.WeakHashMap<Context, Boolean>()
+    private var reservedMainGraph: QaMainActivityGraph? = null
+    private var explicitHumanSession: QaExplicitHumanActionSession? = null
+    private var explicitHumanOwner: android.app.Activity? = null
 
     @Synchronized
     fun install(
@@ -52,7 +58,167 @@ internal object QaInstrumentationScope {
         val info = target.packageManager.getInstrumentationInfo(component, 0)
         check(info.targetPackage == QA && info.name == runnerName)
         this.mode = mode
+        runnerIdentity = runner
         binding = context
+    }
+
+    /** A single verified runner supplies the entire graph; portable data supplies only navigation. */
+    @Synchronized
+    fun expectOwnedMainMethod(runner: Instrumentation, run: String) {
+        check(binding != null && mode == "normal-qa" && runnerIdentity === runner)
+        mainActivityLoans.expectOwnedMethod(run)
+    }
+
+    @Synchronized
+    fun completeOwnedMainMethod(runner: Instrumentation, run: String): Boolean {
+        check(binding != null && mode == "normal-qa" && runnerIdentity === runner)
+        return mainActivityLoans.completeOwnedMethod(run)
+    }
+
+    @Synchronized
+    fun reserveMainActivityGraph(runner: Instrumentation, runnerRun: String, graph: QaMainActivityGraph) {
+        check(binding != null && mode == "normal-qa" && runnerIdentity === runner)
+        reservedMainGraph?.lease?.reject(IllegalStateException("QA_MAIN_GRAPH_ALREADY_RESERVED"))
+        if (mainContexts.containsKey(graph.filesContext))
+            graph.lease.reject(IllegalStateException("QA_MAIN_GRAPH_ALREADY_RESERVED"))
+        check(graph.filesContext.packageName == QA)
+        check(graph.filesContext is QaMainActivityFileContext)
+        mainActivityLoans.reserve(graph.lease, runnerRun)
+        mainContexts[graph.filesContext] = true
+        reservedMainGraph = graph
+    }
+
+    @Synchronized
+    fun mainActivityConstructed(runner: Instrumentation, activity: MainActivity) {
+        check(binding != null && mode == "normal-qa" && runnerIdentity === runner)
+        val graph = reservedMainGraph
+        mainActivityLoans.born(activity) { graph?.publishedReceiver(activity) }
+    }
+
+    @Synchronized
+    fun wrapMainActivity(activity: MainActivity, base: Context): Context {
+        val lease = mainActivityLoans.requireAttached(activity) ?: return wrapActivity(base)
+        val graph = lease.graph as? QaMainActivityGraph
+            ?: lease.reject(IllegalStateException("QA_MAIN_GRAPH_TYPE_MISSING"))
+        return graph.wrapActivity(base)
+    }
+
+    @Synchronized
+    fun attachedMainActivityGraph(activity: MainActivity): QaMainActivityGraph? {
+        val lease = mainActivityLoans.requireAttached(activity) ?: return null
+        return lease.graph as? QaMainActivityGraph
+            ?: lease.reject(IllegalStateException("QA_MAIN_GRAPH_TYPE_MISSING"))
+    }
+
+    @Synchronized
+    fun beginMainActivity(activity: MainActivity, hasSavedState: Boolean): QaMainActivityGraph? {
+        val lease = mainActivityLoans.begin(activity) ?: return null
+        val graph = lease.graph as? QaMainActivityGraph
+            ?: lease.reject(IllegalStateException("QA_MAIN_GRAPH_TYPE_MISSING"))
+        if (hasSavedState) graph.lease.reject(IllegalStateException("QA_MAIN_RECREATION_OUTSIDE_LOAN"))
+        graph.event(QaMainActivityGraph.Event.BEFORE_CREATE)
+        return graph
+    }
+
+    @Synchronized
+    fun mainActivityGraph(activity: MainActivity, expected: QaMainActivityGraph?): QaMainActivityGraph? {
+        val lease = mainActivityLoans.requireActive(activity, expected?.lease) ?: return null
+        val graph = lease.graph as? QaMainActivityGraph
+            ?: lease.reject(IllegalStateException("QA_MAIN_GRAPH_TYPE_MISSING"))
+        if (binding == null || mode != "normal-qa" || reservedMainGraph !== graph)
+            lease.reject(IllegalStateException("QA_MAIN_PROCESS_BINDING_LOST"))
+        return graph
+    }
+
+    fun requireMainActivityGraph(activity: MainActivity, expected: QaMainActivityGraph): QaMainActivityGraph =
+        mainActivityGraph(activity, expected) ?: expected.lease.reject(IllegalStateException("QA_MAIN_GRAPH_LOST"))
+
+    @Synchronized
+    fun requireMainActivityTeardown(activity: MainActivity, expected: QaMainActivityGraph?) {
+        mainActivityLoans.requireTeardown(activity, expected?.lease)
+    }
+
+    @Synchronized
+    fun mainActivityDestroyed(activity: MainActivity, expected: QaMainActivityGraph?) {
+        mainActivityLoans.destroyed(activity, expected?.lease)
+        expected?.observeDestroyedStore(activity)
+        expected?.event(QaMainActivityGraph.Event.DESTROYED)
+    }
+
+    @Synchronized
+    fun releaseMainActivityGraph(runner: Instrumentation, activity: MainActivity, graph: QaMainActivityGraph,
+        resourcesQuiescent: Boolean) {
+        check(binding != null && mode == "normal-qa" && runnerIdentity === runner)
+        if (reservedMainGraph !== graph) graph.lease.reject(IllegalStateException("QA_MAIN_RELEASE_GRAPH_FOREIGN"))
+        graph.lease.close(activity, graph, resourcesQuiescent && graph.modelClosureProven())
+        graph.forgetCompletedModels()
+        mainActivityLoans.release(graph.lease)
+        reservedMainGraph = null
+        // A live private Context keeps its deny-only guard; weak keys do not retain completed graphs.
+    }
+
+
+    @Synchronized internal fun beginExplicitHumanSession(runner: Instrumentation, run: String,
+        owner: android.app.Activity, session: QaExplicitHumanActionSession) {
+        check(binding != null && mode == "normal-qa" && runnerIdentity === runner)
+        check(explicitHumanSession == null && explicitHumanOwner == null)
+        check(java.util.UUID.fromString(run).toString() == run && session.runId == run)
+        check(session.ownerInstance === owner && owner.packageName == QA &&
+            owner.javaClass.name == "com.blackatsystems.miguardia.stage12.Stage12HumanSessionActivity" && !owner.isDestroyed && !owner.isFinishing)
+        explicitHumanSession = session; explicitHumanOwner = owner
+    }
+    @Synchronized internal fun endExplicitHumanSession(runner: Instrumentation, session: QaExplicitHumanActionSession,
+        owner: android.app.Activity, ownClosureProven: Boolean) {
+        check(binding != null && mode == "normal-qa" && runnerIdentity === runner)
+        check(explicitHumanSession === session && explicitHumanOwner === owner && owner.isDestroyed && ownClosureProven)
+        explicitHumanSession = null; explicitHumanOwner = null
+    }
+    private fun explicitHumanFor(owner: android.app.Activity): QaExplicitHumanActionSession = synchronized(this) {
+        check(binding != null && mode == "normal-qa" && explicitHumanOwner === owner)
+        checkNotNull(explicitHumanSession)
+    }
+    internal fun requireExplicitHumanMap(owner: android.app.Activity, intent: android.content.Intent, requestCode: Int) {
+        val session = explicitHumanFor(owner)
+        try { session.requireMapLaunch(owner,intent,requestCode) } catch(failure: Throwable) { session.retainFailure(failure); throw failure }
+    }
+    internal fun requireExplicitHumanPicker(owner: android.app.Activity, intent: android.content.Intent, requestCode: Int) {
+        val session = explicitHumanFor(owner)
+        try { session.requirePickerLaunch(owner,intent,requestCode) } catch(failure: Throwable) { session.retainFailure(failure); throw failure }
+    }
+    internal fun explicitHumanPickerReturned(owner: android.app.Activity, requestCode: Int, error: Throwable?) {
+        val session = explicitHumanFor(owner)
+        try { session.pickerLaunchReturned(owner,requestCode,error) } catch(failure: Throwable) { session.retainFailure(failure); throw failure }
+    }
+    internal fun explicitHumanPickerResult(owner: android.app.Activity, requestCode: Int, resultCode: Int, data: android.content.Intent?) {
+        val session = explicitHumanFor(owner)
+        try { session.pickerResult(owner,requestCode,resultCode,data) } catch(failure: Throwable) { session.retainFailure(failure); throw failure }
+    }
+    internal fun explicitHumanPickerResultForwarded(owner: android.app.Activity, requestCode: Int) {
+        val session = explicitHumanFor(owner)
+        try { session.pickerResultForwarded(owner,requestCode) } catch(failure: Throwable) { session.retainFailure(failure); throw failure }
+    }
+    /** Normal product/other modes retain their original behavior; stale human contexts never fall through. */
+    fun withExplicitHumanApproximateLocationRequest(context: Context, request: (() -> Unit) -> Unit) {
+        val own = context as? QaExplicitHumanActionContext ?: context.applicationContext as? QaExplicitHumanActionContext
+        if (own == null) { request({}); return }
+        val session = explicitHumanFor(own.humanOwnerInstance)
+        try { session.approximateLocationRequest(own) {
+            request {
+                try {
+                    // This callback retains the original capability even after context/global teardown.
+                    session.approximateLocationResult(own)
+                    check(explicitHumanFor(own.humanOwnerInstance) === session)
+                } catch (failure: Throwable) { session.retainFailure(failure); throw failure }
+            }
+        } }
+        catch (failure: Throwable) { session.retainFailure(failure); throw failure }
+    }
+    private fun requireExplicitHumanAction(context: QaExplicitHumanActionContext, operation: String) {
+        val session = explicitHumanFor(context.humanOwnerInstance)
+        try {
+            check(session === context.explicitHumanSession && session.ownerInstance === context.humanOwnerInstance && !context.humanOwnerInstance.isDestroyed)
+            session.requireAction(context,operation)
+        } catch(failure: Throwable) { session.retainFailure(failure); throw failure }
     }
 
     fun wrapActivity(base: Context): Context {
@@ -109,8 +275,14 @@ internal object QaInstrumentationScope {
 
     /** Returns before any service, recovery sweep or external side effect. */
     fun suppress(context: Context, operation: String): Boolean {
-        val scope = binding ?: return false
+        val scope = binding ?: run {
+            (context as? QaMainActivityFileContext)?.rejectFixtureExternalEffect(operation)
+            return false
+        }
         check(context.packageName == QA)
+        val own = context as? QaMainActivityFileContext ?: context.applicationContext as? QaMainActivityFileContext
+        if (own is QaExplicitHumanActionContext) { requireExplicitHumanAction(own, operation); return false }
+        own?.rejectFixtureExternalEffect(operation)
         // Explicit normal QA use is authorized separately. This mode is not storage
         // isolation and must not fabricate suppression/reconciliation evidence.
         if (!QaBootstrapPolicy.isIsolationMode(mode)) return false

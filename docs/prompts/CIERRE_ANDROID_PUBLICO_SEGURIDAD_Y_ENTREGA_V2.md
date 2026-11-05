@@ -1,5 +1,7 @@
 # Cierre integral Android público, seguridad y preparación de entrega V2
 
+> Referencia de requisitos para la etapa 15. El estado, la base, los permisos y el próximo trabajo los fija [STATUS](../STATUS.md) con el [plan 3.0](../PLAN_MAESTRO_CIERRE_3_0.md). Las bases, aprobaciones y secuencias fechadas del cuerpo son antecedentes; no reactivan la beta ni encargan repetir etapas recibidas. ADR 0041 conserva distribución pública y feedback voluntario.
+
 ## Continuación de entrega 20–21 desde Android integrado
 
 Esta sección sustituye la entrada de revisión de etapa 19 conservada debajo.
@@ -175,7 +177,7 @@ Leer completos AGENTS, STATUS, WORKFLOW, VALIDACION y las rutas pertinentes de
 LECTURAS_POR_TAREA. En ORQUESTACION_MAIN, etapas 19–22; planificación §22;
 ADR 0041 y únicamente garantías conservadas de 0039/0040. Para los límites
 tocados: ADR de Copias, Bloqueo, Ayuda, avisos/Widget y Clima.
-Consultar el cierre vigente de `docs/audits/2026-09-09-distribucion-publica-web-main.md`;
+Consultar el cierre vigente de `2026-09-09-distribucion-publica-web-main.md` (antecedente en el archivo);
 su rechazo inicial es histórico, S01/F01/F02/F03 quedaron cerrados.
 
 Fuentes normativas del website aceptado:

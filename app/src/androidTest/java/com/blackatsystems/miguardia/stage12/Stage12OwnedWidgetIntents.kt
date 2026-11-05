@@ -51,6 +51,15 @@ internal class Stage12OwnedWidgetIntents(context: Context, namespace: UUID,
             created[index] = token
         } }
     }
+    /** Observes the already retained original capability; never constructs or sends a replacement. */
+    fun requireRetainedDate(date: LocalDate) {
+        val index = identities.indices.single { index ->
+            identities[index].intent.action == MainActivity.ACTION_VIEW_DATE &&
+                identities[index].intent.data?.getQueryParameter("target") == date.toString()
+        }
+        val original = checkNotNull(created[index]) { "OWN_WIDGET_DATE_TOKEN_NOT_RETAINED" }
+        check(existing(identities[index]) == original) { "OWN_WIDGET_DATE_TOKEN_REPLACED" }
+    }
     override fun close() {
         var primary: Throwable? = null
         created.forEach { (index, token) ->

@@ -452,12 +452,15 @@ private fun requestCurrentLocation(
     }
     val cancellation = CancellationSignal()
     try {
+        val executor = ContextCompat.getMainExecutor(context)
+        com.blackatsystems.miguardia.QaInstrumentationScope.withExplicitHumanApproximateLocationRequest(context) { beforeResult ->
         LocationManagerCompat.getCurrentLocation(
             manager,
             provider,
             cancellation,
-            ContextCompat.getMainExecutor(context),
+            executor,
         ) { location ->
+            beforeResult()
             if (location == null) {
                 onFailure("No pudimos obtener la ubicación aproximada de tu ciudad. Intentá de nuevo más tarde.")
             } else {
@@ -472,6 +475,7 @@ private fun requestCurrentLocation(
                     onFailure("El teléfono devolvió una ubicación inválida. Intentá de nuevo.")
                 }
             }
+        }
         }
     } catch (_: SecurityException) {
         onFailure("Falta el permiso de ubicación. Podés continuar sin clima.")

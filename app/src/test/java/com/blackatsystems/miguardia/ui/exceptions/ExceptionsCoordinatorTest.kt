@@ -387,6 +387,37 @@ class ExceptionsCoordinatorTest {
     }
 
     @Test
+    fun holidayKeepAndCancelPreserveTheDeclaredCommandAndDraftBoundary() {
+        val existing = Holiday(uuid(1), DATE, "Existente", NOW, NOW)
+        val dates = setOf(DATE, DATE.plusDays(1))
+        val keptRepository = FakeHolidayRepository(listOf(existing))
+        val kept = coordinator(holidays = keptRepository)
+        kept.updateHolidayDraft { it.copy(datesText = dates.sorted().joinToString(","), name = "Nombre propio") }
+        kept.saveHolidays()
+        assertEquals(setOf(DATE), kept.uiState.value.holidayDraft.conflictDates)
+        assertEquals(0, keptRepository.applyCalls)
+        kept.saveHolidays(HolidayConflictPolicy.KEEP_EXISTING)
+        assertEquals(1, keptRepository.applyCalls)
+        val command = keptRepository.mutations.single()
+        assertEquals(HolidayConflictPolicy.KEEP_EXISTING, command.conflictPolicy)
+        assertTrue(command.holidayIdsToDelete.isEmpty())
+        assertEquals(dates, command.holidaysToSave.mapTo(linkedSetOf(), Holiday::date))
+        assertTrue(command.holidaysToSave.all { it.name == "Nombre propio" })
+
+        val cancelledRepository = FakeHolidayRepository(listOf(existing))
+        val cancelled = coordinator(holidays = cancelledRepository)
+        cancelled.updateHolidayDraft { it.copy(datesText = dates.sorted().joinToString(","), name = "Borrador conservado") }
+        cancelled.saveHolidays()
+        val draft = cancelled.uiState.value.holidayDraft
+        cancelled.cancelHolidayConflict()
+        assertEquals(0, cancelledRepository.applyCalls)
+        assertTrue(cancelledRepository.mutations.isEmpty())
+        assertEquals(draft.selectedDates, cancelled.uiState.value.holidayDraft.selectedDates)
+        assertEquals(draft.name, cancelled.uiState.value.holidayDraft.name)
+        assertTrue(cancelled.uiState.value.holidayDraft.conflictDates.isEmpty())
+    }
+
+    @Test
     fun failedSaveKeepsSelectedDatesAndNameForRetry() {
         val holidays = FakeHolidayRepository().apply {
             failure = IllegalStateException("Fallo ficticio")

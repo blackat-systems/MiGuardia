@@ -55,9 +55,11 @@ class Stage12C090NativeTest {
         val identity = JSONObject().put("run_uuid", uuid).put("qa_sha256", args.getString("stage12QaSha256"))
             .put("runner_sha256", args.getString("stage12RunnerSha256"))
         val output = Stage12NativeReceiptFiles.prepareOutput(context.filesDir, uuid, identity.toString(), "c090-identical-shifts")
-        val facts = JSONArray(); val readbacks = JSONArray()
+        val facts = JSONArray(); val readbacks = JSONArray(); val readbackAttempts = JSONArray()
         val receipt = JSONObject(identity.toString()).put("schema", "stage12-native-completion-v1").put("case", "C090")
             .put("status", "INCOMPLETE").put("fixture_owned", true).put("facts", facts).put("readbacks", readbacks)
+            .put("readback_attempts", readbackAttempts).put("baseline_captured", false)
+            .put("received_sqlite_restored_verified", false)
         val admission = Stage12ActivityAdmission(technicalOnly = false)
         (instrumentation as Stage12NormalQaRunner).beginReadiness(admission)
         var primary: Throwable? = null
@@ -66,13 +68,44 @@ class Stage12C090NativeTest {
         val ownFiles = linkedMapOf<File, String>()
         fun fact(suffix: String, level: String) { facts.put(JSONObject().put("assertion_key", "C090-contrato-completo.$suffix")
             .put("check", "PASS").put("level", level)) }
-        fun snapshot(stage: String): Stage12StoreSnapshot = Stage12FullStoreReadback.capture(context).also { value ->
-            val tableHashes = JSONObject()
-            value.tables.forEach { (name, table) -> tableHashes.put(name, digest(table.toString().toByteArray(Charsets.UTF_8))) }
-            readbacks.put(JSONObject().put("stage", stage).put("table_hashes", tableHashes)
-                .put("table_count", value.tables.size).put("preferences_entries", value.preferences.size)
-                .put("files", value.files.values.count { it.kind == Stage12PrivateNodeKind.FILE })
-                .put("inventory_entries", value.files.size))
+        fun snapshot(stage: String): Stage12StoreSnapshot {
+            check(readbackAttempts.length() < 16) { "C090_READBACK_ATTEMPT_BOUND" }
+            val trace = Stage12NativeDiagnostics.ReadbackAttempt()
+            val observed = JSONObject().put("stage", stage)
+            readbackAttempts.put(observed) // Retain the attempt even if capture never returns.
+            try {
+                val value = Stage12FullStoreReadback.capture(context, trace::reached) { first, second ->
+                    // Project only the two inventories already read by this capture. No new I/O.
+                    try {
+                        val delta = Stage12B1FileDelta.project(first, second, uuid)
+                        observed.put("inventory_delta", JSONObject().put("total", delta.total)
+                            .put("received_changed", delta.receivedChanged).put("unknown_roles", delta.unknown)
+                            .put("truncated", delta.truncated).put("entries", JSONArray(delta.entries.map {
+                                JSONObject().put("path_token", it.pathToken).put("role", it.role.name)
+                                    .put("change", it.change.name)
+                            })))
+                    } catch (_: Exception) {
+                        observed.put("inventory_delta_projection_failed", true)
+                    }
+                }
+                trace.returned(); trace.projecting()
+                val tableHashes = JSONObject()
+                value.tables.forEach { (name, table) -> tableHashes.put(name, digest(table.toString().toByteArray(Charsets.UTF_8))) }
+                readbacks.put(JSONObject().put("stage", stage).put("table_hashes", tableHashes)
+                    .put("table_count", value.tables.size).put("preferences_entries", value.preferences.size)
+                    .put("files", value.files.values.count { it.kind == Stage12PrivateNodeKind.FILE })
+                    .put("inventory_entries", value.files.size))
+                trace.recorded()
+                return value
+            } catch (error: Throwable) {
+                trace.failed(error)
+                throw error
+            } finally {
+                observed.put("last_phase", trace.phase.name).put("capture_returned", trace.captureReturned)
+                    .put("projection_appended", trace.projectionRecorded)
+                    .put("failure_phase", trace.failurePhase?.name ?: "NONE")
+                    .put("failure_code", trace.failureCode ?: "NONE")
+            }
         }
         try {
             admission.phase(Stage12ActivityAdmission.Phase.LAUNCH)
@@ -81,6 +114,7 @@ class Stage12C090NativeTest {
             compose.waitUntil(30_000) { app.startupRecoveryGate.isReady && calendar().loadState == CalendarLoadState.CONTENT }
             admission.phase(Stage12ActivityAdmission.Phase.BODY)
             initial = snapshot("received_before_fixture")
+            receipt.put("baseline_captured", true)
             val history = runBlocking { requireNotNull(store.workConfiguration.get()) }
             val today = LocalDate.now(com.blackatsystems.miguardia.core.domain.AppDefaults.zoneId())
             val sectors = history.timeline.revisions.map { it.value.sector }.distinct()
@@ -222,7 +256,11 @@ class Stage12C090NativeTest {
             check(Stage12C090Oracle.sameFilesExceptOwnedRemoval(ownedBefore, ownedAfter, setOf(photoKeys[1]))) { "C090_UNEXPECTED_FILE_CHANGE" }
             fact("first-files", "FILES_ISOLATED")
             check(facts.length() == 6)
-        } catch (error: Throwable) { admission.failed(error); primary = error; receipt.put("failure_class", error.javaClass.simpleName) }
+        } catch (error: Throwable) {
+            admission.failed(error); primary = error
+            receipt.put("failure_class", error.javaClass.simpleName)
+                .put("failure_readback_code", Stage12NativeDiagnostics.readbackCodeOrNull(error.message) ?: "NOT_READBACK")
+        }
         finally {
             try {
                 admission.phase(Stage12ActivityAdmission.Phase.CLOSE)
@@ -241,9 +279,16 @@ class Stage12C090NativeTest {
                         if (file.exists()) { check(digest(file.readBytes()) == hash) { "C090_CLEANUP_FILE_CHANGED" }; check(file.delete()) }
                     }
                 }
-                initial?.let { check(it.tables == snapshot("after_owned_fixture_cleanup").tables) { "C090_RECEIVED_SQLITE_CHANGED" } }
+                initial?.let {
+                    check(it.tables == snapshot("after_owned_fixture_cleanup").tables) { "C090_RECEIVED_SQLITE_CHANGED" }
+                    receipt.put("received_sqlite_restored_verified", true)
+                }
                 receipt.put("cleanup_complete", true)
-            } catch (error: Throwable) { admission.failed(error); primary = Stage12C090Oracle.retain(primary, error); receipt.put("cleanup_complete", false).put("cleanup_failure_class", error.javaClass.simpleName) }
+            } catch (error: Throwable) {
+                admission.failed(error); primary = Stage12C090Oracle.retain(primary, error)
+                receipt.put("cleanup_complete", false).put("cleanup_failure_class", error.javaClass.simpleName)
+                    .put("cleanup_readback_code", Stage12NativeDiagnostics.readbackCodeOrNull(error.message) ?: "NOT_READBACK")
+            }
             admission.phase(Stage12ActivityAdmission.Phase.PUBLISH)
             receipt.put("status", if (primary == null) "COMPLETE" else "FAILED").put("readiness", JSONObject(admission.wire()))
             try { Stage12NativeReceiptFiles.publish(output, receipt.toString(2), primary) }

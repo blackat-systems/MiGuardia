@@ -9,7 +9,7 @@ Este repositorio desarrolla MiGuardia 3.0 desde la base estable 2.0.2. El alcanc
 - Arranque: `AGENTS.md` y `docs/STATUS.md`, único estado actual, autorización y pendientes.
 - Lecturas por área: `docs/LECTURAS_POR_TAREA.md`; método de integración: `docs/WORKFLOW.md`.
 - Contrato y handoff de continuación: los señalados por STATUS; índice en `docs/prompts/README.md`.
-- Antecedentes: `docs/HANDOFF_A_MAIN_3_0.md` y [ruta de orquestación 2.0](docs/ORQUESTACION_MAIN.md). No reinician etapas ni sustituyen el contrato 3.0.
+- Archivo recuperable: [ubicación y restauración](docs/EVIDENCIA.md) e [índice](docs/archive/README.md).
 - Producto: `docs/MAPA_MAESTRO_MIGUARDIA_2_0.md`; detalle en planificación.
 - Comprobaciones: `docs/VALIDACION.md`; decisiones técnicas: `docs/adr/README.md`.
 
@@ -34,7 +34,7 @@ MiGuardia 1.0 fue una prueba interna y base de código. V2 comienza limpia, sin 
 
 El índice Git no determina el orden de lectura. Los archivos nuevos del candidato pueden seguir sin rastrear: no agregarlos al staging ni mover fuentes para ordenar la vista. `local.properties`, firmas y datos privados permanecen fuera de Git.
 
-La [auditoría del traslado del workspace](docs/audits/2026-10-20-integridad-y-rutas-del-workspace.md) registra las rutas actuales, la conservación de archivos y la preparación local de las herramientas. Las rutas absolutas de auditorías anteriores son procedencia histórica, no configuración para el perfil actual.
+El [archivo](docs/archive/README.md) conserva la auditoría del traslado del workspace del 20/10/2026. Sus rutas absolutas son procedencia histórica; la ubicación del respaldo actual está en EVIDENCIA.
 
 ## Entorno y comprobaciones
 
@@ -66,4 +66,4 @@ Clima consulta su proveedor si la persona lo habilita. Las actualizaciones públ
 
 ## Historia y evidencia
 
-`docs/archive/README.md` localiza contratos reemplazados. `.ignore` evita arrastrarlos en búsquedas generales, sin borrarlos ni ocultarlos de Git. Evidencia de ejecución local en `.local-evidence/`, fuera de los directorios que limpia Gradle. Política y rutas anteriores en `docs/EVIDENCIA.md`.
+`docs/archive/README.md` localiza los contratos reemplazados en el respaldo externo. `.ignore` excluye el catálogo histórico de búsquedas generales. La evidencia de ejecución vigente está en `.local-evidence/`, fuera de los directorios que limpia Gradle. Ubicación y recuperación en `docs/EVIDENCIA.md`.

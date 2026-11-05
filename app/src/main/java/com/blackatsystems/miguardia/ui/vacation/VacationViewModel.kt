@@ -70,6 +70,7 @@ class VacationViewModel(
     }
 
     fun openList(month: YearMonth = _uiState.value.visibleMonth) {
+        if (_uiState.value.isSaving) return
         setMonth(month)
         clearDraft()
         clearMessage()
@@ -77,6 +78,7 @@ class VacationViewModel(
     }
 
     fun openCreate(month: YearMonth, selectedDate: LocalDate? = null) {
+        if (_uiState.value.isSaving) return
         setMonth(month)
         clearMessage()
         val initialDate = selectedDate ?: if (YearMonth.now(clock.withZone(zone)) == month) {
@@ -89,6 +91,7 @@ class VacationViewModel(
     }
 
     fun edit(vacation: Vacation) {
+        if (_uiState.value.isSaving) return
         setMonth(YearMonth.from(vacation.startDate))
         clearMessage()
         setDraft(
@@ -102,14 +105,16 @@ class VacationViewModel(
         setSurface(VacationSurface.EDITOR)
     }
 
-    fun previousMonth() = setMonth(_uiState.value.visibleMonth.minusMonths(1))
-    fun nextMonth() = setMonth(_uiState.value.visibleMonth.plusMonths(1))
+    fun previousMonth() { if (!_uiState.value.isSaving) setMonth(_uiState.value.visibleMonth.minusMonths(1)) }
+    fun nextMonth() { if (!_uiState.value.isSaving) setMonth(_uiState.value.visibleMonth.plusMonths(1)) }
 
     fun updateStartDate(date: LocalDate) {
+        if (_uiState.value.isSaving) return
         setDraft(_uiState.value.draft.copy(startDate = date, isDirty = true))
     }
 
     fun updateEndDate(date: LocalDate) {
+        if (_uiState.value.isSaving) return
         setDraft(_uiState.value.draft.copy(endDateInclusive = date, isDirty = true))
     }
 
@@ -142,6 +147,7 @@ class VacationViewModel(
     }
 
     fun requestBack() {
+        if (_uiState.value.isSaving) return
         when (_uiState.value.surface) {
             VacationSurface.NONE -> Unit
             VacationSurface.LIST -> close()
@@ -155,20 +161,23 @@ class VacationViewModel(
         }
     }
 
-    fun dismissDiscard() = _uiState.update { it.copy(showDiscardConfirmation = false) }
+    fun dismissDiscard() { if (!_uiState.value.isSaving) _uiState.update { it.copy(showDiscardConfirmation = false) } }
 
     fun confirmDiscard() {
+        if (_uiState.value.isSaving) return
         clearDraft()
         clearMessage()
         setSurface(VacationSurface.LIST)
     }
 
     fun requestDelete(vacation: Vacation) {
+        if (_uiState.value.isSaving) return
         saveVacation(PENDING_DELETE_PREFIX, vacation)
         _uiState.update { it.copy(pendingDelete = vacation) }
     }
 
     fun dismissDelete() {
+        if (_uiState.value.isSaving) return
         clearVacation(PENDING_DELETE_PREFIX)
         _uiState.update { it.copy(pendingDelete = null) }
     }
@@ -185,6 +194,7 @@ class VacationViewModel(
     }
 
     fun close() {
+        if (_uiState.value.isSaving) return
         clearDraft()
         setSurface(VacationSurface.NONE)
         _uiState.update {
@@ -229,9 +239,10 @@ class VacationViewModel(
     }
 
     private fun launchWrite(block: suspend () -> Unit) {
+        if (_uiState.value.isSaving) return
+        _uiState.update { it.copy(isSaving = true, errorMessage = null, infoMessage = null) }
         viewModelScope.launch {
             writeMutex.withLock {
-                _uiState.update { it.copy(isSaving = true, errorMessage = null, infoMessage = null) }
                 try {
                     block()
                 } catch (_: OverlappingVacationException) {

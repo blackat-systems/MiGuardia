@@ -4,7 +4,14 @@ package com.blackatsystems.miguardia.stage12
 internal object Stage12NormalQaSelectors {
     const val activityAdmissionSelector = "com.blackatsystems.miguardia.stage12.Stage12ActivityAdmissionTest#observesOwnActivityAdmissionWithoutGestures"
     val allowed: Set<String> = setOf(
+        Stage12B1HumanContract.SELECTOR,
+        Stage12CalendarDetailContract.SELECTOR,
+        Stage12CalendarDetailContract.ACTIVATION_SELECTOR,
+        "com.blackatsystems.miguardia.stage12.Stage12CalendarExceptionsTest#pendingCancellationEvidenceSurvivesPickerCancellation",
+        "com.blackatsystems.miguardia.stage12.Stage12CalendarExceptionsTest#medicalNotePrivacyUsesRealWidgetAndReportBoundaries",
+        Stage12C097InstitutionContract.SELECTOR,
         Stage12RuntimeTarget.WORK_FIXTURE,
+        Stage12RuntimeTarget.QA_BASELINE_BOOTSTRAP,
         "com.blackatsystems.miguardia.stage12.Stage12C090NativeTest#identicalJourneysCancelThenRejectStaleCasAndDeleteOnlyTheSecond",
         "com.blackatsystems.miguardia.stage12.Stage12W010NativeTest#hiddenRealRemoteViewsClearAdversarialAppliedFieldsInBothSizes",
         "com.blackatsystems.miguardia.stage12.Stage12X015NativeTest#realCalendarSummaryCardAndAppliedWidgetPreserveCompleteStores",
@@ -159,5 +166,5 @@ internal object Stage12NormalQaSelectors {
         "com.blackatsystems.miguardia.stage12.Stage12NormalQaActivityTest#actualMonthNavigationCrossesYearsAndReturnsToToday",
         "com.blackatsystems.miguardia.stage12.Stage12NormalQaActivityTest#fixedDateWeatherAndFutureDetailsKeepTheirOwnerAndReturn",
         "com.blackatsystems.miguardia.stage12.Stage12NormalQaActivityTest#todayDetailRemainsOpenAcrossCloseAndReopen",
-    ) + Stage12B1Selectors.compose + Stage12B1Selectors.OWNED_LOAD_EDIT
+    ) + Stage12B1Selectors.compose + Stage12B1Selectors.OWNED_LOAD_EDIT + Stage12B1Selectors.ownedWorkFamily + Stage12B1Selectors.selectionBatchFamily + Stage12B1Selectors.recurringLifecycleFamily + Stage12B1Selectors.calendarExceptionsFamily + Stage12B1Selectors.medicalDraftRegression + Stage12B1Selectors.temporalLiteralFamily + Stage12B1Selectors.availabilityLifecycleFamily
 }

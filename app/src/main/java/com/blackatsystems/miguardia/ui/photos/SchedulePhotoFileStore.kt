@@ -68,6 +68,7 @@ class SchedulePhotoFileStore internal constructor(
         replacingStorageKey: String? = null,
         namespace: String? = null,
     ): StoredPhoto {
+        com.blackatsystems.miguardia.QaInstrumentationScope.requireExternalAction(context, "photos.import")
         var ownedFiles: Pair<File, File>? = null
         try {
             return withContext(Dispatchers.IO) {

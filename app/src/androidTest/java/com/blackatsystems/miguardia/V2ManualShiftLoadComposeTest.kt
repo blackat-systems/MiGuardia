@@ -10,12 +10,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.click
+import androidx.compose.ui.test.isDisplayed
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -26,6 +29,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
 import com.blackatsystems.miguardia.core.domain.calendar.CalendarDay
@@ -240,10 +244,11 @@ class V2ManualShiftLoadComposeTest {
         compose.onNodeWithTag("calendar-work-setup-action").assertDoesNotExist()
         compose.onNodeWithTag("calendar-v2-repeat-shifts").assertDoesNotExist()
         compose.onNodeWithTag("calendar-v2-load-shifts").assertDoesNotExist()
-        compose.onNodeWithTag("main-menu-button").performClick()
-        compose.onNodeWithTag("drawer-action-work-setup").assertIsDisplayed()
-        compose.onNodeWithTag("drawer-action-calendar-repeat").assertIsDisplayed()
-        compose.onNodeWithTag("drawer-action-calendar-load").assertIsDisplayed().performClick()
+        compose.onNodeWithTag("main-menu-button").assertIsDisplayed().assertIsEnabled().performClick()
+        compose.onNodeWithTag("drawer-action-work-setup").performScrollTo().assertIsDisplayed().assertIsEnabled()
+        compose.onNodeWithTag("drawer-action-calendar-repeat").performScrollTo().assertIsDisplayed().assertIsEnabled()
+        compose.onNodeWithTag("drawer-action-calendar-load").performScrollTo().assertIsDisplayed().assertIsEnabled().performClick()
+        awaitDrawerClosedAndCallback { starts == 1 && entersEditMode == 1 }
         compose.runOnIdle {
             assertEquals(1, starts)
             assertEquals(1, entersEditMode)
@@ -277,7 +282,7 @@ class V2ManualShiftLoadComposeTest {
         compose.onNodeWithTag("v2-manual-confirm-dates").assertIsDisplayed().assertIsNotEnabled()
         compose.onNodeWithTag("day-$first").performClick()
         compose.onNodeWithTag("day-$second").performClick()
-        compose.onNodeWithText("2 días seleccionados").assertIsDisplayed()
+        compose.onNodeWithContentDescription("2 días seleccionados").assertIsDisplayed()
         compose.onAllNodesWithContentDescription("seleccionado para cargar jornadas", substring = true)
             .assertCountEquals(2)
         compose.onNodeWithContentDescription("seleccionado para editar", substring = true)
@@ -287,6 +292,7 @@ class V2ManualShiftLoadComposeTest {
 
         compose.onNodeWithTag("v2-manual-confirm-dates").assertIsDisplayed().assertIsEnabled().performClick()
         compose.runOnIdle {
+            assertEquals(setOf(first, second), calendar.editSelectedDates)
             assertEquals(setOf(first, second), confirmed)
             assertTrue(calendar.editSelectionConfirmed)
         }
@@ -295,26 +301,44 @@ class V2ManualShiftLoadComposeTest {
     @Test
     fun confirmedOrBusyLoadLocksTheGridMonthAndExit() {
         val date = LocalDate.of(2026, 8, 10)
-        val calendar = calendarState(
+        var previousCalls = 0
+        var nextCalls = 0
+        var cancels = 0
+        var finishCalls = 0
+        var calendar by mutableStateOf(calendarState(
             interactionMode = CalendarInteractionMode.EDIT,
             days = listOf(day(date)),
             editSelectedDates = setOf(date),
             editSelectionConfirmed = true,
-        )
+        ))
+        val initialMonth = calendar.visibleMonth
         setApp(
             calendarProvider = { calendar },
+            onPreviousMonth = { previousCalls++; calendar = calendar.copy(visibleMonth = calendar.visibleMonth.minusMonths(1)) },
+            onNextMonth = { nextCalls++; calendar = calendar.copy(visibleMonth = calendar.visibleMonth.plusMonths(1)) },
             manualStateProvider = { V2ManualShiftLoadUiState(
                 stage = V2ManualShiftLoadStage.CHOOSE_TEMPLATE,
                 timelineId = TIMELINE_ID,
                 selectedDates = setOf(date),
                 isLoading = true,
             ) },
+            manualActions = V2ManualShiftLoadActions(cancel = { cancels++ }),
+            onFinishEditMode = { finishCalls++ },
         )
 
         compose.onNodeWithTag("day-$date").assertDoesNotExist()
-        compose.onNodeWithContentDescription("Mes anterior").assertDoesNotExist()
-        compose.onNodeWithText("Cancelar carga").assertIsDisplayed().assertIsNotEnabled()
+        assertMonthNavigationBlocked()
+        compose.onNodeWithTag("manual-cancel-load").performScrollTo().assertIsDisplayed().assertIsNotEnabled()
+            .performTouchInput { click() }
+        compose.onNodeWithText("¿Descartar esta carga?").assertDoesNotExist()
         compose.onNodeWithTag("calendar-edit-tools").assertDoesNotExist()
+        compose.runOnIdle {
+            assertEquals(0, previousCalls); assertEquals(0, nextCalls)
+            assertEquals(initialMonth, calendar.visibleMonth)
+            assertEquals(setOf(date), calendar.editSelectedDates)
+            assertTrue(calendar.editSelectionConfirmed)
+            assertEquals(0, cancels); assertEquals(0, finishCalls)
+        }
     }
 
     @Test
@@ -342,16 +366,19 @@ class V2ManualShiftLoadComposeTest {
             onFinishEditMode = { finishCalls++ },
         )
 
-        compose.onNodeWithText("Cancelar carga").assertIsDisplayed().performClick()
+        compose.onNodeWithTag("manual-cancel-load").performScrollTo().assertIsDisplayed().assertIsEnabled().performClick()
         compose.onNodeWithText("¿Descartar esta carga?").assertIsDisplayed()
-        compose.onNodeWithText("Seguir cargando").performClick()
+        compose.onNodeWithText("Seguir cargando").assertIsDisplayed().assertIsEnabled().performClick()
+        compose.onNodeWithText("¿Descartar esta carga?").assertDoesNotExist()
         compose.runOnIdle {
             assertEquals(0, cancels)
             assertEquals(0, finishCalls)
         }
 
-        compose.onNodeWithText("Cancelar carga").assertIsDisplayed().performClick()
-        compose.onNodeWithText("Descartar carga").performClick()
+        compose.onNodeWithTag("manual-cancel-load").performScrollTo().assertIsDisplayed().assertIsEnabled().performClick()
+        compose.onNodeWithText("¿Descartar esta carga?").assertIsDisplayed()
+        compose.onNodeWithText("Descartar carga").assertIsDisplayed().assertIsEnabled().performClick()
+        compose.onNodeWithText("¿Descartar esta carga?").assertDoesNotExist()
         compose.runOnIdle {
             assertEquals(1, cancels)
             assertEquals(1, finishCalls)
@@ -361,6 +388,12 @@ class V2ManualShiftLoadComposeTest {
     @Test
     fun loadingOrErrorCalendarCannotConfirmRestoredDatesOrStartAnotherLoad() {
         val date = LocalDate.of(2026, 8, 10)
+        var previousCalls = 0
+        var nextCalls = 0
+        var starts = 0
+        var confirmCalls = 0
+        var manualConfirmCalls = 0
+        var dayOffCalls = 0
         var calendar by mutableStateOf(
             calendarState(
                 interactionMode = CalendarInteractionMode.EDIT,
@@ -369,21 +402,32 @@ class V2ManualShiftLoadComposeTest {
                 loadState = CalendarLoadState.LOADING,
             ),
         )
+        val initialMonth = calendar.visibleMonth
+        var manual by mutableStateOf(V2ManualShiftLoadUiState(
+            stage = V2ManualShiftLoadStage.SELECT_DATES,
+            timelineId = TIMELINE_ID,
+        ))
         setApp(
             calendarProvider = { calendar },
-            manualStateProvider = {
-                V2ManualShiftLoadUiState(
-                    stage = V2ManualShiftLoadStage.SELECT_DATES,
-                    timelineId = TIMELINE_ID,
-                )
-            },
+            manualStateProvider = { manual },
+            manualActions = V2ManualShiftLoadActions(start = { starts++ }, confirmDates = { manualConfirmCalls++ },
+                requestDayOff = { _, _ -> dayOffCalls++ }),
+            onConfirmSelection = { confirmCalls++ },
+            onPreviousMonth = { previousCalls++; calendar = calendar.copy(visibleMonth = calendar.visibleMonth.minusMonths(1)) },
+            onNextMonth = { nextCalls++; calendar = calendar.copy(visibleMonth = calendar.visibleMonth.plusMonths(1)) },
         )
 
         compose.onNodeWithTag("day-$date").assertDoesNotExist()
         compose.onNodeWithTag("v2-manual-confirm-dates").assertIsNotEnabled()
         compose.onNodeWithTag("v2-mark-day-off").performScrollTo().assertIsNotEnabled()
         compose.onNodeWithTag("v2-remove-day-off").performScrollTo().assertIsNotEnabled()
-        compose.onNodeWithContentDescription("Mes anterior").assertDoesNotExist()
+        assertMonthNavigationBlocked()
+        compose.runOnIdle {
+            assertEquals(0, previousCalls); assertEquals(0, nextCalls)
+            assertEquals(initialMonth, calendar.visibleMonth)
+            assertEquals(setOf(date), calendar.editSelectedDates)
+            assertEquals(0, confirmCalls); assertEquals(0, manualConfirmCalls); assertEquals(0, dayOffCalls)
+        }
 
         compose.runOnIdle {
             calendar = calendar.copy(
@@ -394,16 +438,35 @@ class V2ManualShiftLoadComposeTest {
         compose.onNodeWithText("Error ficticio recuperable").assertIsDisplayed()
         compose.onNodeWithText("Reintentar").assertIsDisplayed()
         compose.onNodeWithTag("v2-manual-confirm-dates").assertIsNotEnabled()
+        compose.onNodeWithTag("v2-mark-day-off").performScrollTo().assertIsNotEnabled()
+        compose.onNodeWithTag("v2-remove-day-off").performScrollTo().assertIsNotEnabled()
+        assertMonthNavigationBlocked()
+        compose.runOnIdle {
+            assertEquals(0, previousCalls); assertEquals(0, nextCalls)
+            assertEquals(initialMonth, calendar.visibleMonth)
+            assertEquals(setOf(date), calendar.editSelectedDates)
+            assertEquals(0, confirmCalls); assertEquals(0, manualConfirmCalls); assertEquals(0, dayOffCalls)
+        }
 
         compose.runOnIdle {
+            // End the simulated current draft before testing a NEW load from ERROR/VIEW.
+            manual = V2ManualShiftLoadUiState()
             calendar = calendar.copy(
                 interactionMode = CalendarInteractionMode.VIEW,
                 editSelectedDates = emptySet(),
             )
         }
         compose.onNodeWithTag("calendar-v2-load-shifts").assertDoesNotExist()
-        compose.onNodeWithTag("main-menu-button").performClick()
-        compose.onNodeWithTag("drawer-action-calendar-load").assertIsNotEnabled()
+        compose.onNodeWithTag("main-menu-button").assertIsDisplayed().assertIsEnabled().performClick()
+        compose.onNodeWithTag("drawer-action-calendar-load").performScrollTo().assertIsDisplayed().assertIsNotEnabled()
+            .performTouchInput { click() }
+        compose.onNodeWithTag("main-navigation-drawer").assertIsDisplayed()
+        compose.runOnIdle {
+            assertEquals(0, starts)
+            assertEquals(0, previousCalls); assertEquals(0, nextCalls)
+            assertEquals(initialMonth, calendar.visibleMonth)
+            assertEquals(CalendarLoadState.ERROR, calendar.loadState)
+        }
     }
 
     @Test
@@ -972,8 +1035,9 @@ class V2ManualShiftLoadComposeTest {
             )) },
             manualActions = V2ManualShiftLoadActions(start = { starts++ }),
         )
-        compose.onNodeWithTag("main-menu-button").performClick()
-        compose.onNodeWithTag("drawer-action-calendar-load").assertIsEnabled().performClick()
+        compose.onNodeWithTag("main-menu-button").assertIsDisplayed().assertIsEnabled().performClick()
+        compose.onNodeWithTag("drawer-action-calendar-load").performScrollTo().assertIsDisplayed().assertIsEnabled().performClick()
+        awaitDrawerClosedAndCallback { starts == 1 }
         compose.runOnIdle { assertEquals(1, starts) }
     }
 
@@ -1064,6 +1128,27 @@ class V2ManualShiftLoadComposeTest {
         if (placeId != null) compose.onNodeWithTag("manual-place-$placeId").performScrollTo().performClick()
     }
 
+    private fun awaitDrawerClosedAndCallback(callbackObserved: () -> Boolean) {
+        compose.waitUntil(5_000L) {
+            !compose.onNodeWithTag("main-navigation-drawer").isDisplayed() && callbackObserved()
+        }
+        compose.onNodeWithTag("main-navigation-drawer").assertIsNotDisplayed()
+    }
+
+    private fun assertMonthNavigationBlocked() {
+        for (tag in listOf("calendar-previous-month", "calendar-next-month")) {
+            val nodes = compose.onAllNodesWithTag(tag)
+            if (nodes.fetchSemanticsNodes().isEmpty()) {
+                compose.onNodeWithTag(tag).assertDoesNotExist()
+            } else {
+                nodes.assertCountEquals(1)
+                val node = compose.onNodeWithTag(tag).assertIsNotEnabled()
+                // Exercise a disabled control only with reachable physical input, never its semantics action.
+                if (node.isDisplayed()) node.performTouchInput { click() }
+            }
+        }
+    }
+
     private fun setApp(
         calendarProvider: () -> CalendarUiState = { calendarState() },
         manualStateProvider: () -> V2ManualShiftLoadUiState = { V2ManualShiftLoadUiState() },
@@ -1075,13 +1160,15 @@ class V2ManualShiftLoadComposeTest {
         workSetupStateProvider: () -> WorkSetupUiState = { readyWorkSetupState() },
         onEnterEditDate: (LocalDate?) -> Unit = {},
         onDismissDate: () -> Unit = {},
+        onPreviousMonth: () -> Unit = {},
+        onNextMonth: () -> Unit = {},
     ) {
         compose.setContent {
             AndroidFontScaleTheme {
                 MiGuardiaApp(
                     calendarState = calendarProvider(),
-                    onPreviousMonth = {},
-                    onNextMonth = {},
+                    onPreviousMonth = onPreviousMonth,
+                    onNextMonth = onNextMonth,
                     onToday = {},
                     onSelectDate = {},
                     onDismissDate = onDismissDate,

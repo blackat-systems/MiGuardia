@@ -480,6 +480,85 @@ class V2ManualShiftLoadCoordinatorTest {
         assertNotNull(h.coordinator.uiState.value.errorMessage)
     }
 
+    @Test
+    fun increasedAssociatedNoteCountRequiresNewWarningsWithoutWriting() {
+        val previous = existingShift(DATE)
+        val writer = FakeV2Shifts().apply {
+            deletionNoteCounts[previous.id] = 1
+            deletionAttachmentStorageKeys[previous.id] = setOf("note_associated_fixture.jpg")
+        }
+        val h = harness(fixture(), existing = listOf(previous), v2Override = writer)
+        val lossPrefix = "10/08/2026 08:00–16:00: se quitará esta jornada"
+        val originalWarnings = listOf("$lossPrefix, 1 notas, 1 imágenes y 0 avisos.")
+        val changedWarnings = listOf("$lossPrefix, 2 notas, 1 imágenes y 0 avisos.")
+        h.startAndChoose(setOf(DATE))
+        h.coordinator.requestReview()
+        assertEquals(V2ManualShiftLoadStage.CHOOSE_OCCUPIED_POLICY, h.coordinator.uiState.value.stage)
+        h.coordinator.chooseOccupiedPolicy(OccupiedDatePolicy.REPLACE)
+        assertEquals(V2ManualShiftLoadStage.CONFIRM_WARNINGS, h.coordinator.uiState.value.stage)
+        assertEquals(originalWarnings, h.coordinator.uiState.value.warnings)
+        h.coordinator.confirmWarnings()
+        val reviewed = h.coordinator.uiState.value
+        val operation = requireNotNull(reviewed.operationId)
+        assertEquals(V2ManualShiftLoadStage.REVIEW, reviewed.stage)
+        assertEquals(originalWarnings, reviewed.acknowledgedWarnings)
+        assertNotNull(reviewed.reviewFingerprint)
+        assertEquals(0, writer.calls)
+        val associatedBefore = runBlocking { writer.captureDeletionExpectations(setOf(previous.id)).getValue(previous.id) }
+        // The existing regression independently covers a changed opaque token.
+        writer.deletionNoteCounts[previous.id] = 2
+        val associatedAfter = runBlocking { writer.captureDeletionExpectations(setOf(previous.id)).getValue(previous.id) }
+        assertEquals(associatedBefore.copy(noteCount = 2), associatedAfter)
+
+        h.coordinator.save()
+
+        val blocked = h.coordinator.uiState.value
+        assertEquals(V2ManualShiftLoadStage.CONFIRM_WARNINGS, blocked.stage)
+        assertTrue(blocked.isActive)
+        assertFalse(blocked.isSaving)
+        assertFalse(blocked.isLoading)
+        assertNull(blocked.errorMessage)
+        assertEquals(operation, blocked.operationId)
+        assertEquals(reviewed.operationTimestamp, blocked.operationTimestamp)
+        assertEquals(reviewed.selectedDates, blocked.selectedDates)
+        assertEquals(reviewed.selectedTemplateId, blocked.selectedTemplateId)
+        assertEquals(reviewed.position, blocked.position)
+        assertEquals(reviewed.noteBody, blocked.noteBody)
+        assertEquals(reviewed.noteAttachments, blocked.noteAttachments)
+        assertEquals(changedWarnings, blocked.warnings)
+        assertEquals(originalWarnings, blocked.acknowledgedWarnings)
+        assertNotEquals(blocked.warnings, blocked.acknowledgedWarnings)
+        assertEquals(0, writer.calls)
+        assertTrue(writer.mutations.isEmpty())
+        assertEquals(listOf(previous), h.shifts.current)
+
+        // Explicitly dismiss the new losses before starting another review.
+        h.coordinator.dismissWarnings()
+        val dismissed = h.coordinator.uiState.value
+        assertEquals(V2ManualShiftLoadStage.CHOOSE_TEMPLATE, dismissed.stage)
+        assertEquals(operation, dismissed.operationId)
+        assertTrue(dismissed.warnings.isEmpty())
+        assertTrue(dismissed.acknowledgedWarnings.isEmpty())
+        assertNull(dismissed.reviewFingerprint)
+        assertFalse(dismissed.saveAfterPreparation)
+        assertNull(dismissed.errorMessage)
+        h.coordinator.chooseTemplate(requireNotNull(reviewed.selectedTemplateId))
+        h.coordinator.requestReview()
+        val freshReview = h.coordinator.uiState.value
+        assertEquals(V2ManualShiftLoadStage.CHOOSE_OCCUPIED_POLICY, freshReview.stage)
+        assertEquals(operation, freshReview.operationId)
+        assertEquals(reviewed.selectedDates, freshReview.selectedDates)
+        assertTrue(freshReview.acknowledgedWarnings.isEmpty())
+        assertNull(freshReview.reviewFingerprint)
+        h.coordinator.chooseOccupiedPolicy(OccupiedDatePolicy.CANCEL)
+        assertEquals(V2ManualShiftLoadStage.CHOOSE_TEMPLATE, h.coordinator.uiState.value.stage)
+        assertEquals(operation, h.coordinator.uiState.value.operationId)
+        assertEquals(0, writer.calls)
+        assertTrue(writer.mutations.isEmpty())
+        assertEquals(listOf(previous), h.shifts.current)
+        assertEquals(associatedAfter, runBlocking { writer.captureDeletionExpectations(setOf(previous.id)).getValue(previous.id) })
+    }
+
     @After
     fun tearDown() {
         scopes.forEach(CoroutineScope::cancel)
@@ -1640,9 +1719,11 @@ private class FakeV2Shifts : V2ShiftRepository {
     val committed = linkedMapOf<UUID, V2ShiftWrite>()
     var postCommitFailure: Throwable? = null
     val deletionVersions = mutableMapOf<UUID, String>()
+    val deletionNoteCounts = mutableMapOf<UUID, Int>()
+    val deletionAttachmentStorageKeys = mutableMapOf<UUID, Set<String>>()
     override suspend fun captureDeletionExpectations(shiftIds: Set<UUID>): Map<UUID, ShiftDeletionExpectation> =
         shiftIds.associateWith { id -> ShiftDeletionExpectation(id, deletionVersions[id] ?: "initial:$id",
-            0, emptySet(), false, false, 0, false) }
+            deletionNoteCounts[id] ?: 0, deletionAttachmentStorageKeys[id].orEmpty().toSet(), false, false, 0, false) }
     val mutations = mutableListOf<V2ShiftBatchMutation>()
     val occupancyExpectations = mutableListOf<ShiftOccupancyExpectation>()
     var gate: CompletableDeferred<Unit>? = null

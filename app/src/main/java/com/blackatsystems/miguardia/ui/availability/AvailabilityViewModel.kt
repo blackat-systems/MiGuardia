@@ -535,6 +535,9 @@ class AvailabilityViewModel(
             windowStart = observedStart,
             windowEnd = observedEnd,
         )
+        require(expectation.previous == previous) {
+            "La disponibilidad cambió desde que abriste el editor. Volvé a abrirla antes de corregir."
+        }
         val record = buildAvailabilityWindowRecord(
             draft = AvailabilityWindowDraft(
                 id = draft.recordId,
@@ -551,26 +554,18 @@ class AvailabilityViewModel(
         if (expectation.overlaps(record)) {
             error("La disponibilidad se superpone con otra ventana. Los tramos contiguos sí están permitidos.")
         }
-        val isProtected = expectation.protectionFingerprint.isNotEmpty()
-        val breakdown = source.breakdowns[record.id] ?: calculateForDraft(record, source, isProtected)
+        val calculation = requireNotNull(expectation.calculation) {
+            "No pudimos obtener una revisión consistente de la disponibilidad. Volvé a revisar."
+        }
+        val isProtected = calculation.ownerProtected
+        val breakdown = calculateAvailabilityBreakdown(record, calculation.activeWork, isProtected, clock)
         return AvailabilityWindowReview(
             record = record,
             expectation = expectation,
             breakdown = breakdown,
-            isProtected = record.id in source.protectedWindowIds || isProtected,
+            isProtected = isProtected,
         )
     }
-
-    private fun calculateForDraft(
-        record: AvailabilityWindowRecord,
-        source: AvailabilitySource,
-        isProtected: Boolean,
-    ): AvailabilityBreakdown = calculateAvailabilityBreakdown(
-        record,
-        requireNotNull(source.activeWork),
-        isProtected || requireNotNull(source.protectedRanges).any { record.ownerLocalDate in it },
-        clock,
-    )
 
     private fun nextVersionTimestamp(previous: AvailabilityWindowRecord?): Instant {
         val now = clock.instant().truncatedTo(ChronoUnit.MILLIS)
@@ -943,6 +938,7 @@ class AvailabilityViewModel(
         observedWindows.sortedBy { it.id }.forEach { append('|').append(it) }
         observedActiveSources.sortedBy { it.key }.forEach { append('|').append(it) }
         append('|').append(protectionFingerprint)
+        append('|').append(calculation)
     }
 
     private fun AvailabilityWindowRecord.editFingerprint(): String = listOf(

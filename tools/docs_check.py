@@ -18,7 +18,8 @@ GUIDANCE_FILES = ENTRY_FILES + (
     "docs/prompts/README.md",
 )
 LIMIT = 40_000
-SNAPSHOT = "docs/archive/2026-09-06-before-optimization/manifest.json"
+SNAPSHOT = "docs/archive/manifest.json"
+ARCHIVE_LOCATION = ".local-evidence/archive-location.json"
 STALE = (
     "MAIN 2.0 activo", "deuda temporal del árbol actual",
     "Permanece sin integrar hasta completar su puerta física",
@@ -38,6 +39,18 @@ def metadata(text: str, field: str) -> str | None:
 def inside(root: Path, name: str) -> Path | None:
     path = (root / name).resolve()
     return path if path.is_relative_to(root.resolve()) else None
+
+
+def external_backup_root(root: Path) -> Path | None:
+    try:
+        locator = json.loads(read(root, ARCHIVE_LOCATION))
+        backup = Path(locator["checkout_root"])
+        if not backup.is_absolute():
+            return None
+        backup = backup.resolve()
+    except (OSError, ValueError, KeyError, TypeError, RuntimeError):
+        return None
+    return backup if backup.is_dir() and not backup.is_relative_to(root.resolve()) else None
 
 
 def adr_index(root: Path) -> str:
@@ -96,7 +109,9 @@ def check(root: Path, *, snapshots: bool = True) -> dict:
                 problems.append(f"STATUS necesita exactamente un campo {field}")
         block = metadata(status, "Bloque autorizado")
         contract = metadata(status, "Contrato")
-        if metadata(status, "Estado") not in {"EN_CURSO", "VERIFICADO_LOCALMENTE", "CERRADO", "BLOQUEADO"}:
+        if metadata(status, "Estado") not in {
+            "EN_CURSO", "VERIFICADO_LOCALMENTE", "CERRADO", "BLOQUEADO", "PAUSADO_POR_USUARIO",
+        }:
             problems.append("Estado operativo no reconocido")
         if not re.fullmatch(r"[0-9a-f]{40}", metadata(status, "Base verificada") or ""):
             problems.append("STATUS requiere SHA completo de base verificada")
@@ -167,27 +182,40 @@ def check(root: Path, *, snapshots: bool = True) -> dict:
     manifest_path = root / SNAPSHOT
     if snapshots and manifest_path.is_file():
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-        for item in manifest["files"]:
-            path = inside(root, item["snapshot"])
-            if not path or not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != item["sha256"]:
-                problems.append(f"Snapshot histórico alterado: {item['source']}")
-            else:
-                verified_snapshots += 1
-            source = item["source"]
-            if source.startswith("docs/prompts/") and Path(source).name not in live_prompt_names(root):
-                stub = root / source
-                if not stub.is_file():
-                    problems.append(f"Falta ruta de compatibilidad: {source}")
+        storage = manifest.get("storage", "internal")
+        if storage == "internal":
+            snapshot_root = root
+        elif storage == "external-backup":
+            snapshot_root = external_backup_root(root)
+            if snapshot_root is None:
+                problems.append(f"Localizador de archivo histórico externo ausente o inválido: {ARCHIVE_LOCATION}")
+        else:
+            snapshot_root = None
+            problems.append("Almacenamiento del archivo histórico no reconocido")
+        if snapshot_root is not None:
+            for item in manifest["files"]:
+                name = item["snapshot"]
+                path = None if storage == "external-backup" and Path(name).anchor else inside(snapshot_root, name)
+                if not path or not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != item["sha256"]:
+                    problems.append(f"Snapshot histórico alterado: {item['source']}")
                 else:
-                    content = stub.read_text(encoding="utf-8-sig")
-                    if item["snapshot"] not in content or len(content) > 1600:
-                        problems.append(f"Contrato cerrado vuelve a cargar instrucciones: {source}")
+                    verified_snapshots += 1
+                source = item["source"]
+                if storage == "internal" and source.startswith("docs/prompts/") and Path(source).name not in live_prompt_names(root):
+                    stub = root / source
+                    if not stub.is_file():
+                        problems.append(f"Falta ruta de compatibilidad: {source}")
+                    else:
+                        content = stub.read_text(encoding="utf-8-sig")
+                        if name not in content or len(content) > 1600:
+                            problems.append(f"Contrato cerrado vuelve a cargar instrucciones: {source}")
         if list((root / "docs/archive").rglob("AGENTS.md")):
             problems.append("El archivo histórico no debe introducir un AGENTS.md ejecutable por ámbito")
     elif snapshots:
         problems.append("Falta manifiesto de preservación histórica")
 
-    return {"ok": not problems, "problems": problems, "entry_chars": sum(sizes.get(n, 0) for n in ENTRY_FILES),
+    return {"ok": not problems, "problems": problems, "snapshot_check": "requested" if snapshots else "not_requested",
+            "entry_chars": sum(sizes.get(n, 0) for n in ENTRY_FILES),
             "guidance_chars": sum(sizes.values()), "budget_chars": LIMIT, "reference_count": refs,
             "adr_count": len(graph), "snapshots_verified": verified_snapshots}
 
@@ -195,10 +223,11 @@ def check(root: Path, *, snapshots: bool = True) -> dict:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--update-index", action="store_true", help="Regenera sólo el índice ADR desde sus metadatos")
+    parser.add_argument("--live-only", action="store_true", help="Comprueba sólo documentos vigentes, sin acreditar el respaldo histórico local")
     args = parser.parse_args()
     if args.update_index:
         (ROOT / "docs/adr/README.md").write_text(adr_index(ROOT), encoding="utf-8")
-    result = check(ROOT)
+    result = check(ROOT, snapshots=not args.live_only)
     print(json.dumps(result, ensure_ascii=True, indent=2))
     return 0 if result["ok"] else 1
 

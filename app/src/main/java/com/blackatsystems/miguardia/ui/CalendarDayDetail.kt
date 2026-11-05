@@ -36,6 +36,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -49,6 +50,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.blackatsystems.miguardia.R
@@ -87,7 +89,8 @@ import java.time.format.ResolverStyle
 data class Stage2DayActions(
     val clearMessage: () -> Unit = {},
     val toggleUndefined: (LocalDate, ExplicitDayStatusType?) -> Unit = { _, _ -> },
-    val saveMedicalLeave: (MedicalLeave?, LocalDate, LocalDate, String?) -> Unit = { _, _, _, _ -> },
+    val saveMedicalLeave: (MedicalLeave?, LocalDate, LocalDate, String?, (Boolean) -> Unit) -> Unit =
+        { _, _, _, _, completed -> completed(false) },
     val deleteMedicalLeave: (MedicalLeave) -> Unit = {},
     val changeSituation: (
         ShiftSituationExpectation,
@@ -130,6 +133,8 @@ internal fun DayDetailSheet(
     var situationTarget by remember { mutableStateOf<Pair<Shift, ShiftStatus>?>(null) }
     var medicalTarget by remember { mutableStateOf<MedicalLeave?>(null) }
     var showMedicalEditor by remember { mutableStateOf(false) }
+    var medicalSaveRequest by remember { mutableStateOf<Any?>(null) }
+    var medicalSaveFailed by remember { mutableStateOf(false) }
     var pendingMedicalDelete by remember { mutableStateOf<MedicalLeave?>(null) }
     Column(
         modifier = Modifier
@@ -157,8 +162,8 @@ internal fun DayDetailSheet(
                 stage2Expectations = stage2Expectations,
                 onSelectSituation = { shift, target -> situationTarget = shift to target },
                 onToggleUndefined = { stage2Actions.toggleUndefined(day.date, day.explicitStatus) },
-                onAddMedicalLeave = { medicalTarget = null; showMedicalEditor = true },
-                onEditMedicalLeave = { leave -> medicalTarget = leave; showMedicalEditor = true },
+                onAddMedicalLeave = { medicalTarget = null; medicalSaveFailed = false; showMedicalEditor = true },
+                onEditMedicalLeave = { leave -> medicalTarget = leave; medicalSaveFailed = false; showMedicalEditor = true },
                 onDeleteMedicalLeave = { pendingMedicalDelete = it },
                 independentExtras = independentExtras,
                 canRegisterIndependentExtra = canRegisterIndependentExtra,
@@ -250,13 +255,29 @@ internal fun DayDetailSheet(
         }
     }
     if (showMedicalEditor) {
+        DisposableEffect(Unit) {
+            onDispose { medicalSaveRequest = null }
+        }
         MedicalLeaveDialog(
             ownerDate = day.date,
             previous = medicalTarget,
-            onDismiss = { showMedicalEditor = false },
+            saving = medicalSaveRequest != null,
+            saveFailed = medicalSaveFailed,
+            onDismiss = { if (medicalSaveRequest == null) showMedicalEditor = false },
             onConfirm = { start, end, note ->
-                stage2Actions.saveMedicalLeave(medicalTarget, start, end, note)
-                showMedicalEditor = false
+                if (medicalSaveRequest == null) {
+                    val request = Any()
+                    medicalSaveFailed = false
+                    medicalSaveRequest = request
+                    stage2Actions.saveMedicalLeave(medicalTarget, start, end, note) { saved ->
+                        // A completed or abandoned editor cannot dismiss a later opening.
+                        if (medicalSaveRequest === request) {
+                            medicalSaveRequest = null
+                            medicalSaveFailed = !saved
+                            if (saved) showMedicalEditor = false
+                        }
+                    }
+                }
             },
         )
     }
@@ -386,7 +407,7 @@ private fun DayEditingMenu(
         }
     }
     day.medicalLeaves.forEach { leave ->
-        Card(modifier = Modifier.fillMaxWidth()) {
+        Card(modifier = Modifier.fillMaxWidth().testTag("medical-leave-card-${leave.id}")) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Carpeta médica", fontWeight = FontWeight.SemiBold)
                 Text("${leave.startDate.shortDisplayDate()} – ${leave.endDateInclusive.shortDisplayDate()}")
@@ -447,9 +468,12 @@ private fun DayConditionCard(
                 null -> Unit
             }
             availability.forEach { record ->
-                Text("${record.labelSnapshot} · " + formatEventTimeRange(
-                    record.start, record.end, record.zoneId, EventTimeRangeStyle.DETAIL,
-                ))
+                Text(
+                    AnnotatedString("${record.labelSnapshot} · " + formatEventTimeRange(
+                        record.start, record.end, record.zoneId, EventTimeRangeStyle.DETAIL,
+                    )),
+                    modifier = Modifier.testTag("availability-readonly-${record.id}"),
+                )
             }
             day.medicalLeaves.forEach { leave ->
                 Text(
@@ -490,7 +514,7 @@ private fun ShiftSituationDialog(
         )
     }
     var evidenceUri by remember(shift.id, target) { mutableStateOf<Uri?>(null) }
-    val evidencePicker = rememberLauncherForActivityResult(PickVisualMedia()) { uri -> evidenceUri = uri }
+    val evidencePicker = rememberLauncherForActivityResult(PickVisualMedia()) { uri -> if (uri != null) evidenceUri = uri }
     val parsedNotice = runCatching {
         java.time.LocalDateTime.parse(noticeText, DAY_DATE_TIME_FORMATTER)
             .atZone(com.blackatsystems.miguardia.core.domain.AppDefaults.zoneId()).toInstant()
@@ -590,6 +614,8 @@ private fun ShiftSituationDialog(
 private fun MedicalLeaveDialog(
     ownerDate: LocalDate,
     previous: MedicalLeave?,
+    saving: Boolean,
+    saveFailed: Boolean,
     onDismiss: () -> Unit,
     onConfirm: (LocalDate, LocalDate, String?) -> Unit,
 ) {
@@ -603,21 +629,33 @@ private fun MedicalLeaveDialog(
     val start = runCatching { LocalDate.parse(startText, DAY_DATE_FORMATTER) }.getOrNull()
     val end = runCatching { LocalDate.parse(endText, DAY_DATE_FORMATTER) }.getOrNull()
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { if (!saving) onDismiss() },
+        modifier = Modifier.testTag("medical-leave-dialog"),
         title = { Text(if (previous == null) "Agregar carpeta médica" else "Editar carpeta médica") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Registrá un rango inclusivo. Informa días, no horas, y nunca guarda fotos de certificados.")
-                OutlinedTextField(startText, { startText = it }, label = { Text("Desde (DD/MM/AAAA)") })
-                OutlinedTextField(endText, { endText = it }, label = { Text("Hasta (DD/MM/AAAA)") })
-                OutlinedTextField(note, { note = it }, label = { Text("Nota privada (opcional)") })
+                OutlinedTextField(startText, { startText = it }, label = { Text("Desde (DD/MM/AAAA)") },
+                    enabled = !saving, modifier = Modifier.testTag("medical-leave-start"))
+                OutlinedTextField(endText, { endText = it }, label = { Text("Hasta (DD/MM/AAAA)") },
+                    enabled = !saving, modifier = Modifier.testTag("medical-leave-end"))
+                OutlinedTextField(note, { note = it }, label = { Text("Nota privada (opcional)") },
+                    enabled = !saving, modifier = Modifier.testTag("medical-leave-note"))
+                if (saveFailed) {
+                    Text("No se pudo guardar. Revisá los datos e intentá nuevamente.",
+                        color = MaterialTheme.colorScheme.error, modifier = Modifier.testTag("medical-leave-error"))
+                }
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } },
+        dismissButton = {
+            TextButton(onClick = onDismiss, enabled = !saving,
+                modifier = Modifier.testTag("medical-leave-cancel")) { Text("Cancelar") }
+        },
         confirmButton = {
             TextButton(
                 onClick = { onConfirm(requireNotNull(start), requireNotNull(end), note) },
-                enabled = start != null && end != null && !end.isBefore(start),
+                enabled = !saving && start != null && end != null && !end.isBefore(start),
+                modifier = Modifier.testTag("medical-leave-save"),
             ) { Text("Guardar") }
         },
     )
@@ -667,13 +705,13 @@ private fun ShiftDetail(
         val details: @Composable (Modifier) -> Unit = { detailsModifier ->
             Column(verticalArrangement = Arrangement.spacedBy(3.dp), modifier = detailsModifier) {
                 Text(
-                    text = "${shift.objectiveNameSnapshot} (${shift.objectiveAbbreviationSnapshot})",
+                    text = AnnotatedString("${shift.objectiveNameSnapshot} (${shift.objectiveAbbreviationSnapshot})"),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                 )
                 shift.objectiveAddressSnapshot?.takeIf { it.isNotBlank() }?.let { address ->
                     Text(
-                        text = address,
+                        text = AnnotatedString(address),
                         color = MaterialTheme.colorScheme.primary,
                         style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier
@@ -684,7 +722,7 @@ private fun ShiftDetail(
                             .padding(vertical = 12.dp),
                     )
                 }
-                Text(formatEventTimeRange(shift.startAt, shift.endAt, shift.zoneId, EventTimeRangeStyle.DETAIL))
+                Text(AnnotatedString(formatEventTimeRange(shift.startAt, shift.endAt, shift.zoneId, EventTimeRangeStyle.DETAIL)))
                 val roles = MaterialTheme.vigiliaColors
                 val completed = calendarShift.temporalStatus == ShiftTemporalStatus.COMPLETED
                 val adverse = calendarShift.temporalStatus == ShiftTemporalStatus.CANCELLED ||
@@ -704,7 +742,7 @@ private fun ShiftDetail(
                     symbol = if (completed) "✓" else null,
                 )
                 shift.position?.takeIf { it.isNotBlank() }?.let { position ->
-                    Text(stringResource(R.string.position_value, position))
+                    Text(AnnotatedString(stringResource(R.string.position_value, position)))
                 }
                 CompactShiftAction(
                     symbol = "✎",

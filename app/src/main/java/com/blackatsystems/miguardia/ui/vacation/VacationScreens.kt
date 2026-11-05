@@ -260,11 +260,13 @@ private fun VacationEditor(state: VacationUiState, actions: VacationActions) {
             label = "Fecha inicial",
             date = state.draft.startDate,
             onSelected = actions.updateStartDate,
+            enabled = !state.isSaving,
         )
         VacationDateField(
             label = "Fecha final inclusiva",
             date = state.draft.endDateInclusive,
             onSelected = actions.updateEndDate,
+            enabled = !state.isSaving,
         )
         val preview = state.draft.inclusiveDayCount
         Card(modifier = Modifier.fillMaxWidth()) {
@@ -298,9 +300,10 @@ private fun VacationDateField(
     label: String,
     date: LocalDate?,
     onSelected: (LocalDate) -> Unit,
+    enabled: Boolean,
 ) {
     var showPicker by remember { mutableStateOf(false) }
-    OutlinedButton(onClick = { showPicker = true }, modifier = Modifier.fillMaxWidth()) {
+    OutlinedButton(onClick = { showPicker = true }, enabled = enabled, modifier = Modifier.fillMaxWidth()) {
         Text("$label: ${date?.displayName() ?: "Elegir"}")
     }
     if (showPicker) {

@@ -3,7 +3,7 @@
 - Estado: decisiones de producto vigentes; no es una orden de implementación.
 - Producto: Joaquin. Base de código V1 conservada; runtime V2.
 - Estado operativo y evidencia: exclusivamente `docs/STATUS.md`.
-- Orden de orquestación adoptado el 8/09/2026: `docs/ORQUESTACION_MAIN.md`; MAIN conserva etapas aceptadas y retoma el cursor de STATUS sin convertir antecedentes en trabajo nuevo.
+- Ejecución actual: `docs/PLAN_MAESTRO_CIERRE_3_0.md` y cursor de STATUS. La ruta histórica 2.0 se conserva en el archivo.
 - Las secciones 14 y 21 distinguen diseños futuros no habilitados.
 
 ## 1. Objetivo
@@ -20,8 +20,9 @@ reglas reales las configura cada usuario.
 
 - Android es la plataforma inicial.
 - Los datos laborales permanecen locales, sin cuenta laboral, nube laboral,
-  sincronización, analítica ni telemetría. El servicio beta aprobado en §22
-  sólo administra acceso, opiniones y actualizaciones sin datos laborales.
+  sincronización, analítica ni telemetría. La distribución y las actualizaciones
+  públicas conscientes y el feedback voluntario siguen §22 y ADR 0041, sin
+  acceso beta, cupos ni feedback obligatorio.
 - Se mantiene por ahora `applicationId = "com.blackatsystems.miguardia"`, sin
   convertirlo en una promesa de migración desde 1.0.
 - El tag `v1.0.0` no se mueve ni reescribe.
@@ -636,11 +637,7 @@ sólo por registrar esta decisión.
 
 ### Paquete de entrega y seguridad
 
-La ruta de `docs/ORQUESTACION_MAIN.md` conserva los hitos, con este sucesor:
-19 transición pública y revisión de seguridad → 20 candidata aceptada/firmada
-→ 21 instalación y upgrade real con datos poblados → 22 publicación exacta
-→ 23 seguimiento voluntario/correcciones → 24 continuidad de versión estable.
-No reimplementar etapas cerradas ni fraccionar botones y pruebas en dependencias.
+El plan maestro 3.0 conserva el cierre por capacidades: Stage 12.1 Trabajo y Calendario, 12.2 Cálculos y consulta, 13 Datos y archivos, 14 Sistema y aceptación integral, 15 Entrega y upgrade público. Los hitos públicos mantienen revisión de seguridad, aceptación/firma, instalación y upgrade con datos poblados, publicación exacta y seguimiento voluntario.
 
 La revisión de seguridad cubre Android, web, archivos, dependencias/historial,
 claves y distribución. Aplicar controles pertinentes de MASVS/MASTG y ASVS;

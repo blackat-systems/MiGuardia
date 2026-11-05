@@ -1,5 +1,7 @@
 # Distribución pública web y contrato de actualización
 
+> Referencia de requisitos para la etapa 15. El estado, la base, los permisos y el próximo trabajo los fija [STATUS](../STATUS.md) con el [plan 3.0](../PLAN_MAESTRO_CIERRE_3_0.md). Las bases, aprobaciones y secuencias fechadas del cuerpo son antecedentes; no reactivan la beta ni encargan repetir etapas recibidas. ADR 0041 conserva distribución pública y feedback voluntario.
+
 ## Rol y resultado
 
 Sos la dependencia especialista WEB de MAIN para la etapa 19 de MiGuardia.

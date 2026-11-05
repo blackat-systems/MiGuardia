@@ -4,7 +4,7 @@ Arranque común: `AGENTS.md` y `docs/STATUS.md`. Esta tabla dirige la lectura ad
 
 | Si la tarea afecta… | Consultar antes de cambiar |
 |---|---|
-| MAIN: elegir, retomar o delegar | STATUS, su contrato y `docs/WORKFLOW.md`; `docs/ORQUESTACION_MAIN.md` es historia 2.0, no despacho 3.0 |
+| MAIN: elegir, retomar o delegar | STATUS, su contrato, `docs/WORKFLOW.md` y `docs/PLAN_MAESTRO_CIERRE_3_0.md` |
 | Sólo documentación o flujo | `docs/WORKFLOW.md`, documento afectado y `docs/adr/README.md` si cambia vigencia |
 | Producto, vocabulario o reglas laborales | Sección pertinente de `docs/PLANIFICACION_MIGUARDIA_2_0.md`, ficha en `docs/sectores/`, ADR del tema, `core/domain/src/` y sus pruebas |
 | Persistencia/migraciones | Planificación §16, ADR 0026–0030/0038, `core/database/src/` y `core/database/schemas/` |
@@ -16,12 +16,12 @@ Arranque común: `AGENTS.md` y `docs/STATUS.md`. Esta tabla dirige la lectura ad
 | Clima/ubicación | ADR 0038, `weather/` y adaptadores de ubicación |
 | Distribución pública/retirada beta/actualizaciones | Planificación §22, ADR 0041 y alcance conservado de 0039/0040, `beta/`, `updates/`, contrato API del proyecto web en sólo lectura hasta su Puerta 0 propia |
 | Builds/pruebas/entorno | `docs/VALIDACION.md`, `tools/`, Gradle y pruebas afectadas |
-| Preparar distribución | `docs/prompts/PREPARAR_APK_BETA_OFICIAL_PARA_WEB_V2.md` sólo si STATUS lo autoriza; matriz vigente, contrato web y ADR 0039/0040 |
+| Preparar distribución | Etapa 15 del plan maestro, matriz vigente, contratos públicos de referencia y ADR 0039–0041 |
 
 Los prefijos de paquetes anteriores se ubican dentro de `app/src/main/java/com/blackatsystems/miguardia/` salvo indicación distinta. Los números ADR se resuelven en `docs/adr/README.md`.
 
 ## Buscar sin cargar historia
 
-`rg` respeta `.gitignore` y `.ignore`: código, reglas actuales y contratos accesibles primero. Las auditorías, snapshots y stubs históricos están excluidos de la búsqueda general. Para una regresión o evidencia previa, buscar explícitamente en su archivo, o usar `rg --no-ignore` sobre el directorio histórico concreto. No usar `-uu` sobre toda la carpeta salvo un inventario intencional.
+`rg` respeta `.gitignore` y `.ignore`: código, reglas actuales y contratos accesibles primero. El archivo documental está fuera del árbol activo. Las auditorías actuales se consultan desde STATUS. Para una regresión o evidencia previa, buscar explícitamente en su archivo, o usar `rg --no-ignore` sobre el directorio histórico concreto. No usar `-uu` sobre toda la carpeta salvo un inventario intencional.
 
-`docs/archive/README.md` conserva el índice. No leer MAIN V1 ni todos los prompts cerrados para una tarea V2 sin relación. Un enlace histórico es una referencia, no una ampliación de alcance.
+`docs/archive/README.md` conserva el índice y la ubicación del respaldo. Consultar únicamente el antecedente necesario para la regresión concreta. Un enlace histórico es una referencia, no una ampliación de alcance.

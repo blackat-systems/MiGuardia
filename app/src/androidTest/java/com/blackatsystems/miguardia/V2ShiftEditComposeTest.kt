@@ -7,6 +7,7 @@ import androidx.compose.ui.test.assertHasNoClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
@@ -113,6 +114,7 @@ class V2ShiftEditComposeTest {
     fun calendarDetailUsesEditarEsteDiaWithoutEnteringBulkEditMode() {
         val original = write(uuid(11))
         var starts = 0
+        var bulkEditEntries = 0
         compose.setContent {
             AndroidFontScaleTheme {
                 MiGuardiaApp(
@@ -123,6 +125,7 @@ class V2ShiftEditComposeTest {
                     onSelectDate = {},
                     onDismissDate = {},
                     onRetry = {},
+                    onEnterCalendarEditMode = { bulkEditEntries++ },
                     v2ShiftEditState = V2ShiftEditUiState(
                         timelineId = TIMELINE_ID,
                         date = DATE,
@@ -135,9 +138,13 @@ class V2ShiftEditComposeTest {
             }
         }
 
-        compose.onNodeWithText("Editar día").performScrollTo().assertIsDisplayed().performClick()
-        compose.onNodeWithText("Agregar jornada o franco").performScrollTo().assertIsDisplayed().performClick()
-        compose.runOnIdle { assertEquals(1, starts) }
+        compose.onNodeWithTag("day-other-options").performScrollTo().assertIsDisplayed().assertIsEnabled().performClick()
+        compose.onNodeWithTag("v2-edit-day-action").performScrollTo().assertIsDisplayed().assertIsEnabled()
+            .assertTextEquals("Agregar jornada o franco").performClick()
+        compose.runOnIdle {
+            assertEquals(1, starts)
+            assertEquals(0, bulkEditEntries)
+        }
         compose.onNodeWithText("Editando calendario").assertDoesNotExist()
     }
 

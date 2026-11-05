@@ -257,7 +257,7 @@ private fun HolidayContent(state: ExceptionsUiState, actions: ExceptionsActions)
             )
         } else {
             state.holidays.forEach { holiday ->
-                Card(Modifier.fillMaxWidth()) {
+                Card(Modifier.fillMaxWidth().testTag("holiday-card-${holiday.id}")) {
                     Row(
                         Modifier.fillMaxWidth().padding(12.dp),
                         verticalAlignment = Alignment.CenterVertically,

@@ -455,6 +455,27 @@ data class AvailabilitySourceVersion(
     val version: String,
 )
 
+/** Business-only calculation inputs captured together with the optimistic write expectation.
+ * No clock sample is stored: time changes must not invalidate the CAS identity.
+ */
+@ConsistentCopyVisibility
+data class AvailabilityCalculationSnapshot private constructor(
+    val activeWork: List<AvailabilityActiveWorkInterval>,
+    val ownerProtected: Boolean,
+) {
+    companion object {
+        fun capture(activeWork: Iterable<AvailabilityActiveWorkInterval>, ownerProtected: Boolean): AvailabilityCalculationSnapshot {
+            val values = activeWork.toList()
+            require(values.map { it.key }.distinct().size == values.size) {
+                "La instantánea de disponibilidad no puede repetir fuentes activas"
+            }
+            return AvailabilityCalculationSnapshot(Collections.unmodifiableList(values.sortedWith(
+                compareBy(AvailabilityActiveWorkInterval::start, AvailabilityActiveWorkInterval::end,
+                    AvailabilityActiveWorkInterval::key))), ownerProtected)
+        }
+    }
+}
+
 @ConsistentCopyVisibility
 data class AvailabilityWindowExpectation private constructor(
     val previous: AvailabilityWindowRecord?,
@@ -464,6 +485,7 @@ data class AvailabilityWindowExpectation private constructor(
     val observedWindows: Set<AvailabilityWindowVersion>,
     val observedActiveSources: Set<AvailabilitySourceVersion>,
     val protectionFingerprint: String,
+    val calculation: AvailabilityCalculationSnapshot?,
 ) {
     init {
         require(observedStart < observedEnd) { "La ventana observada debe tener duración positiva" }
@@ -488,6 +510,7 @@ data class AvailabilityWindowExpectation private constructor(
             observedWindows: Iterable<AvailabilityWindowVersion>,
             observedActiveSources: Iterable<AvailabilitySourceVersion>,
             protectionFingerprint: String,
+            calculation: AvailabilityCalculationSnapshot? = null,
         ): AvailabilityWindowExpectation = AvailabilityWindowExpectation(
             previous = previous,
             configuration = configuration,
@@ -496,6 +519,7 @@ data class AvailabilityWindowExpectation private constructor(
             observedWindows = Collections.unmodifiableSet(LinkedHashSet(observedWindows.toList())),
             observedActiveSources = Collections.unmodifiableSet(LinkedHashSet(observedActiveSources.toList())),
             protectionFingerprint = protectionFingerprint,
+            calculation = calculation,
         )
     }
 

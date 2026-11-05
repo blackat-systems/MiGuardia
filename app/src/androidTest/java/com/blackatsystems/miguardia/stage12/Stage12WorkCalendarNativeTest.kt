@@ -1,9 +1,13 @@
 package com.blackatsystems.miguardia.stage12
 
 import android.content.Context
+import android.os.Build
+import android.view.WindowInsets
+import android.view.inspector.WindowInspector
 import android.view.inputmethod.InputMethodManager
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.test.core.app.ActivityScenario
@@ -15,6 +19,8 @@ import com.blackatsystems.miguardia.core.domain.AppDefaults
 import com.blackatsystems.miguardia.core.domain.model.*
 import com.blackatsystems.miguardia.core.domain.work.ResolvedWorkConfigurationRevision
 import com.blackatsystems.miguardia.core.domain.work.WorkTemplate
+import com.blackatsystems.miguardia.ui.EventTimeRangeStyle
+import com.blackatsystems.miguardia.ui.formatEventTimeRange
 import com.blackatsystems.miguardia.ui.calendar.*
 import com.blackatsystems.miguardia.ui.management.*
 import kotlinx.coroutines.flow.first
@@ -27,6 +33,8 @@ import java.security.MessageDigest
 import java.time.Duration
 import java.time.LocalDate
 import java.time.YearMonth
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 import java.util.UUID
 
 /** Received QA stays in place. Only UI-created rows bearing this run's marker are owned. */
@@ -39,6 +47,8 @@ class Stage12WorkCalendarNativeTest {
     private val device get() = UiDevice.getInstance(instrumentation)
     private var scenario: ActivityScenario<MainActivity>? = null
     private val directSaveObservations = JSONArray()
+    private val backEvents = mutableListOf<Pair<String, Stage12OwnedBackEventSemantics.Observation>>()
+    private val postKeepReadiness = JSONObject()
 
     @Test fun ownDayAndOvernightLoadRecreateEditCancelAndReopenPreserveReceivedRows() {
         check(instrumentation is Stage12NormalQaRunner && context.packageName == QA)
@@ -50,9 +60,12 @@ class Stage12WorkCalendarNativeTest {
             .put("runner_sha256", args.getString("stage12RunnerSha256"))
         val output = Stage12NativeReceiptFiles.prepareOutput(context.filesDir, run, identity.toString(), "b1-owned-load-edit")
         val facts = JSONArray()
+        val editObservations = JSONArray()
         val receipt = JSONObject(identity.toString()).put("schema", "stage12-b1-owned-load-edit-v1")
             .put("case", "b1-owned-load-edit").put("status", "INCOMPLETE").put("facts", facts)
             .put("direct_save_observations", directSaveObservations)
+            .put("edit_observations", editObservations)
+            .put("post_keep_readiness", postKeepReadiness)
             .put("calendar_clock_mode", "REAL").put("calendar_zone", AppDefaults.zoneId().id)
             .put("fixture_binding", "OWN_UI_ROWS_EMPTY_FUTURE_DATE_RECEIVED_ACTIVE_DAY_AND_OVERNIGHT_TEMPLATES")
             .put("literal_C026_fixed_fixture_claim", false).put("round_credit", 0)
@@ -63,9 +76,53 @@ class Stage12WorkCalendarNativeTest {
         var before: Stage12StoreSnapshot? = null
         var date: LocalDate? = null
         var fixtureWritesStarted = false
+        var expectedEditTarget: UUID? = null
         val owned = linkedSetOf<UUID>()
         fun fact(key: String, level: String, observed: JSONObject = JSONObject()) {
             facts.put(JSONObject().put("assertion_key", key).put("level", level).put("check", "PASS").put("observed", observed))
+        }
+        fun editStep(next: String): JSONObject {
+            step = next
+            check(editObservations.length() < 48) { "B1_EDIT_OBSERVATION_BOUND" }
+            val observation = JSONObject().put("step", next)
+            editObservations.put(observation)
+            try {
+                val state = edit()
+                observation.put("state_observed", true).put("stage", state.stage.name)
+                    .put("is_loading", state.isLoading).put("is_saving", state.isSaving)
+                    .put("has_unconfirmed_changes", state.hasUnconfirmedChanges)
+                    .put("target_matches", expectedEditTarget != null && state.targetShiftId == expectedEditTarget)
+                    .put("date_matches", date != null && state.date == date)
+                    .put("draft_matches", state.position == "$marker-edited")
+            } catch (_: Exception) { observation.put("state_observed", false) }
+            try {
+                observation.put("lifecycle", requireNotNull(scenario).state.name)
+                requireNotNull(scenario).onActivity { activity ->
+                    observation.put("activity_window_focused", activity.window.decorView.hasWindowFocus())
+                    // WindowInspector returns only windows in this process. Read no other app/IME content.
+                    if (Build.VERSION.SDK_INT >= 30) {
+                        val focused = WindowInspector.getGlobalWindowViews().filter {
+                            it.context.applicationContext.packageName == QA && it.hasWindowFocus()
+                        }
+                        observation.put("focused_owned_windows", focused.size)
+                        val insets = focused.singleOrNull()?.rootWindowInsets
+                        observation.put("ime_observed", insets != null)
+                        if (insets != null) observation.put("ime_visible", insets.isVisible(WindowInsets.Type.ime()))
+                    } else observation.put("ime_observed", false)
+                }
+            } catch (_: Exception) { observation.put("window_observed", false) }
+            return observation
+        }
+        fun recordRowGeometry(observation: JSONObject, tag: String) {
+            fun bounds(tagName: String): JSONObject {
+                val value = compose.onNodeWithTag(tagName).fetchSemanticsNode().boundsInRoot
+                return JSONObject().put("left", value.left.toDouble()).put("top", value.top.toDouble())
+                    .put("right", value.right.toDouble()).put("bottom", value.bottom.toDouble())
+            }
+            try {
+                observation.put("row_bounds_in_root", bounds(tag))
+                    .put("scroll_bounds_in_root", bounds("v2-shift-edit-scroll"))
+            } catch (_: Exception) { observation.put("geometry_observed", false) }
         }
         fun trackOwned(): List<V2ShiftWrite> {
             val day = date?.takeIf { fixtureWritesStarted } ?: return emptyList()
@@ -176,29 +233,118 @@ class Stage12WorkCalendarNativeTest {
             fact("C033-contrato-completo.activity_native", "ACTIVITY_NATIVE")
             val target = pair.first()
             val neighbour = pair.last()
-            step = "EDIT_RECREATE_BACK_AND_DISCARD"
-            touch("v2-edit-shift-${target.shift.id}"); positionEdit("$marker-edited")
+            expectedEditTarget = target.shift.id
+            val rowTag = "v2-edit-shift-${target.shift.id}"
+            val rowObservation = editStep("EDIT_ROW_TOUCH")
+            waitTag(rowTag)
+            val rowNode = compose.onNodeWithTag(rowTag)
+            if (!rowNode.isDisplayed()) rowNode.performScrollTo()
+            recordRowGeometry(rowObservation, rowTag)
+            rowNode.assertIsDisplayed().assertIsEnabled().performTouchInput {
+                val point = center
+                rowObservation.put("touch_local_x", point.x.toDouble()).put("touch_local_y", point.y.toDouble())
+                click(point)
+            }
+            editStep("EDIT_FORM_WAIT")
+            await { exists("v2-shift-edit-position") && edit().stage == V2ShiftEditStage.EDIT_FORM && !edit().isLoading && !edit().isSaving }
+            editStep("POSITION_REPLACE")
+            positionEdit("$marker-edited")
+            editStep("EDIT_BASELINE_CAPTURE")
             val beforeEdit = Stage12FullStoreReadback.capture(context)
-            requireNotNull(scenario).recreate(); waitTag("v2-shift-edit-position")
+            editStep("RECREATE_REQUEST")
+            requireNotNull(scenario).recreate()
+            editStep("RECREATE_RETURNED")
+            step = "RESTORED_FORM_WAIT"
+            await { exists("v2-shift-edit-position") && edit().stage == V2ShiftEditStage.EDIT_FORM && !edit().isLoading && !edit().isSaving }
+            editStep("RESTORED_FORM_READY")
             check(edit().targetShiftId == target.shift.id && edit().date == day && edit().position == "$marker-edited") {
                 "B1_RECREATED_EDIT_TARGET_DIFFERS"
             }
+            step = "EDIT_RECREATE_DATABASE_CHECK"
             check(beforeEdit.tables == Stage12FullStoreReadback.capture(context).tables) { "B1_EDIT_RECREATION_WROTE_DATABASE" }
-            device.pressBack(); waitTag("v2-shift-discard-dialog"); touchText("Seguir editando")
+            val originalEditOwner = checkNotNull(scenario).let { active ->
+                var owner: MainActivity? = null
+                active.onActivity { owner = it }
+                checkNotNull(owner)
+            }
+            val editDraftBeforeBack = edit()
+            fun originalEditForm(): Boolean = edit() == editDraftBeforeBack &&
+                editDraftBeforeBack.stage == V2ShiftEditStage.EDIT_FORM && editDraftBeforeBack.hasUnconfirmedChanges &&
+                editDraftBeforeBack.targetShiftId == target.shift.id && editDraftBeforeBack.date == day &&
+                editDraftBeforeBack.position == "$marker-edited" && !editDraftBeforeBack.isLoading && !editDraftBeforeBack.isSaving &&
+                compose.onNodeWithTag("v2-shift-edit-position").isDisplayed() && !exists("v2-shift-discard-dialog")
+            fun discardConfirmed(): Boolean = edit().let { state ->
+                state.stage == V2ShiftEditStage.CONFIRM_DISCARD && state.copy(stage = V2ShiftEditStage.EDIT_FORM) == editDraftBeforeBack &&
+                    compose.onNodeWithTag("v2-shift-discard-dialog").isDisplayed() &&
+                    compose.onNodeWithTag("v2-shift-confirm-discard").isDisplayed()
+            }
+            fun nativeEditBack(boundary: String) {
+                val observed = Stage12OwnedBackEventSemantics.Observation()
+                backEvents += boundary to observed
+                editStep("${boundary}_PRECONDITIONS")
+                Stage12OwnedBackEventSemantics.execute(observed, ::originalEditForm, ::discardConfirmed,
+                    nativeCall = {
+                        val nativeObservation = editStep(boundary)
+                        // The Boolean describes an accessibility-event acknowledgement; the UI is mandatory.
+                        device.pressBack().also { nativeObservation.put("api_return_boolean", it) }
+                    }, awaitUi = { condition ->
+                        editStep("${boundary}_WAIT_CONFIRMATION_UI")
+                        await(condition)
+                    })
+            }
+            nativeEditBack("BACK1")
+            editStep("DISCARD1_WAIT"); waitTag("v2-shift-discard-dialog")
+            editStep("KEEP_EDITING"); touchText("Seguir editando")
+            awaitOriginalEditFormAfterKeep(originalEditOwner, ::originalEditForm, ::editStep)
             check(edit().position == "$marker-edited" && edit().targetShiftId == target.shift.id)
-            device.pressBack(); waitTag("v2-shift-discard-dialog"); touch("v2-shift-confirm-discard")
-            waitTag("v2-edit-shift-${target.shift.id}")
+            nativeEditBack("BACK2")
+            editStep("DISCARD2_WAIT"); waitTag("v2-shift-discard-dialog")
+            editStep("DISCARD"); touch("v2-shift-confirm-discard")
+            editStep("DAY_ACTIONS_WAIT"); waitTag(rowTag)
+            step = "DISCARD_DATABASE_CHECK"
             check(beforeEdit.tables == Stage12FullStoreReadback.capture(context).tables) { "B1_DISCARD_CHANGED_DATABASE" }
             step = "EDIT_POSITION_REVIEW_COMMIT"
             touch("v2-edit-shift-${target.shift.id}"); positionEdit("$marker-edited")
-            compose.onNodeWithTag("v2-shift-fixed-date").assertExists()
+            val historicalDate = day.format(DateTimeFormatter.ofPattern("EEEE d 'de' MMMM 'de' uuuu", Locale.forLanguageTag("es-AR")))
+            compose.onNodeWithTag("v2-shift-fixed-date")
+                .assertContentDescriptionEquals("Fecha fija. $historicalDate").assertHasNoClickAction()
             check(edit().date == day && edit().targetShiftId == target.shift.id && edit().usesHistoricalTemplate)
+            val beforeHistoricalCommit = Stage12FullStoreReadback.capture(context)
             touch("v2-shift-request-review")
             await { exists("v2-shift-save") || exists("v2-shift-warning-dialog") }
             if (exists("v2-shift-warning-dialog")) touch("v2-shift-confirm-warnings")
+            await { edit().stage == V2ShiftEditStage.REVIEW && !edit().isLoading && !edit().isSaving }
+            check(edit().originalWrite == target && edit().date == day && edit().usesHistoricalTemplate &&
+                edit().position == "$marker-edited" && edit().reviewFingerprint != null)
+            fun historicalReviewLine(expected: String) {
+                val selector = hasText(expected, substring = false) and hasAnyAncestor(hasTestTag("v2-shift-final-summary"))
+                compose.onAllNodes(selector).assertCountEquals(1)
+                val node = compose.onNode(selector)
+                if (!node.isDisplayed()) node.performScrollTo()
+                node.assertIsDisplayed()
+            }
+            historicalReviewLine("Fecha fija: $historicalDate")
+            historicalReviewLine("Lugar: ${target.shift.objectiveNameSnapshot} (${target.shift.objectiveAbbreviationSnapshot})")
+            historicalReviewLine("Tipo: ${target.snapshot.workTypeNameSnapshot}")
+            historicalReviewLine("Horario: " + formatEventTimeRange(target.shift.startAt, target.shift.endAt,
+                target.shift.zoneId, EventTimeRangeStyle.DETAIL))
+            historicalReviewLine("Puesto o función: $marker-edited")
+            target.shift.objectiveAddressSnapshot?.let { historicalReviewLine("Dirección: $it") }
+            Stage12RecurringReadbackOracle.requireExact(Stage12FullStoreReadback.capture(context), beforeHistoricalCommit)
+            fact("C089-contrato-completo.ui_compose", "UI_COMPOSE", JSONObject().put("historical_review_fields_complete", true))
+            val historicalSaveStartedAtMillis = System.currentTimeMillis()
             touch("v2-shift-save")
             await { runBlocking { store.shifts.getById(target.shift.id)?.position } == "$marker-edited" }
             val edited = runBlocking { store.v2Shifts.getShift(target.shift.id) as V2ShiftLookup.V2 }.write
+            check(edited.shift.updatedAt.toEpochMilli() in historicalSaveStartedAtMillis..System.currentTimeMillis() &&
+                edited.shift.updatedAt > target.shift.updatedAt) { "B1_HISTORICAL_EDIT_TIMESTAMP_OUTSIDE_SAVE" }
+            val expectedHistoricalWrite = target.copy(shift = target.shift.copy(position = "$marker-edited",
+                updatedAt = edited.shift.updatedAt))
+            val expectedHistoricalStore = Stage12RecurringReadbackOracle.expected(beforeHistoricalCommit,
+                removed = Stage12RecurringReadbackOracle.write(target),
+                inserted = Stage12RecurringReadbackOracle.write(expectedHistoricalWrite))
+            Stage12RecurringReadbackOracle.requireExact(Stage12FullStoreReadback.capture(context), expectedHistoricalStore)
+            check(edited == expectedHistoricalWrite) { "B1_HISTORICAL_EDIT_WRITE_DIFFERS" }
             check(edited.snapshot == target.snapshot &&
                 edited.shift.copy(position = target.shift.position, updatedAt = target.shift.updatedAt) == target.shift) {
                 "B1_POSITION_EDIT_CHANGED_OTHER_FIELDS"
@@ -221,10 +367,12 @@ class Stage12WorkCalendarNativeTest {
             goToMonth(YearMonth.from(day)); openDate(day)
             check(trackOwned().size == 2 && runBlocking { store.shifts.getById(target.shift.id)?.position } == "$marker-edited")
             pair.forEach { compose.onNodeWithTag("shift-detail-card-${it.shift.id}").assertExists() }
+            Stage12RecurringReadbackOracle.requireExact(Stage12FullStoreReadback.capture(context), expectedHistoricalStore)
             fact("B1-close-reopen-real-activity", "ACTIVITY_NATIVE")
         } catch (failure: Throwable) {
             primary = failure; admission.failed(failure); receipt.put("failure_class", failure.javaClass.simpleName)
                 .put("failure_step", step).put("failure_code", failure.message?.takeIf { it.matches(Regex("B1_[A-Z0-9_]+")) } ?: "B1_UNCLASSIFIED")
+                .put("failure_readback_code", Stage12NativeDiagnostics.readbackCodeOrNull(failure.message) ?: "NOT_READBACK")
         } finally {
             try {
                 admission.phase(Stage12ActivityAdmission.Phase.CLOSE)
@@ -266,6 +414,7 @@ class Stage12WorkCalendarNativeTest {
             }
             admission.phase(Stage12ActivityAdmission.Phase.PUBLISH)
             receipt.put("status", if (primary == null) "COMPLETE" else "FAILED").put("readiness", JSONObject(admission.wire()))
+                .put("back_events", backEventsForReceipt())
             try { Stage12NativeReceiptFiles.publish(output, receipt.toString(2), primary) }
             catch (failure: Throwable) { admission.failed(failure); primary = Stage12C090Oracle.retain(primary, failure) }
             finally { admission.finish(primary == null) }
@@ -281,6 +430,52 @@ class Stage12WorkCalendarNativeTest {
     private fun calendar() = state<CalendarViewModel, CalendarUiState> { it.uiState.value }
     private fun manual() = state<V2ManualShiftLoadViewModel, V2ManualShiftLoadUiState> { it.uiState.value }
     private fun edit() = state<V2ShiftEditViewModel, V2ShiftEditUiState> { it.uiState.value }
+    private fun awaitOriginalEditFormAfterKeep(originalOwner: MainActivity, formReady: () -> Boolean,
+        record: (String) -> JSONObject) {
+        fun ownerReady(observeIme: Boolean): Boolean {
+            var ready = false
+            requireNotNull(scenario).onActivity { owner ->
+                val decor = owner.window.decorView
+                val sameOwner = owner === originalOwner
+                val resumedFocused = sameOwner && !owner.isDestroyed && owner.lifecycle.currentState == Lifecycle.State.RESUMED &&
+                    decor.isAttachedToWindow && decor.isLaidOut && decor.hasWindowFocus()
+                postKeepReadiness.put("same_original_owner", sameOwner).put("owner_resumed_focused", resumedFocused)
+                var visibility: String? = null
+                if (observeIme) {
+                    val insets = if (resumedFocused && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) decor.rootWindowInsets else null
+                    postKeepReadiness.put("owned_ime_observed", insets != null)
+                    if (insets != null) visibility = if (insets.isVisible(WindowInsets.Type.ime())) "VISIBLE" else "HIDDEN"
+                    postKeepReadiness.remove("owned_ime_visibility")
+                    visibility?.let { postKeepReadiness.put("owned_ime_visibility", it) }
+                }
+                ready = resumedFocused && (!observeIme || Stage12OwnedBackEventSemantics.knownHidden(visibility))
+            }
+            return ready
+        }
+        record("KEEP_WAIT_ORIGINAL_FORM_AND_WINDOW")
+        await { formReady() && ownerReady(observeIme = false) }
+        // One explicit own-IME action changes input state/timing; it is not a neutral wait or an extra Back.
+        record("KEEP_HIDE_OWN_IME_ONCE")
+        postKeepReadiness.put("owned_ime_hide_attempts", 1).put("input_action_may_change_state_and_timing", true)
+        requireNotNull(scenario).onActivity { owner ->
+            check(owner === originalOwner) { "B1_IME_OWNER_CHANGED" }
+            owner.currentFocus?.clearFocus()
+            (owner.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager)
+                .hideSoftInputFromWindow(owner.window.decorView.windowToken, 0)
+        }
+        record("KEEP_WAIT_ORIGINAL_FORM_IME_HIDDEN")
+        await { formReady() && ownerReady(observeIme = true) }
+        postKeepReadiness.put("form_draft_preserved", true).put("dialog_absent", true).put("completed", true)
+    }
+    private fun backEventsForReceipt(): JSONArray = JSONArray(backEvents.map { (boundary, observed) ->
+        JSONObject().put("boundary", boundary).put("phase", observed.phase).put("api_return_available", observed.returnAvailable).apply {
+            observed.apiReturn?.let { put("api_return_boolean", it) }
+            observed.confirmationBefore?.let { put("confirmation_before", it) }
+            observed.confirmationUi?.let { put("confirmation_ui", it) }
+            observed.escapedErrorClass?.let { put("escaped_error_class", it) }
+            observed.failureCode?.let { put("failure_code", it) }
+        }
+    })
     private fun exists(tag: String) = compose.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty()
     private fun await(condition: () -> Boolean) = compose.waitUntil(30_000) { check(device.currentPackageName == QA) { "B1_QA_FOCUS_LOST" }; condition() }
     private fun waitTag(tag: String) = await { exists(tag) }

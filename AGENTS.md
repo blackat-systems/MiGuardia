@@ -2,12 +2,12 @@
 
 ## Entrada y autoridad
 
-1. Leer este archivo y `docs/STATUS.md`. El estado autorizado vive sólo en STATUS.
+1. Leer este archivo y `docs/STATUS.md`: bloque, permisos y cursor autorizados, con enlaces al registro de cobertura y evidencia.
 2. Usar `docs/LECTURAS_POR_TAREA.md` para elegir contrato, decisiones, código y pruebas pertinentes.
-3. MAIN sigue el contrato y cursor de STATUS. `docs/ORQUESTACION_MAIN.md` conserva la ruta histórica 2.0; no reinicia ni impone sus 24 etapas a 3.0. No cargar Mermaid ni inventarios históricos al reanudar.
+3. MAIN sigue el contrato y cursor de STATUS y el plan maestro de cierre 3.0. Los despachos sustituidos están fuera del árbol activo, localizables desde `docs/archive/README.md`. No restaurar sus órdenes ni reiniciar etapas al reanudar.
 4. Para integrar o delegar, consultar `docs/WORKFLOW.md`; para comprobar, `docs/VALIDACION.md`.
 
-No releer toda la documentación al reanudar: comprobar Git y cambios desde la última base conocida. Leer de nuevo los contratos modificados o cuyo contexto falte. `docs/archive/`, auditorías y prompts cerrados son antecedentes, no lectura de arranque ni órdenes ejecutables. Las rutas antiguas se conservan como enlaces de compatibilidad.
+No releer toda la documentación al reanudar: comprobar Git y cambios desde la última base conocida. Leer de nuevo los contratos modificados o cuyo contexto falte. `docs/archive/`, auditorías y prompts cerrados son antecedentes, no lectura de arranque ni órdenes ejecutables. El catálogo del archivo permite localizar rutas retiradas sin volver a cargarlas como instrucciones.
 
 Autoridad: instrucción actual de Joaquin; decisiones de producto vigentes en `docs/PLANIFICACION_MIGUARDIA_2_0.md`; fichas sectoriales para evidencia; ADR vigentes para contratos técnicos; estas reglas y WORKFLOW para procedimiento; código y pruebas para implementación real. `docs/MAPA_MAESTRO_MIGUARDIA_2_0.md` resume el producto sin otra hoja de estado. Un texto archivado no reemplaza su sucesor. Si queda una decisión material irresoluble, explicarla y preguntar; corregir incoherencias documentales evidentes dentro del alcance autorizado.
 
@@ -35,9 +35,10 @@ Autoridad: instrucción actual de Joaquin; decisiones de producto vigentes en `d
 ## Trabajo, Git y recursos compartidos
 
 - Hablar en español argentino claro: resultado, evidencia y siguiente paso. Diferenciar verificado, inferido y pendiente.
-- Puerta 0: ruta exacta, rama/HEAD, cambios rastreados/nuevos/staged, worktrees y remotos. Detenerse ante un mismatch inexplicable. Un checkout intencionalmente modificado se preserva como entrada.
-- MAIN integra un bloque autorizado por vez; puede delegar subtareas independientes dentro de ese alcance con contrato acotado, un escritor por archivo y revisión final. Crear una nueva tarea de Codex requiere indicación de Joaquin. No confundir tareas nuevas con revisores internos.
+- Puerta 0: ruta exacta, rama/HEAD, cambios rastreados/nuevos/staged, worktrees y remotos. Ante una divergencia material inexplicada, preservar lo recibido y detener sólo la parte afectada; continuar lo independiente autorizado. Un checkout intencionalmente modificado se preserva como entrada.
+- MAIN integra un bloque autorizado por vez y delega subtareas independientes con contrato y revisión final. Este checkout admite reparto explícito por archivo, excepción a un escritor por checkout del contenedor; conserva un único operador de Gradle/dispositivo. Crear un chat requiere indicación de Joaquin; los revisores internos son distintos.
 - Delegar capacidades completas de punta a punta, con profundidad acorde al modelo elegido por Joaquin (Astra/ultra en este ciclo). Mantener chats especializados separados por responsabilidades reales; aplicar la granularidad de `docs/WORKFLOW.md`, sin convertir botones, correcciones o pruebas del mismo recorrido en dependencias sucesivas.
+- Según `docs/WORKFLOW.md`, las correcciones rutinarias son hitos internos y las entregas estables tienen revisión independiente. Si crece la preparación sin ejecutar el recorrido, reevaluar la táctica aunque aparezcan novedades.
 - Usar el proyecto guardado; crear ramas/worktrees sólo cuando estén autorizados o se acuerde una necesidad real. No recuperar código de worktrees históricos como sustituto de la base vigente.
 - Rama de desarrollo `codex/miguardia-3.0`; `main` conserva la instantánea inicial aceptada del repositorio 3.0. Las referencias, etiquetas y hashes de 1.x/2.x pertenecen al repositorio archivado y sólo sirven como procedencia. Mantener `applicationId = com.blackatsystems.miguardia` hasta otra decisión.
 - MAIN puede crear checkpoints locales de un bloque autorizado, revisado y comprobado. Incluir sólo su alcance, sin absorber trabajo previo ajeno. Mensajes Conventional Commits en inglés.
@@ -53,5 +54,5 @@ Autoridad: instrucción actual de Joaquin; decisiones de producto vigentes en `d
 - Si cambia conducta, probar límites y errores relevantes. UI/sistema requieren QA física proporcional autorizada; informar pendiente si no se ejecutó, sin confundir una extracción mecánica verificada con QA nueva.
 - Preservar tema, TalkBack sin controles extra y tamaño de letra nativo de Android (ADR 0043). No hay zoom interno. Conservar su preferencia heredada sólo en Copias; no modificar ajustes globales durante QA.
 - Revisar diff completo del alcance, no rastreados, permisos, dependencias y ausencia de datos privados antes del cierre.
-- Registrar implementación, revisión, commit real, validación local, matriz física y distribución por separado. Actualizar sólo STATUS para estado actual; el contrato conserva requisitos, la auditoría evidencia fechada.
+- Separar implementación, revisión, commit, validación local, matriz física y distribución. Antes de encadenar, MAIN concilia cobertura, evidencia vigente y pendientes en el registro existente; STATUS resume y enlaza. El contrato fija requisitos; la auditoría conserva evidencia fechada.
 - Cierre breve: qué cambió y por qué, archivos relevantes, comprobaciones reales, límites y próximo paso. No declarar publicación, instalación o prueba que no ocurrió.
