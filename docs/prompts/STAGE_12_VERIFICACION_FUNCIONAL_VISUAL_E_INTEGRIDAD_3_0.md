@@ -4,6 +4,8 @@ Esta matriz conserva las capacidades y oráculos requeridos. El bloque ejecutor 
 
 El programa V5 conserva 441 IDs, 506 subcasos y 1627 obligaciones. Las aceptaciones se atribuyen a requisitos, variantes, artefactos y niveles. Las correcciones posteriores repiten las comprobaciones afectadas. El cierre integral requiere dos rondas completas de la misma candidata congelada y la observación humana que corresponda.
 
+> **Actualización 7/11/2026 (Joaquín):** donde este documento pide dos rondas completas, rige una pasada completa de la candidata final más una prueba corta tras cada arreglo posterior. Ver [Proceso simple](../PROCESO_SIMPLE.md).
+
 Los controles conservan datos laborales, preferencias y archivos, con cambios de ensayo propios explícitos. El baseline representa el estado real recibido. La autorización de uso normal QA y la instrumentación se aplican según el contrato actual. MAIN revisa las entregas y Stage es el único operador del dispositivo. El estado actual es PAUSADO_POR_USUARIO.
 
 ## Guardas de datos y capturas que se conservan

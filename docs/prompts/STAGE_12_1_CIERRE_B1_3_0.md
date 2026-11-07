@@ -97,4 +97,4 @@ El uso normal de QA fue autorizado por Joaquín. Para instalar o instrumentar se
 
 Una entrega permite comprobar delta, causas, resultados, nivel, fuentes, artefactos y recursos liberados. MAIN revisa de forma independiente lo crítico. B1 se cierra cuando cada obligación requerida tenga evidencia suficiente y las diferencias de conservación estén resueltas o expresamente decididas. Tras el cierre auditado se informa y se mantiene la pausa de encadenamiento acordada.
 
-Las dos rondas integrales requieren la misma candidata final, ejecutor, datos de prueba y criterios congelados, con raíces independientes. Quedan registradas en la etapa 14 del [plan maestro](../PLAN_MAESTRO_CIERRE_3_0.md).
+Por decisión de Joaquín del 7/11/2026 se hace una sola pasada completa final más una prueba corta tras cada arreglo ([Proceso simple](../PROCESO_SIMPLE.md)). Esa pasada requiere la misma candidata final, ejecutor, datos de prueba y criterios congelados, con raíces independientes. Quedan registradas en la etapa 14 del [plan maestro](../PLAN_MAESTRO_CIERRE_3_0.md).

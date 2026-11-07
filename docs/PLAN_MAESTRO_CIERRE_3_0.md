@@ -4,7 +4,7 @@ El estado actual vive en [STATUS](STATUS.md). Tras la pausa del 4 de noviembre, 
 
 ## Objetivo y responsables
 
-Completar las capacidades existentes y su verificación, conservar datos y permisos, obtener dos rondas completas conformes de la misma candidata final y preparar una entrega utilizable. Los 441 IDs, 506 subcasos y 1627 obligaciones de V5 conservan sus oráculos y niveles.
+Completar las capacidades existentes y su verificación, conservar datos y permisos, obtener una pasada completa conforme de la candidata final más una prueba corta tras cada arreglo posterior (decisión de Joaquín del 7/11/2026, ver [Proceso simple](PROCESO_SIMPLE.md)) y preparar una entrega utilizable. Los 441 IDs, 506 subcasos y 1627 obligaciones de V5 conservan sus oráculos y niveles.
 
 MAIN coordina, recibe, revisa y acepta entregas. Stage 12.1 es el implementador y operador exclusivo de Trabajo y Calendario. La poda autorizada quedó verificada y conserva su acta. Las comunicaciones MAIN y Stage mantienen la autoridad humana ya registrada.
 
@@ -31,7 +31,7 @@ La siguiente tabla conserva el resultado histórico y sus límites. Los detalles
 | 10 | Recuperación y conservación comprobadas en AVD. El ensayo original de actualización quedó incompleto. |
 | 11 | Restauración sintética Android auditada, 35/35. No acredita upgrade público ni aceptación OEM/humana. |
 | 12 original | Fase inicial Samsung ejecutada, recibida y con cese auditado. |
-| 12.1 | B1 abierto y rondas integrales 0/2. Rescate local del vínculo semántico integrado y comprobado; detenido antes de encadenar. |
+| 12.1 | B1 abierto y pasada completa final pendiente. Rescate local del vínculo semántico integrado y comprobado; detenido antes de encadenar. |
 
 ## Etapas de cierre
 
@@ -40,7 +40,7 @@ La siguiente tabla conserva el resultado histórico y sus límites. Los detalles
 | **12.1 · Trabajo y Calendario (B1)** | Configuración, carga, edición, borradores, situaciones, disponibilidad, repeticiones, jornadas múltiples/nocturnas, navegación, recreación y muerte real de proceso donde se exige. MAIN acepta obligaciones y cese antes de declarar B1 cerrado. |
 | **12.2 · Cálculos y consulta** | Conciliar horas, metas, extras, Resumen e Informes PDF/XLSX sobre la misma fixture y comprobar el retorno a Calendario. [Plan detallado](../.local-evidence/stage12-1/main/reorganization-20261103/next-stage12-2-plan/plan.md) |
 | **13 · Datos y archivos** | Demostrar conservación y recuperación con notas, fotos, Copias en reemplazo y mezcla, SAF Samsung, cancelación, corrupción e interrupción real cuando corresponda. |
-| **14 · Sistema y aceptación integral** | Verificar avisos, Widget, bloqueo, Clima, actualizaciones, temas, letra Android, accesibilidad y pasos OEM/humanos. Completar las dos rondas independientes de la candidata final. |
+| **14 · Sistema y aceptación integral** | Verificar avisos, Widget, bloqueo, Clima, actualizaciones, temas, letra Android, accesibilidad y pasos OEM/humanos. Completar la pasada completa de la candidata final y la prueba corta tras cada arreglo posterior. |
 | **15 · Preparación de entrega y upgrade público** | Aplicar la fase C. Preparar y verificar los artefactos y el ensayo de upgrade desde la versión pública exacta en destino aislado. Ejecutar la operación pública bajo autorización específica. |
 
 MAIN revisa la salida por obligación y nivel antes de habilitar la etapa siguiente.
@@ -58,8 +58,9 @@ no reabre automáticamente ABBA ni exige resolver R4 para probar otras familias.
 
 Durante corrección repetir falla y regresiones afectadas. Antes de las rondas:
 resolver versión/código final creciente, requisitos humanos/entorno y defectos;
-congelar fuentes/QA/ejecutor/fixtures/criterios. Ejecutar dos rondas completas
-independientes de la misma candidata. No sumar resultados de APK diferentes.
+congelar fuentes/QA/ejecutor/fixtures/criterios. Ejecutar una pasada completa
+de la candidata final; tras cada arreglo, repetir lo afectado y la prueba corta
+sobre el APK corregido. No sumar resultados de APK diferentes.
 Un cambio posterior se trata según la invalidación contractual, no se oculta.
 
 ## Entrega y actualización pública

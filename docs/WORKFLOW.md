@@ -1,5 +1,7 @@
 # Método de trabajo e integración
 
+> Desde el 7/11/2026 rige [Proceso simple](PROCESO_SIMPLE.md), aprobado por Joaquín. Este documento queda como referencia técnica y cede ante él donde se contradigan. Los códigos están traducidos en el [glosario](GLOSARIO.md).
+
 Este método no habilita otro bloque. `docs/STATUS.md` conserva alcance, permisos y cursor; enlaza el registro de cierre y la evidencia pertinente.
 
 ## Un ciclo
