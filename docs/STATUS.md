@@ -39,7 +39,10 @@ borrarlos espera autorización de Joaquín). La sesión humana dejó además su 
 `databases/stage12-2-ff23743f-….db` (+ `-shm`, `-wal`): al volver del selector, las pantallas reabrieron la
 base durante la limpieza. Corregido (se detienen los ViewModels antes de cerrar la base) y verificado sin
 regresión en las 5 automáticas; el caso exacto de salir a un selector no se repitió. El PDF que Joaquín
-guardó (`MiGuardia_2026-09_informe_parcial.pdf`, datos ficticios) quedó en la carpeta que eligió. PDF real revisado en la PC: mismos números y sin dirección,
+guardó (`MiGuardia_2026-09_informe_parcial.pdf`, datos ficticios) quedó en la carpeta que eligió.
+**Limpieza (8/11, autorizada por Joaquín):** borrados por nombre exacto los 3 archivos de esa base y los 20
+`.lck` vacíos. Foto posterior (`.local-evidence/claude-20261108-12-2/after-cleanup/`): 23 bases y 353
+archivos, idénticos a la foto previa a la etapa. El ejecutor `0d394c22…` sigue instalado. PDF real revisado en la PC: mismos números y sin dirección,
 motivo, puesto, notas, nota médica ni identificadores.
 Latencia de primera apertura del Resumen (fixture chica): 210–233 ms en 3 corridas. Sólo se anota; la
 alerta de la etapa 8 sigue sin causa conocida y no se reabrió.
