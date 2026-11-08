@@ -76,7 +76,8 @@ faltante**; sólo cambió `files/profileInstalled` (marca de Android al instalar
 **Hallazgo (app, no corregido):** cada vez que la app abre o aplica una Copia crea una base candidata temporal
 y la borra, pero Room deja un archivo vacío `cache/miguardia-backup-candidate-<id>.db.lck`. En uso normal se
 acumulan en la caché (Android puede limpiarla). Las corridas de hoy dejaron 41 en la app QA antes de corregir la
-limpieza del arnés; borrarlos espera autorización de Joaquín. Decidir si se corrige en la app.
+limpieza del arnés; **borrados con autorización de Joaquín (8/11)**: foto posterior (`after-cleanup/`) con 23
+bases y 353 archivos, idéntica a la previa salvo `files/profileInstalled`. Decidir si se corrige en la app.
 
 Escrito en castellano llano. Los códigos raros están traducidos en el [glosario](GLOSARIO.md).
 
