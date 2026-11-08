@@ -299,6 +299,40 @@ class SummaryViewModelTest {
         recreatedScope.cancel()
     }
 
+    @Test
+    fun previousNextAndCurrentMonthLandOnTheExactMonthAndSurviveRecreation() {
+        val handle = SavedStateHandle(mapOf("summary.visibleMonth" to "2026-01"))
+        val observer = TrackingObserver()
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
+        val viewModel = viewModel(observer, ControllablePreferencesDataStore(), handle, scope)
+        viewModel.setActive(true)
+
+        fun assertShowing(month: YearMonth) {
+            assertEquals(month, viewModel.uiState.value.visibleMonth)
+            assertEquals(month, viewModel.uiState.value.projection?.month)
+            assertEquals(month, observer.subscriptions.last())
+        }
+
+        assertShowing(YearMonth.of(2026, 1))
+        viewModel.showPreviousMonth()
+        assertShowing(YearMonth.of(2025, 12))
+        viewModel.showNextMonth()
+        viewModel.showNextMonth()
+        assertShowing(YearMonth.of(2026, 2))
+        viewModel.showCurrentMonth()
+        assertShowing(MONTH)
+        val subscriptionsAtCurrent = observer.subscriptions.size
+        viewModel.showCurrentMonth()
+        assertEquals(subscriptionsAtCurrent, observer.subscriptions.size)
+
+        viewModel.showPreviousMonth()
+        val recreatedScope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
+        val recreated = viewModel(TrackingObserver(), ControllablePreferencesDataStore(), handle, recreatedScope)
+        assertEquals(MONTH.minusMonths(1), recreated.uiState.value.visibleMonth)
+        scope.cancel()
+        recreatedScope.cancel()
+    }
+
     private fun viewModel(
         observer: MonthlySummaryObserver,
         dataStore: DataStore<Preferences>,

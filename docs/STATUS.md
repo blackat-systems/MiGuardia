@@ -1,19 +1,76 @@
 # Estado actual de MiGuardia 3.0
 
-- Bloque autorizado: STAGE_12_1_CIERRE_B1_3_0
-- Estado: CERRADO (8/11) — B1 completo, commits locales sin push
-- Próxima etapa: 12.2 · Cálculos y consulta — NO iniciada; prompt de arranque en docs/prompts/ETAPA_12_2_CALCULOS_Y_CONSULTA.md
-- Contrato: docs/prompts/STAGE_12_1_CIERRE_B1_3_0.md
-- Base: cf8fe1d + cambios locales SIN COMMIT (ver abajo)
+- Etapa en curso: 12.2 · Cálculos y consulta — EN CURSO (arrancó el 8/11); prompt en docs/prompts/ETAPA_12_2_CALCULOS_Y_CONSULTA.md
+- Etapa anterior: B1 (Trabajo y Calendario) CERRADA el 8/11
+- Base: commit local de la primera tanda 12.2 sobre 6f612bd; nada subido a GitHub
 - Actualización: 2026-11-08
 
 Escrito en castellano llano. Los códigos raros están traducidos en el [glosario](GLOSARIO.md).
 
 ## En una frase
 
-Estamos en la etapa **Cierre de Trabajo y Calendario** (B1). Las 9 pruebas automáticas
-**pasan en el Samsung** y la **sesión humana de 6 pasos pasó completa** el 8/11. B1 quedó cerrado
-con commit local (sin push). Lo próximo es la etapa 12.2.
+Estamos en la etapa **12.2 · Cálculos y consulta**. Con una misma fixture, «Tus horas y tu meta»,
+Resumen, el XLSX real y el PDF real muestran los mismos minutos, en la PC y en el Samsung, y los
+retornos conservan el mes. Falta: la sesión con el dedo de Joaquín (guardar y compartir con el selector
+real) y una segunda tanda de pruebas de los editores de Horas y extras.
+
+## Etapa 12.2 · Cálculos y consulta (desde el 8/11)
+
+**Cómo se prueba.** Una sola fixture para todo
+(`app/src/testSupport/.../stage12/Stage12CalculationFixture.kt`): septiembre 2026, meta fija mensual de
+20 h, jornada diurna 8 h con 1 h extra que cuenta, nocturna 22:00–06:00 de 8 h, extra independiente de
+3 h 30 min que no cuenta, disponibilidad de 12 h aparte, carpeta médica con nota y textos canario de
+privacidad. Valores esperados escritos a mano: 16 h sin extras, 4 h 30 min de extras, 20 h 30 min total,
+17 h que cuentan, faltan 3 h.
+- PC: `Stage12CalculationConciliationTest` (Horas = Resumen = proyección del informe = XLSX real; lista
+  blanca con opciones privadas apagadas y encendidas; opciones privadas no cambian números; mes abierto
+  igual) y `SummaryViewModelTest` (mes anterior/siguiente/actual exactos, cruce de año, recreación).
+- Samsung: `Stage12CalculationsDeviceTest` (5 métodos) monta la app real (`MiGuardiaApp`, ViewModels y Room
+  reales) sobre una **base propia de cada corrida** (`stage12-2-<id>.db` + carpeta privada), con reloj
+  anclado al 30/9/2026; se borra al terminar. No abre ni modifica los datos QA. Arnés:
+  `Stage12CalculationStore.kt`. Correr con `run_methods_diag.sh` (ver «Retomar aquí»).
+
+**Resultado en el Samsung (8/11, pareja QA `7dc36052…` + ejecutor `327fec25…`): 5/5 ✅.**
+Foto de datos QA antes/después: 23 bases idénticas, ningún archivo faltante ni cambiado. Quedaron 20
+archivos vacíos `cache/stage12-2-<id>.db.lck` de corridas anteriores a corregir la limpieza (ya corregida;
+borrarlos espera autorización de Joaquín). PDF real revisado en la PC: mismos números y sin dirección,
+motivo, puesto, notas, nota médica ni identificadores.
+Latencia de primera apertura del Resumen (fixture chica): 210–233 ms en 3 corridas. Sólo se anota; la
+alerta de la etapa 8 sigue sin causa conocida y no se reabrió.
+
+**Lista de la etapa** (✅ probado · ⏳ falta · ❌ falla). Ninguna ❌.
+
+*Horas, meta y extras (A077–A110)*
+- ✅ A086 avance, meta, período y pendiente — mismos minutos en pantalla real (Samsung) y PC.
+- ✅ A087 disponibilidad separada — PC y Samsung.
+- ✅ A077, A079, A080, A085, A088, A089, A092, A099, A103, A108, A110 — pruebas existentes.
+- ⏳ A078 crear clase con éxito / por sugerencia; A081 ayuda de las dos preguntas; A082–A084 editar,
+  archivar y reactivar desde la pantalla.
+- ⏳ A090–A091 semanal y ciclo en pantalla; A093–A098 vigencias, corte, confirmaciones, guardar y
+  valor por período.
+- ⏳ A100–A102, A104–A107, A109 extra independiente: fecha futura, elección completa, medianoche y >24 h,
+  clase nueva sin perder borrador, solapamiento, conflicto al guardar, borrar conserva el día.
+
+*Resumen (A127–A145)*
+- ✅ A128–A130 meses exactos (PC y Samsung); A131–A133 mismos minutos y disponibilidad aparte (Samsung);
+  A135 total con sus 4 contribuciones (Samsung); A145 Informes desde el menú y desde el final (Samsung).
+- ✅ Calendario → detalle → Resumen → volver conserva el mes del Calendario (Samsung).
+- ✅ A127, A136–A144 — pruebas existentes.
+- ⏳ A134 desgloses: aparecen con valores correctos en pantalla (lugares, tipos, clases, planificado/real,
+  situaciones) pero la prueba todavía no los afirma uno por uno.
+
+*Informes (A146–A165)*
+- ✅ A146 mes del Resumen (septiembre y agosto); A147 PDF real; A148 XLSX real; A149 vista previa con
+  recuentos; A157 archivo coherente con el Resumen; A160 regenerar; A165 vuelve al Resumen en el mismo
+  mes — Samsung.
+- ✅ A150–A152 en el archivo (PC: aparecen sólo si se eligen) · ⏳ tocar esos interruptores en pantalla.
+- ✅ A153, A156, A159 (permiso al archivo exacto), A161–A164 — pruebas existentes.
+- ⏳ A154 hasta 12 fotos en pantalla; A155 aviso de fotos (la fixture no tiene fotos).
+- ⏳ A158 guardar y compartir con el selector real — sesión con el dedo de Joaquín.
+
+**PC:** `python tools/verify.py --profile local` ya termina bien. El `preflight_failed` no venía de una
+ruta vieja: Windows tiene las rutas largas desactivadas y la copia de los reportes XML superaba 260
+caracteres; `verify.py` ahora usa la forma de ruta larga. Última corrida: 1339 pruebas, 0 fallas.
 
 ## Retomar aquí (sesión del 7–8/11, Claude)
 
@@ -21,7 +78,11 @@ Joaquín autorizó en el chat instalar y probar en el Samsung y aprobó los arre
 **Dónde quedamos (8/11, ~02:15):** B1 cerrado y guardado en commits locales (`f00d769` y el de este
 registro). Teléfono limpio: pareja instalada QA `7dc36052…` + ejecutor `31c30439…`; datos QA iguales a la
 foto previa. Nada subido a GitHub: la rama va adelantada respecto de `origin` y el push espera pedido de Joaquín.
-**Siguiente:** arrancar la etapa 12.2 con el prompt de `docs/prompts/ETAPA_12_2_CALCULOS_Y_CONSULTA.md`.
+**Actualización 8/11 (etapa 12.2):** el ejecutor instalado ahora es `327fec25…` (pruebas 12.2); la app QA
+sigue `7dc36052…`. Correr las pruebas 12.2 con
+`RUNNER=327fec25e5ee357bc870be1470b22bdc6d2d751ee4bab18a1d30711d5c21f6fc bash .local-evidence/claude-20261107-b1/run_methods_diag.sh <salida> <selector>…`
+(selectores en `Stage12CalculationSelectors`). Evidencia 12.2 en `.local-evidence/claude-20261108-12-2/`.
+**Siguiente:** sesión con tu dedo para guardar/compartir y segunda tanda de editores de Horas (ver etapa 12.2).
 
 **Entorno de esta PC** (la app de Claude redirige en silencio lo que se escribe en
 `AppData\Local`, por eso el SDK quedó fuera de ahí):
@@ -47,7 +108,7 @@ selector de imagen cancelado · ✅ Privacidad de nota médica · ✅ Repeticion
 Datos QA: las 23 bases idénticas tras instalar y probar; sólo se agregaron recibos y el
 horario nocturno 22:00–06:00 que se cargó a propósito como dato de partida.
 
-**Cambios sin commit (revisar diff y proponer commit a Joaquín):**
+**Cambios de B1 (ya guardados en el commit `f00d769`):**
 - App: «Otras opciones del día» sigue abierto al volver de una pantalla encima (p. ej. cancelar
   una eliminación) — `MiGuardiaApp.kt`, `CalendarDayDetail.kt`. Decidido por Joaquín.
 - App: al editar una jornada, la hora de modificación se sella al **guardar**, no al armar la
@@ -113,8 +174,7 @@ Ubicación aproximada quedó concedida a la app QA.
 2. ✅ (8/11) Foto final de datos QA y comparación con `final-after-tests/digest.json`.
 3. ✅ (8/11) Diff revisado, commit local hecho con autorización de Joaquín, B1 cerrado.
 
-**Pendientes anotados:** `tools/verify.py` termina con `preflight_failed` (WinError 3, una ruta
-inexistente, probablemente de antes de mover la carpeta) aunque Gradle pasa; para la etapa 14,
+**Pendientes anotados:** (`verify.py` arreglado el 8/11, ver etapa 12.2.) Para la etapa 14,
 TalkBack podría alcanzar el calendario que queda debajo de pantallas completas.
 
 ## Etapas que vienen después
