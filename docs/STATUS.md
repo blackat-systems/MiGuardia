@@ -11,8 +11,9 @@ Escrito en castellano llano. Los códigos raros están traducidos en el [glosari
 
 Estamos en la etapa **12.2 · Cálculos y consulta**. Con una misma fixture, «Tus horas y tu meta»,
 Resumen, el XLSX real y el PDF real muestran los mismos minutos, en la PC y en el Samsung, y los
-retornos conservan el mes. Guardar y compartir con los selectores reales pasó con Joaquín (8/11). Falta
-una segunda tanda de pruebas de los editores de Horas y extras.
+retornos conservan el mes. Guardar y compartir con los selectores reales pasó con Joaquín (8/11). La
+segunda tanda (editores de Horas, clases y extra independiente) pasó 6/6 en el Samsung. Quedan pocos
+casos ⏳ (ver lista) antes de cerrar la etapa.
 
 ## Etapa 12.2 · Cálculos y consulta (desde el 8/11)
 
@@ -33,6 +34,10 @@ privacidad. Valores esperados escritos a mano: 16 h sin extras, 4 h 30 min de ex
 **Resultado en el Samsung (8/11): 5/5 ✅** con QA `7dc36052…` + ejecutor `327fec25…`, repetidas 5/5 con el
 ejecutor final `0d394c22…` (carpeta privada movida a `files/reports/artifacts/stage12-2-<id>` para poder
 compartir, y limpieza reforzada). Sesión humana ✅ con `7cfaaa24…`.
+**Segunda tanda (8/11):** `Stage12HoursEditorsDeviceTest` (6 métodos). Corrida final junto con las 5
+anteriores sobre QA `7dc36052…` + ejecutor `f300fe81…`: **11/11 ✅**. Foto de datos QA antes/después: 23 bases
+idénticas, ningún archivo faltante ni nuevo; sólo cambió `files/profileInstalled` (marca de Android al
+instalar). Sin restos `stage12-2`. Evidencia en `.local-evidence/claude-20261108-12-2b/`.
 Foto de datos QA antes/después: 23 bases idénticas, ningún archivo faltante ni cambiado. Quedaron 20
 archivos vacíos `cache/stage12-2-<id>.db.lck` de corridas anteriores a corregir la limpieza (ya corregida;
 borrarlos espera autorización de Joaquín). La sesión humana dejó además su base
@@ -42,7 +47,7 @@ regresión en las 5 automáticas; el caso exacto de salir a un selector no se re
 guardó (`MiGuardia_2026-09_informe_parcial.pdf`, datos ficticios) quedó en la carpeta que eligió.
 **Limpieza (8/11, autorizada por Joaquín):** borrados por nombre exacto los 3 archivos de esa base y los 20
 `.lck` vacíos. Foto posterior (`.local-evidence/claude-20261108-12-2/after-cleanup/`): 23 bases y 353
-archivos, idénticos a la foto previa a la etapa. El ejecutor `0d394c22…` sigue instalado. PDF real revisado en la PC: mismos números y sin dirección,
+archivos, idénticos a la foto previa a la etapa. (Después se instaló el ejecutor `f300fe81…`.) PDF real revisado en la PC: mismos números y sin dirección,
 motivo, puesto, notas, nota médica ni identificadores.
 Latencia de primera apertura del Resumen (fixture chica): 210–233 ms en 3 corridas. Sólo se anota; la
 alerta de la etapa 8 sigue sin causa conocida y no se reabrió.
@@ -53,12 +58,19 @@ alerta de la etapa 8 sigue sin causa conocida y no se reabrió.
 - ✅ A086 avance, meta, período y pendiente — mismos minutos en pantalla real (Samsung) y PC.
 - ✅ A087 disponibilidad separada — PC y Samsung.
 - ✅ A077, A079, A080, A085, A088, A089, A092, A099, A103, A108, A110 — pruebas existentes.
-- ⏳ A078 crear clase con éxito / por sugerencia; A081 ayuda de las dos preguntas; A082–A084 editar,
-  archivar y reactivar desde la pantalla.
-- ⏳ A090–A091 semanal y ciclo en pantalla; A093–A098 vigencias, corte, confirmaciones, guardar y
-  valor por período.
-- ⏳ A100–A102, A104–A107, A109 extra independiente: fecha futura, elección completa, medianoche y >24 h,
-  clase nueva sin perder borrador, solapamiento, conflicto al guardar, borrar conserva el día.
+- ✅ A078 crear por sugerencia («Servicio extra»); A081 ayuda de las dos preguntas; A082 renombrar sin
+  reinterpretar el extra guardado; A083–A084 archivar y reactivar sin tocar el extra existente — Samsung.
+- ✅ A090 semana con primer día elegido; A091 ciclo con longitud y anclaje; A093 desde hoy y fecha
+  propia; A094 corte del tramo anterior (el tramo viejo queda intacto); A095 recálculo pasado y primer tramo
+  corto exigen confirmar; A096 guardar después de revisar — Samsung.
+- ✅ A097 meta por período sin valor (no se inventa) y luego informada; A098 corrección sólo con
+  confirmación y misma identidad — Samsung.
+- ✅ A100 sin alta para fecha futura; A101 lugar, tipo, sin plantilla, clase, color y puesto; A102 cruce
+  de medianoche y 29 h; A104 clase creada desde el borrador sin perderlo; A105 duración y meta en la
+  revisión; A106 superposición y carpeta médica exigen confirmar (la carpeta no se borra); A109 borrar sólo
+  ese extra (la jornada del día sigue) — Samsung.
+- ⏳ A107 (parte): la revalidación por un conflicto que aparece justo al guardar sólo está probada en Room,
+  no desde la pantalla; A096 ídem para la meta.
 
 *Resumen (A127–A145)*
 - ✅ A128–A130 meses exactos (PC y Samsung); A131–A133 mismos minutos y disponibilidad aparte (Samsung);
@@ -90,11 +102,11 @@ Joaquín autorizó en el chat instalar y probar en el Samsung y aprobó los arre
 **Dónde quedamos (8/11, ~02:15):** B1 cerrado y guardado en commits locales (`f00d769` y el de este
 registro). Teléfono limpio: pareja instalada QA `7dc36052…` + ejecutor `31c30439…`; datos QA iguales a la
 foto previa. Nada subido a GitHub: la rama va adelantada respecto de `origin` y el push espera pedido de Joaquín.
-**Actualización 8/11 (etapa 12.2):** el ejecutor instalado ahora es `0d394c22…` (pruebas 12.2); la app QA
+**Actualización 8/11 (etapa 12.2):** el ejecutor instalado ahora es `f300fe81…` (pruebas 12.2); la app QA
 sigue `7dc36052…`. Correr las pruebas 12.2 con
-`RUNNER=0d394c220234a3ec4ff7f5bbb202f60c44d7da16de8c56e72667bbfe41741c22 bash .local-evidence/claude-20261107-b1/run_methods_diag.sh <salida> <selector>…`
+`RUNNER=f300fe81f0134f3b335d38d02487772c6adb00621de08a3ff2c590f5d3f27c2d bash .local-evidence/claude-20261107-b1/run_methods_diag.sh <salida> <selector>…`
 (selectores en `Stage12CalculationSelectors`). Evidencia 12.2 en `.local-evidence/claude-20261108-12-2/`.
-**Siguiente:** segunda tanda de editores de Horas y extras (ver etapa 12.2).
+**Siguiente:** decidir si los ⏳ restantes de la etapa 12.2 se cubren o se aceptan, y cerrarla.
 
 **Entorno de esta PC** (la app de Claude redirige en silencio lo que se escribe en
 `AppData\Local`, por eso el SDK quedó fuera de ahí):
