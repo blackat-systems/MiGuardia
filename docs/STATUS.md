@@ -45,8 +45,8 @@ faltante**; sólo cambió `files/profileInstalled` (marca de Android al instalar
   A206 EXIF ROTATE_90 / ROTATE_270 se ve girada al importar y al reemplazar — Samsung.
 - ✅ A207 foto cuyo archivo falta: «No se pudo mostrar la foto» sólo en su tarjeta y en el visor, sin mostrar
   otra; al volver el archivo y reabrirla, se lee la misma — Samsung.
-- ✅ A201 pinza y desplazamiento en el visor real — sesión humana (confirmación visual de Joaquín pendiente
-  de anotar). Gestos en Compose — prueba existente.
+- ✅ A201 pinza y desplazamiento en el visor real — sesión humana; Joaquín confirmó a la vista que ampliar y
+  arrastrar anduvieron bien (8/11). Gestos en Compose — prueba existente.
 
 *Copias y restauración (A166–A188)*
 - ✅ A166 abrir; A167 con y sin fotos (la copia declara INCLUDED u OMITTED); A168 cifrado por defecto; A169
@@ -197,8 +197,8 @@ sigue `7dc36052…`. Correr las pruebas 12.2 con
 **Actualización 8/11 (etapa 13):** ejecutor instalado `ac66cf6f52472cef9be73490f80a25508b65bb3aa26d2653479e0abad2682057`
 (incluye 12.2 y 13). Después se instaló `e86d06c7b2ea0e8e3b5b46cb4607ef5f9b3633b2bbd84a2e228cfaab87344d5e`
 (agrega A188); la app QA sigue `7dc36052…`. Foto de datos QA tras A188 idéntica a la previa (salvo
-`files/profileInstalled`). **Siguiente:** confirmación visual de la pinza por Joaquín, decidir el hallazgo de los
-`.lck` y cerrar la etapa 13.
+`files/profileInstalled`). **Siguiente:** Joaquín decide si el hallazgo de los `.lck` se corrige ahora o queda para
+la etapa 14, y cierra la etapa 13 (todos los casos A166–A207, C078, C079 y C095 ✅).
 
 **Entorno de esta PC** (la app de Claude redirige en silencio lo que se escribe en
 `AppData\Local`, por eso el SDK quedó fuera de ahí):
