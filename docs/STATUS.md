@@ -11,8 +11,8 @@ Escrito en castellano llano. Los códigos raros están traducidos en el [glosari
 
 Estamos en la etapa **12.2 · Cálculos y consulta**. Con una misma fixture, «Tus horas y tu meta»,
 Resumen, el XLSX real y el PDF real muestran los mismos minutos, en la PC y en el Samsung, y los
-retornos conservan el mes. Falta: la sesión con el dedo de Joaquín (guardar y compartir con el selector
-real) y una segunda tanda de pruebas de los editores de Horas y extras.
+retornos conservan el mes. Guardar y compartir con los selectores reales pasó con Joaquín (8/11). Falta
+una segunda tanda de pruebas de los editores de Horas y extras.
 
 ## Etapa 12.2 · Cálculos y consulta (desde el 8/11)
 
@@ -30,10 +30,16 @@ privacidad. Valores esperados escritos a mano: 16 h sin extras, 4 h 30 min de ex
   anclado al 30/9/2026; se borra al terminar. No abre ni modifica los datos QA. Arnés:
   `Stage12CalculationStore.kt`. Correr con `run_methods_diag.sh` (ver «Retomar aquí»).
 
-**Resultado en el Samsung (8/11, pareja QA `7dc36052…` + ejecutor `327fec25…`): 5/5 ✅.**
+**Resultado en el Samsung (8/11): 5/5 ✅** con QA `7dc36052…` + ejecutor `327fec25…`, repetidas 5/5 con el
+ejecutor final `0d394c22…` (carpeta privada movida a `files/reports/artifacts/stage12-2-<id>` para poder
+compartir, y limpieza reforzada). Sesión humana ✅ con `7cfaaa24…`.
 Foto de datos QA antes/después: 23 bases idénticas, ningún archivo faltante ni cambiado. Quedaron 20
 archivos vacíos `cache/stage12-2-<id>.db.lck` de corridas anteriores a corregir la limpieza (ya corregida;
-borrarlos espera autorización de Joaquín). PDF real revisado en la PC: mismos números y sin dirección,
+borrarlos espera autorización de Joaquín). La sesión humana dejó además su base
+`databases/stage12-2-ff23743f-….db` (+ `-shm`, `-wal`): al volver del selector, las pantallas reabrieron la
+base durante la limpieza. Corregido (se detienen los ViewModels antes de cerrar la base) y verificado sin
+regresión en las 5 automáticas; el caso exacto de salir a un selector no se repitió. El PDF que Joaquín
+guardó (`MiGuardia_2026-09_informe_parcial.pdf`, datos ficticios) quedó en la carpeta que eligió. PDF real revisado en la PC: mismos números y sin dirección,
 motivo, puesto, notas, nota médica ni identificadores.
 Latencia de primera apertura del Resumen (fixture chica): 210–233 ms en 3 corridas. Sólo se anota; la
 alerta de la etapa 8 sigue sin causa conocida y no se reabrió.
@@ -66,7 +72,10 @@ alerta de la etapa 8 sigue sin causa conocida y no se reabrió.
 - ✅ A150–A152 en el archivo (PC: aparecen sólo si se eligen) · ⏳ tocar esos interruptores en pantalla.
 - ✅ A153, A156, A159 (permiso al archivo exacto), A161–A164 — pruebas existentes.
 - ⏳ A154 hasta 12 fotos en pantalla; A155 aviso de fotos (la fixture no tiene fotos).
-- ⏳ A158 guardar y compartir con el selector real — sesión con el dedo de Joaquín.
+- ✅ A158 guardar con el selector real de documentos: lo guardado es idéntico byte a byte al PDF
+  (14.120 bytes) — sesión humana 8/11 (`Stage12CalculationsHumanTest`).
+- ✅ A159/A161 en el sistema real: se abre la hoja de compartir de Android; cerrarla sin elegir deja el
+  informe privado intacto y la pantalla lista; vuelve al Resumen — misma sesión humana.
 
 **PC:** `python tools/verify.py --profile local` ya termina bien. El `preflight_failed` no venía de una
 ruta vieja: Windows tiene las rutas largas desactivadas y la copia de los reportes XML superaba 260
@@ -78,11 +87,11 @@ Joaquín autorizó en el chat instalar y probar en el Samsung y aprobó los arre
 **Dónde quedamos (8/11, ~02:15):** B1 cerrado y guardado en commits locales (`f00d769` y el de este
 registro). Teléfono limpio: pareja instalada QA `7dc36052…` + ejecutor `31c30439…`; datos QA iguales a la
 foto previa. Nada subido a GitHub: la rama va adelantada respecto de `origin` y el push espera pedido de Joaquín.
-**Actualización 8/11 (etapa 12.2):** el ejecutor instalado ahora es `327fec25…` (pruebas 12.2); la app QA
+**Actualización 8/11 (etapa 12.2):** el ejecutor instalado ahora es `0d394c22…` (pruebas 12.2); la app QA
 sigue `7dc36052…`. Correr las pruebas 12.2 con
-`RUNNER=327fec25e5ee357bc870be1470b22bdc6d2d751ee4bab18a1d30711d5c21f6fc bash .local-evidence/claude-20261107-b1/run_methods_diag.sh <salida> <selector>…`
+`RUNNER=0d394c220234a3ec4ff7f5bbb202f60c44d7da16de8c56e72667bbfe41741c22 bash .local-evidence/claude-20261107-b1/run_methods_diag.sh <salida> <selector>…`
 (selectores en `Stage12CalculationSelectors`). Evidencia 12.2 en `.local-evidence/claude-20261108-12-2/`.
-**Siguiente:** sesión con tu dedo para guardar/compartir y segunda tanda de editores de Horas (ver etapa 12.2).
+**Siguiente:** segunda tanda de editores de Horas y extras (ver etapa 12.2).
 
 **Entorno de esta PC** (la app de Claude redirige en silencio lo que se escribe en
 `AppData\Local`, por eso el SDK quedó fuera de ahí):

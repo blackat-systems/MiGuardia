@@ -37,6 +37,7 @@ import com.blackatsystems.miguardia.reports.LocalReportGenerator
 import com.blackatsystems.miguardia.reports.ReportArtifact
 import com.blackatsystems.miguardia.reports.ReportArtifactStore
 import com.blackatsystems.miguardia.reports.ReportDestination
+import com.blackatsystems.miguardia.reports.ReportDestinationWriter
 import com.blackatsystems.miguardia.reports.ReportPhotoStager
 import com.blackatsystems.miguardia.ui.MiGuardiaApp
 import com.blackatsystems.miguardia.ui.availability.AvailabilityViewModel
@@ -87,10 +88,17 @@ import com.blackatsystems.miguardia.stage12.Stage12CalculationFixture as F
  * dentro de `filesDir/stage12-2-<run>/`, y la fixture compartida sembrada por los repositorios reales.
  * Un único reloj que avanza, anclado al construir en 2026-09-30T15:00:00Z, alimenta todo el grafo.
  */
-internal class Stage12CalculationStore(private val context: Context, private val runId: UUID) : AutoCloseable {
+internal class Stage12CalculationStore(
+    private val context: Context,
+    private val runId: UUID,
+    /** true: guarda con el escritor real por el selector de documentos (sesión humana). */
+    realDestination: Boolean = false,
+) : AutoCloseable {
     private val tag = "stage12-2-$runId"
     private val databaseName = "$tag.db"
-    val privateRoot: File = File(context.filesDir, tag)
+    /** Bajo `files/reports/artifacts/` para que el FileProvider real pueda compartir el informe (como B1). */
+    private val artifactsParent: File = File(context.filesDir, "reports/artifacts")
+    val privateRoot: File = File(artifactsParent, tag)
     val anchoredNow: Instant = Instant.parse("2026-09-30T15:00:00Z")
     val zone: ZoneId = F.ZONE
     val clock: Clock = Clock.offset(Clock.system(F.ZONE), Duration.between(Instant.now(), anchoredNow))
@@ -101,6 +109,9 @@ internal class Stage12CalculationStore(private val context: Context, private val
 
     private val saved = Collections.synchronizedList(mutableListOf<ByteArray>())
     val savedArtifacts: List<ByteArray> get() = synchronized(saved) { saved.toList() }
+    private val savedTo = Collections.synchronizedList(mutableListOf<Uri>())
+    /** Destinos reales donde se guardó con éxito (sólo con `realDestination`). */
+    val savedDestinations: List<Uri> get() = synchronized(savedTo) { savedTo.toList() }
     private val discarded = Collections.synchronizedList(mutableListOf<Uri>())
     val discardedDestinations: List<Uri> get() = synchronized(discarded) { discarded.toList() }
 
@@ -133,6 +144,7 @@ internal class Stage12CalculationStore(private val context: Context, private val
     init {
         check(!privateRoot.exists()) { "STAGE12_2_PRIVATE_ROOT_EXISTS" }
         check(!context.getDatabasePath(databaseName).exists()) { "STAGE12_2_DATABASE_EXISTS" }
+        check(artifactsParent.isDirectory || artifactsParent.mkdirs()) { "STAGE12_2_ARTIFACTS_PARENT" }
         check(privateRoot.mkdirs()) { "STAGE12_2_PRIVATE_ROOT_NOT_CREATED" }
         listOf("files", "cache", "no_backup", "datastore").forEach { check(File(privateRoot, it).mkdirs()) }
         privateContext = PrivateFileContext(context, privateRoot) { rejected += it }
@@ -153,11 +165,17 @@ internal class Stage12CalculationStore(private val context: Context, private val
         val generator = LocalReportGenerator(store.monthlyReportSnapshots, profile,
             ReportPhotoStager(privateContext, photoStore, clock), ReportArtifactStore(privateContext, clock),
             clock = clock, zoneId = zone)
+        val real = ReportDestinationWriter(context.contentResolver)
         val destination = object : ReportDestination {
             override suspend fun save(artifact: ReportArtifact, destination: Uri) {
+                if (realDestination) real.save(artifact, destination)
                 saved += artifact.file.readBytes()
+                if (realDestination) savedTo += destination
             }
-            override suspend fun discard(destination: Uri): Boolean { discarded += destination; return true }
+            override suspend fun discard(destination: Uri): Boolean {
+                discarded += destination
+                return if (realDestination) real.discard(destination) else true
+            }
         }
         val s = store
         calendarFactory = CalendarViewModel.Factory(s.shifts, s.explicitDayStatuses, s.medicalLeaves, s.holidays,
@@ -376,7 +394,7 @@ internal class Stage12CalculationStore(private val context: Context, private val
         }
         if (privateRoot.exists()) check(privateRoot.deleteRecursively()) { "STAGE12_2_PRIVATE_ROOT_NOT_DELETED" }
         val databaseDir = context.getDatabasePath(databaseName).parentFile
-        val leftovers = listOfNotNull(databaseDir, context.filesDir, context.cacheDir)
+        val leftovers = listOfNotNull(databaseDir, context.filesDir, context.cacheDir, artifactsParent)
             .flatMap { dir -> dir.listFiles().orEmpty().filter { it.name.contains(runId.toString()) } }
         check(leftovers.isEmpty()) { "STAGE12_2_CLEANUP_LEFTOVERS:${leftovers.map { it.name }}" }
     }

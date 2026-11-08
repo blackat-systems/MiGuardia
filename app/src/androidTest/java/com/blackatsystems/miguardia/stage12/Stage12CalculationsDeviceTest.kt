@@ -55,6 +55,9 @@ class Stage12CalculationsDeviceTest {
     }
 
     @After fun closeIsolatedApp() {
+        // Primero se detienen los ViewModels de la pantalla: si siguen vivos pueden reabrir la base ya cerrada.
+        runCatching { compose.runOnUiThread { compose.activity.viewModelStore.clear() } }
+        compose.waitForIdle()
         if (::graph.isInitialized) graph.close()
     }
 
