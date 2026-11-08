@@ -1,6 +1,7 @@
 # Estado actual de MiGuardia 3.0
 
-- Etapa: 13 · Datos y archivos — todos los casos ✅ en el Samsung (8/11); falta que Joaquín la dé por cerrada
+- Etapa: 13 · Datos y archivos — CERRADA por Joaquín (8/11): A166–A207, C078, C079 y C095 ✅; commits locales sin push
+- Próxima etapa: 14 · Sistema y aceptación final — NO iniciada
 - Etapa anterior: 12.2 · Cálculos y consulta — CERRADA por Joaquín (8/11)
 - Base: `cbfa26d` (arranque de la etapa 13). Push del 8/11 04:24: `origin/codex/miguardia-3.0` = `cbfa26d`;
   lo posterior es local, sin push
@@ -206,7 +207,10 @@ sigue `7dc36052…`. Correr las pruebas 12.2 con
 `71523f97946bc2087dac6a45eb3d911f2ea4f728d0fd6f7f524d35ebe462f056` + ejecutor
 `1c22148b9e2725ce3d079d55cfc895c557b14fd3fd1c1bbb56453c7f9812e869` (ambos verificados sacándolos del teléfono). Para
 correr con esta pareja: `.local-evidence/claude-20261108-13/fix-lck/run.sh` con `QA=` y `RUNNER=`.
-**Siguiente:** Joaquín cierra la etapa 13 (todos los casos A166–A207, C078, C079 y C095 ✅).
+**Etapa 13 cerrada por Joaquín (8/11).** **Siguiente:** arrancar la etapa 14 · Sistema y aceptación final (avisos,
+Widget, bloqueo, Clima, temas, accesibilidad y pasada completa). Pendientes anotados para esa etapa: «Guardar meta»
+durante una recarga (12.2), TalkBack sobre pantallas completas (B1), y Atrás con recuperación de Copias pendiente
+(13, INFERIDO que al reabrir aparece la recuperación).
 
 **Entorno de esta PC** (la app de Claude redirige en silencio lo que se escribe en
 `AppData\Local`, por eso el SDK quedó fuera de ahí):
