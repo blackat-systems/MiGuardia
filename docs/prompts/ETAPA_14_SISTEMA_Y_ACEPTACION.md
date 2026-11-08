@@ -4,8 +4,10 @@ Pegar en una sesión nueva de Claude, desde `MiGuardia-3.0/`:
 
 ---
 
-Retomá MiGuardia 3.0 y arrancá la **etapa 14 · Sistema y aceptación final**. La etapa 13 (Datos y
-archivos) quedó cerrada el 8/11/2026 (commit `c74284f`, subido a `origin/codex/miguardia-3.0`).
+Retomá MiGuardia 3.0 y arrancá la **etapa 14 · Sistema y aceptación final**. Viene después de la 13
+(Datos y archivos, cerrada el 8/11/2026) y de la 13.5 (Estética y facilidad de uso): confirmá en STATUS
+que la 13.5 está cerrada y tomá su último commit como base; si no lo está, frená y avisame. La pareja
+instalada, el script y los hashes vigentes son los que diga STATUS al cerrar la 13.5.
 
 **Antes de tocar nada**
 1. Leé `CLAUDE.md`, `docs/STATUS.md`, `docs/PROCESO_SIMPLE.md` y `docs/LECTURAS_POR_TAREA.md`
@@ -40,9 +42,9 @@ Dos partes, en este orden:
   `Stage12W010NativeTest`, `Stage12X015NativeTest` y afines) y cuáles faltan. Proponeme la lista
   agrupada por superficie antes de escribir pruebas nuevas.
 - PC: `python tools/verify.py --profile local` (última corrida 1339 pruebas, 0 fallas).
-- Samsung: sólo con mi autorización en el momento. Pareja instalada (QA `71523f97…`, ejecutor
-  `1c22148b…`), entorno y script (`.local-evidence/claude-20261108-13/fix-lck/run.sh` con `QA=` y
-  `RUNNER=`) en STATUS. Lo que necesite mi dedo (permisos del sistema, agregar el Widget a la pantalla
+- Samsung: sólo con mi autorización en el momento. Pareja instalada, entorno y script en STATUS (al cerrar
+  la 13 eran QA `71523f97…` y ejecutor `1c22148b…`, con `.local-evidence/claude-20261108-13/fix-lck/run.sh`
+  y `QA=`/`RUNNER=`; la 13.5 los va a cambiar). Lo que necesite mi dedo (permisos del sistema, agregar el Widget a la pantalla
   de inicio, bloqueo del teléfono, TalkBack, mirar un tema) me lo pedís paso a paso, en castellano, con
   lo que voy a ver en pantalla.
 

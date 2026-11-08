@@ -1,10 +1,11 @@
 # Estado actual de MiGuardia 3.0
 
-- Etapa: 13 · Datos y archivos — CERRADA por Joaquín (8/11): A166–A207, C078, C079 y C095 ✅; commits locales sin push
-- Próxima etapa: 14 · Sistema y aceptación final — NO iniciada; prompt de arranque en docs/prompts/ETAPA_14_SISTEMA_Y_ACEPTACION.md
+- Etapa: 13 · Datos y archivos — CERRADA por Joaquín (8/11): A166–A207, C078, C079 y C095 ✅
+- Próxima etapa: **13.5 · Estética y facilidad de uso** (agregada por Joaquín el 8/11) — NO iniciada; prompt en
+  docs/prompts/ETAPA_13_5_ESTETICA_Y_FACILIDAD.md. Después: 14 · Sistema y aceptación final
+  (docs/prompts/ETAPA_14_SISTEMA_Y_ACEPTACION.md) y 15 · Entrega
 - Etapa anterior: 12.2 · Cálculos y consulta — CERRADA por Joaquín (8/11)
-- Base: `cbfa26d` (arranque de la etapa 13). Push del 8/11 04:24: `origin/codex/miguardia-3.0` = `cbfa26d`;
-  lo posterior es local, sin push
+- Base: `636e4ae`, subido a `origin/codex/miguardia-3.0` el 8/11 con pedido de Joaquín
 - Actualización: 2026-11-08
 
 ## Etapa 13 · Datos y archivos (desde el 8/11)
@@ -207,7 +208,8 @@ sigue `7dc36052…`. Correr las pruebas 12.2 con
 `71523f97946bc2087dac6a45eb3d911f2ea4f728d0fd6f7f524d35ebe462f056` + ejecutor
 `1c22148b9e2725ce3d079d55cfc895c557b14fd3fd1c1bbb56453c7f9812e869` (ambos verificados sacándolos del teléfono). Para
 correr con esta pareja: `.local-evidence/claude-20261108-13/fix-lck/run.sh` con `QA=` y `RUNNER=`.
-**Etapa 13 cerrada por Joaquín (8/11).** **Siguiente:** arrancar la etapa 14 · Sistema y aceptación final (avisos,
+**Etapa 13 cerrada por Joaquín (8/11).** **Siguiente:** arrancar la etapa 13.5 · Estética y facilidad de uso; después
+la etapa 14 · Sistema y aceptación final (avisos,
 Widget, bloqueo, Clima, temas, accesibilidad y pasada completa). Pendientes anotados para esa etapa: «Guardar meta»
 durante una recarga (12.2), TalkBack sobre pantallas completas (B1), y Atrás con recuperación de Copias pendiente
 (13, INFERIDO que al reabrir aparece la recuperación).
@@ -311,6 +313,7 @@ TalkBack podría alcanzar el calendario que queda debajo de pantallas completas.
 |---|---|
 | 12.2 · Cálculos y consulta | Horas, metas, extras, Resumen, informes PDF/XLSX |
 | 13 · Datos y archivos | Notas, fotos, Copias, restaurar, archivos dañados |
+| 13.5 · Estética y facilidad de uso | Pulir Vigilia R4 en toda la app; elegir horarios y fechas con selector nativo (sin quitar la escritura) |
 | 14 · Sistema y aceptación final | Avisos, Widget, bloqueo, Clima, temas, accesibilidad, pasada completa final |
 | 15 · Preparar la entrega | Firma, prueba de actualización desde 2.0.2 y publicación |
 
