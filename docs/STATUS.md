@@ -1,7 +1,8 @@
 # Estado actual de MiGuardia 3.0
 
 - Bloque autorizado: STAGE_12_1_CIERRE_B1_3_0
-- Estado: CERRADO (8/11) — B1 completo, commit local sin push
+- Estado: CERRADO (8/11) — B1 completo, commits locales sin push
+- Próxima etapa: 12.2 · Cálculos y consulta — NO iniciada; prompt de arranque en docs/prompts/ETAPA_12_2_CALCULOS_Y_CONSULTA.md
 - Contrato: docs/prompts/STAGE_12_1_CIERRE_B1_3_0.md
 - Base: cf8fe1d + cambios locales SIN COMMIT (ver abajo)
 - Actualización: 2026-11-08
@@ -17,7 +18,10 @@ con commit local (sin push). Lo próximo es la etapa 12.2.
 ## Retomar aquí (sesión del 7–8/11, Claude)
 
 Joaquín autorizó en el chat instalar y probar en el Samsung y aprobó los arreglos de abajo.
-B1 cerrado. Al reiniciar Claude, preguntar a Joaquín si arranca la etapa 12.2 y si se hace push.
+**Dónde quedamos (8/11, ~02:15):** B1 cerrado y guardado en commits locales (`f00d769` y el de este
+registro). Teléfono limpio: pareja instalada QA `7dc36052…` + ejecutor `31c30439…`; datos QA iguales a la
+foto previa. Nada subido a GitHub: la rama va adelantada respecto de `origin` y el push espera pedido de Joaquín.
+**Siguiente:** arrancar la etapa 12.2 con el prompt de `docs/prompts/ETAPA_12_2_CALCULOS_Y_CONSULTA.md`.
 
 **Entorno de esta PC** (la app de Claude redirige en silencio lo que se escribe en
 `AppData\Local`, por eso el SDK quedó fuera de ahí):
@@ -28,12 +32,12 @@ B1 cerrado. Al reiniciar Claude, preguntar a Joaquín si arranca la etapa 12.2 y
 - En Git Bash usar `MSYS_NO_PATHCONV=1` para rutas `/sdcard`.
 
 **Pareja instalada en el Samsung** (verificada sacando el APK del teléfono):
-QA `7dc36052…d249`, ejecutor `75563034…3d90`. Se compila con
+QA `7dc36052…d249`, ejecutor `31c30439…c19b` (desde el 8/11; antes `75563034…3d90`). Se compila con
 `:app:assembleQa` y luego `:app:assembleQaAndroidTest -Pmiguardia.stage12NormalRunner=true
 -Pmiguardia.stage12QaSha256=<hash QA>`; instalar con `adb install --user 0 -r` (conserva datos).
 
 **Evidencia y herramientas** en `.local-evidence/claude-20261107-b1/` (fuera de Git):
-`run_methods.sh` (corre métodos con la pareja actual), `snapshot_digest.py` (foto lógica de
+`run_methods.sh` (pareja vieja) y `run_methods_diag.sh` (pareja actual; corre métodos), `snapshot_digest.py` (foto lógica de
 datos QA), `ui.py` (toques por adb), fotos antes/después y recibos de cada corrida.
 
 **Resultados en el Samsung (versión final):** ✅ Disponibilidad historial, revisiones y
@@ -78,7 +82,9 @@ repitió y no se cambió código por eso (INFERIDO: demora de red).
 faltante; sólo cambió `files/profileInstalled` (marcador de Android ya excusado). Lo nuevo es propio de
 pruebas: restos de 10 corridas fallidas (una base + archivos cada una) y 2 recibos de la corrida aprobada.
 Imágenes de prueba sobrantes en la galería: borradas (con autorización de Joaquín); no queda ninguna.
-**Pendiente opcional:** borrar los restos de las 10 corridas fallidas dentro del paquete QA (pedir permiso).
+Restos de las 10 corridas fallidas: **borrados** por Joaquín el 8/11 (10 bases con `-wal`/`-shm` y 10
+carpetas privadas; los recibos se conservan). Foto posterior (`final-after-cleanup/`): 23 bases idénticas
+a `final-after-tests/`, ningún archivo previo faltante ni extra salvo 19 recibos y `files/profileInstalled`.
 Ubicación aproximada quedó concedida a la app QA.
 
 ## Qué pasó hasta el 5/11
