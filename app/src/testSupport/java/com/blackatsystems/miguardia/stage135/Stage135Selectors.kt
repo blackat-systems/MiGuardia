@@ -34,7 +34,75 @@ object Stage135Selectors {
     ).map { "$AVAILABILITY#$it" }.toSet() + listOf(
         "darkThemeExposesApprovedVigiliaRolesAndContrast",
         "lightThemeExposesApprovedVigiliaRolesAndContrast",
-    ).map { "com.blackatsystems.miguardia.VigiliaThemeComposeTest#$it" }
+    ).map { "com.blackatsystems.miguardia.VigiliaThemeComposeTest#$it" } +
+        // Style v2 changes the font for the whole app: screens whose tests check fit, cut-off
+        // text and typography run as regression (synthetic data, no Room).
+        styleV2Regression
+
+    private val styleV2Regression: Set<String> get() = emptySet<String>() + listOf(
+        "standardFontScalePhysicalViewportShowsTheWholeMonthWithoutPermanentActions",
+        "shortViewportKeepsTheWholeMonthWithoutAddingVerticalScroll",
+        "anOldCollapsedPreferenceCannotHideDates",
+        "fixedPhysicalViewportKeepsCalendarReachableAtEveryAndroidFontScale",
+        "shortWindowManualSelectionKeepsSixFullRowsAtTwoHundredPercent",
+        "wideShortWindowKeepsRailControlsAndEverySelectionOwnerAtNativeLargeText",
+        "shiftDetailKeepsItsParticularNotificationSettingsReachable",
+    ).map { "com.blackatsystems.miguardia.CalendarAdaptiveLayoutComposeTest#$it" } + listOf(
+        "portraitFourFiveSixWeekMonthsAtEveryThemeAndAndroidFontScale",
+        "landscapeFourFiveSixWeekMonthsAtEveryThemeAndAndroidFontScale",
+    ).map { "com.blackatsystems.miguardia.Stage4CalendarMatrixTest#$it" } + listOf(
+        "upcomingJourneyHasRequestedVisualOrderAndSubMinuteCountdown",
+        "singleOngoingJourneyIsShownWithoutARedundantExpandableCopy",
+        "singleJourneyDoesNotDuplicateWhenUpcomingBecomesOngoing",
+        "expansionDisappearsWhenOnlyTheAlreadyShownPrimaryJourneyRemains",
+        "completedTodayDoesNotHideTheNextJourneyOrItsCountdown",
+        "upcomingJourneyIsReadableInBothThemesAndEveryAndroidFontScale",
+        "loadingAndRecoverableErrorExposeRetryWithoutHidingLastValidResult",
+        "activeOvernightStartedYesterdayIsTheClosedPrimaryWithoutPrivateContent",
+        "activeAvailabilityKeepsItsHistoricalLabelAndDoesNotBecomeAShift",
+        "twentyFiveHourAvailabilityKeepsItsCivilEndDayInTextAndAccessibility",
+        "resumedAvailabilityShowsTheSegmentDateWithoutRewritingItsOwnerDate",
+        "simultaneousUpcomingShiftAndAvailabilityRemainVisibleWithoutChangingShiftCount",
+        "availabilityRemainsReadableInLightDarkAndEveryAndroidFontScale",
+        "sameTimeUpcomingShiftsStayDifferentiatedAndExpandInStableOrder",
+        "completedOnlySummaryExpandsAndCanCloseWithoutLosingItsData",
+        "oneHistoricalTodayRecordStillOffersItsFullExpandableDetail",
+        "sameDayExpansionSurvivesContentLoadingWithoutResultAndContent",
+        "restoredSameDayExpansionSurvivesNullLoadingButDoesNotExpandAnotherCivilDate",
+        "expansionResetsWhenTheCivilDateChanges",
+        "restoredExpansionStaysBoundToTheCivilDateThatWasSaved",
+        "expandedListIncludesCancelledAbsentAndProtectedTodayShifts",
+        "expandedMixedListPreservesEveryTodayStateAndPlannedSnapshots",
+        "actualTimeAndProtectionStayVisibleWithoutLeakingReasonsOrMedicalNotes",
+        "futureShiftExplicitDayOffAndHonestEmptyStateAreDistinct",
+        "protectedFutureProducesAnHonestEmptyStateWithoutAnnouncingWork",
+        "exactTemporalTransitionsUpdateUpcomingToOngoingAndThenCompleted",
+        "changingVisibleMonthDoesNotCreateASecondTopCardSourceOfTruth",
+        "engineErrorDoesNotForceTheCardIntoAShortCalendarAcrossThemeAndAndroidFontScale",
+        "todayCardRemainsReadableInLandscapeAndRestoresOrientation",
+    ).map { "com.blackatsystems.miguardia.NextEventComposeTest#$it" } + listOf(
+        "progressDistinguishesLoadingErrorAndKnownContentWithoutFalseZero",
+        "referenceEditorExposesEveryExplicitChoiceAndNoSectorDefault",
+        "exactReferenceReviewShowsPeriodAmountAndConfirmationsAfterReview",
+        "independentExtraCardIsTextualAndKeepsCorrectionAndDeletionSeparate",
+        "perPeriodMissingValueHasAnExplicitEditorAndCorrectionHasAConfirmation",
+        "progressPrimaryActionStaysReachableInBothThemesAndEveryAndroidFontScale",
+        "pendingHoursKeepTheWholeAmountAndUnitSeparatedFromTheCompleteLabel",
+    ).map { "com.blackatsystems.miguardia.HoursAndExtrasComposeTest#$it" } + listOf(
+        "loadingEmptyAndErrorAreDistinctAndRetryIsExplicit",
+        "introAndThreeDotMenuOpenPersonalizationWithoutChangingProjection",
+        "visibleSummaryOffersTheReportEntryAndCallsTheDedicatedAction",
+        "monthControlsShareOneRowAndNumbersPrecedeIntroductionAndReport",
+        "hiddenEmptyAndOrderedFamiliesFollowPreferences",
+        "metricDetailUsesTheExactRowsAndNeverDisplaysPrivateFields",
+        "personalizationHasAccessibleVisibilityAndBoundaryMoveControls",
+        "restoredDetailAndPersonalizationWaitForRealDataAndExposeRetryOnFailure",
+        "preferenceWriteFailureIsRecoverableWithoutClosingTheSurface",
+        "eachHistoricallySimilarLabelOpensItsOwnMetricDetail",
+        "returningFromDetailRestoresTheOverviewScrollPosition",
+        "surfaceRendersAtEveryAndroidFontScaleInLightAndDarkThemes",
+        "summaryAndContributionKeepLongLabelsAndAmountsWholeAtEveryThemeAndFontScale",
+    ).map { "com.blackatsystems.miguardia.SummaryComposeTest#$it" }
 
     val family: Set<String> = own + screenRegression
 }

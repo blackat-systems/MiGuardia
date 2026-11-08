@@ -1,6 +1,10 @@
 package com.blackatsystems.miguardia.ui.components
 
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.DatePicker
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -21,7 +25,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import com.blackatsystems.miguardia.ui.theme.vigiliaColors
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
@@ -42,6 +49,23 @@ private val PickerLocale: Locale = Locale.forLanguageTag("es-AR")
  * only "Aceptar" calls back, with the same canonical text a person could type, so the
  * screen's draft, review and save rules stay exactly the same. Cancel or dismiss changes nothing.
  */
+
+/** Small violet tag inside a field (style v2). */
+@Composable
+fun FieldBadge(text: String, modifier: Modifier = Modifier) {
+    Surface(
+        modifier = modifier,
+        shape = MaterialTheme.shapes.extraSmall,
+        color = MaterialTheme.vigiliaColors.selection,
+        contentColor = MaterialTheme.vigiliaColors.active,
+    ) {
+        Text(
+            text,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+            style = MaterialTheme.typography.labelMedium,
+        )
+    }
+}
 
 /** Test tag suffixes shared by the pickers. The field tag is the prefix. */
 const val PICKER_BUTTON_SUFFIX = "-picker"
@@ -193,6 +217,8 @@ fun PickableDateField(
     pickerFallback: () -> LocalDate = { LocalDate.now() },
     pickerTestTag: String? = null,
     enabled: Boolean = true,
+    // Style v2: short tag shown inside the field, e.g. "+1 día" when the date crosses midnight.
+    badge: String? = null,
 ) {
     var showPicker by rememberSaveable { mutableStateOf(false) }
     OutlinedTextField(
@@ -201,12 +227,15 @@ fun PickableDateField(
         label = { Text(label) },
         supportingText = supportingText?.let { { Text(it) } },
         trailingIcon = {
-            PickerTrailingButton(
-                iconRes = R.drawable.ic_pick_date,
-                description = "Elegir en el calendario: $label",
-                enabled = enabled,
-                testTag = pickerTestTag,
-            ) { showPicker = true }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                badge?.let { FieldBadge(it) }
+                PickerTrailingButton(
+                    iconRes = R.drawable.ic_pick_date,
+                    description = "Elegir en el calendario: $label",
+                    enabled = enabled,
+                    testTag = pickerTestTag,
+                ) { showPicker = true }
+            }
         },
         singleLine = true,
         enabled = enabled,

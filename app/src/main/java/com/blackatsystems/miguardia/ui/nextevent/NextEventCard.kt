@@ -289,12 +289,12 @@ private fun ShiftIdentity(shift: NextEventItem.Shift) {
             Text(
                 "${shift.placeAbbreviationSnapshot} · ${shift.placeNameSnapshot}",
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
             )
+            // Style v2: the time range is the big figure of the card.
             Text(
                 AnnotatedString(shift.eventTimeRange(EventTimeRangeStyle.COMPACT)),
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.ExtraBold,
             )
         }
     }

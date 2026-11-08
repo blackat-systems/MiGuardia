@@ -9,6 +9,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.ExperimentalTextApi
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontVariation
+import androidx.compose.ui.unit.em
+import com.blackatsystems.miguardia.R
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -23,71 +28,71 @@ import androidx.compose.ui.unit.sp
  */
 private val VigiliaDarkScheme = darkColorScheme(
     primary = Color(0xFF7AA2F7),
-    onPrimary = Color(0xFF1A1B26),
-    primaryContainer = Color(0xFF394B70),
-    onPrimaryContainer = Color(0xFFC0CAF5),
+    onPrimary = Color(0xFF10111A),
+    primaryContainer = Color(0xFF26304F),
+    onPrimaryContainer = Color(0xFF89B4FA),
     secondary = Color(0xFF7DCFFF),
-    onSecondary = Color(0xFF1A1B26),
-    secondaryContainer = Color(0xFF283457),
+    onSecondary = Color(0xFF10111A),
+    secondaryContainer = Color(0xFF26304F),
     onSecondaryContainer = Color(0xFFC0CAF5),
-    tertiary = Color(0xFF9ECE6A),
-    onTertiary = Color(0xFF1A1B26),
-    tertiaryContainer = Color(0xFF2A3B2C),
-    onTertiaryContainer = Color(0xFF9ECE6A),
-    background = Color(0xFF1A1B26),
-    onBackground = Color(0xFFC0CAF5),
-    surface = Color(0xFF24283B),
-    onSurface = Color(0xFFC0CAF5),
-    surfaceVariant = Color(0xFF292E42),
+    tertiary = Color(0xFFA9DC76),
+    onTertiary = Color(0xFF10111A),
+    tertiaryContainer = Color(0xFF22362A),
+    onTertiaryContainer = Color(0xFFA9DC76),
+    background = Color(0xFF13141C),
+    onBackground = Color(0xFFE6EAFF),
+    surface = Color(0xFF1E2030),
+    onSurface = Color(0xFFE6EAFF),
+    surfaceVariant = Color(0xFF24283B),
     onSurfaceVariant = Color(0xFFA9B1D6),
-    surfaceContainerLowest = Color(0xFF16161E),
-    surfaceContainerLow = Color(0xFF1F2335),
-    surfaceContainer = Color(0xFF24283B),
-    surfaceContainerHigh = Color(0xFF292E42),
-    surfaceContainerHighest = Color(0xFF2F3549),
+    surfaceContainerLowest = Color(0xFF0F1016),
+    surfaceContainerLow = Color(0xFF181A26),
+    surfaceContainer = Color(0xFF1E2030),
+    surfaceContainerHigh = Color(0xFF24283B),
+    surfaceContainerHighest = Color(0xFF2A2E45),
     outline = Color(0xFF737AA2),
-    outlineVariant = Color(0xFF3B4261),
-    error = Color(0xFFF7768E),
-    onError = Color(0xFF1A1B26),
-    errorContainer = Color(0xFF3F2533),
-    onErrorContainer = Color(0xFFF7C6D0),
-    inverseSurface = Color(0xFFC0CAF5),
-    inverseOnSurface = Color(0xFF24283B),
-    inversePrimary = Color(0xFF34548A),
+    outlineVariant = Color(0xFF2A2E45),
+    error = Color(0xFFFF8FA3),
+    onError = Color(0xFF10111A),
+    errorContainer = Color(0xFF33202B),
+    onErrorContainer = Color(0xFFFFC2CD),
+    inverseSurface = Color(0xFFE6EAFF),
+    inverseOnSurface = Color(0xFF1E2030),
+    inversePrimary = Color(0xFF2F5DC6),
 )
 
 private val VigiliaLightScheme = lightColorScheme(
-    primary = Color(0xFF34548A),
+    primary = Color(0xFF2F5DC6),
     onPrimary = Color.White,
-    primaryContainer = Color(0xFFD5DEF2),
-    onPrimaryContainer = Color(0xFF1F3360),
+    primaryContainer = Color(0xFFE7EEFF),
+    onPrimaryContainer = Color(0xFF2D5BD0),
     secondary = Color(0xFF0F4B6E),
     onSecondary = Color.White,
     secondaryContainer = Color(0xFFD3E9F2),
     onSecondaryContainer = Color(0xFF0F4B6E),
-    tertiary = Color(0xFF485E30),
+    tertiary = Color(0xFF3C6B20),
     onTertiary = Color.White,
-    tertiaryContainer = Color(0xFFDCE8CF),
-    onTertiaryContainer = Color(0xFF3F5228),
-    background = Color(0xFFE1E2E7),
-    onBackground = Color(0xFF343B58),
-    surface = Color(0xFFF5F6FA),
-    onSurface = Color(0xFF343B58),
-    surfaceVariant = Color(0xFFECEDF2),
-    onSurfaceVariant = Color(0xFF565A72),
-    surfaceContainerLowest = Color.White,
-    surfaceContainerLow = Color(0xFFF9FAFC),
-    surfaceContainer = Color(0xFFF5F6FA),
-    surfaceContainerHigh = Color(0xFFECEDF2),
-    surfaceContainerHighest = Color(0xFFE4E6EE),
-    outline = Color(0xFF68709A),
-    outlineVariant = Color(0xFFC4C8DA),
-    error = Color(0xFF8C4351),
+    tertiaryContainer = Color(0xFFE6F4DD),
+    onTertiaryContainer = Color(0xFF3C6B20),
+    background = Color(0xFFF4F5FA),
+    onBackground = Color(0xFF1F2440),
+    surface = Color(0xFFFFFFFF),
+    onSurface = Color(0xFF1F2440),
+    surfaceVariant = Color(0xFFF0F2F8),
+    onSurfaceVariant = Color(0xFF5B6180),
+    surfaceContainerLowest = Color(0xFFFFFFFF),
+    surfaceContainerLow = Color(0xFFFAFBFD),
+    surfaceContainer = Color(0xFFFFFFFF),
+    surfaceContainerHigh = Color(0xFFF0F2F8),
+    surfaceContainerHighest = Color(0xFFE8EBF4),
+    outline = Color(0xFF6E7596),
+    outlineVariant = Color(0xFFE4E7F2),
+    error = Color(0xFFA8304B),
     onError = Color.White,
-    errorContainer = Color(0xFFF6D9DF),
-    onErrorContainer = Color(0xFF5C1F2C),
-    inverseSurface = Color(0xFF343B58),
-    inverseOnSurface = Color(0xFFE1E2E7),
+    errorContainer = Color(0xFFFCE8EC),
+    onErrorContainer = Color(0xFF7A1F35),
+    inverseSurface = Color(0xFF1F2440),
+    inverseOnSurface = Color(0xFFF4F5FA),
     inversePrimary = Color(0xFF7AA2F7),
 )
 
@@ -111,22 +116,51 @@ private val AppShapes = Shapes(
     extraLarge = asymmetricShape(28, 8),
 )
 
+/*
+ * Plus Jakarta Sans (SIL OFL 1.1, bundled as one variable font; decided by Joaquín on 8/11/2026).
+ * Each weight pins the variable axis so the shape matches the weight. Tabular figures keep times
+ * aligned. Sizes are unchanged from Vigilia: Android's font scale still applies on top (ADR 0043).
+ */
+@OptIn(ExperimentalTextApi::class)
+private fun jakarta(weight: Int) = Font(
+    resId = R.font.plus_jakarta_sans,
+    weight = FontWeight(weight),
+    variationSettings = FontVariation.Settings(FontVariation.weight(weight)),
+)
+
+internal val PlusJakartaSans = FontFamily(
+    jakarta(400),
+    jakarta(500),
+    jakarta(600),
+    jakarta(700),
+    jakarta(800),
+)
+
+private fun style(size: Int, line: Int, weight: FontWeight = FontWeight.Normal, tracking: Float = 0f) = TextStyle(
+    fontFamily = PlusJakartaSans,
+    fontFeatureSettings = "tnum",
+    fontSize = size.sp,
+    lineHeight = line.sp,
+    fontWeight = weight,
+    letterSpacing = tracking.em,
+)
+
 private val AppTypography = Typography(
-    labelSmall = TextStyle(fontFamily = FontFamily.SansSerif, fontFeatureSettings = "tnum", fontSize = 11.sp, lineHeight = 16.sp, fontWeight = FontWeight.Medium),
-    labelMedium = TextStyle(fontFamily = FontFamily.SansSerif, fontFeatureSettings = "tnum", fontSize = 12.sp, lineHeight = 16.sp, fontWeight = FontWeight.Medium),
-    headlineMedium = TextStyle(fontFamily = FontFamily.SansSerif, fontFeatureSettings = "tnum", fontSize = 26.sp, lineHeight = 32.sp, fontWeight = FontWeight.SemiBold),
-    headlineLarge = TextStyle(fontFamily = FontFamily.SansSerif, fontFeatureSettings = "tnum", fontSize = 28.sp, lineHeight = 34.sp, fontWeight = FontWeight.SemiBold),
-    displayMedium = TextStyle(fontFamily = FontFamily.SansSerif, fontFeatureSettings = "tnum", fontSize = 36.sp, lineHeight = 42.sp, fontWeight = FontWeight.SemiBold),
-    displayLarge = TextStyle(fontFamily = FontFamily.SansSerif, fontFeatureSettings = "tnum", fontSize = 40.sp, lineHeight = 48.sp, fontWeight = FontWeight.SemiBold),
-    displaySmall = TextStyle(fontFamily = FontFamily.SansSerif, fontFeatureSettings = "tnum", fontSize = 32.sp, lineHeight = 38.sp, fontWeight = FontWeight.SemiBold),
-    headlineSmall = TextStyle(fontFamily = FontFamily.SansSerif, fontFeatureSettings = "tnum", fontSize = 24.sp, lineHeight = 30.sp, fontWeight = FontWeight.SemiBold),
-    titleLarge = TextStyle(fontFamily = FontFamily.SansSerif, fontFeatureSettings = "tnum", fontSize = 22.sp, lineHeight = 28.sp, fontWeight = FontWeight.SemiBold),
-    titleMedium = TextStyle(fontFamily = FontFamily.SansSerif, fontFeatureSettings = "tnum", fontSize = 18.sp, lineHeight = 24.sp, fontWeight = FontWeight.SemiBold),
-    titleSmall = TextStyle(fontFamily = FontFamily.SansSerif, fontFeatureSettings = "tnum", fontSize = 15.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold),
-    bodyLarge = TextStyle(fontFamily = FontFamily.SansSerif, fontFeatureSettings = "tnum", fontSize = 16.sp, lineHeight = 24.sp),
-    bodyMedium = TextStyle(fontFamily = FontFamily.SansSerif, fontFeatureSettings = "tnum", fontSize = 14.sp, lineHeight = 21.sp),
-    bodySmall = TextStyle(fontFamily = FontFamily.SansSerif, fontFeatureSettings = "tnum", fontSize = 12.sp, lineHeight = 18.sp),
-    labelLarge = TextStyle(fontFamily = FontFamily.SansSerif, fontFeatureSettings = "tnum", fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold),
+    displayLarge = style(40, 48, FontWeight.ExtraBold, -0.02f),
+    displayMedium = style(36, 42, FontWeight.ExtraBold, -0.02f),
+    displaySmall = style(32, 38, FontWeight.ExtraBold, -0.02f),
+    headlineLarge = style(28, 34, FontWeight.ExtraBold, -0.02f),
+    headlineMedium = style(26, 32, FontWeight.ExtraBold, -0.02f),
+    headlineSmall = style(24, 30, FontWeight.ExtraBold, -0.02f),
+    titleLarge = style(22, 28, FontWeight.Bold, -0.01f),
+    titleMedium = style(18, 24, FontWeight.Bold, -0.01f),
+    titleSmall = style(15, 20, FontWeight.Bold),
+    bodyLarge = style(16, 24),
+    bodyMedium = style(14, 21),
+    bodySmall = style(12, 18),
+    labelLarge = style(14, 20, FontWeight.Bold, 0.01f),
+    labelMedium = style(12, 16, FontWeight.SemiBold),
+    labelSmall = style(11, 16, FontWeight.SemiBold),
 )
 
 @Composable

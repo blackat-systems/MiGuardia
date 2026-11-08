@@ -169,6 +169,7 @@ import com.blackatsystems.miguardia.ui.vacation.VacationSurface
 import com.blackatsystems.miguardia.ui.vacation.VacationSurfaceHost
 import com.blackatsystems.miguardia.ui.vacation.VacationUiState
 import com.blackatsystems.miguardia.ui.vacation.VacationViewModel
+import com.blackatsystems.miguardia.ui.components.vigiliaScreenBackground
 import com.blackatsystems.miguardia.ui.theme.AppThemeMode
 import com.blackatsystems.miguardia.ui.theme.vigiliaColors
 import com.blackatsystems.miguardia.ui.weather.WeatherActions
@@ -1281,7 +1282,9 @@ fun MiGuardiaApp(
         },
     ) {
         Scaffold(
-            modifier = modifier.fillMaxSize().onSizeChanged {
+            // Style v2: page color plus the soft top glow; the Scaffold itself stays transparent.
+            containerColor = Color.Transparent,
+            modifier = modifier.fillMaxSize().vigiliaScreenBackground().onSizeChanged {
                 calendarWindowHeightPx = it.height
                 calendarWindowWidthPx = it.width
             }.onGloballyPositioned {

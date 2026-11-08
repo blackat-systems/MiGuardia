@@ -1,6 +1,13 @@
 package com.blackatsystems.miguardia.ui.availability
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import com.blackatsystems.miguardia.ui.components.MiGuardiaButtonShape
+import com.blackatsystems.miguardia.ui.components.destructiveButtonColors
+import com.blackatsystems.miguardia.ui.components.vigiliaScreenBackground
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -149,7 +156,7 @@ private fun FullAvailabilitySurface(
     content: @Composable () -> Unit,
 ) {
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-        Column(Modifier.fillMaxSize().safeDrawingPadding()) {
+        Column(Modifier.fillMaxSize().vigiliaScreenBackground().safeDrawingPadding()) {
             SurfaceHeader(title, actionLabel, onBack)
             HorizontalDivider()
             content()
@@ -193,6 +200,7 @@ private fun ConfigurationEditor(state: AvailabilityUiState, actions: Availabilit
             val selected = draft.label == option
             OutlinedButton(
                 onClick = { actions.updateConfiguration(draft.copy(label = option)) },
+                shape = MiGuardiaButtonShape,
                 border = BorderStroke(1.dp, if (selected) MaterialTheme.vigiliaColors.active else MaterialTheme.colorScheme.outline),
                 colors = ButtonDefaults.outlinedButtonColors(
                     containerColor = if (selected) MaterialTheme.vigiliaColors.selection else MaterialTheme.colorScheme.surface,
@@ -253,38 +261,24 @@ private fun ConfigurationReview(state: AvailabilityUiState, actions: Availabilit
 private fun WindowEditor(state: AvailabilityUiState, actions: AvailabilityActions) {
     AvailabilityBody(state, actions) {
         val draft = state.windowDraft ?: return@AvailabilityBody
+        val ownerDate = draft.ownerDate
         SectionCard(
-            title = buildString {
-                draft.labelOverride?.let { append(it.displayName).append(" · ") }
-                append("Fecha ${draft.ownerDate ?: ""}")
-            },
+            eyebrow = draft.labelOverride?.displayName
+                ?: ownerDate?.let { state.source?.labelOn(it)?.displayName },
+            title = ownerDate?.let(::humanOwnerDate) ?: "Fecha sin elegir",
             supportingText = "La fecha dueña no cambia al corregir. Para moverla, eliminá y creá otra ventana.",
         ) {
-            AutomaticTimeField(
-                value = draft.startTime,
-                onValueChange = { actions.updateWindow(draft.copy(startTime = it)) },
-                label = "Inicio",
-                withPicker = true,
-                pickerTestTag = "availability-start$PICKER_BUTTON_SUFFIX",
-                modifier = Modifier.fillMaxWidth().testTag("availability-start"),
-            )
+            WindowTimes(draft, actions)
             PickableDateField(
                 value = draft.endDate,
                 onValueChange = { actions.updateWindow(draft.copy(endDate = it)) },
                 label = "Fecha final",
                 format = DateFieldFormat.ISO,
                 supportingText = "AAAA-MM-DD; puede cruzar mes o año",
-                pickerFallback = { draft.ownerDate ?: state.source?.today ?: LocalDate.now() },
+                pickerFallback = { ownerDate ?: state.source?.today ?: LocalDate.now() },
                 pickerTestTag = "availability-end-date$PICKER_BUTTON_SUFFIX",
+                badge = daysAfterOwnerBadge(ownerDate, draft.endDate),
                 modifier = Modifier.fillMaxWidth().testTag("availability-end-date"),
-            )
-            AutomaticTimeField(
-                value = draft.endTime,
-                onValueChange = { actions.updateWindow(draft.copy(endTime = it)) },
-                label = "Final",
-                withPicker = true,
-                pickerTestTag = "availability-end$PICKER_BUTTON_SUFFIX",
-                modifier = Modifier.fillMaxWidth().testTag("availability-end"),
             )
             HelperText("Una disponibilidad puede superar 24 horas. No se combina automáticamente con ventanas contiguas.")
         }
@@ -296,6 +290,83 @@ private fun WindowEditor(state: AvailabilityUiState, actions: AvailabilityAction
         )
     }
 }
+
+/**
+ * Start and end times. Side by side with large numerals when there is room (style v2); stacked
+ * when the width or Android's font size would squeeze them, so nothing gets cut.
+ */
+@Composable
+private fun WindowTimes(draft: AvailabilityWindowDraftState, actions: AvailabilityActions) {
+    val bigTime = MaterialTheme.typography.headlineSmall
+    val fontScale = LocalDensity.current.fontScale
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val sideBySide = maxWidth >= 280.dp * fontScale
+        val start = @Composable { modifier: Modifier ->
+            AutomaticTimeField(
+                value = draft.startTime,
+                onValueChange = { actions.updateWindow(draft.copy(startTime = it)) },
+                label = "Inicio",
+                withPicker = true,
+                pickerTestTag = "availability-start$PICKER_BUTTON_SUFFIX",
+                textStyle = bigTime,
+                showHint = false,
+                modifier = modifier.testTag("availability-start"),
+            )
+        }
+        val end = @Composable { modifier: Modifier ->
+            AutomaticTimeField(
+                value = draft.endTime,
+                onValueChange = { actions.updateWindow(draft.copy(endTime = it)) },
+                label = "Final",
+                withPicker = true,
+                pickerTestTag = "availability-end$PICKER_BUTTON_SUFFIX",
+                textStyle = bigTime,
+                showHint = false,
+                modifier = modifier.testTag("availability-end"),
+            )
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.extraSmall)) {
+            if (sideBySide) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    start(Modifier.weight(1f))
+                    Text(
+                        "→",
+                        modifier = Modifier.clearAndSetSemantics {},
+                        color = MaterialTheme.vigiliaColors.onSurfaceMuted,
+                    )
+                    end(Modifier.weight(1f))
+                }
+            } else {
+                start(Modifier.fillMaxWidth())
+                end(Modifier.fillMaxWidth())
+            }
+            HelperText("Escribí 4 números o tocá el reloj. MiGuardia agrega los dos puntos.")
+        }
+    }
+}
+
+/** "jueves 27 de agosto de 2026", capitalized: full human date for the card title (V010). */
+private fun humanOwnerDate(date: LocalDate): String =
+    date.format(HumanDateFormatter).replaceFirstChar { it.titlecase(SpanishArgentina) }
+
+/** "+1 día" when the typed end date is after the owner date; nothing while it is incomplete. */
+internal fun daysAfterOwnerBadge(ownerDate: LocalDate?, endDate: String): String? {
+    val owner = ownerDate ?: return null
+    val end = DateFieldFormat.ISO.parseOrNull(endDate) ?: return null
+    val days = java.time.temporal.ChronoUnit.DAYS.between(owner, end)
+    return when {
+        days <= 0L -> null
+        days == 1L -> "+1 día"
+        else -> "+$days días"
+    }
+}
+
+private val SpanishArgentina: java.util.Locale = java.util.Locale.forLanguageTag("es-AR")
+private val HumanDateFormatter: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("EEEE d 'de' MMMM 'de' uuuu", SpanishArgentina)
 
 @Composable
 private fun WindowReview(state: AvailabilityUiState, actions: AvailabilityActions) {
@@ -344,7 +415,7 @@ private fun AvailabilityBody(
                     message = state.message ?: "No pudimos actualizar los datos. Se conserva la última información válida.",
                     onDismiss = actions.clearMessage,
                 )
-                OutlinedButton(onClick = actions.retry, modifier = Modifier.fillMaxWidth()) {
+                OutlinedButton(onClick = actions.retry, shape = MiGuardiaButtonShape, modifier = Modifier.fillMaxWidth()) {
                     Text("Reintentar")
                 }
                 content(source)
@@ -416,6 +487,7 @@ fun AvailabilityDaySection(
         if (label != null && showActions) {
             OutlinedButton(
                 onClick = { actions.openCreate(date) },
+                shape = MiGuardiaButtonShape,
                 modifier = Modifier.fillMaxWidth().testTag("availability-add-$date"),
             ) { Text("Registrar ${label.displayName.lowercase()}") }
         }
@@ -510,9 +582,10 @@ private fun DeleteConfirmation(state: AvailabilityUiState, actions: Availability
             }
         },
         confirmButton = {
-            Button(
+            FilledTonalButton(
                 onClick = actions.confirmDelete,
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error, contentColor = MaterialTheme.colorScheme.onError),
+                shape = MiGuardiaButtonShape,
+                colors = destructiveButtonColors(),
                 enabled = !state.isSaving,
                 modifier = Modifier.testTag("availability-delete-confirm"),
             ) { Text(if (state.isSaving) "Eliminando…" else "Eliminar") }
@@ -530,8 +603,9 @@ private fun DiscardConfirmation(actions: AvailabilityActions) {
         title = { Text("Descartar cambios") },
         text = { Text("Los datos que todavía no guardaste se perderán.") },
         confirmButton = {
-            Button(onClick = actions.confirmDiscard,
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error, contentColor = MaterialTheme.colorScheme.onError),
+            FilledTonalButton(onClick = actions.confirmDiscard,
+                shape = MiGuardiaButtonShape,
+                colors = destructiveButtonColors(),
                 modifier = Modifier.testTag("availability-discard-confirm")) {
                 Text("Descartar")
             }

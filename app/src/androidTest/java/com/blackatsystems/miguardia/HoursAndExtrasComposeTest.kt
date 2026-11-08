@@ -19,7 +19,6 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.text.TextLayoutResult
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -322,7 +321,7 @@ class HoursAndExtrasComposeTest {
                 assertEquals(context, 1, layouts.size)
                 val valueLayout = layouts.single()
                 assertEquals(context, expected, valueLayout.layoutInput.text.text.replace('\u00a0', ' '))
-                assertEquals("$context amount font family", FontFamily.SansSerif, valueLayout.layoutInput.style.fontFamily)
+                assertEquals("$context amount font family", com.blackatsystems.miguardia.ui.theme.PlusJakartaSans, valueLayout.layoutInput.style.fontFamily)
                 assertEquals("$context tabular numbers", "tnum", valueLayout.layoutInput.style.fontFeatureSettings)
                 assertEquals("$context amount font size", 14.sp, valueLayout.layoutInput.style.fontSize)
                 assertEquals("$context amount weight", FontWeight.SemiBold, valueLayout.layoutInput.style.fontWeight)

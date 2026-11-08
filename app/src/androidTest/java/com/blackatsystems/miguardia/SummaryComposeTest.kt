@@ -24,7 +24,6 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.text.TextLayoutResult
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -468,7 +467,7 @@ class SummaryComposeTest {
                 "line0=${layout.getLineLeft(0)}..${layout.getLineRight(0)} " +
                 "bounds=${node.fetchSemanticsNode().boundsInRoot}", layout.hasVisualOverflow)
             assertEquals(context, expected.length, layout.getLineEnd(layout.lineCount - 1))
-            assertEquals("$context font family", FontFamily.SansSerif, layout.layoutInput.style.fontFamily)
+            assertEquals("$context font family", com.blackatsystems.miguardia.ui.theme.PlusJakartaSans, layout.layoutInput.style.fontFamily)
             assertEquals("$context tabular numbers", "tnum", layout.layoutInput.style.fontFeatureSettings)
             if (expected == expectedValue) {
                 assertEquals("$context amount font size", 15.sp, layout.layoutInput.style.fontSize)

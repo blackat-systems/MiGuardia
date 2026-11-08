@@ -1,6 +1,7 @@
 package com.blackatsystems.miguardia.ui.components
 
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -13,6 +14,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.KeyboardType
 import com.blackatsystems.miguardia.R
@@ -29,6 +31,9 @@ fun AutomaticTimeField(
     withPicker: Boolean = false,
     pickerTestTag: String? = null,
     pickerFallback: () -> LocalTime = { LocalTime.now().withSecond(0).withNano(0) },
+    // Style v2: large numerals for times; the hint can live once below a pair of fields.
+    textStyle: TextStyle = LocalTextStyle.current,
+    showHint: Boolean = true,
 ) {
     val completeInvalidTime = isCompleteInvalidAutomaticTime(value)
     var isFocused by remember { mutableStateOf(false) }
@@ -62,16 +67,21 @@ fun AutomaticTimeField(
         isError = completeInvalidTime,
         label = { Text(label) },
         placeholder = { Text("Ejemplo: 0830") },
-        supportingText = {
-            Text(
-                if (completeInvalidTime) {
-                    "Ingresá una hora válida entre 00:00 y 23:59."
-                } else if (withPicker) {
-                    "Escribí 4 números o tocá el reloj. MiGuardia agrega los dos puntos."
-                } else {
-                    "Escribí 4 números. MiGuardia agrega los dos puntos."
-                },
-            )
+        textStyle = textStyle,
+        supportingText = if (completeInvalidTime || showHint) {
+            {
+                Text(
+                    if (completeInvalidTime) {
+                        "Ingresá una hora válida entre 00:00 y 23:59."
+                    } else if (withPicker) {
+                        "Escribí 4 números o tocá el reloj. MiGuardia agrega los dos puntos."
+                    } else {
+                        "Escribí 4 números. MiGuardia agrega los dos puntos."
+                    },
+                )
+            }
+        } else {
+            null
         },
         trailingIcon = if (withPicker) {
             {
