@@ -63,6 +63,23 @@ Joaquín pidió reevaluar las tarjetas porque le parecían genéricas. Se le mos
 - **Samsung (8/11): 15/15 ✅**; datos QA con 23 bases idénticas. Las capturas están en la cuarta
   columna del atlas.
 
+## 0.c Decisión de estilo v2 (Joaquín, 8/11/2026) — en curso
+
+Joaquín pidió que la app se vea «linda, canchera y placentera de ver». Se armó la maqueta
+`.local-evidence/claude-20261108-13-5/maquetas/estilo-v2.html` (fuera de Git) y Joaquín eligió:
+
+- **Tipografía:** Plus Jakarta Sans, incluida en la app como archivo variable de 176 KB con
+  licencia SIL OFL 1.1. No usa red ni servicios de Google.
+- **Estilo v2 tal cual:**
+  - paleta más profunda;
+  - títulos grandes con rótulo violeta;
+  - horas grandes con reloj y «+1 día» visible;
+  - botón principal con degradado de azul a violeta;
+  - secundarios y eliminar en versión tonal;
+  - brillo suave arriba de la pantalla.
+
+Valores, contraste y pasos: STATUS, sección «PAUSA — Etapa 13.5». Todavía no está aplicado en la app.
+
 ## 1. Reglas comunes del pulido (mismo Vigilia, parejo)
 
 Hoy cada pantalla resuelve espacios, títulos y botones a su manera. Los componentes comunes de

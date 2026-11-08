@@ -1,7 +1,7 @@
 # Estado actual de MiGuardia 3.0
 
 - Etapa: 13 · Datos y archivos — CERRADA por Joaquín (8/11): A166–A207, C078, C079 y C095 ✅
-- Etapa en curso: **13.5 · Estética y facilidad de uso** (agregada por Joaquín el 8/11) — INICIADA el 8/11; prompt en
+- Etapa en curso: **13.5 · Estética y facilidad de uso** — ⏸ EN PAUSA (ver «PAUSA — Etapa 13.5» abajo) (agregada por Joaquín el 8/11) — INICIADA el 8/11; prompt en
   docs/prompts/ETAPA_13_5_ESTETICA_Y_FACILIDAD.md. **Lista aprobada por Joaquín (8/11):**
   [inventario y propuesta](design/ETAPA_13_5_INVENTARIO.md) (reglas comunes, pulido por pantalla, 22 campos).
   **Paleta Tokyo Night** (Joaquín, 8/11: Night + acento azul; sólo colores, forma Vigilia igual) aplicada en
@@ -18,6 +18,81 @@
 - Etapa anterior: 12.2 · Cálculos y consulta — CERRADA por Joaquín (8/11)
 - Base: `636e4ae`, subido a `origin/codex/miguardia-3.0` el 8/11 con pedido de Joaquín
 - Actualización: 2026-11-08
+
+## ⏸ PAUSA — Etapa 13.5 (8/11/2026, pedido de Joaquín: «frenamos acá»)
+
+**Retomar exactamente desde acá.** Lo hecho está en commits locales sobre `origin`, sin push:
+`c983166` (selectores y Disponibilidad), `c2f7f32` (paleta Tokyo Night) y `7343cea` (esquinas
+asimétricas), más el commit de este registro. Árbol limpio. En el Samsung quedó instalada la pareja
+de «esquinas»: QA `d6f9a0f1…` y ejecutor `7e278f06…`. Los hashes completos están en
+`.local-evidence/claude-20261108-13-5/esquinas/build/hashes.txt`. Los datos QA quedaron intactos:
+23 bases idénticas a la foto inicial de la etapa.
+
+**Qué estábamos haciendo: «estilo v2».** Joaquín pidió que la app se vea «linda, canchera y placentera
+de ver».
+
+- Se armó la maqueta `.local-evidence/claude-20261108-13-5/maquetas/estilo-v2.html`, con Calendario y
+  Disponibilidad en oscuro y claro y un selector de tipografía.
+- Joaquín eligió **Plus Jakarta Sans** y aprobó la maqueta **tal cual**, con degradados y brillo.
+- El contraste de la paleta v2 ya está medido: todos los textos dan 4,5:1 o más. El más justo es el
+  botón claro: blanco sobre #3D6FE0 da 4,62. Script: `.local-evidence/claude-20261108-13-5/contraste.py`.
+- **Fuente descargada y no incluida todavía en la app:**
+  - archivos en `.local-evidence/claude-20261108-13-5/fuente/`: `PlusJakartaSans-wght.ttf`, variable
+    de 200 a 800, 176 KB, sha256 `89b3fb38…`, de `raw.githubusercontent.com/google/fonts/main/ofl/plusjakartasans/`;
+  - licencia `OFL.txt`, SIL OFL 1.1;
+  - tiene números de ancho fijo (`tnum`) y eje de peso;
+  - comprobado: ñ, Ñ, vocales con tilde, ü, ¿, ¡, – y —;
+  - **falta comprobar** →, ‹, ›, ✓, ·, ° y … (el control se cortó por un error de consola de Windows).
+
+**Pasos que siguen, en orden:**
+
+1. Terminar el control de glifos. Si falta alguno de los que usa la app, como ‹ › del navegador de
+   meses o ✓, decidir: se puede usar un ícono o dejar que Android tome ese carácter de otra fuente.
+2. Copiar la fuente a `app/src/main/res/font/plus_jakarta_sans.ttf` y la licencia a
+   `docs/licencias/PlusJakartaSans-OFL.txt`. En `Theme.kt`, `FontFamily` con
+   `Font(R.font.plus_jakarta_sans, weight, variationSettings = FontVariation.Settings(FontVariation.weight(n)))`
+   para 400, 500, 600, 700 y 800, y `tnum` en todos los estilos, como ahora. Pesos de la maqueta:
+   títulos de pantalla 800, títulos de tarjeta 700, rótulo 700 en mayúsculas con espaciado, botones 700.
+3. **Paleta v2** en `Theme.kt` y `VigiliaTokens.kt` (valores en la maqueta):
+   - Oscuro: página #13141C, tarjeta #1E2030 (con degradado a #22253A y borde #2A2E45), campo #161824,
+     título #EEF1FF, texto #C0CAF5, ayuda #8F98C4, rótulo violeta #BB9AF7, rótulos de estado azul
+     #89B4FA/#26304F, violeta #C8A8FF/#2E2650 y verde #A9DC76/#22362A, eliminar #FF8FA3/#33202B,
+     caja de fecha #B4F9F8/#10324A.
+   - Claro: página #F4F5FA, tarjeta #FFFFFF (borde #E4E7F2 y sombra suave), título #171B30, texto
+     #3B4261, ayuda #5B6180, violeta #6D4FD6, botón con degradado #3D6FE0→#6D4FD6 y letra blanca,
+     eliminar #A8304B/#FCE8EC.
+   - Repetir `VigiliaContrastTest` y `VigiliaThemeComposeTest`, actualizando los valores esperados.
+4. **Componentes comunes** (`VisualSystem.kt`):
+   - encabezado con flecha y «Cerrar» arriba, rótulo violeta y título grande;
+   - `PrimaryAction` con degradado y forma asimétrica 18/6, de 52 dp;
+   - secundarios tonales y destructivo tonal;
+   - fondo de pantalla con brillo radial suave arriba a la derecha;
+   - etiquetas con forma asimétrica 10/3.
+5. **Disponibilidad:**
+   - horas grandes lado a lado (Inicio → Final), con el reloj dentro del campo;
+   - etiqueta «+1 día» calculada sólo con fecha final menos fecha dueña;
+   - **no** se agrega la duración en el editor, que ya se muestra en la revisión: calcularla en la
+     pantalla con la zona horaria sería lógica nueva;
+   - conservar textos y etiquetas que buscan las pruebas; si un rótulo cambia, actualizar la prueba
+     sabiendo qué cubría.
+6. **Calendario:**
+   - tarjeta de próxima jornada con caja de fecha, horario grande y «+1 día»;
+   - grilla con celdas asimétricas y colores v2;
+   - respetar las decisiones 0042 y 0043: mes completo, 48 dp, letra de Android y la omisión de
+     información secundaria accesible.
+7. PC: `python tools/verify.py --profile local` (hoy 1344 pruebas, 0 fallas).
+8. Samsung, **pidiendo autorización de nuevo**: foto de datos QA, compilar e instalar, y correr
+   `.local-evidence/claude-20261108-13-5/run.sh` con los selectores de `Stage135Selectors` en una
+   sola invocación. Después capturas (la prueba de capturas guarda en `Android/data/…qa/cache/stage13-5-captures`),
+   foto de datos y commit.
+9. Después, lo que ya estaba pendiente de la etapa: pulir el resto de las pantallas según
+   `docs/design/ETAPA_13_5_INVENTARIO.md`, poner el selector en los 18 campos restantes, la prueba
+   del selector con el dedo de Joaquín y la regresión de 12.2 y 13 en el teléfono.
+
+**Decisiones tomadas en esta etapa:** paleta Tokyo Night (Night + azul), esquinas asimétricas
+(opción C), estilo v2 tal cual y Plus Jakarta Sans incluida en la app (licencia OFL, sin red). El
+detalle está en `docs/design/ETAPA_13_5_INVENTARIO.md`, secciones 0 y 0.b. **Pendiente para la etapa 14:**
+decidir si el Widget adopta la paleta nueva.
 
 ## Etapa 13 · Datos y archivos (desde el 8/11)
 
