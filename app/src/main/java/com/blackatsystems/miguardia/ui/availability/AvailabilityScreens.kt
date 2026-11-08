@@ -19,7 +19,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -37,7 +36,12 @@ import com.blackatsystems.miguardia.core.domain.model.AvailabilityTemporalState
 import com.blackatsystems.miguardia.core.domain.model.AvailabilityWindowRecord
 import com.blackatsystems.miguardia.core.domain.work.AvailabilityLabel
 import com.blackatsystems.miguardia.ui.components.EmptyState
+import com.blackatsystems.miguardia.ui.components.MiGuardiaSpacing
+import com.blackatsystems.miguardia.ui.components.PrimaryAction
 import com.blackatsystems.miguardia.ui.components.AutomaticTimeField
+import com.blackatsystems.miguardia.ui.components.DateFieldFormat
+import com.blackatsystems.miguardia.ui.components.PICKER_BUTTON_SUFFIX
+import com.blackatsystems.miguardia.ui.components.PickableDateField
 import com.blackatsystems.miguardia.ui.components.PersistentMessage
 import com.blackatsystems.miguardia.ui.components.SectionCard
 import com.blackatsystems.miguardia.ui.components.SurfaceHeader
@@ -163,10 +167,11 @@ private fun AvailabilityOverview(state: AvailabilityUiState, actions: Availabili
         ) {
             Text("Ventanas registradas: ${source.windows.size}")
         }
-        Button(
+        PrimaryAction(
+            label = "Configurar o cambiar",
             onClick = actions.openConfiguration,
-            modifier = Modifier.fillMaxWidth().testTag("availability-configure"),
-        ) { Text("Configurar o cambiar") }
+            modifier = Modifier.testTag("availability-configure"),
+        )
     }
 }
 
@@ -174,7 +179,11 @@ private fun AvailabilityOverview(state: AvailabilityUiState, actions: Availabili
 private fun ConfigurationEditor(state: AvailabilityUiState, actions: AvailabilityActions) {
     AvailabilityBody(state, actions) {
         val draft = state.configurationDraft ?: return@AvailabilityBody
-        Text("Elegí el nombre que MiGuardia debe usar.", fontWeight = FontWeight.SemiBold)
+        Text(
+            "Elegí el nombre que MiGuardia debe usar.",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+        )
         (listOf<AvailabilityLabel?>(
             AvailabilityLabel.PASSIVE_GUARD,
             AvailabilityLabel.AVAILABLE_FOR_CALL,
@@ -199,19 +208,21 @@ private fun ConfigurationEditor(state: AvailabilityUiState, actions: Availabilit
                 )
             }
         }
-        OutlinedTextField(
+        PickableDateField(
             value = draft.effectiveDate,
             onValueChange = { actions.updateConfiguration(draft.copy(effectiveDate = it)) },
-            label = { Text("Vigente desde") },
-            supportingText = { Text("AAAA-MM-DD") },
-            singleLine = true,
+            label = "Vigente desde",
+            format = DateFieldFormat.ISO,
+            pickerFallback = { state.source?.today ?: LocalDate.now() },
+            pickerTestTag = "availability-config-date$PICKER_BUTTON_SUFFIX",
             modifier = Modifier.fillMaxWidth().testTag("availability-config-date"),
         )
-        Button(
+        PrimaryAction(
+            label = "Revisar",
             onClick = actions.reviewConfiguration,
             enabled = !state.isSaving,
-            modifier = Modifier.fillMaxWidth().testTag("availability-config-review"),
-        ) { Text("Revisar") }
+            modifier = Modifier.testTag("availability-config-review"),
+        )
     }
 }
 
@@ -222,18 +233,19 @@ private fun ConfigurationReview(state: AvailabilityUiState, actions: Availabilit
         SectionCard("Confirmá el cambio") {
             Text("Nombre: ${draft.label?.displayName ?: "No uso disponibilidad"}")
             Text("Vigente desde: ${draft.effectiveDate}")
-            Text("El historial anterior se conserva. Desactivar sólo bloquea cargas nuevas desde esa fecha.")
+            HelperText("El historial anterior se conserva. Desactivar sólo bloquea cargas nuevas desde esa fecha.")
             runCatching { LocalDate.parse(draft.effectiveDate) }.getOrNull()?.let { effectiveDate ->
                 if (state.source?.today?.let(effectiveDate::isBefore) == true) {
-                    Text("Como la fecha es anterior a hoy, ese tramo histórico pasa a usar este nombre. No se crean ventanas ni se cambian sus fotografías guardadas.")
+                    HelperText("Como la fecha es anterior a hoy, ese tramo histórico pasa a usar este nombre. No se crean ventanas ni se cambian sus fotografías guardadas.")
                 }
             }
         }
-        Button(
+        PrimaryAction(
+            label = if (state.isSaving) "Guardando…" else "Guardar configuración",
             onClick = actions.saveConfiguration,
             enabled = !state.isSaving,
-            modifier = Modifier.fillMaxWidth().testTag("availability-config-save"),
-        ) { Text(if (state.isSaving) "Guardando…" else "Guardar configuración") }
+            modifier = Modifier.testTag("availability-config-save"),
+        )
     }
 }
 
@@ -247,33 +259,41 @@ private fun WindowEditor(state: AvailabilityUiState, actions: AvailabilityAction
                 append("Fecha ${draft.ownerDate ?: ""}")
             },
             supportingText = "La fecha dueña no cambia al corregir. Para moverla, eliminá y creá otra ventana.",
-        ) { }
-        AutomaticTimeField(
-            value = draft.startTime,
-            onValueChange = { actions.updateWindow(draft.copy(startTime = it)) },
-            label = "Inicio",
-            modifier = Modifier.fillMaxWidth().testTag("availability-start"),
-        )
-        OutlinedTextField(
-            value = draft.endDate,
-            onValueChange = { actions.updateWindow(draft.copy(endDate = it)) },
-            label = { Text("Fecha final") },
-            supportingText = { Text("AAAA-MM-DD; puede cruzar mes o año") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth().testTag("availability-end-date"),
-        )
-        AutomaticTimeField(
-            value = draft.endTime,
-            onValueChange = { actions.updateWindow(draft.copy(endTime = it)) },
-            label = "Final",
-            modifier = Modifier.fillMaxWidth().testTag("availability-end"),
-        )
-        Text("Una disponibilidad puede superar 24 horas. No se combina automáticamente con ventanas contiguas.")
-        Button(
+        ) {
+            AutomaticTimeField(
+                value = draft.startTime,
+                onValueChange = { actions.updateWindow(draft.copy(startTime = it)) },
+                label = "Inicio",
+                withPicker = true,
+                pickerTestTag = "availability-start$PICKER_BUTTON_SUFFIX",
+                modifier = Modifier.fillMaxWidth().testTag("availability-start"),
+            )
+            PickableDateField(
+                value = draft.endDate,
+                onValueChange = { actions.updateWindow(draft.copy(endDate = it)) },
+                label = "Fecha final",
+                format = DateFieldFormat.ISO,
+                supportingText = "AAAA-MM-DD; puede cruzar mes o año",
+                pickerFallback = { draft.ownerDate ?: state.source?.today ?: LocalDate.now() },
+                pickerTestTag = "availability-end-date$PICKER_BUTTON_SUFFIX",
+                modifier = Modifier.fillMaxWidth().testTag("availability-end-date"),
+            )
+            AutomaticTimeField(
+                value = draft.endTime,
+                onValueChange = { actions.updateWindow(draft.copy(endTime = it)) },
+                label = "Final",
+                withPicker = true,
+                pickerTestTag = "availability-end$PICKER_BUTTON_SUFFIX",
+                modifier = Modifier.fillMaxWidth().testTag("availability-end"),
+            )
+            HelperText("Una disponibilidad puede superar 24 horas. No se combina automáticamente con ventanas contiguas.")
+        }
+        PrimaryAction(
+            label = if (state.isSaving) "Revisando…" else "Revisar",
             onClick = actions.reviewWindow,
             enabled = !state.isSaving,
-            modifier = Modifier.fillMaxWidth().testTag("availability-window-review"),
-        ) { Text(if (state.isSaving) "Revisando…" else "Revisar") }
+            modifier = Modifier.testTag("availability-window-review"),
+        )
     }
 }
 
@@ -292,13 +312,14 @@ private fun WindowReview(state: AvailabilityUiState, actions: AvailabilityAction
         }
         AvailabilityResultLines(review.breakdown)
         if (review.isProtected) {
-            Text("La fecha está protegida por vacaciones o licencia médica; la ventana se conserva sin aportar disponibilidad efectiva.")
+            HelperText("La fecha está protegida por vacaciones o licencia médica; la ventana se conserva sin aportar disponibilidad efectiva.")
         }
-        Button(
+        PrimaryAction(
+            label = if (state.isSaving) "Guardando…" else "Guardar",
             onClick = actions.saveWindow,
             enabled = !state.isSaving,
-            modifier = Modifier.fillMaxWidth().testTag("availability-window-save"),
-        ) { Text(if (state.isSaving) "Guardando…" else "Guardar") }
+            modifier = Modifier.testTag("availability-window-save"),
+        )
     }
 }
 
@@ -316,8 +337,8 @@ private fun AvailabilityBody(
         ) { CircularProgressIndicator() }
         AvailabilityLoadState.ERROR -> state.source?.let { source ->
             Column(
-                Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
+                Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(MiGuardiaSpacing.large),
+                verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.large),
             ) {
                 PersistentMessage(
                     message = state.message ?: "No pudimos actualizar los datos. Se conserva la última información válida.",
@@ -333,11 +354,11 @@ private fun AvailabilityBody(
             message = state.message ?: "Los datos no están disponibles.",
             actionLabel = "Reintentar",
             onAction = actions.retry,
-            modifier = Modifier.fillMaxSize().padding(24.dp),
+            modifier = Modifier.fillMaxSize().padding(MiGuardiaSpacing.extraLarge),
         )
         AvailabilityLoadState.CONTENT -> Column(
-            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(MiGuardiaSpacing.large),
+            verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.large),
         ) {
             state.message?.let { PersistentMessage(message = it, onDismiss = actions.clearMessage) }
             content(requireNotNull(state.source))
@@ -380,7 +401,7 @@ fun AvailabilityDaySection(
             )
             result?.let { Text(resultShortLabel(it)) }
             if (showActions) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small)) {
                     TextButton(
                         onClick = { actions.openCorrect(record) },
                         modifier = Modifier.testTag("availability-correct-${record.id}"),
@@ -463,6 +484,12 @@ private fun stateLabel(state: AvailabilityTemporalState): String = when (state) 
     AvailabilityTemporalState.PROTECTED -> "Protegida"
 }
 
+/** Secondary explanation: same text, quieter than data so the values read first. */
+@Composable
+private fun HelperText(text: String) {
+    Text(text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+}
+
 private fun minutesLabel(minutes: Long): String = "${minutes / 60} h ${minutes % 60} min"
 
 @Composable
@@ -474,7 +501,7 @@ private fun DeleteConfirmation(state: AvailabilityUiState, actions: Availability
         onDismissRequest = actions.dismissDelete,
         title = { Text("Eliminar ${record.labelSnapshot}") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small)) {
                 Text(
                     "Se eliminará exactamente esta ventana: $start–$end (${minutesLabel(record.durationMinutes)}). " +
                         "La acción no modifica jornadas ni horas trabajadas.",

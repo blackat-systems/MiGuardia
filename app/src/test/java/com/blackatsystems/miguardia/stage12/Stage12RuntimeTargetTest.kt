@@ -280,6 +280,30 @@ class Stage12RuntimeTargetTest {
             Stage12RuntimeTarget.requireSelection(api37(), listOf(selector), "REAL", false, true)
         }
     }
+    @Test fun stage135RuleNeedsAnOwnMethodAndAdmitsOnlyItsScreenRegression() {
+        val own = com.blackatsystems.miguardia.stage135.Stage135Selectors.own.toList()
+        val regression = com.blackatsystems.miguardia.stage135.Stage135Selectors.screenRegression.toList()
+        Stage12RuntimeTarget.requireSelection(api37(), own, "REAL", false, true)
+        Stage12RuntimeTarget.requireSelection(api37(), own.take(1) + regression, "REAL", false, true)
+        // Alone, the earlier screen methods keep the rules of their own stage.
+        regression.forEach { selector ->
+            assertThrows(IllegalStateException::class.java) {
+                Stage12RuntimeTarget.requireSelection(api37(), listOf(selector), "REAL", false, true)
+            }
+        }
+        assertThrows(IllegalStateException::class.java) {
+            Stage12RuntimeTarget.requireSelection(api37(), own.take(1) + Stage12B1Selectors.OWNED_LOAD_EDIT, "REAL", false, true)
+        }
+        assertThrows(IllegalStateException::class.java) {
+            Stage12RuntimeTarget.requireSelection(api37(), own, "FIXED", false, true)
+        }
+        assertThrows(IllegalStateException::class.java) {
+            Stage12RuntimeTarget.requireSelection(api37(), own, "REAL", true, true)
+        }
+        assertThrows(IllegalStateException::class.java) {
+            Stage12RuntimeTarget.requireSelection(aosp(), own, "REAL", false, true)
+        }
+    }
     @Test fun api37B1ClosureAdmitsOnlyItsTwoExactRealClockSingletons() {
         val selected = listOf(Stage12B1Selectors.OWNED_LOAD_EDIT,
             "com.blackatsystems.miguardia.stage12.Stage12RecurringLifecycleTest#mixedOccupancyPoliciesUseExactPreviewsAndAtomicRealWrites")

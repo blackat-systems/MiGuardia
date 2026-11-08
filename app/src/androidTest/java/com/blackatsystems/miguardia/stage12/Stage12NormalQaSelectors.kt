@@ -167,5 +167,6 @@ internal object Stage12NormalQaSelectors {
         "com.blackatsystems.miguardia.stage12.Stage12NormalQaActivityTest#fixedDateWeatherAndFutureDetailsKeepTheirOwnerAndReturn",
         "com.blackatsystems.miguardia.stage12.Stage12NormalQaActivityTest#todayDetailRemainsOpenAcrossCloseAndReopen",
     ) + Stage12B1Selectors.compose + Stage12B1Selectors.OWNED_LOAD_EDIT + Stage12B1Selectors.ownedWorkFamily + Stage12B1Selectors.selectionBatchFamily + Stage12B1Selectors.recurringLifecycleFamily + Stage12B1Selectors.calendarExceptionsFamily + Stage12B1Selectors.medicalDraftRegression + Stage12B1Selectors.temporalLiteralFamily + Stage12B1Selectors.availabilityLifecycleFamily +
-        Stage12CalculationSelectors.family + com.blackatsystems.miguardia.stage13.Stage13DataSelectors.family
+        Stage12CalculationSelectors.family + com.blackatsystems.miguardia.stage13.Stage13DataSelectors.family +
+        com.blackatsystems.miguardia.stage135.Stage135Selectors.family
 }

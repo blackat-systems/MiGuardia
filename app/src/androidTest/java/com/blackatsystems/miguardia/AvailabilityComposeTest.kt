@@ -17,6 +17,10 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTextReplacement
+import com.blackatsystems.miguardia.ui.components.PICKER_CANCEL_TAG
+import com.blackatsystems.miguardia.ui.components.PICKER_CONFIRM_TAG
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.blackatsystems.miguardia.core.domain.model.AvailabilityBreakdown
@@ -300,6 +304,120 @@ class AvailabilityComposeTest {
         }
         compose.onNodeWithText("Fallo recuperable").assertIsDisplayed()
         compose.onNodeWithText("Ventanas registradas: 1").assertIsDisplayed()
+    }
+
+    @Test
+    fun windowPickersGiveTheSameTextAsTypingAndCancelChangesNothing() {
+        var state by mutableStateOf(
+            contentState().copy(
+                surface = AvailabilitySurface.WINDOW_EDITOR,
+                windowDraft = AvailabilityWindowDraftState(
+                    ownerDate = OWNER,
+                    startTime = "",
+                    endDate = OWNER.toString(),
+                    endTime = "",
+                ),
+            ),
+        )
+        var reviews = 0
+        compose.setContent {
+            AndroidFontScaleTheme {
+                AvailabilitySurfaceHost(
+                    state,
+                    AvailabilityActions(
+                        updateWindow = { state = state.copy(windowDraft = it) },
+                        reviewWindow = { reviews++ },
+                    ),
+                )
+            }
+        }
+        fun draft() = requireNotNull(state.windowDraft)
+
+        // Upper limit typed, then confirmed in the clock: same text, nothing else changes.
+        compose.onNodeWithTag("availability-start").performTextInput("2359")
+        compose.runOnIdle { assertEquals("23:59", draft().startTime) }
+        compose.onNodeWithTag("availability-start-picker").performClick()
+        compose.onNodeWithTag(PICKER_CONFIRM_TAG).performClick()
+        compose.runOnIdle { assertEquals("23:59", draft().startTime) }
+
+        // Lower limit typed; cancelling the clock keeps it.
+        compose.onNodeWithTag("availability-end").performTextInput("0000")
+        compose.runOnIdle { assertEquals("00:00", draft().endTime) }
+        compose.onNodeWithTag("availability-end-picker").performScrollTo().performClick()
+        compose.onNodeWithTag(PICKER_CANCEL_TAG).performClick()
+        compose.runOnIdle { assertEquals("00:00", draft().endTime) }
+        compose.onNodeWithTag("availability-end-picker").performClick()
+        compose.onNodeWithTag(PICKER_CONFIRM_TAG).performClick()
+        compose.runOnIdle { assertEquals("00:00", draft().endTime) }
+
+        // Crossing midnight: the calendar reads the typed next day and writes the same text.
+        val nextDay = OWNER.plusDays(1).toString()
+        compose.onNodeWithTag("availability-end-date").performTextReplacement(nextDay)
+        compose.onNodeWithTag("availability-end-date-picker").performScrollTo().performClick()
+        compose.onNodeWithTag(PICKER_CANCEL_TAG).performClick()
+        compose.runOnIdle { assertEquals(nextDay, draft().endDate) }
+        compose.onNodeWithTag("availability-end-date-picker").performClick()
+        compose.onNodeWithTag(PICKER_CONFIRM_TAG).performClick()
+        compose.runOnIdle {
+            assertEquals(nextDay, draft().endDate)
+            assertEquals("23:59", draft().startTime)
+            assertEquals("00:00", draft().endTime)
+            // Pickers never review or save on their own.
+            assertEquals(0, reviews)
+            assertEquals(AvailabilitySurface.WINDOW_EDITOR, state.surface)
+        }
+    }
+
+    @Test
+    fun emptyDateFieldPickerStartsOnTheOwnerDateAndOnlyWritesAfterConfirming() {
+        var state by mutableStateOf(
+            contentState().copy(
+                surface = AvailabilitySurface.WINDOW_EDITOR,
+                windowDraft = AvailabilityWindowDraftState(
+                    ownerDate = OWNER,
+                    startTime = "08:00",
+                    endDate = "",
+                    endTime = "12:00",
+                ),
+            ),
+        )
+        compose.setContent {
+            AndroidFontScaleTheme(darkTheme = false) {
+                AvailabilitySurfaceHost(
+                    state,
+                    AvailabilityActions(updateWindow = { state = state.copy(windowDraft = it) }),
+                )
+            }
+        }
+        compose.onNodeWithTag("availability-end-date-picker").performScrollTo().performClick()
+        compose.onNodeWithTag(PICKER_CANCEL_TAG).performClick()
+        compose.runOnIdle { assertEquals("", state.windowDraft?.endDate) }
+        compose.onNodeWithTag("availability-end-date-picker").performClick()
+        compose.onNodeWithTag(PICKER_CONFIRM_TAG).performClick()
+        compose.runOnIdle { assertEquals(OWNER.toString(), state.windowDraft?.endDate) }
+    }
+
+    @Test
+    fun configurationDateKeepsTypingAndAddsTheCalendar() {
+        var state by mutableStateOf(
+            contentState().copy(
+                surface = AvailabilitySurface.CONFIG_EDITOR,
+                configurationDraft = AvailabilityConfigurationDraft(AvailabilityLabel.PASSIVE_GUARD, ""),
+            ),
+        )
+        compose.setContent {
+            AndroidFontScaleTheme(darkTheme = true, fontScale = TestFontScale.EXTRA_LARGE) {
+                AvailabilitySurfaceHost(
+                    state,
+                    AvailabilityActions(updateConfiguration = { state = state.copy(configurationDraft = it) }),
+                )
+            }
+        }
+        compose.onNodeWithTag("availability-config-date").performScrollTo().performTextInput("2026-12-31")
+        compose.runOnIdle { assertEquals("2026-12-31", state.configurationDraft?.effectiveDate) }
+        compose.onNodeWithTag("availability-config-date-picker").performClick()
+        compose.onNodeWithTag(PICKER_CONFIRM_TAG).performClick()
+        compose.runOnIdle { assertEquals("2026-12-31", state.configurationDraft?.effectiveDate) }
     }
 
     private fun contentState(disabled: Boolean = false): AvailabilityUiState = AvailabilityUiState(

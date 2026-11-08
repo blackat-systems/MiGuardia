@@ -1,8 +1,14 @@
 # Estado actual de MiGuardia 3.0
 
 - Etapa: 13 · Datos y archivos — CERRADA por Joaquín (8/11): A166–A207, C078, C079 y C095 ✅
-- Próxima etapa: **13.5 · Estética y facilidad de uso** (agregada por Joaquín el 8/11) — NO iniciada; prompt en
-  docs/prompts/ETAPA_13_5_ESTETICA_Y_FACILIDAD.md. Después: 14 · Sistema y aceptación final
+- Etapa en curso: **13.5 · Estética y facilidad de uso** (agregada por Joaquín el 8/11) — INICIADA el 8/11; prompt en
+  docs/prompts/ETAPA_13_5_ESTETICA_Y_FACILIDAD.md. **Lista aprobada por Joaquín (8/11):**
+  [inventario y propuesta](design/ETAPA_13_5_INVENTARIO.md) (reglas comunes, pulido por pantalla, 22 campos).
+  ✅ Disponibilidad (ejemplo): selector de hora y fecha + pulido; Samsung 12/12 y capturas antes/después
+  (`.local-evidence/claude-20261108-13-5/`); datos QA 23 bases idénticas. ⏳ El resto de las pantallas y
+  campos; vista humana de los selectores; regresión 12.2 y 13 al final. Pareja instalada: QA `f409c840…` +
+  ejecutor `09d9e6af…` (hashes completos en `build-despues/hashes.txt`); correr con `run.sh` de esa carpeta.
+  Después: 14 · Sistema y aceptación final
   (docs/prompts/ETAPA_14_SISTEMA_Y_ACEPTACION.md) y 15 · Entrega
 - Etapa anterior: 12.2 · Cálculos y consulta — CERRADA por Joaquín (8/11)
 - Base: `636e4ae`, subido a `origin/codex/miguardia-3.0` el 8/11 con pedido de Joaquín
