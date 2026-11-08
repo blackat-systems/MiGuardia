@@ -1,6 +1,6 @@
 # Estado actual de MiGuardia 3.0
 
-- Etapa: 12.2 · Cálculos y consulta — LISTA (8/11): todos los casos A077–A110, A127–A165 ✅; commits locales sin push
+- Etapa: 12.2 · Cálculos y consulta — CERRADA por Joaquín (8/11): todos los casos A077–A110, A127–A165 ✅; commits locales sin push
 - Próxima etapa: 13 · Datos y archivos (ver plan maestro)
 - Etapa anterior: B1 (Trabajo y Calendario) CERRADA el 8/11
 - Base: commit local de la primera tanda 12.2 sobre 6f612bd; nada subido a GitHub
@@ -15,7 +15,7 @@ Resumen, el XLSX real y el PDF real muestran los mismos minutos, en la PC y en e
 retornos conservan el mes. Guardar y compartir con los selectores reales pasó con Joaquín (8/11). La
 segunda tanda (editores de Horas, clases y extra independiente) y la tanda final (desgloses, interruptores,
 fotos y conflictos al guardar) también pasaron. **Corrida final: 15/15 en el Samsung**; la etapa cumple sus
-condiciones de «lista». Falta sólo que Joaquín la dé por cerrada.
+condiciones de «lista» y **Joaquín la dio por cerrada el 8/11**.
 
 ## Etapa 12.2 · Cálculos y consulta (desde el 8/11)
 
@@ -118,7 +118,7 @@ foto previa. Nada subido a GitHub: la rama va adelantada respecto de `origin` y 
 sigue `7dc36052…`. Correr las pruebas 12.2 con
 `RUNNER=ed25efe4a7f9a46fc349e7cd396be2e5d15793844f4acc4ea2eba6be305ffb0e bash .local-evidence/claude-20261107-b1/run_methods_diag.sh <salida> <selector>…`
 (selectores en `Stage12CalculationSelectors`). Evidencia 12.2 en `.local-evidence/claude-20261108-12-2/`.
-**Siguiente:** que Joaquín dé por cerrada la etapa 12.2 y arrancar la etapa 13 · Datos y archivos.
+**Siguiente:** arrancar la etapa 13 · Datos y archivos (notas, fotos, Copias, restaurar, archivos dañados).
 
 **Entorno de esta PC** (la app de Claude redirige en silencio lo que se escribe en
 `AppData\Local`, por eso el SDK quedó fuera de ahí):
