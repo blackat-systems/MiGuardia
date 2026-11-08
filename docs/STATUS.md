@@ -1,7 +1,7 @@
 # Estado actual de MiGuardia 3.0
 
 - Etapa: 13 · Datos y archivos — CERRADA por Joaquín (8/11): A166–A207, C078, C079 y C095 ✅
-- Etapa en curso: **13.5 · Estética y facilidad de uso** — ⏸ EN PAUSA (ver «PAUSA — Etapa 13.5» abajo) (agregada por Joaquín el 8/11) — INICIADA el 8/11; prompt en
+- Etapa en curso: **13.5 · Estética y facilidad de uso** — retomada el 8/11 (ver «Etapa 13.5 retomada» abajo) (agregada por Joaquín el 8/11) — INICIADA el 8/11; prompt en
   docs/prompts/ETAPA_13_5_ESTETICA_Y_FACILIDAD.md. **Lista aprobada por Joaquín (8/11):**
   [inventario y propuesta](design/ETAPA_13_5_INVENTARIO.md) (reglas comunes, pulido por pantalla, 22 campos).
   **Paleta Tokyo Night** (Joaquín, 8/11: Night + acento azul; sólo colores, forma Vigilia igual) aplicada en
@@ -18,6 +18,42 @@
 - Etapa anterior: 12.2 · Cálculos y consulta — CERRADA por Joaquín (8/11)
 - Base: `636e4ae`, subido a `origin/codex/miguardia-3.0` el 8/11 con pedido de Joaquín
 - Actualización: 2026-11-08
+
+## Etapa 13.5 retomada (8/11/2026) — avance sobre la pausa
+
+Joaquín pidió «retomá la 13.5». Ya se hicieron los pasos 1 a 7 de la lista de abajo; quedan en el
+commit `180201e`.
+
+- **Paso 1, símbolos de la fuente:**
+  - a Plus Jakarta Sans le faltan 18 de los 42 símbolos no ASCII que usa la app (✓, ☰, ⋯, ☁, ♡, ↻
+    y otros parecidos usados como íconos);
+  - Android los toma de la fuente del sistema, así que se ven igual que antes;
+  - → ‹ › · ° … sí están.
+- **Pasos 2 a 6:**
+  - fuente en `res/font`, licencia en `docs/licencias/` (el `.ttf` también trae el aviso OFL en sus
+    metadatos);
+  - paleta v2;
+  - componentes v2;
+  - Disponibilidad v2: horas lado a lado, que se apilan si no entran, fecha completa y «+1 día»;
+  - tarjeta de próxima jornada con el horario como dato grande;
+  - brillo de fondo en el Calendario.
+- **Cambios de color forzados por `VigiliaContrastTest`:**
+  - el azul claro pasó de #3D6FE0 a #2F5DC6, porque con el blanco del estado presionado no
+    llegaba a 4,5:1;
+  - la ayuda oscura pasó de #8F98C4 a #959ECA, porque sobre la tarjeta de próxima jornada daba
+    4,34:1;
+  - el final del degradado del botón en claro es #6548CE.
+- **Decisión técnica:** el título no lleva un color propio en el estilo de letra, porque le ganaría
+  al color de botones y celdas. La jerarquía la marcan el peso (800 y 700) y los secundarios más
+  apagados.
+- **PC:** 1349 pruebas, 0 fallas en la primera corrida completa.
+  - **Observación para la etapa 14:** en otra corrida falló una vez
+    `BetaCoordinatorTest#lostResponseRestartAndIdempotentRetryKeepExactBodyThenEraseMessage`, con
+    un `IllegalArgumentException`. Es código beta que no se tocó, y sola pasó 3 de 3.
+  - Es INFERIDO que se trata de una carrera de tiempos: no está reproducida.
+- **Paso 8 pendiente:** Samsung, con autorización de Joaquín. La familia `Stage135Selectors` ahora
+  incluye la regresión de estilo: Calendario (7 + 2), próxima jornada (29), Horas (7) y Resumen (13),
+  todas con datos ficticios.
 
 ## ⏸ PAUSA — Etapa 13.5 (8/11/2026, pedido de Joaquín: «frenamos acá»)
 
