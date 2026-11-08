@@ -195,8 +195,10 @@ sigue `7dc36052…`. Correr las pruebas 12.2 con
 `RUNNER=ed25efe4a7f9a46fc349e7cd396be2e5d15793844f4acc4ea2eba6be305ffb0e bash .local-evidence/claude-20261107-b1/run_methods_diag.sh <salida> <selector>…`
 (selectores en `Stage12CalculationSelectors`). Evidencia 12.2 en `.local-evidence/claude-20261108-12-2/`.
 **Actualización 8/11 (etapa 13):** ejecutor instalado `ac66cf6f52472cef9be73490f80a25508b65bb3aa26d2653479e0abad2682057`
-(incluye 12.2 y 13; la app QA sigue `7dc36052…`). **Siguiente:** correr A188 en el Samsung, decidir el hallazgo
-de los `.lck` y cerrar la etapa 13.
+(incluye 12.2 y 13). Después se instaló `e86d06c7b2ea0e8e3b5b46cb4607ef5f9b3633b2bbd84a2e228cfaab87344d5e`
+(agrega A188); la app QA sigue `7dc36052…`. Foto de datos QA tras A188 idéntica a la previa (salvo
+`files/profileInstalled`). **Siguiente:** confirmación visual de la pinza por Joaquín, decidir el hallazgo de los
+`.lck` y cerrar la etapa 13.
 
 **Entorno de esta PC** (la app de Claude redirige en silencio lo que se escribe en
 `AppData\Local`, por eso el SDK quedó fuera de ahí):
