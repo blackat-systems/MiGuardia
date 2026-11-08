@@ -184,6 +184,20 @@ class Stage12AvailabilityLifecycleTest {
             try { error.addSuppressed(accessory) } catch (_: Throwable) { }
         }
     }
+    /** Last helper entered, by tag or fixture text; published only with a failure. */
+    private var lastAction: String? = null
+    /** First failed text observation in any step; fixture text only, never received data. */
+    private var textFailureDiagnostic: JSONObject? = null
+    private fun rememberTextFailure(value: String, check: String, overflow: ReviewTextOverflow?, error: Throwable) {
+        try {
+            if (textFailureDiagnostic == null) textFailureDiagnostic = JSONObject().put("phase", phase).put("text", value)
+                .put("check", check).put("overflow", overflow?.projection() ?: JSONObject.NULL)
+                .put("error_class", error.javaClass.simpleName)
+                .put("error_code", error.message?.takeIf { it.matches(Regex("[A-Z0-9_]{1,80}")) } ?: JSONObject.NULL)
+        } catch (accessory: Throwable) {
+            try { error.addSuppressed(accessory) } catch (_: Throwable) { }
+        }
+    }
     private var reviewTextDiagnostic: ReviewTextDiagnostic? = null
     private val reviewTextObservationStages = setOf(
         ReviewStage.PROGRAMMED_TEXT_OBSERVE, ReviewStage.EFFECTIVE_TEXT_OBSERVE, ReviewStage.REPLACED_TEXT_OBSERVE,
@@ -225,6 +239,20 @@ class Stage12AvailabilityLifecycleTest {
                         }
                         if (primary != null) overviewTextDiagnostic?.let { diagnostic ->
                             try { value.put("overview_text_diagnostic", diagnostic.projection()) }
+                            catch (accessory: Throwable) {
+                                try { primary.addSuppressed(accessory) } catch (_: Throwable) { }
+                                throw primary
+                            }
+                        }
+                        if (primary != null) lastAction?.let { action ->
+                            try { value.put("last_action", action) }
+                            catch (accessory: Throwable) {
+                                try { primary.addSuppressed(accessory) } catch (_: Throwable) { }
+                                throw primary
+                            }
+                        }
+                        if (primary != null) textFailureDiagnostic?.let { diagnostic ->
+                            try { value.put("text_failure_diagnostic", diagnostic) }
                             catch (accessory: Throwable) {
                                 try { primary.addSuppressed(accessory) } catch (_: Throwable) { }
                                 throw primary
@@ -477,9 +505,14 @@ class Stage12AvailabilityLifecycleTest {
             await { a.loadState == AvailabilityLoadState.ERROR }
             check(a.source == valid && owner.faults.writeCalls == calls)
             observeText("Ventanas registradas: ${valid.windows.size}")
-            observeText("AVAILABILITY_CONTROLLED_WINDOW_OBSERVATION")
+            // The calendar below the full-screen overview shares this state and shows its own copy of the
+            // error; observe only the overview's copy, whose scroll owner also holds the window count.
+            observeText("AVAILABILITY_CONTROLLED_WINDOW_OBSERVATION",
+                scope = hasAnyAncestor(hasScrollAction() and hasAnyDescendant(hasText("Ventanas registradas: ${valid.windows.size}"))),
+                expectedViewportTag = null)
             exact("observation-error-retains-valid", expected)
-            owner.faults.set(Stage12AvailabilityFaults.Mode.NONE); textTouch("Reintentar")
+            owner.faults.set(Stage12AvailabilityFaults.Mode.NONE)
+            textTouch("Reintentar", scope = hasAnyAncestor(hasScrollAction() and hasAnyDescendant(hasText("Ventanas registradas: ${valid.windows.size}"))))
             await { a.loadState == AvailabilityLoadState.CONTENT && a.source?.calculationError == null }
             closeOverview()
         }
@@ -662,7 +695,11 @@ class Stage12AvailabilityLifecycleTest {
         val matcher = if (scope == null) hasText(value, substring = false) else hasText(value, substring = false) and scope
         reviewStage(reviewWait) {
             overviewStage(overviewWait) {
-                await { compose.onAllNodes(matcher, useUnmergedTree = true).fetchSemanticsNodes().size == 1 }
+                try { await { compose.onAllNodes(matcher, useUnmergedTree = true).fetchSemanticsNodes().size == 1 } }
+                catch (error: Throwable) {
+                    val found = runCatching { compose.onAllNodes(matcher, useUnmergedTree = true).fetchSemanticsNodes().size }.getOrNull()
+                    rememberTextFailure(value, "WAIT_FOUND_" + (found ?: "UNKNOWN"), null, error); throw error
+                }
             }
         }
         reviewStage(reviewObservation) { overviewStage(overviewAssertion) {
@@ -696,7 +733,7 @@ class Stage12AvailabilityLifecycleTest {
                         requireTemporalTextLayout(
                             layouts, value,
                             text = { measured -> part(ReviewTextCheck.LAYOUT_TEXT_QUERY) { measured.layoutInput.text.text } },
-                            hasOverflow = { measured -> part(ReviewTextCheck.LAYOUT_OVERFLOW_QUERY) { measured.hasVisualOverflow } },
+                            hasOverflow = { measured -> part(ReviewTextCheck.LAYOUT_OVERFLOW_QUERY) { measured.stage12VisibleOverflow() } },
                         ) {
                             val paragraph = it.multiParagraph
                             val constraints = it.layoutInput.constraints
@@ -785,6 +822,7 @@ class Stage12AvailabilityLifecycleTest {
             } catch (error: Throwable) {
                 rememberReviewText(reviewObservation, textCheck, overflow, error)
                 rememberOverviewText(overviewAssertion, textCheck, overflow, error)
+                rememberTextFailure(value, textCheck.name, overflow, error)
                 throw error
             }
         } }
@@ -941,6 +979,7 @@ class Stage12AvailabilityLifecycleTest {
         }
     }
     private fun exact(stage: String, expected: Stage12StoreSnapshot) {
+        lastAction = "EXACT:$stage"
         reviewStage(ReviewStage.READBACK_ACTIVE) { active() }
         val read = reviewStage(ReviewStage.READBACK_CAPTURE) { overviewStage(OverviewStage.READBACK_CAPTURE) {
             trace.checked(Stage12SelectionDiagnostics.Checkpoint.CATALOG_READ) {
@@ -965,7 +1004,9 @@ class Stage12AvailabilityLifecycleTest {
     private fun touch(tag: String, overviewWait: OverviewStage? = null, overviewAction: OverviewStage? = null,
         reviewWait: ReviewStage? = null, reviewAction: ReviewStage? = null) {
         active()
+        lastAction = "TOUCH:$tag"
         reviewStage(reviewWait) { overviewStage(overviewWait) { waitTag(tag) } }
+        lastAction = "TOUCH_ACT:$tag"
         reviewStage(reviewAction) { overviewStage(overviewAction) {
             val node = compose.onNodeWithTag(tag)
             if (!trace.checked(Stage12SelectionDiagnostics.Checkpoint.NODE_SCROLL_QUERY) { node.isDisplayed() })
@@ -975,9 +1016,18 @@ class Stage12AvailabilityLifecycleTest {
             trace.checked(Stage12SelectionDiagnostics.Checkpoint.NODE_SINGLE_TOUCH) { node.performTouchInput { click() } }
         } }
     }
-    private fun textTouch(value: String, reviewWait: ReviewStage? = null, reviewAction: ReviewStage? = null) {
-        val selector = hasText(value, substring = false) and hasClickAction()
-        reviewStage(reviewWait) { await { compose.onAllNodes(selector).fetchSemanticsNodes().size == 1 } }
+    private fun textTouch(value: String, reviewWait: ReviewStage? = null, reviewAction: ReviewStage? = null,
+        scope: SemanticsMatcher? = null) {
+        val selector = hasText(value, substring = false) and hasClickAction() and (scope ?: SemanticsMatcher("ANY") { true })
+        lastAction = "TEXT_TOUCH:$value"
+        reviewStage(reviewWait) {
+            try { await { compose.onAllNodes(selector).fetchSemanticsNodes().size == 1 } }
+            catch (error: Throwable) {
+                val found = runCatching { compose.onAllNodes(selector).fetchSemanticsNodes().size }.getOrNull()
+                lastAction = "TEXT_TOUCH:$value found=${found ?: "UNKNOWN"}"; throw error
+            }
+        }
+        lastAction = "TEXT_TOUCH_ACT:$value"
         reviewStage(reviewAction) {
             val node = compose.onNode(selector)
             if (!node.isDisplayed()) node.performScrollTo()

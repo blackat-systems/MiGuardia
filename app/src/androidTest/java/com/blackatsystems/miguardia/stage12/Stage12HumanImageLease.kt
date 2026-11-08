@@ -52,7 +52,15 @@ internal class Stage12HumanImageLease(private val context: Context, private val 
     fun requireSelected(selected: Uri) {
         check(selected.scheme == "content")
         val own = checkNotNull(uri)
-        val mapped = if (selected == own) selected else MediaStore.getMediaUri(context, selected)
+        // El selector de fotos devuelve content://media/picker…/<id>; getMediaUri no lo admite. Para medios
+        // locales el último segmento es el _id de MediaStore: se compara con la fila propia y los bytes abajo.
+        val pickerUri = selected.authority == "media" && selected.pathSegments.firstOrNull()?.startsWith("picker") == true
+        val mapped = when {
+            selected == own -> selected
+            pickerUri -> own.takeIf { selected.lastPathSegment != null && selected.lastPathSegment == own.lastPathSegment }
+            else -> MediaStore.getMediaUri(context, selected)
+        }
+        if (pickerUri) projection.put("selected_uri_kind", "PHOTO_PICKER")
         check(mapped == own) { "HUMAN_SELECTED_MEDIA_ID_NOT_PROVEN" }
         check(resolver.getType(selected) == "image/png")
         check(readExact(selected).contentEquals(bytes)); verify()

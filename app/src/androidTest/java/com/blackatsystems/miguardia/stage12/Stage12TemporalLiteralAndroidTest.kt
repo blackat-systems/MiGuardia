@@ -578,7 +578,7 @@ class Stage12TemporalLiteralAndroidTest {
         val layout = requireTemporalTextLayout(
             layouts, value,
             text = { it.layoutInput.text.text },
-            hasOverflow = { it.hasVisualOverflow },
+            hasOverflow = { it.stage12VisibleOverflow() },
         ) {
             val paragraph = it.multiParagraph
             val constraints = it.layoutInput.constraints

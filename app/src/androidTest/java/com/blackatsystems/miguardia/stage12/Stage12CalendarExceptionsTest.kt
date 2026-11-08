@@ -107,6 +107,14 @@ class Stage12CalendarExceptionsTest {
                             .put("status", if (primary == null && cleaned) "COMPLETE" else "FAILED")
                         if (primary != null) receipt.put("failure_phase", phase).put("failure_action_ordinal", action)
                             .put("failure_action_target_sha256", actionHash)
+                        // Diagnóstico local temporal (B1 humana, 8/11): sólo clases/mensajes/frames propios, sin datos.
+                        if (primary != null) receipt.put("debug_primary_failure", org.json.JSONArray().also { chain ->
+                            generateSequence(primary) { it.cause }.take(5).forEach { error ->
+                                chain.put(JSONObject().put("type", error.javaClass.name).put("message", error.message ?: "")
+                                    .put("frames", org.json.JSONArray(error.stackTrace.filter { it.className.startsWith("com.blackatsystems") }
+                                        .take(25).map { "${it.className}.${it.methodName}:${it.lineNumber}" })))
+                            }
+                        })
                         Stage12NativeReceiptFiles.publish(checkNotNull(pendingOutput), receipt.toString(2), primary)
                     }
                 })
@@ -2195,11 +2203,16 @@ class Stage12CalendarExceptionsTest {
     }
     private fun humanMapStep() {
         phase = "HUMAN_MAP_AND_RETURN"
-        openDay(humanTarget.shift.localStartDate)
+        openDay(humanTarget.shift.localStartDate, editing = false)
         val same = checkNotNull(owner)
-        val card = hasTestTag("v2-shift-" + humanTarget.shift.id + "-card")
+        val card = hasTestTag("shift-detail-card-" + humanTarget.shift.id)
         val address = hasContentDescription("Abrir en Google Maps: " + Stage12B1HumanSession.ADDRESS) and hasAnyAncestor(card) and
             !hasAnyAncestor(hasTestTag("v2-actual-" + humanTarget.shift.id + "-card"))
+        // Diagnóstico local temporal (B1 humana, 8/11): árbol sintético de QA si falta el nodo.
+        if (compose.onAllNodes(address).fetchSemanticsNodes().size != 1) checkNotNull(pendingReceipt).put("debug_tree",
+            compose.onAllNodes(androidx.compose.ui.test.isRoot(), useUnmergedTree = true).fetchSemanticsNodes().size.toString() + "\n" +
+            compose.onAllNodes(androidx.compose.ui.test.isRoot(), useUnmergedTree = true).let { roots ->
+                (0 until roots.fetchSemanticsNodes().size).joinToString("\n=====\n") { roots[it].printToString(Int.MAX_VALUE) } }.take(60_000))
         compose.onAllNodes(address).assertCountEquals(1)
         compose.onNode(address).performScrollTo().assertIsDisplayed().assertHasClickAction()
         val session = checkNotNull(humanSession)
@@ -2328,7 +2341,7 @@ class Stage12CalendarExceptionsTest {
             session.begin(Stage12B1HumanSession.HumanStep.WEATHER_AFTER_LOCATION)
             closeOwner(); session.complete("LOCATION_UNAVAILABLE_NOT_RUN", JSONObject().put("weather_action_not_performed", true)); return
         }
-        openDay(humanTarget.shift.localStartDate); touch("shift-weather-" + humanTarget.shift.id)
+        openDay(humanTarget.shift.localStartDate, editing = false); touch("shift-weather-" + humanTarget.shift.id)
         val weather = checkNotNull(humanWeather)
         await { weather.model.uiState.value.selectedShift == humanTarget.shift && !weather.model.uiState.value.isLoading }
         val stateBefore = weather.model.uiState.value
@@ -2351,8 +2364,19 @@ class Stage12CalendarExceptionsTest {
             .put("provider_correctness_proven", false).put("coordinates_recorded", false)
         touch("weather-close"); await { weather.model.uiState.value.surface == com.blackatsystems.miguardia.ui.weather.WeatherSurface.NONE }
         check(c.detailDate == humanTarget.shift.localStartDate)
-        closeDay(); openDay(humanTarget.shift.localStartDate); touch("shift-weather-" + humanTarget.shift.id)
-        await { val s=weather.model.uiState.value; s.selectedShift == humanTarget.shift && !s.isLoading && !s.isRefreshing && s.loadingBriefIds.isEmpty() }
+        closeDay(); openDay(humanTarget.shift.localStartDate, editing = false); touch("shift-weather-" + humanTarget.shift.id)
+        try { await { val s=weather.model.uiState.value; s.selectedShift == humanTarget.shift && !s.isLoading && !s.isRefreshing && s.loadingBriefIds.isEmpty() } }
+        catch (error: Throwable) {
+            // Diagnóstico local temporal (B1 humana, 8/11): sólo banderas, sin coordenadas ni textos del proveedor.
+            val s = weather.model.uiState.value
+            checkNotNull(pendingReceipt).put("debug_weather_wait", JSONObject().put("surface", s.surface.name)
+                .put("selected_present", s.selectedShift != null).put("selected_id_match", s.selectedShift?.id == humanTarget.shift.id)
+                .put("selected_equal", s.selectedShift == humanTarget.shift).put("is_loading", s.isLoading).put("is_refreshing", s.isRefreshing)
+                .put("loading_brief_count", s.loadingBriefIds.size).put("forecast_present", s.forecast != null)
+                .put("error_present", s.errorMessage != null).put("ineligible_present", s.ineligibleReason != null)
+                .put("enabled", s.preferences.enabled).put("detail_date_match", c.detailDate == humanTarget.shift.localStartDate))
+            throw error
+        }
         val second = weather.model.uiState.value
         check(second.preferences.enabled && second.preferences.providerExplanationAccepted && second.ineligibleReason == null &&
             (second.forecast != null || second.errorMessage != null))

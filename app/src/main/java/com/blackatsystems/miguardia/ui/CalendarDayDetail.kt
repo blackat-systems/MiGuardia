@@ -37,6 +37,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -128,8 +129,10 @@ internal fun DayDetailSheet(
     stage2Actions: Stage2DayActions = Stage2DayActions(),
     stage2Busy: Boolean = false,
     stage2Expectations: Map<java.util.UUID, ShiftSituationExpectation> = emptyMap(),
+    editingDayState: MutableState<Boolean>? = null,
 ) {
-    var editingDay by remember(day.date) { mutableStateOf(false) }
+    val localEditingDay = remember(day.date) { mutableStateOf(false) }
+    var editingDay by (editingDayState ?: localEditingDay)
     var situationTarget by remember { mutableStateOf<Pair<Shift, ShiftStatus>?>(null) }
     var medicalTarget by remember { mutableStateOf<MedicalLeave?>(null) }
     var showMedicalEditor by remember { mutableStateOf(false) }

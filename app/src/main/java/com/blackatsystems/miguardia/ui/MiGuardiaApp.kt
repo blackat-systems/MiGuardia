@@ -1514,6 +1514,9 @@ fun MiGuardiaApp(
             weatherActions.loadBriefs(weatherBriefIds)
         }
     }
+    // Lives outside the sheet: a blocking surface (for example a cancelled availability deletion)
+    // removes the sheet, and returning must show the same day options the person had open.
+    val dayOptionsOpen = rememberSaveable(selectedDay?.date) { mutableStateOf(false) }
     if (
         selectedDay != null &&
         !v2ShiftEditActive &&
@@ -1532,6 +1535,7 @@ fun MiGuardiaApp(
         ) {
             DayDetailSheet(
                 day = selectedDay,
+                editingDayState = dayOptionsOpen,
                 referenceInstant = calendarState.referenceInstant,
                 onEditDay = v2ReadyState?.let { v2ShiftEditActions.beginDayEditing },
                 onManageDayOff = if (v2ReadyState != null || needsFirstWorkSet) {

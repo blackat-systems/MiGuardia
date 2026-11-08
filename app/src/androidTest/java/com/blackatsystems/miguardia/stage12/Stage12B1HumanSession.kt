@@ -123,7 +123,7 @@ internal class Stage12B1HumanSession(override val runId: String, private val run
         requireActive(); check(activeStep == null && step.ordinal == nextOrdinal && activity != null)
         check(checkNotNull(activity).lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED))
         activeStep = step; stepStarted = SystemClock.elapsedRealtime(); stepPause = pauseCount; stepResume = resumeCount
-        counts.clear(); mapReturned = 0; mapCandidate = 0; mapActivityEntries = 0; admittedMapIntent = null
+        counts.clear(); mapReturned = 0; mapCandidate = 0; mapActivityEntries = 0; admittedMapIntent = null; directMapLaunches = 0
         pickerRequest = null; pickerReturned = false; resultObserved = false; resultForwarded = false
         expectedPicker = if (step in setOf(HumanStep.PICK_OWN_IMAGE, HumanStep.CANCEL_SECOND_PICKER))
             androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia().createIntent(checkNotNull(activity),
@@ -136,6 +136,9 @@ internal class Stage12B1HumanSession(override val runId: String, private val run
     }
     @Synchronized fun requireMapIntent(context: QaExplicitHumanActionContext, intent: Intent): Int {
         QaInstrumentationScope.requireExternalAction(context as Context, "maps.launch")
+        return admitMapCandidate(intent)
+    }
+    private fun admitMapCandidate(intent: Intent): Int {
         val encoded = Uri.encode(ADDRESS)
         val candidates = listOf(
             Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=$encoded")).setPackage("com.google.android.apps.maps"),
@@ -147,6 +150,20 @@ internal class Stage12B1HumanSession(override val runId: String, private val run
         admittedMapIntent = Intent(intent)
         return mapCandidate++
     }
+    /**
+     * La hoja del detalle del día es una ventana propia: Compose le da el contexto de la Activity, no el
+     * contexto privado. Ahí el lanzamiento llega directo al borde de la Activity; se admite con la misma
+     * lista cerrada de destinos y el mismo tope de intentos, y el regreso se mide por pausa/reanudación.
+     */
+    private fun admitDirectMapLaunch(intent: Intent) {
+        val count = (counts["maps.launch"] ?: 0) + 1
+        if (count > 3) reject("HUMAN_OPERATION_REPEATED")
+        admitMapCandidate(intent)
+        counts["maps.launch"] = count; directMapLaunches++
+        projection.getJSONArray("capability_entries").put(JSONObject().put("step", HumanStep.MAP_AND_RETURN.name)
+            .put("operation", "maps.launch").put("ordinal", count).put("guard_passed", true).put("boundary", "ACTIVITY_DIRECT"))
+    }
+    private var directMapLaunches = 0
     @Synchronized fun mapReturned(candidate: Int, error: Throwable?) {
         requireActive(); check(activeStep == HumanStep.MAP_AND_RETURN && candidate == mapCandidate - 1)
         if (error == null) mapReturned++ else if (error !is ActivityNotFoundException) reject("HUMAN_MAP_LAUNCH_FAILED")
@@ -154,6 +171,8 @@ internal class Stage12B1HumanSession(override val runId: String, private val run
 
     @Synchronized override fun requireMapLaunch(owner: Activity, intent: Intent, requestCode: Int) {
         requireActive(); check(activeStep == HumanStep.MAP_AND_RETURN && owner === activity && requestCode == -1)
+        // Camino directo (sin contexto privado): este candidato todavía no fue admitido.
+        if (mapCandidate == mapActivityEntries) admitDirectMapLaunch(intent)
         val admitted = checkNotNull(admittedMapIntent)
         check(mapCandidate == mapActivityEntries+1 && intent.filterEquals(admitted) && intent.flags == admitted.flags &&
             intent.extras == null && intent.clipData == null && intent.selector == null)
@@ -204,7 +223,7 @@ internal class Stage12B1HumanSession(override val runId: String, private val run
         pickerReturned = true
     }
 
-    @Synchronized fun mapReturnObserved(): Boolean = mapReturned == 1 && pauseCount > stepPause && resumeCount > stepResume &&
+    @Synchronized fun mapReturnObserved(): Boolean = (mapReturned == 1 || (directMapLaunches > 0 && mapActivityEntries == directMapLaunches)) && pauseCount > stepPause && resumeCount > stepResume &&
         activity?.lifecycle?.currentState == Lifecycle.State.RESUMED
     @Synchronized fun pickerReturnObserved(): Boolean = pickerReturned && resultObserved && resultForwarded && counts["image.pick"] == 1 && pauseCount > stepPause && resumeCount > stepResume &&
         activity?.lifecycle?.currentState == Lifecycle.State.RESUMED
@@ -289,11 +308,17 @@ internal class Stage12B1HumanSession(override val runId: String, private val run
         activeStep = null; nextOrdinal++
     }
     @Synchronized fun beforeClose() { if (failed != null) activeStep = null }
-    @Synchronized fun detached(owner: ComponentActivity, ownClosure: Boolean) {
-        check(activity === owner && owner.isDestroyed && ownClosure)
-        runner.releaseB1HumanSession(owner,this,ownClosure)
-        owner.lifecycle.removeObserver(observer); allowedContexts.clear(); activity = null; root = null
-        projection.put("owner_closures", projection.getInt("owner_closures")+1)
+    fun detached(owner: ComponentActivity, ownClosure: Boolean) {
+        synchronized(this) {
+            check(activity === owner && owner.isDestroyed && ownClosure)
+            runner.releaseB1HumanSession(owner,this,ownClosure)
+        }
+        // Lifecycle exige el hilo principal; se llama fuera del candado para no bloquear al observador.
+        runner.runOnMainSync { owner.lifecycle.removeObserver(observer) }
+        synchronized(this) {
+            allowedContexts.clear(); activity = null; root = null
+            projection.put("owner_closures", projection.getInt("owner_closures")+1)
+        }
     }
     private fun permissionState(context: Context) =
         (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) to

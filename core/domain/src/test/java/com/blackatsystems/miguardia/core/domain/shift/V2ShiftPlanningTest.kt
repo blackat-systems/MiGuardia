@@ -151,6 +151,22 @@ class V2ShiftPlanningTest {
     }
 
     @Test
+    fun reviewedEditIsStampedWhenSavedAndKeepsEveryOtherField() {
+        val original = build()
+        val reviewed = editV2ShiftPositionOnly(original, "Puesto revisado", NOW.plusSeconds(1))
+        val savedAt = NOW.plusSeconds(90)
+
+        val saved = stampV2ShiftEditAtSave(original, reviewed, savedAt)
+
+        assertEquals(savedAt, saved.shift.updatedAt)
+        assertEquals(reviewed.copy(shift = reviewed.shift.copy(updatedAt = savedAt)), saved)
+        assertTrue(isExactV2PositionOnlyEdit(original, saved))
+        // A clock that did not advance still yields a distinct, later version.
+        val sameClock = stampV2ShiftEditAtSave(original, reviewed, original.shift.updatedAt)
+        assertEquals(original.shift.updatedAt.plusMillis(1), sameClock.shift.updatedAt)
+    }
+
+    @Test
     fun positionOnlyEditPreservesTheCompleteHistoricalPair() {
         val original = build()
 

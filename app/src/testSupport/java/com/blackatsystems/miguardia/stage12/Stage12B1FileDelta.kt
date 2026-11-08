@@ -5,7 +5,7 @@ import java.util.UUID
 
 /** Projects the current RAM readback; no path, filename, value or resource capability escapes. */
 internal object Stage12B1FileDelta {
-    enum class Role { OWN_REPORT, APP_CACHE, CODE_CACHE, PREFERENCE_PRIMARY, PREFERENCE_BACKUP, APP_STATE, UNKNOWN }
+    enum class Role { OWN_REPORT, PROFILE_INSTALLER_MARKER, APP_CACHE, CODE_CACHE, PREFERENCE_PRIMARY, PREFERENCE_BACKUP, APP_STATE, UNKNOWN }
     enum class Change { ADDED, REMOVED, MODIFIED }
     data class Entry(val pathToken: String, val role: Role, val change: Change,
         val before: Stage12FileSnapshot?, val after: Stage12FileSnapshot?)
@@ -27,7 +27,8 @@ internal object Stage12B1FileDelta {
             }, before[path], after[path])
         }
         return Result(changes.size, changes.count { it.change == Change.ADDED }, changes.count { it.change == Change.REMOVED },
-            changes.count { it.change == Change.MODIFIED }, changes.count { it.before != null },
+            changes.count { it.change == Change.MODIFIED },
+            changes.count { it.before != null && it.role != Role.PROFILE_INSTALLER_MARKER },
             changes.count { it.role == Role.UNKNOWN }, changes.size > limit, changes.take(limit))
     }
 
@@ -35,6 +36,9 @@ internal object Stage12B1FileDelta {
         val own = "files/reports/artifacts/stage12-normal-$run"
         return when {
             path == own || path.startsWith("$own/") -> Role.OWN_REPORT
+            // Written by androidx.profileinstaller on the first launch after an install; never MiGuardia data.
+            // The same exact path is already excluded by the other instrumented conservation suites.
+            path == "files/profileInstalled" -> Role.PROFILE_INSTALLER_MARKER
             path == "code_cache" || path.startsWith("code_cache/") -> Role.CODE_CACHE
             path == "cache" || path.startsWith("cache/") -> Role.APP_CACHE
             path.startsWith("shared_prefs/") && path.endsWith(".xml.bak") -> Role.PREFERENCE_BACKUP

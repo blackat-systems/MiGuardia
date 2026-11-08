@@ -34,6 +34,7 @@ import com.blackatsystems.miguardia.core.domain.shift.buildV2ShiftWrite
 import com.blackatsystems.miguardia.core.domain.shift.editV2ShiftPositionOnly
 import com.blackatsystems.miguardia.core.domain.shift.editV2ShiftWrite
 import com.blackatsystems.miguardia.core.domain.shift.planV2ShiftBatch
+import com.blackatsystems.miguardia.core.domain.shift.stampV2ShiftEditAtSave
 import com.blackatsystems.miguardia.core.domain.work.ResolvedWorkConfigurationRevision
 import com.blackatsystems.miguardia.core.domain.work.WorkCatalog
 import com.blackatsystems.miguardia.core.domain.work.WorkConfigurationHistory
@@ -671,8 +672,14 @@ internal class V2ShiftEditCoordinator(
                 return@launch
             }
             try {
+                val savedAt = clock.instant()
+                val mutation = prepared.mutation.copy(
+                    shiftsToUpdate = prepared.mutation.shiftsToUpdate.map { reviewed ->
+                        stampV2ShiftEditAtSave(prepared.original, reviewed, savedAt)
+                    },
+                )
                 v2ShiftRepository.applyV2Batch(
-                    mutation = prepared.mutation,
+                    mutation = mutation,
                     expectedOccupancy = prepared.expectedOccupancy,
                     expectedUpdates = V2ShiftWriteExpectation.capture(listOf(prepared.original)),
                 )

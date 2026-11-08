@@ -22,6 +22,16 @@ class Stage12B1FileDeltaTest {
         assertEquals(old, entry.before); assertEquals(next, entry.after)
         assertFalse(result.toString().contains(secret)); assertFalse(result.toString().contains("PRIVATE_B1_FILENAME"))
     }
+    @Test fun onlyTheExactProfileInstallerMarkerIsNotAReceivedChange() {
+        val marker = Stage12B1FileDelta.project(mapOf("files/profileInstalled" to old), mapOf("files/profileInstalled" to next), run)
+        assertEquals(Stage12B1FileDelta.Role.PROFILE_INSTALLER_MARKER, marker.entries.single().role)
+        assertEquals(1, marker.modified); assertEquals(0, marker.receivedChanged)
+        for (path in listOf("files/profileInstalled.bak", "files/x/profileInstalled", "no_backup/profileInstalled")) {
+            val other = Stage12B1FileDelta.project(mapOf(path to old), mapOf(path to next), run)
+            assertEquals(Stage12B1FileDelta.Role.APP_STATE, other.entries.single().role)
+            assertEquals(1, other.receivedChanged)
+        }
+    }
     @Test fun rolesDescribeCurrentSourcePathsWithoutWaivingReceivedChanges() {
         val roles = mapOf("cache/x" to Stage12B1FileDelta.Role.APP_CACHE, "code_cache/x" to Stage12B1FileDelta.Role.CODE_CACHE,
             "shared_prefs/p.xml" to Stage12B1FileDelta.Role.PREFERENCE_PRIMARY,
