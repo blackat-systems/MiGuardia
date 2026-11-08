@@ -38,11 +38,11 @@ class AppThemeModeTest {
     @Test
     fun systemBarsKeepBackgroundAndIconsReadableInBothThemes() {
         val dark = vigiliaSystemBarStyle(darkTheme = true)
-        assertEquals(0xFF15151E.toInt(), dark.backgroundArgb)
+        assertEquals(0xFF1A1B26.toInt(), dark.backgroundArgb)
         assertFalse(dark.useDarkIcons)
 
         val light = vigiliaSystemBarStyle(darkTheme = false)
-        assertEquals(0xFFF5F4F8.toInt(), light.backgroundArgb)
+        assertEquals(0xFFE1E2E7.toInt(), light.backgroundArgb)
         assertTrue(light.useDarkIcons)
     }
 }

@@ -7,6 +7,44 @@ Las capturas del estado actual **todavía no existen**. No se pueden sacar en la
 emulador instalado y las pruebas de pantalla corren en Android. Se sacan en el Samsung cuando
 Joaquín lo autorice; el plan está en la sección 5.
 
+## 0. Decisión de colores: paleta Tokyo Night (Joaquín, 8/11/2026)
+
+Joaquín pidió que el diseño nuevo se parezca a Tokyo Night. Eligió la variante **Night** para el oscuro
+y el **acento azul**. Cambian sólo los colores: la forma de Vigilia R4 (tarjetas, botones, grilla y
+jerarquía) queda igual, y `docs/design/vigilia-referencia-elegida.png` sigue siendo la referencia de
+forma, no de color. Los colores están en `ui/theme/Theme.kt` y `VigiliaTokens.kt`.
+
+**Roles de cada color:**
+
+| Rol | Oscuro (Night) | Claro (Day + acentos de Light) |
+|---|---|---|
+| Fondo | #1A1B26 | #E1E2E7 |
+| Tarjetas | #24283B | #F5F6FA |
+| Texto | #C0CAF5 | #343B58 |
+| Texto secundario | #A9B1D6 | #565A72 |
+| Botón principal y acción | azul #7AA2F7 | azul #34548A |
+| Hoy | violeta #BB9AF7 | violeta #5A4A78 |
+| Completada | verde #9ECE6A | verde #485E30 |
+| Planificada | celeste #7DCFFF | azul #34548A |
+| Error | rosa #F7768E | #8C4351 |
+| Aviso | ámbar #E0AF68 | #8F5E15 |
+| Seleccionado | #253154 | #D5DEF2 |
+
+- **Por qué el claro no es Day puro.** En Tokyo Night Day el texto es azul (#3760BF) y el azul de
+  los botones con letra blanca da menos de 4,5:1. Por eso se usan los fondos de Day con los acentos
+  más oscuros de Tokyo Night Light. Así todos los textos quedan en 4,5:1 o más, los bordes en 3:1
+  o más, y en claro las tarjetas se distinguen del fondo, como pedía la regla 7.
+- **Lo comprueban las pruebas.**
+  - `VigiliaContrastTest` (PC) controla todos los pares, incluidos los estados presionado y
+    enfocado. Con el primer seleccionado oscuro, #394B70, el borde daba 2,1:1 y el texto
+    secundario 4,1:1; por eso se cambió a #253154.
+  - `VigiliaThemeComposeTest` (teléfono) controla la misma paleta.
+- **Barras del sistema y ventana de arranque:** usan el fondo nuevo.
+- **Samsung (8/11): 15/15 ✅** (capturas, 12 de Disponibilidad y 2 de colores). Datos QA: 23 bases
+  idénticas. Las capturas Tokyo Night están en la tercera columna del atlas.
+- **Pendiente, etapa 14:** el Widget sigue con los colores Vigilia anteriores, porque está fuera
+  del alcance de esta etapa y tiene pruebas propias. Hay que decidir si adopta la paleta nueva.
+
 ## 1. Reglas comunes del pulido (mismo Vigilia, parejo)
 
 Hoy cada pantalla resuelve espacios, títulos y botones a su manera. Los componentes comunes de
@@ -36,10 +74,8 @@ archivo. Propuesta:
    - «Descartar carga» del Calendario y «Eliminar» de Horas hoy no son rojos.
 6. **Textos de ayuda** en tono secundario, para que los datos se lean primero. Mismo texto, sin
    recortes ni puntos suspensivos en información importante.
-7. **Colores, tema claro.** En claro, las tarjetas tienen el mismo color que el fondo (#F5F4F8) y
-   sólo las separa un borde casi invisible. Propuesta: tarjetas blancas sobre el fondo gris claro,
-   con borde suave. El tema oscuro queda igual porque ya separa bien.
-   - Es un cambio global de un solo color. Se aplica junto con el resto, no en el ejemplo.
+7. **Colores.** Resuelto por la paleta Tokyo Night (sección 0). En claro, las tarjetas #F5F6FA
+   se distinguen del fondo #E1E2E7.
 8. **Navegador de meses.**
    - Resumen pasa a usar el mismo navegador que Fotos y Vacaciones.
    - El Calendario conserva el suyo, porque es parte de la grilla con reglas propias de mes

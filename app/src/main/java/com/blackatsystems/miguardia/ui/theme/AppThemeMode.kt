@@ -30,12 +30,12 @@ data class VigiliaSystemBarStyle(
 
 fun vigiliaSystemBarStyle(darkTheme: Boolean): VigiliaSystemBarStyle = if (darkTheme) {
     VigiliaSystemBarStyle(
-        backgroundArgb = 0xFF15151E.toInt(),
+        backgroundArgb = 0xFF1A1B26.toInt(),
         useDarkIcons = false,
     )
 } else {
     VigiliaSystemBarStyle(
-        backgroundArgb = 0xFFF5F4F8.toInt(),
+        backgroundArgb = 0xFFE1E2E7.toInt(),
         useDarkIcons = true,
     )
 }

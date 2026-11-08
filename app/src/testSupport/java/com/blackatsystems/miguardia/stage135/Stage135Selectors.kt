@@ -31,7 +31,10 @@ object Stage135Selectors {
         "loadingErrorAndRetryRemainDistinctFromEmptyContent",
         "editorRemainsReachableInLandscapeSizedViewportAtTwoHundredPercentFontScale",
         "discardAndObservationErrorKeepTheUserInControlWithoutHidingSavedWindows",
-    ).map { "$AVAILABILITY#$it" }.toSet()
+    ).map { "$AVAILABILITY#$it" }.toSet() + listOf(
+        "darkThemeExposesApprovedVigiliaRolesAndContrast",
+        "lightThemeExposesApprovedVigiliaRolesAndContrast",
+    ).map { "com.blackatsystems.miguardia.VigiliaThemeComposeTest#$it" }
 
     val family: Set<String> = own + screenRegression
 }

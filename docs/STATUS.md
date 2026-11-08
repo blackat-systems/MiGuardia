@@ -4,10 +4,13 @@
 - Etapa en curso: **13.5 · Estética y facilidad de uso** (agregada por Joaquín el 8/11) — INICIADA el 8/11; prompt en
   docs/prompts/ETAPA_13_5_ESTETICA_Y_FACILIDAD.md. **Lista aprobada por Joaquín (8/11):**
   [inventario y propuesta](design/ETAPA_13_5_INVENTARIO.md) (reglas comunes, pulido por pantalla, 22 campos).
+  **Paleta Tokyo Night** (Joaquín, 8/11: Night + acento azul; sólo colores, forma Vigilia igual) aplicada en
+  el tema; PC 1344/0; Samsung 15/15 (capturas, Disponibilidad y colores) con QA `5e4f5931…` + ejecutor `45155a10…`
+  (`tokyo/build/hashes.txt`); datos QA 23 bases idénticas. Widget sigue con colores anteriores (etapa 14).
   ✅ Disponibilidad (ejemplo): selector de hora y fecha + pulido; Samsung 12/12 y capturas antes/después
   (`.local-evidence/claude-20261108-13-5/`); datos QA 23 bases idénticas. ⏳ El resto de las pantallas y
-  campos; vista humana de los selectores; regresión 12.2 y 13 al final. Pareja instalada: QA `f409c840…` +
-  ejecutor `09d9e6af…` (hashes completos en `build-despues/hashes.txt`); correr con `run.sh` de esa carpeta.
+  campos; vista humana de los selectores; regresión 12.2 y 13 al final. Pareja instalada: la de Tokyo Night (arriba); correr con
+  `.local-evidence/claude-20261108-13-5/run.sh` (selectores de la etapa en `Stage135Selectors`).
   Después: 14 · Sistema y aceptación final
   (docs/prompts/ETAPA_14_SISTEMA_Y_ACEPTACION.md) y 15 · Entrega
 - Etapa anterior: 12.2 · Cálculos y consulta — CERRADA por Joaquín (8/11)
