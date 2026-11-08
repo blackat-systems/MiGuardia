@@ -68,8 +68,11 @@ faltante**; sólo cambió `files/profileInstalled` (marca de Android al instalar
   deja la Copia exacta — Samsung (fallas inyectadas en el coordinador de la corrida).
   Observación: con la recuperación pendiente, Atrás del sistema cierra la Activity (la app pasa a segundo
   plano); no vuelve a los datos. INFERIDO que al reabrir aparece la recuperación: no probado acá.
-- ⏳ A188 lectura de V5/V6/V7: cubierta por `Stage11RestoreInstrumentedTest` (aislada, ejecutor propio); falta
-  correrla en el Samsung en esta etapa.
+- ✅ A188 copias genuinas V5, V6 y V7 (mismas fixtures que `Stage11RestoreInstrumentedTest`) se abren por la
+  pantalla real, muestran su Room de origen, bloquean combinar (otra línea temporal) y con reemplazo consciente
+  quedan exactamente en la forma V8 declarada aparte (columnas, filas, sin tablas inventadas) y con los bytes de
+  sus imágenes — Samsung, `Stage13LegacyCopiesDeviceTest` 3/3 con ejecutor `e86d06c7…`. V8 — arriba.
+  (La suite Stage11 original exige su propio ejecutor para emulador; no se corrió en el Samsung.)
 - Interrupción real del proceso durante la aplicación: cubierta con fallas en cada punto del registro de
   recuperación (pruebas existentes) y con la falla inyectada de arriba; no se mató el proceso.
 
