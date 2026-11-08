@@ -1,10 +1,82 @@
 # Estado actual de MiGuardia 3.0
 
-- Etapa: 12.2 · Cálculos y consulta — CERRADA por Joaquín (8/11): todos los casos A077–A110, A127–A165 ✅; commits locales sin push
-- Próxima etapa: 13 · Datos y archivos — NO iniciada; prompt de arranque en docs/prompts/ETAPA_13_DATOS_Y_ARCHIVOS.md
-- Etapa anterior: B1 (Trabajo y Calendario) CERRADA el 8/11
-- Base: commit local de la primera tanda 12.2 sobre 6f612bd; nada subido a GitHub
+- Etapa: 13 · Datos y archivos — EN CURSO desde el 8/11; 12 pruebas automáticas + sesión humana ✅ en el Samsung
+- Etapa anterior: 12.2 · Cálculos y consulta — CERRADA por Joaquín (8/11)
+- Base: `cbfa26d` (arranque de la etapa 13). Push del 8/11 04:24: `origin/codex/miguardia-3.0` = `cbfa26d`;
+  lo posterior es local, sin push
 - Actualización: 2026-11-08
+
+## Etapa 13 · Datos y archivos (desde el 8/11)
+
+**Cómo se prueba.** La app real (MiGuardiaApp, ViewModels, Room y **Copias**) sobre una base y una carpeta
+propias de cada corrida (`stage13-<id>`), con la fixture de 12.2. Copias usa un coordinador construido sobre
+esa base, nunca el de la Application (base QA real). Preferencias de la corrida con su propio nombre y
+borradas al terminar. Los selectores los contesta la prueba con archivos de la corrida por el FileProvider
+real (`Stage13Pickers`); la sesión humana usa los selectores reales. Arnés: `Stage12CalculationStore`
+(parámetros `tagPrefix`, `allowedEffects = photos.import`) y `stage13/Stage13Support.kt`. Selectores en
+`Stage13DataSelectors`. Correr con `run_methods_diag.sh` y `RUNNER=<hash del ejecutor>`.
+
+**Resultado en el Samsung (8/11):** QA `7dc36052…` (sin cambios) + ejecutor `07063d22…`: **12/12 ✅**;
+sesión humana con ejecutor `ac66cf6f…`: **6/6 pasos ✅**; regresión de 12.2 con el arnés cambiado y el mismo
+ejecutor `ac66cf6f…`: **15/15 ✅**. Foto de datos QA antes/después: **23 bases idénticas, ningún archivo previo
+faltante**; sólo cambió `files/profileInstalled` (marca de Android al instalar); galería sin imágenes de prueba. Evidencia en `.local-evidence/claude-20261108-13/`.
+
+**Lista de la etapa** (✅ probado · ⏳ falta · ❌ falla). Ninguna ❌.
+
+*Notas privadas (A189–A197, C078, C079)*
+- ✅ A189 jornada gemela (misma fecha, horario y objetivo, otro UUID) no ve la nota de la otra; borrar la
+  suya no toca la otra — Samsung.
+- ✅ C078 vacía o con espacios no se guarda; A190 crear; A191 editar con mismo id y fecha de creación;
+  A197 cancelar edición y descartar con confirmación («Seguir editando» conserva) — Samsung.
+- ✅ A196 eliminar exige confirmación; cancelarla no borra — Samsung.
+- ✅ A192–A194, C079 dos imágenes elegidas, abrir, quitar una del borrador con confirmación, guardar: bytes
+  idénticos y la quitada no queda guardada; selector cancelado no cambia nada — Samsung (y selector de fotos
+  real en la sesión humana).
+- ✅ A195 si la nota se borra por fuera mientras se edita, guardar no la recrea («La nota ya no existe.») y
+  el borrador queda — Samsung. Doble guardado y acuse perdido — pruebas existentes de PC.
+  Observación: si otra pantalla *edita* (no borra) la nota, al guardar gana el último; no hay control de
+  versión del texto. Es la conducta actual; no se cambió.
+
+*Fotos del mes (A198–A207, C095)*
+- ✅ A198, C095 se abre en el mes visible del Calendario y al cerrar vuelve al mismo mes; A199 cambiar de mes.
+- ✅ A200 importar dos imágenes con bytes exactos (y con el selector de fotos real en la sesión humana);
+  A202 asociar al objetivo activo; A203 quitar objetivo sin borrar el archivo; A204 reemplazar conserva el id
+  y toma los bytes nuevos (el archivo viejo se retira); A205 eliminar con confirmación (cancelar no borra);
+  A206 EXIF ROTATE_90 / ROTATE_270 se ve girada al importar y al reemplazar — Samsung.
+- ✅ A207 foto cuyo archivo falta: «No se pudo mostrar la foto» sólo en su tarjeta y en el visor, sin mostrar
+  otra; al volver el archivo y reabrirla, se lee la misma — Samsung.
+- ✅ A201 pinza y desplazamiento en el visor real — sesión humana (confirmación visual de Joaquín pendiente
+  de anotar). Gestos en Compose — prueba existente.
+
+*Copias y restauración (A166–A188)*
+- ✅ A166 abrir; A167 con y sin fotos (la copia declara INCLUDED u OMITTED); A168 cifrado por defecto; A169
+  7 caracteres o confirmación distinta no habilitan, 256 sí; A170 mostrar/ocultar sólo cambia la vista; la
+  contraseña no aparece en ningún archivo ni preferencia de la corrida; A171 sin cifrado sólo tras la
+  advertencia; A172 copia coherente (0 nuevos, 0 conflictos al reabrirla); A173 cancelar el selector no deja
+  archivos ni cambia datos — Samsung (y selector de documentos real: cancelar, guardar en Descargas y abrir).
+- ✅ A174 elegir copia (y selección cancelada); A175–A176 contraseña incorrecta, archivo alterado, truncado y
+  no admitido: error visible, sin vista previa ni escritura; A177 vista previa (Room V8, 3 imágenes, nuevos,
+  conflictos) antes de escribir — Samsung.
+- ✅ A178–A181 combinar con tres conflictos (nota, foto y jornada superpuesta): conservar actual, usar copia y
+  conservar ambos, cada uno aplicado; bytes de imágenes sin cambios — Samsung.
+- ✅ A182 reemplazar todo sólo con la frase exacta (minúsculas o incompleta no habilita); A187 devuelve la Copia
+  exacta (base, preferencias y bytes) aunque la imagen actual tenga los mismos metadatos y otros bytes; A186
+  vuelve al Calendario con los datos restaurados — Samsung.
+- ✅ A183 otra línea temporal: combinar bloqueado, reemplazar disponible; salir no escribe — Samsung.
+- ✅ A184 durante la aplicación no hay cancelar, «Volver» está deshabilitado y Atrás no sale; A185 recuperación
+  pendiente: error con Reintentar (nunca éxito), un reintento que falla sigue sin éxito, el siguiente termina y
+  deja la Copia exacta — Samsung (fallas inyectadas en el coordinador de la corrida).
+  Observación: con la recuperación pendiente, Atrás del sistema cierra la Activity (la app pasa a segundo
+  plano); no vuelve a los datos. INFERIDO que al reabrir aparece la recuperación: no probado acá.
+- ⏳ A188 lectura de V5/V6/V7: cubierta por `Stage11RestoreInstrumentedTest` (aislada, ejecutor propio); falta
+  correrla en el Samsung en esta etapa.
+- Interrupción real del proceso durante la aplicación: cubierta con fallas en cada punto del registro de
+  recuperación (pruebas existentes) y con la falla inyectada de arriba; no se mató el proceso.
+
+**Hallazgo (app, no corregido):** cada vez que la app abre o aplica una Copia crea una base candidata temporal
+y la borra, pero Room deja un archivo vacío `cache/miguardia-backup-candidate-<id>.db.lck`. En uso normal se
+acumulan en la caché (Android puede limpiarla). Las corridas de hoy dejaron 41 en la app QA antes de corregir la
+limpieza del arnés; borrarlos espera autorización de Joaquín. Decidir si se corrige en la app.
 
 Escrito en castellano llano. Los códigos raros están traducidos en el [glosario](GLOSARIO.md).
 
@@ -118,7 +190,9 @@ foto previa. Nada subido a GitHub: la rama va adelantada respecto de `origin` y 
 sigue `7dc36052…`. Correr las pruebas 12.2 con
 `RUNNER=ed25efe4a7f9a46fc349e7cd396be2e5d15793844f4acc4ea2eba6be305ffb0e bash .local-evidence/claude-20261107-b1/run_methods_diag.sh <salida> <selector>…`
 (selectores en `Stage12CalculationSelectors`). Evidencia 12.2 en `.local-evidence/claude-20261108-12-2/`.
-**Siguiente:** arrancar la etapa 13 · Datos y archivos (notas, fotos, Copias, restaurar, archivos dañados).
+**Actualización 8/11 (etapa 13):** ejecutor instalado `ac66cf6f52472cef9be73490f80a25508b65bb3aa26d2653479e0abad2682057`
+(incluye 12.2 y 13; la app QA sigue `7dc36052…`). **Siguiente:** correr A188 en el Samsung, decidir el hallazgo
+de los `.lck` y cerrar la etapa 13.
 
 **Entorno de esta PC** (la app de Claude redirige en silencio lo que se escribe en
 `AppData\Local`, por eso el SDK quedó fuera de ahí):

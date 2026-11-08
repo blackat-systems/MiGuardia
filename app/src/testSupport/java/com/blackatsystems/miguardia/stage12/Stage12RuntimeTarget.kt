@@ -48,6 +48,14 @@ internal object Stage12RuntimeTarget {
             }
             return
         }
+        if (selectors.any { it in com.blackatsystems.miguardia.stage13.Stage13DataSelectors.family }) {
+            check((target == Target.SAMSUNG_TEMPORAL_API37 || target == Target.SAMSUNG) &&
+                selectors.all { it in com.blackatsystems.miguardia.stage13.Stage13DataSelectors.family } &&
+                clock == "REAL" && clockExplicit && !hasSummaryObservation) {
+                "Stage 13 data runs only its own Samsung methods with an explicit real clock"
+            }
+            return
+        }
         val b1Closure = setOf(Stage12B1Selectors.OWNED_LOAD_EDIT,
             "com.blackatsystems.miguardia.stage12.Stage12RecurringLifecycleTest#mixedOccupancyPoliciesUseExactPreviewsAndAtomicRealWrites")
         if (target == Target.SAMSUNG_TEMPORAL_API37 && selectors.any { it in b1Closure }) {

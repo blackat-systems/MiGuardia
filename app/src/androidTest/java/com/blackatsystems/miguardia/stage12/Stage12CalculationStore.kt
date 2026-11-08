@@ -3,12 +3,21 @@ package com.blackatsystems.miguardia.stage12
 import android.content.Context
 import android.content.ContextWrapper
 import android.net.Uri
+import androidx.activity.compose.LocalActivityResultRegistryOwner
+import androidx.activity.result.ActivityResultRegistryOwner
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.blackatsystems.miguardia.MiGuardiaApplication
 import com.blackatsystems.miguardia.QaMainActivityFileContext
+import com.blackatsystems.miguardia.StartupRecoveryGate
 import com.blackatsystems.miguardia.backup.BackupViewModel
+import com.blackatsystems.miguardia.backup.LocalBackupCoordinator
 import com.blackatsystems.miguardia.backup.LocalDataMutationGate
+import com.blackatsystems.miguardia.backup.PortablePreferencesGateway
+import com.blackatsystems.miguardia.backup.RestoreCheckpoint
+import com.blackatsystems.miguardia.backup.RestoreFaultInjector
+import com.blackatsystems.miguardia.backup.deletePrivateTreeChecked
 import com.blackatsystems.miguardia.core.database.LocalDataStore
 import com.blackatsystems.miguardia.core.domain.model.AvailabilityWindowMutation
 import com.blackatsystems.miguardia.core.domain.model.AvailabilityWindowWriteResult
@@ -93,8 +102,15 @@ internal class Stage12CalculationStore(
     private val runId: UUID,
     /** true: guarda con el escritor real por el selector de documentos (sesión humana). */
     realDestination: Boolean = false,
+    /** Prefijo de la base y la carpeta de la corrida (`stage12-2`, `stage13`…); siempre seguido del id. */
+    tagPrefix: String = "stage12-2",
+    /**
+     * Efectos que la corrida admite porque quedan dentro de su carpeta privada. Sólo `photos.import`
+     * (copiar una imagen elegida a la carpeta de la corrida); avisos, Widget, red, etc. siguen rechazados.
+     */
+    allowedEffects: Set<String> = emptySet(),
 ) : AutoCloseable {
-    private val tag = "stage12-2-$runId"
+    private val tag = "$tagPrefix-$runId"
     private val databaseName = "$tag.db"
     /** Bajo `files/reports/artifacts/` para que el FileProvider real pueda compartir el informe (como B1). */
     private val artifactsParent: File = File(context.filesDir, "reports/artifacts")
@@ -120,9 +136,26 @@ internal class Stage12CalculationStore(
     private val notificationJob: Job
     val store: LocalDataStore
     private val privateContext: PrivateFileContext
+    /** Contexto de archivos de la corrida (filesDir, cacheDir y preferencias propias). */
+    val runContext: Context get() = privateContext
     private val profile: GuardProfileStore
-    private val photoStore: SchedulePhotoFileStore
+    val photoStore: SchedulePhotoFileStore
     private val weatherPreferences: WeatherPreferencesStore
+    /** Misma puerta de exclusión que comparten Fotos, Notas y Copias, como en la Application. */
+    val mutationGate: LocalDataMutationGate
+    val portablePreferences: PortablePreferencesGateway
+
+    /**
+     * Copias de la corrida: coordinador real sobre ESTA base, carpeta y preferencias, nunca el de la
+     * Application (que usa la base QA real `miguardia-v2.db`).
+     */
+    val backupCoordinator: LocalBackupCoordinator
+    val backupRecoveryGate = StartupRecoveryGate()
+    /** Si se fija, la próxima restauración se detiene o falla en ese punto (una sola vez). */
+    @Volatile var restoreFault: Pair<RestoreCheckpoint, (RestoreCheckpoint) -> Unit>? = null
+    /** Si es true, la próxima limpieza de recuperación falla una vez (recuperación pendiente que no termina). */
+    @Volatile var failNextRecoveryCleanup = false
+    private val candidatesBefore: Set<String>
 
     private val calendarFactory: CalendarViewModel.Factory
     private val nextFactory: NextEventViewModel.Factory
@@ -148,7 +181,9 @@ internal class Stage12CalculationStore(
         check(artifactsParent.isDirectory || artifactsParent.mkdirs()) { "STAGE12_2_ARTIFACTS_PARENT" }
         check(privateRoot.mkdirs()) { "STAGE12_2_PRIVATE_ROOT_NOT_CREATED" }
         listOf("files", "cache", "no_backup", "datastore").forEach { check(File(privateRoot, it).mkdirs()) }
-        privateContext = PrivateFileContext(context, privateRoot) { rejected += it }
+        require(allowedEffects.all { it in ALLOWABLE_EFFECTS }) { "STAGE_RUN_EFFECT_NOT_ALLOWABLE:$allowedEffects" }
+        privateContext = PrivateFileContext(context, privateRoot, tag) { rejected += it }
+        candidatesBefore = backupCandidates()
         store = LocalDataStore.create(context, databaseName = databaseName)
         val job = SupervisorJob(); preferenceJob = job
         val scope = CoroutineScope(job + Dispatchers.IO)
@@ -160,8 +195,37 @@ internal class Stage12CalculationStore(
         val weather = WeatherRuntime(privateContext, weatherPreferences, store.objectives, clock)
         val notifications = NotificationRuntime(privateContext, store, notificationPreferences, weather)
         notificationJob = checkNotNull(notifications.scope.coroutineContext[Job])
-        val gate = LocalDataMutationGate()
-        photoStore = SchedulePhotoFileStore(privateContext)
+        val gate = LocalDataMutationGate(); mutationGate = gate
+        photoStore = SchedulePhotoFileStore(
+            if ("photos.import" in allowedEffects) PhotoImportContext(context, privateRoot) else privateContext,
+        )
+        portablePreferences = PortablePreferencesGateway(privateContext, profile, summaryPreferences,
+            notificationPreferences, weatherPreferences)
+        backupCoordinator = LocalBackupCoordinator(
+            context = privateContext,
+            localDataStore = store,
+            preferences = portablePreferences,
+            clock = clock,
+            zoneId = zone,
+            mutationGate = gate,
+            faultInjector = RestoreFaultInjector { checkpoint ->
+                val fault = restoreFault
+                if (fault != null && fault.first == checkpoint) {
+                    restoreFault = null
+                    fault.second(checkpoint)
+                }
+            },
+            startupStagingCleanup = { staging ->
+                if (failNextRecoveryCleanup) {
+                    failNextRecoveryCleanup = false
+                    throw java.io.IOException("STAGE_RUN_RECOVERY_CLEANUP_FAULT")
+                }
+                staging.deletePrivateTreeChecked("el staging privado de copias de la corrida")
+            },
+        )
+        check(File(privateContext.filesDir, "backups").canonicalPath.startsWith(privateRoot.canonicalPath)) {
+            "STAGE_RUN_BACKUP_ROOT_NOT_PRIVATE"
+        }
         val notes = ManualLoadNotes(privateContext, store.shiftNotes, store.shiftSituations, gate)
         val generator = LocalReportGenerator(store.monthlyReportSnapshots, profile,
             ReportPhotoStager(privateContext, photoStore, clock), ReportArtifactStore(privateContext, clock),
@@ -216,6 +280,46 @@ internal class Stage12CalculationStore(
                 throw SecurityException("STAGE12_2_EXTERNAL_EFFECT_EXCLUDED:help.complete")
             }
         })
+        // Igual que la Application al arrancar, pero sobre la corrida: recuperación y luego datos listos.
+        runBlocking { backupCoordinator.recoverAtStartup() }
+        backupRecoveryGate.ready()
+    }
+
+    /** Candidatas temporales de restauración (`miguardia-backup-candidate-*`) en la carpeta real de bases. */
+    private fun backupCandidates(): Set<String> = (context.getDatabasePath("x").parentFile?.listFiles().orEmpty().toList() +
+        context.cacheDir.listFiles().orEmpty().toList())
+        .map { it.name }.filter { it.startsWith("miguardia-backup-candidate-") }.toSet()
+
+    /** Documentos de la corrida (copias, imágenes de origen) fuera de los datos de la app pero dentro de la corrida. */
+    fun runDocument(name: String): File = File(privateRoot, "documents/$name").also {
+        check(it.parentFile!!.isDirectory || it.parentFile!!.mkdirs()) { "STAGE_RUN_DOCUMENTS_DIR" }
+    }
+
+    /** Enlace `content://` del FileProvider real a un archivo de la corrida (como devolvería un selector). */
+    fun contentUri(file: File): Uri {
+        check(file.canonicalPath.startsWith(privateRoot.canonicalPath)) { "STAGE_RUN_URI_OUTSIDE_RUN" }
+        return androidx.core.content.FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+    }
+
+    /**
+     * Copia sin fotos ni contraseña de OTRA línea temporal (base `<tag>-foreign.db` que se borra al
+     * terminar), para comprobar que combinar queda bloqueado y reemplazar sigue disponible.
+     */
+    suspend fun prepareForeignTimelineBackup(target: File) {
+        check(!target.exists() && target.canonicalPath.startsWith(privateRoot.canonicalPath))
+        val foreignName = "$tag-foreign.db"
+        val foreign = LocalDataStore.create(context, databaseName = foreignName)
+        try {
+            foreign.workConfiguration.createInitial(UUID.randomUUID(), F.configuration.timeline.revisions.single())
+            val files = PhotoImportContext(context, File(privateRoot, "foreign"))
+            LocalBackupCoordinator(files, foreign, portablePreferences, clock = clock, zoneId = zone)
+                .prepareBackup(com.blackatsystems.miguardia.backup.BackupCreateOptions(includePhotos = false, password = null))
+                .use { artifact -> artifact.file.copyTo(target) }
+        } finally {
+            foreign.close()
+            context.deleteDatabase(foreignName)
+            File(context.cacheDir, "$foreignName.lck").takeIf { it.exists() }?.delete()
+        }
     }
 
     /** Nombre visible del perfil para los informes; por defecto no hay nombre. */
@@ -390,8 +494,19 @@ internal class Stage12CalculationStore(
         check(note.shiftId == F.DAY_SHIFT_ID && note.body == F.Canary.SHIFT_NOTE) { "STAGE12_2_READBACK_NOTE" }
     }
 
+    /**
+     * [registryOwner]: selectores controlados por la prueba (documentos, fotos); null usa los reales
+     * de la Activity (sesión humana).
+     */
     @Composable
-    fun Host() {
+    fun Host(registryOwner: ActivityResultRegistryOwner? = null) {
+        if (registryOwner == null) AppContent() else {
+            CompositionLocalProvider(LocalActivityResultRegistryOwner provides registryOwner) { AppContent() }
+        }
+    }
+
+    @Composable
+    private fun AppContent() {
         val application = context.applicationContext as MiGuardiaApplication
         MiGuardiaApp(
             calendarViewModel = viewModel(factory = calendarFactory),
@@ -413,8 +528,9 @@ internal class Stage12CalculationStore(
             availabilityViewModel = viewModel(factory = availabilityFactory),
             summaryViewModel = viewModel(factory = summaryFactory),
             reportsViewModel = viewModel(factory = reportsFactory),
-            backupViewModel = viewModel(factory = BackupViewModel.Factory(application.backupCoordinator,
-                application.startupRecoveryGate, application.backupCoordinator::discardIncompleteDocument)),
+            // Copias de la corrida, nunca `application.backupCoordinator` (base QA real).
+            backupViewModel = viewModel(factory = BackupViewModel.Factory(backupCoordinator,
+                backupRecoveryGate, backupCoordinator::discardIncompleteDocument)),
             helpViewModel = viewModel(factory = helpFactory),
         )
     }
@@ -429,13 +545,29 @@ internal class Stage12CalculationStore(
             store.close()
         }
         context.deleteDatabase(databaseName)
+        // Candidatas de restauración que nacieron en esta corrida (el coordinador ya debería haberlas borrado).
+        (backupCandidates() - candidatesBefore).forEach { name ->
+            if (name.endsWith(".db.lck")) {
+                // La app borra la candidata pero Room deja su bloqueo vacío en la caché: es de esta corrida.
+                File(context.cacheDir, name).takeIf { it.isFile && it.length() == 0L }?.delete()
+            } else if (name.endsWith(".db")) {
+                android.util.Log.w("MiGuardiaRun", "candidata de restauración sobrante: $name")
+                context.deleteDatabase(name)
+                File(context.cacheDir, "$name.lck").takeIf { it.exists() }?.delete()
+            }
+        }
+        check((backupCandidates() - candidatesBefore).isEmpty()) { "STAGE_RUN_CANDIDATE_LEFTOVERS" }
+        privateContext.isolatedPreferenceNames().forEach { name ->
+            check(context.deleteSharedPreferences(name)) { "STAGE_RUN_PREFERENCES_NOT_DELETED:$name" }
+        }
         // Room deja un archivo de bloqueo propio en la caché real (`<base>.lck`); es de esta corrida.
         File(context.cacheDir, "$databaseName.lck").takeIf { it.exists() }?.let { lock ->
             check(lock.delete()) { "STAGE12_2_LOCK_NOT_DELETED" }
         }
         if (privateRoot.exists()) check(privateRoot.deleteRecursively()) { "STAGE12_2_PRIVATE_ROOT_NOT_DELETED" }
         val databaseDir = context.getDatabasePath(databaseName).parentFile
-        val leftovers = listOfNotNull(databaseDir, context.filesDir, context.cacheDir, artifactsParent)
+        val sharedPrefsDir = File(context.dataDir, "shared_prefs")
+        val leftovers = listOfNotNull(databaseDir, context.filesDir, context.cacheDir, artifactsParent, sharedPrefsDir)
             .flatMap { dir -> dir.listFiles().orEmpty().filter { it.name.contains(runId.toString()) } }
         check(leftovers.isEmpty()) { "STAGE12_2_CLEANUP_LEFTOVERS:${leftovers.map { it.name }}" }
     }
@@ -444,16 +576,45 @@ internal class Stage12CalculationStore(
     private class PrivateFileContext(
         base: Context,
         private val root: File,
+        private val preferencePrefix: String,
         private val record: (String) -> Unit,
     ) : ContextWrapper(base), QaMainActivityFileContext {
+        private val preferenceNames = Collections.synchronizedSet(mutableSetOf<String>())
         override fun getApplicationContext(): Context = this
         override fun getFilesDir(): File = File(root, "files")
         override fun getCacheDir(): File = File(root, "cache")
         override fun getNoBackupFilesDir(): File = File(root, "no_backup")
         override fun getDataDir(): File = root
+
+        /** Preferencias de la corrida (p. ej. tema de Copias y avisos diferidos), nunca las de QA. */
+        override fun getSharedPreferences(name: String, mode: Int): android.content.SharedPreferences {
+            val isolated = "$preferencePrefix-$name"
+            preferenceNames += isolated
+            return baseContext.getSharedPreferences(isolated, mode)
+        }
+
+        fun isolatedPreferenceNames(): List<String> = synchronized(preferenceNames) { preferenceNames.toList() }
         override fun rejectFixtureExternalEffect(operation: String): Nothing {
             record(operation)
             throw SecurityException("STAGE12_2_EXTERNAL_EFFECT_EXCLUDED:$operation")
         }
+    }
+
+    /**
+     * Sólo para el almacén de fotos cuando la corrida admite `photos.import`: mismos archivos que
+     * [PrivateFileContext], sin preferencias ni otros efectos. Copia la imagen elegida dentro de la corrida.
+     */
+    private class PhotoImportContext(base: Context, private val root: File) : ContextWrapper(base) {
+        override fun getApplicationContext(): Context = this
+        override fun getFilesDir(): File = File(root, "files")
+        override fun getCacheDir(): File = File(root, "cache")
+        override fun getNoBackupFilesDir(): File = File(root, "no_backup")
+        override fun getDataDir(): File = root
+        override fun getSharedPreferences(name: String, mode: Int): android.content.SharedPreferences =
+            throw SecurityException("STAGE_RUN_PHOTO_CONTEXT_PREFERENCES:$name")
+    }
+
+    companion object {
+        private val ALLOWABLE_EFFECTS = setOf("photos.import")
     }
 }
