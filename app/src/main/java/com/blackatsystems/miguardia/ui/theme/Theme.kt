@@ -91,12 +91,24 @@ private val VigiliaLightScheme = lightColorScheme(
     inversePrimary = Color(0xFF7AA2F7),
 )
 
+/*
+ * Asymmetric corners (decided by Joaquín on 8/11/2026, option C): large top-start and
+ * bottom-end, small top-end and bottom-start, at every size. Cards use `large`; fields,
+ * badges, dialogs and sheets inherit the rest. Buttons keep Material's pill shape.
+ */
+internal fun asymmetricShape(large: Int, small: Int) = RoundedCornerShape(
+    topStart = large.dp,
+    topEnd = small.dp,
+    bottomEnd = large.dp,
+    bottomStart = small.dp,
+)
+
 private val AppShapes = Shapes(
-    extraSmall = RoundedCornerShape(8.dp),
-    small = RoundedCornerShape(12.dp),
-    medium = RoundedCornerShape(16.dp),
-    large = RoundedCornerShape(24.dp),
-    extraLarge = RoundedCornerShape(24.dp),
+    extraSmall = asymmetricShape(8, 3),
+    small = asymmetricShape(12, 4),
+    medium = asymmetricShape(16, 5),
+    large = asymmetricShape(22, 6),
+    extraLarge = asymmetricShape(28, 8),
 )
 
 private val AppTypography = Typography(

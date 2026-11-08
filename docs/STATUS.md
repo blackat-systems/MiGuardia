@@ -7,9 +7,11 @@
   **Paleta Tokyo Night** (Joaquín, 8/11: Night + acento azul; sólo colores, forma Vigilia igual) aplicada en
   el tema; PC 1344/0; Samsung 15/15 (capturas, Disponibilidad y colores) con QA `5e4f5931…` + ejecutor `45155a10…`
   (`tokyo/build/hashes.txt`); datos QA 23 bases idénticas. Widget sigue con colores anteriores (etapa 14).
+  **Esquinas asimétricas** en tarjetas y tema (Joaquín, 8/11, opción C de 3 maquetas): Samsung 15/15 con QA
+  `d6f9a0f1…` + ejecutor `7e278f06…` (`esquinas/build/hashes.txt`, pareja instalada); datos QA 23 bases idénticas.
   ✅ Disponibilidad (ejemplo): selector de hora y fecha + pulido; Samsung 12/12 y capturas antes/después
   (`.local-evidence/claude-20261108-13-5/`); datos QA 23 bases idénticas. ⏳ El resto de las pantallas y
-  campos; vista humana de los selectores; regresión 12.2 y 13 al final. Pareja instalada: la de Tokyo Night (arriba); correr con
+  campos; vista humana de los selectores; regresión 12.2 y 13 al final. Pareja instalada: la de esquinas (arriba); correr con
   `.local-evidence/claude-20261108-13-5/run.sh` (selectores de la etapa en `Stage135Selectors`).
   Después: 14 · Sistema y aceptación final
   (docs/prompts/ETAPA_14_SISTEMA_Y_ACEPTACION.md) y 15 · Entrega

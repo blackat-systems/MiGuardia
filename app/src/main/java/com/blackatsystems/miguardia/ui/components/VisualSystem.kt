@@ -20,7 +20,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -57,6 +56,15 @@ object MiGuardiaSpacing {
     val extraLarge = 24.dp
     val huge = 32.dp
 }
+
+/**
+ * Cards float on the page by color in the dark theme (Tokyo Night). In the light theme the
+ * page and the cards are close, so a soft outline keeps them apart.
+ */
+@Composable
+internal fun cardBorder(): BorderStroke? =
+    if (MaterialTheme.vigiliaColors.isDark) null
+    else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
 
 @Composable
 fun DateBadge(label: String, modifier: Modifier = Modifier) {
@@ -156,7 +164,8 @@ fun MonthNavigator(
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        shape = MaterialTheme.shapes.large,
+        border = cardBorder(),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainer,
         ),
@@ -193,11 +202,13 @@ fun SectionCard(
     title: String,
     modifier: Modifier = Modifier,
     supportingText: String? = null,
+    eyebrow: String? = null,
     content: @Composable () -> Unit,
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        shape = MaterialTheme.shapes.large,
+        border = cardBorder(),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainer,
         ),
@@ -206,6 +217,13 @@ fun SectionCard(
             modifier = Modifier.padding(MiGuardiaSpacing.large),
             verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small),
         ) {
+            eyebrow?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
@@ -218,7 +236,7 @@ fun SectionCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            Spacer(Modifier.size(MiGuardiaSpacing.extraSmall))
             content()
         }
     }
@@ -267,7 +285,8 @@ fun EmptyState(
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        shape = MaterialTheme.shapes.large,
+        border = cardBorder(),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         ),
@@ -385,7 +404,8 @@ fun NavigationCard(
                 role = Role.Button
             }
             .clickable(onClick = onClick),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        shape = MaterialTheme.shapes.large,
+        border = cardBorder(),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainer,
         ),

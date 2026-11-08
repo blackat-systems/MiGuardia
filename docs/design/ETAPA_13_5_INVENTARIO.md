@@ -45,6 +45,24 @@ forma, no de color. Los colores están en `ui/theme/Theme.kt` y `VigiliaTokens.k
 - **Pendiente, etapa 14:** el Widget sigue con los colores Vigilia anteriores, porque está fuera
   del alcance de esta etapa y tiene pruebas propias. Hay que decidir si adopta la paleta nueva.
 
+## 0.b Decisión de forma: esquinas asimétricas (Joaquín, 8/11/2026)
+
+Joaquín pidió reevaluar las tarjetas porque le parecían genéricas. Se le mostraron tres maquetas
+(acento lateral, franja de encabezado y esquinas asimétricas) y eligió las **esquinas asimétricas**.
+
+- **Forma:** grande arriba a la izquierda y abajo a la derecha, chica en las otras dos. Se define
+  en `AppShapes` (`Theme.kt`) para todos los tamaños: 8/3, 12/4, 16/5, 22/6 y 28/8. Las tarjetas
+  usan 22/6; campos, rótulos, diálogos, menús, hojas y selectores toman su tamaño. Los botones
+  conservan la píldora de Material.
+- **Tarjetas comunes** (`VisualSystem.kt`): sin borde en oscuro, donde se separan del fondo por el
+  color, y con un borde suave en claro. Ya no tienen la línea divisoria bajo el título.
+  `SectionCard` acepta un rótulo opcional (`eyebrow`) arriba del título, para usarlo al pulir cada
+  pantalla.
+- **Las tarjetas sueltas** del detalle del día, Vacaciones, Ayuda y otras pantallas toman la forma
+  al pasarlas al componente común (regla 4).
+- **Samsung (8/11): 15/15 ✅**; datos QA con 23 bases idénticas. Las capturas están en la cuarta
+  columna del atlas.
+
 ## 1. Reglas comunes del pulido (mismo Vigilia, parejo)
 
 Hoy cada pantalla resuelve espacios, títulos y botones a su manera. Los componentes comunes de
