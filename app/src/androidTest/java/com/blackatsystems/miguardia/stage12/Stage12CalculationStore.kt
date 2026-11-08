@@ -546,17 +546,20 @@ internal class Stage12CalculationStore(
         }
         context.deleteDatabase(databaseName)
         // Candidatas de restauración que nacieron en esta corrida (el coordinador ya debería haberlas borrado).
-        (backupCandidates() - candidatesBefore).forEach { name ->
+        // La app debe retirar sus candidatas de restauración con todos sus archivos (también el `.lck` de Room
+        // en la caché). Si queda alguno, se informa como falla; se borra igual porque es de esta corrida.
+        val leftoverCandidates = (backupCandidates() - candidatesBefore).sorted()
+        leftoverCandidates.forEach { name ->
+            android.util.Log.w("MiGuardiaRun", "candidata de restauración sobrante: $name")
             if (name.endsWith(".db.lck")) {
-                // La app borra la candidata pero Room deja su bloqueo vacío en la caché: es de esta corrida.
                 File(context.cacheDir, name).takeIf { it.isFile && it.length() == 0L }?.delete()
             } else if (name.endsWith(".db")) {
-                android.util.Log.w("MiGuardiaRun", "candidata de restauración sobrante: $name")
                 context.deleteDatabase(name)
                 File(context.cacheDir, "$name.lck").takeIf { it.exists() }?.delete()
             }
         }
-        check((backupCandidates() - candidatesBefore).isEmpty()) { "STAGE_RUN_CANDIDATE_LEFTOVERS" }
+        check((backupCandidates() - candidatesBefore).isEmpty()) { "STAGE_RUN_CANDIDATE_NOT_DELETED" }
+        check(leftoverCandidates.isEmpty()) { "STAGE_RUN_CANDIDATE_LEFTOVERS:$leftoverCandidates" }
         privateContext.isolatedPreferenceNames().forEach { name ->
             check(context.deleteSharedPreferences(name)) { "STAGE_RUN_PREFERENCES_NOT_DELETED:$name" }
         }

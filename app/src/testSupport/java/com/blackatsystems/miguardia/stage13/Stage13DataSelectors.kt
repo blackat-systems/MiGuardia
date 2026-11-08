@@ -26,6 +26,7 @@ object Stage13DataSelectors {
         "replaceAllNeedsTheExactPhraseAndRestoresTheCopyExactly",
         "otherTimelineBlocksMergeButKeepsConsciousReplacement",
         "applyingCannotBeLeftAndPendingRecoveryNeedsARealRetry",
+        "orphanCandidateLockIsSweptByTheNextStore",
     ).map { "$BACKUP#$it" } + listOf(
         "version5CopyIsReadAndRestoredExactly",
         "version6CopyIsReadAndRestoredExactly",

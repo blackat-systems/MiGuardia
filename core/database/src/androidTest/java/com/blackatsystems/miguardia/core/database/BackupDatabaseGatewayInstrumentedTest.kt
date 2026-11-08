@@ -243,6 +243,11 @@ class BackupDatabaseGatewayInstrumentedTest {
         orphan.close()
         val orphanFile = context.getDatabasePath(orphanName)
         val orphanWal = java.io.File("${orphanFile.path}-wal").also { it.writeText("orphan") }
+        // A lock left alone in the cache by an earlier version (its database was already removed).
+        val lockOnlyName = "miguardia-backup-candidate-${UUID.randomUUID()}.db"
+        val cache = context.applicationContext.cacheDir
+        val lockOnly = java.io.File(cache, "$lockOnlyName.lck").also { check(it.createNewFile()) }
+        val unrelatedLock = java.io.File(cache, "miguardia-backup-candidate-not-owned.db.lck").also { it.writeText("keep") }
         val unrelated = context.getDatabasePath("miguardia-backup-candidate-not-owned.db").also {
             it.parentFile?.mkdirs()
             it.writeText("keep")
@@ -255,9 +260,14 @@ class BackupDatabaseGatewayInstrumentedTest {
 
             assertFalse(orphanFile.exists())
             assertFalse(orphanWal.exists())
+            assertFalse(java.io.File(cache, "$orphanName.lck").exists())
+            assertFalse(lockOnly.exists())
             assertTrue(unrelated.exists())
+            assertTrue(unrelatedLock.exists())
         } finally {
             context.deleteDatabase(orphanName)
+            lockOnly.delete()
+            unrelatedLock.delete()
             unrelated.delete()
         }
     }

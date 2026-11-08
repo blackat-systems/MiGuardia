@@ -352,6 +352,24 @@ class Stage13BackupDeviceTest : Stage13DeviceBase() {
         assertEquals(atCopy, runBlocking { graph.digest() })
     }
 
+    /** Hallazgo de la etapa 13: un `.lck` de candidata huérfano (de una versión anterior) se retira al abrir una base. */
+    @Test fun orphanCandidateLockIsSweptByTheNextStore() {
+        val context = instrumentation.targetContext
+        val orphan = File(context.cacheDir, "miguardia-backup-candidate-${UUID.randomUUID()}.db.lck")
+        val name = "stage13-sweep-${UUID.randomUUID()}.db"
+        check(orphan.createNewFile())
+        val sweeper = com.blackatsystems.miguardia.core.database.LocalDataStore.create(context, databaseName = name)
+        try {
+            runBlocking { sweeper.backups.capture() }
+            assertFalse("El bloqueo huérfano se retira", orphan.exists())
+        } finally {
+            sweeper.close()
+            context.deleteDatabase(name)
+            File(context.cacheDir, "$name.lck").delete()
+            orphan.delete()
+        }
+    }
+
     private fun openBackups() {
         openDrawerAction("drawer-action-backups")
         waitTag("backup-surface")

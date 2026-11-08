@@ -1,6 +1,6 @@
 # Estado actual de MiGuardia 3.0
 
-- Etapa: 13 · Datos y archivos — EN CURSO desde el 8/11; 12 pruebas automáticas + sesión humana ✅ en el Samsung
+- Etapa: 13 · Datos y archivos — todos los casos ✅ en el Samsung (8/11); falta que Joaquín la dé por cerrada
 - Etapa anterior: 12.2 · Cálculos y consulta — CERRADA por Joaquín (8/11)
 - Base: `cbfa26d` (arranque de la etapa 13). Push del 8/11 04:24: `origin/codex/miguardia-3.0` = `cbfa26d`;
   lo posterior es local, sin push
@@ -76,11 +76,16 @@ faltante**; sólo cambió `files/profileInstalled` (marca de Android al instalar
 - Interrupción real del proceso durante la aplicación: cubierta con fallas en cada punto del registro de
   recuperación (pruebas existentes) y con la falla inyectada de arriba; no se mató el proceso.
 
-**Hallazgo (app, no corregido):** cada vez que la app abre o aplica una Copia crea una base candidata temporal
-y la borra, pero Room deja un archivo vacío `cache/miguardia-backup-candidate-<id>.db.lck`. En uso normal se
-acumulan en la caché (Android puede limpiarla). Las corridas de hoy dejaron 41 en la app QA antes de corregir la
-limpieza del arnés; **borrados con autorización de Joaquín (8/11)**: foto posterior (`after-cleanup/`) con 23
-bases y 353 archivos, idéntica a la previa salvo `files/profileInstalled`. Decidir si se corrige en la app.
+**Hallazgo corregido en la app (8/11, pedido de Joaquín):** cada vez que la app abría o aplicaba una Copia creaba una
+base candidata temporal y la borraba, pero Room dejaba un archivo vacío `cache/miguardia-backup-candidate-<id>.db.lck`
+que se acumulaba. Ahora `BackupDatabaseGateway` borra también ese bloqueo, y el barrido que ya hacía al abrir la base
+retira los bloqueos huérfanos de versiones anteriores (sin tocar nombres que no son suyos). Pruebas: el barrido en
+`BackupDatabaseGatewayInstrumentedTest` (compila; no se corrió en el teléfono, usa otro paquete de prueba), la
+limpieza del arnés ahora **falla** si queda una candidata o un bloqueo, y `orphanCandidateLockIsSweptByTheNextStore`.
+Samsung con QA nueva `71523f97…` + ejecutor `1c22148b…`: **16/16 ✅** (las 12 de la etapa, el barrido y V5–V7),
+ninguna candidata sobrante; foto de datos QA antes/después de instalar y de probar: 23 bases idénticas, sólo cambió
+`files/profileInstalled`. Pruebas de 12.2 y sesión humana no repetidas: no usan Copias (12.2) o sus selectores no
+cambiaron (humana). Los 41 bloqueos de las corridas anteriores se borraron con autorización de Joaquín (8/11).
 
 Escrito en castellano llano. Los códigos raros están traducidos en el [glosario](GLOSARIO.md).
 
@@ -197,8 +202,11 @@ sigue `7dc36052…`. Correr las pruebas 12.2 con
 **Actualización 8/11 (etapa 13):** ejecutor instalado `ac66cf6f52472cef9be73490f80a25508b65bb3aa26d2653479e0abad2682057`
 (incluye 12.2 y 13). Después se instaló `e86d06c7b2ea0e8e3b5b46cb4607ef5f9b3633b2bbd84a2e228cfaab87344d5e`
 (agrega A188); la app QA sigue `7dc36052…`. Foto de datos QA tras A188 idéntica a la previa (salvo
-`files/profileInstalled`). **Siguiente:** Joaquín decide si el hallazgo de los `.lck` se corrige ahora o queda para
-la etapa 14, y cierra la etapa 13 (todos los casos A166–A207, C078, C079 y C095 ✅).
+`files/profileInstalled`). **Pareja instalada desde el arreglo de los `.lck`:** QA
+`71523f97946bc2087dac6a45eb3d911f2ea4f728d0fd6f7f524d35ebe462f056` + ejecutor
+`1c22148b9e2725ce3d079d55cfc895c557b14fd3fd1c1bbb56453c7f9812e869` (ambos verificados sacándolos del teléfono). Para
+correr con esta pareja: `.local-evidence/claude-20261108-13/fix-lck/run.sh` con `QA=` y `RUNNER=`.
+**Siguiente:** Joaquín cierra la etapa 13 (todos los casos A166–A207, C078, C079 y C095 ✅).
 
 **Entorno de esta PC** (la app de Claude redirige en silencio lo que se escribe en
 `AppData\Local`, por eso el SDK quedó fuera de ahí):

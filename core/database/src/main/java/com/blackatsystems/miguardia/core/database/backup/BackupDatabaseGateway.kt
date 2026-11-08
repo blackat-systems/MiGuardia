@@ -118,11 +118,15 @@ class BackupDatabaseGateway internal constructor(
      */
     private fun sweepOrphanedCandidateDatabases() {
         val databaseDirectory = context.getDatabasePath(databaseName).parentFile ?: return
-        databaseDirectory.listFiles().orEmpty()
+        // Room leaves `<name>.lck` in the application cache; earlier versions never removed it.
+        (databaseDirectory.listFiles().orEmpty().toList() + roomLockDirectory().listFiles().orEmpty().toList())
             .mapNotNull { file -> file.candidateDatabaseNameOrNull() }
             .toSet()
             .forEach(::deleteCandidateDatabase)
     }
+
+    /** Same directory Room uses for its open/migration lock file (application context cache). */
+    private fun roomLockDirectory(): File = context.applicationContext.cacheDir
 
     private fun deleteCandidateDatabase(candidateName: String) {
         check(candidateName.isCandidateDatabaseName()) {
@@ -134,6 +138,7 @@ class BackupDatabaseGateway internal constructor(
             File("${databaseFile.path}-journal"),
             File("${databaseFile.path}-shm"),
             File("${databaseFile.path}-wal"),
+            File(roomLockDirectory(), "$candidateName.lck"),
         )
         context.deleteDatabase(candidateName)
         knownFiles.forEach { file ->
@@ -552,7 +557,7 @@ class BackupDatabaseGateway internal constructor(
         val CANDIDATE_DATABASE_NAME_PATTERN =
             Regex("^${CANDIDATE_DATABASE_PREFIX}([0-9a-fA-F-]{36})\\.db$")
         val CANDIDATE_FILE_PATTERN =
-            Regex("^${CANDIDATE_DATABASE_PREFIX}([0-9a-fA-F-]{36})\\.db(?:-(?:journal|shm|wal))?$")
+            Regex("^${CANDIDATE_DATABASE_PREFIX}([0-9a-fA-F-]{36})\\.db(?:-(?:journal|shm|wal)|\\.lck)?$")
         val IDENTIFIER = Regex("[A-Za-z_][A-Za-z0-9_]*")
         val booleanColumns = mapOf(
             "objectives" to setOf("isActive"),
