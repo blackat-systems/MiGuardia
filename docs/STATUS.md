@@ -1,7 +1,7 @@
 # Estado actual de MiGuardia 3.0
 
 - Etapa: 13 · Datos y archivos — CERRADA por Joaquín (8/11): A166–A207, C078, C079 y C095 ✅; commits locales sin push
-- Próxima etapa: 14 · Sistema y aceptación final — NO iniciada
+- Próxima etapa: 14 · Sistema y aceptación final — NO iniciada; prompt de arranque en docs/prompts/ETAPA_14_SISTEMA_Y_ACEPTACION.md
 - Etapa anterior: 12.2 · Cálculos y consulta — CERRADA por Joaquín (8/11)
 - Base: `cbfa26d` (arranque de la etapa 13). Push del 8/11 04:24: `origin/codex/miguardia-3.0` = `cbfa26d`;
   lo posterior es local, sin push
