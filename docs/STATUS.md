@@ -1,7 +1,7 @@
 # Estado actual de MiGuardia 3.0
 
 - Etapa: 12.2 · Cálculos y consulta — CERRADA por Joaquín (8/11): todos los casos A077–A110, A127–A165 ✅; commits locales sin push
-- Próxima etapa: 13 · Datos y archivos (ver plan maestro)
+- Próxima etapa: 13 · Datos y archivos — NO iniciada; prompt de arranque en docs/prompts/ETAPA_13_DATOS_Y_ARCHIVOS.md
 - Etapa anterior: B1 (Trabajo y Calendario) CERRADA el 8/11
 - Base: commit local de la primera tanda 12.2 sobre 6f612bd; nada subido a GitHub
 - Actualización: 2026-11-08
