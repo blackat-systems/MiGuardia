@@ -90,6 +90,17 @@ class Stage12CalculationsDeviceTest {
         assertTextIn(Screen.HELPS_REFERENCE, hasAnyAncestor(hasTestTag("summary-compliance")))
         assertTextIn(Screen.MISSING, hasAnyAncestor(hasTestTag("summary-compliance")))
         assertTextIn(Screen.AVAILABILITY, hasAnyAncestor(hasTestTag("summary-availability")))
+        // A134: desgloses opcionales con valores exactos (fila tocable = un nodo con etiqueta y valor).
+        listOf(
+            "${Stage12CalculationFixture.PLACE_NAME} (${Stage12CalculationFixture.PLACE_ABBREVIATION})" to Screen.TOTAL,
+            Stage12CalculationFixture.WORK_TYPE_NAME to Screen.TOTAL,
+            Stage12CalculationFixture.NOT_HELPING_CLASS_NAME to Screen.DOES_NOT_HELP,
+            Stage12CalculationFixture.HELPING_CLASS_NAME to "1 h",
+            "Duración planificada" to "8 h",
+            "Duración real confirmada" to "9 h",
+            "Diferencia real − planificada" to "1 h",
+            "Días de carpeta médica" to "1",
+        ).forEach { (label, value) -> assertRow(label, value) }
 
         compose.onNodeWithTag("summary-metric-essential-total").performScrollTo().performClick()
         waitTag("summary-detail")
@@ -165,6 +176,57 @@ class Stage12CalculationsDeviceTest {
         compose.onNodeWithTag("reports-back-summary").performScrollTo().performClick()
         waitTag("summary-overview")
         assertSummaryMonth("Agosto de 2026")
+    }
+
+    /** A150–A153: interruptores en pantalla; el XLSX real incluye sólo lo elegido (nota médica con 2ª confirmación). */
+    @Test fun reportPrivacySwitchesIncludeOnlyWhatWasChosen() {
+        runBlocking { graph.setProfileDisplayName(DISPLAY_NAME) }
+        openSummary()
+        compose.onNodeWithTag("summary-menu").performClick()
+        compose.onNodeWithTag("summary-menu-generate-report").performClick()
+        waitTag("reports-surface")
+        compose.onNodeWithTag("reports-format-xlsx").performScrollTo().performClick()
+        listOf("reports-include-name", "reports-include-position", "reports-include-shift-notes").forEach { tag ->
+            // La fila entera es el interruptor; la etiqueta "-switch" queda dentro del nodo fusionado.
+            waitTag(tag)
+            compose.onNodeWithTag(tag).performScrollTo().performClick()
+        }
+        compose.onNodeWithTag("reports-include-medical-notes").performScrollTo().performClick()
+        waitTag("reports-confirm-medical-note")
+        compose.onNodeWithTag("reports-confirm-medical-note").performClick()
+        compose.onNodeWithTag("reports-generate").performScrollTo().performClick()
+        waitTag("reports-ready")
+        assertTextIn("Notas incluidas: 2", hasAnyAncestor(hasTestTag("reports-review")))
+        Stage12CalculationOracle.checkXlsx(newest(".xlsx").readBytes(), privateOptionsIncluded = true, displayName = DISPLAY_NAME)
+    }
+
+    /** A154, A155: aviso de privacidad de fotos y como máximo 12 elegidas una por una para el PDF. */
+    @Test fun pdfPhotosShowTheWarningAndStopAtTwelve() {
+        runBlocking { graph.seedPhotos(13) }
+        openSummary()
+        compose.onNodeWithTag("summary-menu").performClick()
+        compose.onNodeWithTag("summary-menu-generate-report").performClick()
+        waitTag("reports-surface")
+        compose.onNodeWithTag("reports-format-pdf").performScrollTo().performClick()
+        compose.onNodeWithTag("reports-include-photos").performScrollTo().performClick()
+        waitTag("reports-photo-warning")
+        assertTextIn(
+            "La imagen puede contener nombres u otros datos de terceros. MiGuardia no hace OCR, recorte ni redacción. Elegí hasta 12 fotos.",
+            hasTestTag("reports-photo-warning"),
+        )
+        for (index in 0 until 12) {
+            waitTag("reports-photo-choice-$index")
+            compose.onNodeWithTag("reports-photo-choice-$index").performScrollTo().performClick()
+        }
+        assertTextIn("Seleccionadas: 12 de 12", hasAnyAncestor(hasTestTag("reports-surface")))
+        compose.onNodeWithTag("reports-photo-choice-12").performScrollTo().performClick()
+        assertTextIn("Podés incluir como máximo 12 fotos. Desmarcá una antes de continuar.", hasAnyAncestor(hasTestTag("reports-surface")))
+        assertTextIn("Seleccionadas: 12 de 12", hasAnyAncestor(hasTestTag("reports-surface")))
+        compose.onNodeWithTag("reports-generate").performScrollTo().performClick()
+        waitTag("reports-ready")
+        assertTextIn("Fotos incluidas: 12", hasAnyAncestor(hasTestTag("reports-review")))
+        val pdf = newest(".pdf").readBytes()
+        assertTrue("PDF con fotos", pdf.size > 4 && String(pdf, 0, 5, Charsets.US_ASCII) == "%PDF-")
     }
 
     /** El PDF real se genera con la misma proyección; la foto ofrece su aviso de privacidad (A147, A155). */
@@ -267,6 +329,10 @@ class Stage12CalculationsDeviceTest {
         }
     }
 
+    private fun assertRow(label: String, value: String) {
+        waitFor { compose.onAllNodes(hasText(label) and hasText(value)).fetchSemanticsNodes().isNotEmpty() }
+    }
+
     private fun assertTextIn(text: String, scope: SemanticsMatcher) {
         waitFor() { compose.onAllNodes(hasText(text) and scope).fetchSemanticsNodes().isNotEmpty() }
     }
@@ -295,5 +361,6 @@ class Stage12CalculationsDeviceTest {
     private companion object {
         const val WAIT = 30_000L
         const val LOG_TAG = "MiGuardia122"
+        const val DISPLAY_NAME = "Apodo canario"
     }
 }

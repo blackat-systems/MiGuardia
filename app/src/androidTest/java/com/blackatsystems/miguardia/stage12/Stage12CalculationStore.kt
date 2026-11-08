@@ -121,6 +121,7 @@ internal class Stage12CalculationStore(
     val store: LocalDataStore
     private val privateContext: PrivateFileContext
     private val profile: GuardProfileStore
+    private val photoStore: SchedulePhotoFileStore
     private val weatherPreferences: WeatherPreferencesStore
 
     private val calendarFactory: CalendarViewModel.Factory
@@ -160,7 +161,7 @@ internal class Stage12CalculationStore(
         val notifications = NotificationRuntime(privateContext, store, notificationPreferences, weather)
         notificationJob = checkNotNull(notifications.scope.coroutineContext[Job])
         val gate = LocalDataMutationGate()
-        val photoStore = SchedulePhotoFileStore(privateContext)
+        photoStore = SchedulePhotoFileStore(privateContext)
         val notes = ManualLoadNotes(privateContext, store.shiftNotes, store.shiftSituations, gate)
         val generator = LocalReportGenerator(store.monthlyReportSnapshots, profile,
             ReportPhotoStager(privateContext, photoStore, clock), ReportArtifactStore(privateContext, clock),
@@ -219,6 +220,46 @@ internal class Stage12CalculationStore(
 
     /** Nombre visible del perfil para los informes; por defecto no hay nombre. */
     suspend fun setProfileDisplayName(name: String) { profile.save(name) }
+
+    /** Siembra [count] fotos mensuales reales (PNG 80×40) del mes de la fixture, en la carpeta privada. */
+    suspend fun seedPhotos(count: Int): List<java.util.UUID> = (1..count).map { index ->
+        val id = UUID.nameUUIDFromBytes("stage12-2/photo/$index".toByteArray())
+        val key = "$id.png"
+        val file = photoStore.file(key)
+        check(file.parentFile.isDirectory || file.parentFile.mkdirs())
+        val bitmap = android.graphics.Bitmap.createBitmap(80, 40, android.graphics.Bitmap.Config.ARGB_8888)
+        try {
+            bitmap.eraseColor(android.graphics.Color.rgb(30 + index * 10, 120, 200))
+            java.io.FileOutputStream(file).use { check(bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)) }
+        } finally {
+            bitmap.recycle()
+        }
+        val stamp = F.CREATED_AT.plusSeconds(index.toLong())
+        store.schedulePhotos.insert(com.blackatsystems.miguardia.core.domain.model.SchedulePhoto(id, F.MONTH,
+            F.OBJECTIVE_ID, "Foto ficticia $index", F.PLACE_ABBREVIATION, key, "image/png", file.length(), 80, 40,
+            stamp, stamp))
+        id
+    }
+
+    /** Escribe por fuera de la pantalla un extra independiente (simula un cambio concurrente). */
+    suspend fun insertIndependentExtraConcurrently(id: UUID, start: Instant, end: Instant) {
+        val history = checkNotNull(store.workConfiguration.get())
+        val owner = start.atZone(zone).toLocalDate()
+        val catalog = store.workCatalog.observeCatalog(F.TIMELINE_ID, F.SECTOR).first()
+        val objective = checkNotNull(store.objectives.getById(F.OBJECTIVE_ID))
+        val extraClass = store.shiftActuals.observeExtraWorkClasses(F.TIMELINE_ID, F.SECTOR).first()
+            .single { it.id == F.NOT_HELPING_CLASS_ID }
+        val selection = IndependentExtraWorkSelection(ResolvedWorkConfigurationRevision.resolve(history, owner),
+            catalog.workPlaces.single(), objective, catalog.workTypes.single(), null, extraClass)
+        val record = buildIndependentExtraWorkRecord(
+            IndependentExtraWorkDraft(id, owner, zone, start, end, F.COLOR, null), selection, clock, Instant.now())
+        val expectation = store.independentExtraWork.captureExpectation(null, selection, start, end, owner,
+            end.minusNanos(1).atZone(zone).toLocalDate())
+        check(store.independentExtraWork.applyMutation(IndependentExtraWorkMutation(expectation, record,
+            overlappingWorkConfirmed = true, protectedDateConfirmed = true)) is IndependentExtraWorkWriteResult.Saved) {
+            "STAGE12_2_CONCURRENT_EXTRA_REJECTED"
+        }
+    }
 
     /** Todo PDF/XLSX regular bajo la raíz privada (artefactos reales generados por Informes). */
     fun generatedArtifacts(): List<File> = privateRoot.walkTopDown()

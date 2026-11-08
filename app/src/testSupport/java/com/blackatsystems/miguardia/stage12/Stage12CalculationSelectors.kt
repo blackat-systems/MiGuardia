@@ -14,6 +14,8 @@ object Stage12CalculationSelectors {
         "$CLASS#calendarDetailSummaryAndBackKeepTheCalendarMonth",
         "$CLASS#reportsFromSummaryKeepMonthMatchTheRealXlsxAndReturn",
         "$CLASS#pdfIsGeneratedFromTheSameProjection",
+        "$CLASS#reportPrivacySwitchesIncludeOnlyWhatWasChosen",
+        "$CLASS#pdfPhotosShowTheWarningAndStopAtTwelve",
         HUMAN,
     ) + listOf(
         "weeklyReferenceFromTodayCutsThePreviousSegmentAndSaves",
@@ -22,5 +24,7 @@ object Stage12CalculationSelectors {
         "classCatalogCreatesEditsArchivesAndReactivatesWithoutRewritingHistory",
         "independentExtraAcrossMidnightNeedsOverlapConfirmationAndDeletesOnlyItself",
         "missingClassIsCreatedKeepingTheDraftAndProtectedDateNeedsConfirmation",
+        "referenceSaveRevalidatesAfterAConcurrentConfigurationChange",
+        "independentExtraSaveRevalidatesOccupancyAfterAConcurrentWrite",
     ).map { "$EDITORS#$it" }
 }

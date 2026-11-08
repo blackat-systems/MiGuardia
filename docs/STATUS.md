@@ -1,6 +1,7 @@
 # Estado actual de MiGuardia 3.0
 
-- Etapa en curso: 12.2 · Cálculos y consulta — EN CURSO (arrancó el 8/11); prompt en docs/prompts/ETAPA_12_2_CALCULOS_Y_CONSULTA.md
+- Etapa: 12.2 · Cálculos y consulta — LISTA (8/11): todos los casos A077–A110, A127–A165 ✅; commits locales sin push
+- Próxima etapa: 13 · Datos y archivos (ver plan maestro)
 - Etapa anterior: B1 (Trabajo y Calendario) CERRADA el 8/11
 - Base: commit local de la primera tanda 12.2 sobre 6f612bd; nada subido a GitHub
 - Actualización: 2026-11-08
@@ -12,8 +13,9 @@ Escrito en castellano llano. Los códigos raros están traducidos en el [glosari
 Estamos en la etapa **12.2 · Cálculos y consulta**. Con una misma fixture, «Tus horas y tu meta»,
 Resumen, el XLSX real y el PDF real muestran los mismos minutos, en la PC y en el Samsung, y los
 retornos conservan el mes. Guardar y compartir con los selectores reales pasó con Joaquín (8/11). La
-segunda tanda (editores de Horas, clases y extra independiente) pasó 6/6 en el Samsung. Quedan pocos
-casos ⏳ (ver lista) antes de cerrar la etapa.
+segunda tanda (editores de Horas, clases y extra independiente) y la tanda final (desgloses, interruptores,
+fotos y conflictos al guardar) también pasaron. **Corrida final: 15/15 en el Samsung**; la etapa cumple sus
+condiciones de «lista». Falta sólo que Joaquín la dé por cerrada.
 
 ## Etapa 12.2 · Cálculos y consulta (desde el 8/11)
 
@@ -34,6 +36,12 @@ privacidad. Valores esperados escritos a mano: 16 h sin extras, 4 h 30 min de ex
 **Resultado en el Samsung (8/11): 5/5 ✅** con QA `7dc36052…` + ejecutor `327fec25…`, repetidas 5/5 con el
 ejecutor final `0d394c22…` (carpeta privada movida a `files/reports/artifacts/stage12-2-<id>` para poder
 compartir, y limpieza reforzada). Sesión humana ✅ con `7cfaaa24…`.
+**Tanda final y corrida completa (8/11):** las 15 pruebas automáticas de la etapa (7 de cálculos, 8 de
+editores) sobre QA `7dc36052…` + ejecutor `ed25efe4…`: **15/15 ✅**; foto de datos QA antes/después idéntica
+(23 bases, 353 archivos), sin restos. Evidencia en `.local-evidence/claude-20261108-12-2c/`.
+Observación (INFERIDO, sin verificar en el código): si se toca «Guardar meta» justo mientras la pantalla
+recarga datos cambiados por fuera, el toque no hace nada ni muestra aviso; un segundo toque sí avisa. No
+pone en riesgo datos (no escribe). Queda anotada para la etapa 14 (aceptación).
 **Segunda tanda (8/11):** `Stage12HoursEditorsDeviceTest` (6 métodos). Corrida final junto con las 5
 anteriores sobre QA `7dc36052…` + ejecutor `f300fe81…`: **11/11 ✅**. Foto de datos QA antes/después: 23 bases
 idénticas, ningún archivo faltante ni nuevo; sólo cambió `files/profileInstalled` (marca de Android al
@@ -49,7 +57,7 @@ guardó (`MiGuardia_2026-09_informe_parcial.pdf`, datos ficticios) quedó en la 
 `.lck` vacíos. Foto posterior (`.local-evidence/claude-20261108-12-2/after-cleanup/`): 23 bases y 353
 archivos, idénticos a la foto previa a la etapa. (Después se instaló el ejecutor `f300fe81…`.) PDF real revisado en la PC: mismos números y sin dirección,
 motivo, puesto, notas, nota médica ni identificadores.
-Latencia de primera apertura del Resumen (fixture chica): 210–233 ms en 3 corridas. Sólo se anota; la
+Latencia de primera apertura del Resumen (fixture chica): 210–241 ms en 5 corridas. Sólo se anota; la
 alerta de la etapa 8 sigue sin causa conocida y no se reabrió.
 
 **Lista de la etapa** (✅ probado · ⏳ falta · ❌ falla). Ninguna ❌.
@@ -69,24 +77,28 @@ alerta de la etapa 8 sigue sin causa conocida y no se reabrió.
   de medianoche y 29 h; A104 clase creada desde el borrador sin perderlo; A105 duración y meta en la
   revisión; A106 superposición y carpeta médica exigen confirmar (la carpeta no se borra); A109 borrar sólo
   ese extra (la jornada del día sigue) — Samsung.
-- ⏳ A107 (parte): la revalidación por un conflicto que aparece justo al guardar sólo está probada en Room,
-  no desde la pantalla; A096 ídem para la meta.
+- ✅ A096 si la configuración cambia entre revisar y guardar: avisa «La configuración o la fecha cambió desde
+  la revisión…» y no escribe — Samsung.
+- ✅ A107 si aparece otro trabajo superpuesto entre revisar y guardar: no guarda, conserva el borrador
+  («Los datos cambiaron…»), y al revisar de nuevo exige confirmar la superposición nueva — Samsung.
 
 *Resumen (A127–A145)*
 - ✅ A128–A130 meses exactos (PC y Samsung); A131–A133 mismos minutos y disponibilidad aparte (Samsung);
   A135 total con sus 4 contribuciones (Samsung); A145 Informes desde el menú y desde el final (Samsung).
 - ✅ Calendario → detalle → Resumen → volver conserva el mes del Calendario (Samsung).
 - ✅ A127, A136–A144 — pruebas existentes.
-- ⏳ A134 desgloses: aparecen con valores correctos en pantalla (lugares, tipos, clases, planificado/real,
-  situaciones) pero la prueba todavía no los afirma uno por uno.
+- ✅ A134 desgloses con valores exactos: lugar y tipo 20 h 30 min, clases 3 h 30 min y 1 h, planificado 8 h,
+  real 9 h, diferencia 1 h, 1 día de carpeta médica — Samsung.
 
 *Informes (A146–A165)*
 - ✅ A146 mes del Resumen (septiembre y agosto); A147 PDF real; A148 XLSX real; A149 vista previa con
   recuentos; A157 archivo coherente con el Resumen; A160 regenerar; A165 vuelve al Resumen en el mismo
   mes — Samsung.
-- ✅ A150–A152 en el archivo (PC: aparecen sólo si se eligen) · ⏳ tocar esos interruptores en pantalla.
+- ✅ A150–A153 interruptores tocados en pantalla (nombre, puesto, notas y nota médica con 2ª confirmación):
+  el XLSX real incluye exactamente eso y nunca dirección, motivo ni IDs — Samsung (y PC con/sin opción).
 - ✅ A153, A156, A159 (permiso al archivo exacto), A161–A164 — pruebas existentes.
-- ⏳ A154 hasta 12 fotos en pantalla; A155 aviso de fotos (la fixture no tiene fotos).
+- ✅ A154 fotos elegidas de a una, tope de 12 con aviso «Podés incluir como máximo 12 fotos…», PDF con 12;
+  A155 aviso de privacidad de fotos visible — Samsung (13 fotos PNG reales sembradas en la corrida).
 - ✅ A158 guardar con el selector real de documentos: lo guardado es idéntico byte a byte al PDF
   (14.120 bytes) — sesión humana 8/11 (`Stage12CalculationsHumanTest`).
 - ✅ A159/A161 en el sistema real: se abre la hoja de compartir de Android; cerrarla sin elegir deja el
@@ -102,11 +114,11 @@ Joaquín autorizó en el chat instalar y probar en el Samsung y aprobó los arre
 **Dónde quedamos (8/11, ~02:15):** B1 cerrado y guardado en commits locales (`f00d769` y el de este
 registro). Teléfono limpio: pareja instalada QA `7dc36052…` + ejecutor `31c30439…`; datos QA iguales a la
 foto previa. Nada subido a GitHub: la rama va adelantada respecto de `origin` y el push espera pedido de Joaquín.
-**Actualización 8/11 (etapa 12.2):** el ejecutor instalado ahora es `f300fe81…` (pruebas 12.2); la app QA
+**Actualización 8/11 (etapa 12.2):** el ejecutor instalado ahora es `ed25efe4…` (pruebas 12.2); la app QA
 sigue `7dc36052…`. Correr las pruebas 12.2 con
-`RUNNER=f300fe81f0134f3b335d38d02487772c6adb00621de08a3ff2c590f5d3f27c2d bash .local-evidence/claude-20261107-b1/run_methods_diag.sh <salida> <selector>…`
+`RUNNER=ed25efe4a7f9a46fc349e7cd396be2e5d15793844f4acc4ea2eba6be305ffb0e bash .local-evidence/claude-20261107-b1/run_methods_diag.sh <salida> <selector>…`
 (selectores en `Stage12CalculationSelectors`). Evidencia 12.2 en `.local-evidence/claude-20261108-12-2/`.
-**Siguiente:** decidir si los ⏳ restantes de la etapa 12.2 se cubren o se aceptan, y cerrarla.
+**Siguiente:** que Joaquín dé por cerrada la etapa 12.2 y arrancar la etapa 13 · Datos y archivos.
 
 **Entorno de esta PC** (la app de Claude redirige en silencio lo que se escribe en
 `AppData\Local`, por eso el SDK quedó fuera de ahí):

@@ -325,6 +325,78 @@ class Stage12HoursEditorsDeviceTest {
         assertEquals("La carpeta médica no se borra", F.MEDICAL_LEAVE_ID, leave.id)
     }
 
+    /** A096: si la configuración cambia entre la revisión y el guardado, no se guarda y pide revisar de nuevo. */
+    @Test fun referenceSaveRevalidatesAfterAConcurrentConfigurationChange() {
+        openReferenceEditor()
+        click("La cantidad es fija")
+        click("Semana")
+        replaceText("hours-fixed-minutes", "600")
+        click("Desde hoy (2026-09-30)")
+        clickTag("hours-reference-review")
+        waitTag("hours-reference-save")
+        runBlocking {
+            val current = F.configuration.timeline.revisions.single().value
+            store.workConfiguration.addRevision(
+                F.TIMELINE_ID,
+                com.blackatsystems.miguardia.core.domain.work.EffectiveRevision(
+                    UUID.nameUUIDFromBytes("stage12-2/concurrent-revision".toByteArray()),
+                    LocalDate.of(2026, 10, 15),
+                    current.copy(hoursReference = HoursReference.NotUsed, hoursReferenceStartedOn = null),
+                ),
+            )
+        }
+        // Esperar a que la pantalla vea los datos nuevos (borrador restaurado) antes de tocar Guardar:
+        // un toque durante la recarga no hace nada y la prueba quedaría librada al azar.
+        waitText("El borrador fue restaurado. Al guardar se revalidarán todas las fuentes.")
+        compose.waitForIdle()
+        clickTag("hours-reference-save")
+        waitText("La configuración o la fecha cambió desde la revisión. Revisá nuevamente antes de guardar.")
+        val revisions = history().timeline.revisions
+        assertEquals("Sólo la original y la concurrente", 2, revisions.size)
+        assertTrue(revisions.none { it.effectiveFrom == LocalDate.of(2026, 9, 30) })
+    }
+
+    /** A107: si aparece otro trabajo superpuesto entre la revisión y el guardado, no se guarda a ciegas. */
+    @Test fun independentExtraSaveRevalidatesOccupancyAfterAConcurrentWrite() {
+        val date = F.NIGHT_SHIFT_DATE
+        openDay(date)
+        clickTag("day-other-options")
+        clickTag("register-independent-extra-$date")
+        waitTag("extra-review")
+        click("Sin plantilla")
+        replaceText("extra-start-time", "08:00")
+        replaceText("extra-end-time", "10:00")
+        clickTag("extra-class-${F.HELPING_CLASS_ID}")
+        clickTag("extra-color")
+        clickTag("common-color-rojo")
+        click("Usar color")
+        clickTag("extra-review")
+        waitTag("extra-save")
+        waitText("Duración: 2 h")
+        runBlocking {
+            graph.insertIndependentExtraConcurrently(
+                UUID.nameUUIDFromBytes("stage12-2/concurrent-extra".toByteArray()),
+                F.local(date, LocalTime.of(9, 0)),
+                F.local(date, LocalTime.of(9, 30)),
+            )
+        }
+        assertEquals(2, extras().size)
+        clickTag("extra-save")
+        compose.waitForIdle()
+        Thread.sleep(1_500)
+        assertEquals("No se guarda sin revalidar la nueva superposición", 2, extras().size)
+        // La app conserva el borrador y pide revisar otra vez con los datos nuevos.
+        waitText("Los datos cambiaron. El borrador se conserva para que refresques y revises.")
+        click("Volver a editar")
+        waitTag("extra-start-time")
+        clickTag("extra-review")
+        waitText("Extra independiente: 14 de septiembre de 2026 09:00 – 14 de septiembre de 2026 09:30", substring = true, optional = true)
+        waitText("Hay trabajos activos superpuestos. Confirmo conservarlos y sumar cada uno completo.")
+        click("Hay trabajos activos superpuestos. Confirmo conservarlos y sumar cada uno completo.")
+        clickTag("extra-save")
+        waitFor { extras().size == 3 }
+    }
+
     // ---- navegación ----
 
     private fun openHours() {
