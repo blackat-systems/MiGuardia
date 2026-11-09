@@ -8,6 +8,10 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertTextEquals
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
@@ -60,6 +64,7 @@ import java.time.YearMonth
 import java.time.ZoneId
 import java.util.UUID
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -540,6 +545,31 @@ class V2ShiftEditComposeTest {
                     .assertIsEnabled()
             }
         }
+    }
+
+    @Test
+    fun commonHeaderPutsNavigationOnTheRightAndIgnoresTouchesWhileSaving() {
+        val original = write(uuid(55), position = "Puesto A")
+        var state by mutableStateOf(editorState(original))
+        var backs = 0
+        compose.setContent {
+            AndroidFontScaleTheme {
+                V2ShiftEditSurfaceHost(state, V2ShiftEditActions(back = { backs++ }))
+            }
+        }
+        val inHeader = hasAnyAncestor(hasTestTag("v2-shift-edit-header"))
+        val title = compose.onNode(hasText("Editar jornada") and inHeader).fetchSemanticsNode().boundsInRoot
+        val navigation = compose.onNode(hasText("Volver") and hasClickAction() and inHeader)
+        assertTrue(navigation.fetchSemanticsNode().boundsInRoot.left > title.left)
+        navigation.performClick()
+        compose.runOnIdle {
+            assertEquals(1, backs)
+            state = state.copy(isSaving = true)
+        }
+        // As before stage 13.5: the button keeps its tag and is disabled while saving.
+        compose.onNodeWithTag("v2-shift-edit-back").assertIsNotEnabled()
+        navigation.performClick()
+        compose.runOnIdle { assertEquals(1, backs) }
     }
 
     private fun editorState(original: V2ShiftWrite): V2ShiftEditUiState = V2ShiftEditUiState(

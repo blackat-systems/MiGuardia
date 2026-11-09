@@ -27,7 +27,6 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -41,13 +40,20 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import com.blackatsystems.miguardia.core.domain.report.ReportFormat
 import com.blackatsystems.miguardia.core.domain.report.ReportPrivacySelection
+import com.blackatsystems.miguardia.ui.components.MiGuardiaButtonShape
+import com.blackatsystems.miguardia.ui.components.MiGuardiaSpacing
 import com.blackatsystems.miguardia.ui.components.PersistentMessage
+import com.blackatsystems.miguardia.ui.components.PrimaryAction
+import com.blackatsystems.miguardia.ui.components.SecondaryAction
 import com.blackatsystems.miguardia.ui.components.SectionCard
+import com.blackatsystems.miguardia.ui.components.vigiliaScreenBackground
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -72,7 +78,7 @@ fun ReportsSurfaceHost(
         modifier = Modifier.fillMaxSize().testTag("reports-surface"),
         color = MaterialTheme.colorScheme.background,
     ) {
-        Column(Modifier.fillMaxSize().safeDrawingPadding()) {
+        Column(Modifier.fillMaxSize().vigiliaScreenBackground().safeDrawingPadding()) {
             ReportsHeader(
                 onNavigation = actions.close,
                 modifier = Modifier.testTag("reports-header"),
@@ -82,8 +88,8 @@ fun ReportsSurfaceHost(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
-                    .padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
+                    .padding(MiGuardiaSpacing.large),
+                verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.large),
             ) {
                 Text(
                     "Generá una fotografía privada y de sólo lectura de ${state.month.format(ReportMonthFormatter)}.",
@@ -145,7 +151,7 @@ fun ReportsSurfaceHost(
                         },
                     )
                 }
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(MiGuardiaSpacing.medium))
             }
         }
     }
@@ -160,7 +166,11 @@ fun ReportsSurfaceHost(
                 )
             },
             confirmButton = {
-                Button(onClick = actions.confirmMedicalNotes, modifier = Modifier.testTag("reports-confirm-medical-note")) {
+                Button(
+                    onClick = actions.confirmMedicalNotes,
+                    modifier = Modifier.testTag("reports-confirm-medical-note"),
+                    shape = MiGuardiaButtonShape,
+                ) {
                     Text("Sí, incluirla")
                 }
             },
@@ -171,6 +181,13 @@ fun ReportsSurfaceHost(
     }
 }
 
+/**
+ * Style v2: kept local instead of the shared SurfaceHeader on purpose. When the title and the
+ * action do not fit in one row, this header puts the action *below* the title with an explicit
+ * 48 dp target, and ReportsComposeTest's native geometry diagnostic (320/360/384 dp, every font
+ * scale) requires exactly that order and gap. SurfaceHeader puts the action above the title.
+ * Only its styles are aligned with SurfaceHeader (theme title without a forced weight, heading).
+ */
 @Composable
 private fun ReportsHeader(
     onNavigation: () -> Unit,
@@ -179,11 +196,14 @@ private fun ReportsHeader(
     val measurer = rememberTextMeasurer()
     val density = LocalDensity.current
     val layoutDirection = LocalLayoutDirection.current
-    val titleStyle = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold)
+    val titleStyle = MaterialTheme.typography.titleLarge
     val navigationStyle = MaterialTheme.typography.labelLarge
     val navigationPadding = ButtonDefaults.TextButtonContentPadding
     BoxWithConstraints(modifier.fillMaxWidth()) {
-        val contentModifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
+        val contentModifier = Modifier.fillMaxWidth().padding(
+            horizontal = MiGuardiaSpacing.large,
+            vertical = MiGuardiaSpacing.small,
+        )
         val titleWidth = measurer.measure("Informes locales", style = titleStyle, softWrap = false).size.width
         val navigationTextWidth = measurer.measure("Volver al Resumen", style = navigationStyle, softWrap = false).size.width
         val navigationWidth = with(density) {
@@ -192,16 +212,16 @@ private fun ReportsHeader(
                 navigationPadding.calculateRightPadding(layoutDirection).roundToPx())
         }
         // Measure the native SP styles and the same button padding used below; do not shrink text to fit a row.
-        val fitsInline = titleWidth + navigationWidth + with(density) { 8.dp.roundToPx() } <=
-            constraints.maxWidth - with(density) { 2 * 16.dp.roundToPx() }
+        val fitsInline = titleWidth + navigationWidth + with(density) { MiGuardiaSpacing.small.roundToPx() } <=
+            constraints.maxWidth - with(density) { 2 * MiGuardiaSpacing.large.roundToPx() }
         if (!fitsInline) {
             Column(
                 modifier = contentModifier,
-                verticalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.extraSmall),
             ) {
                 Text(
                     text = "Informes locales",
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().semantics { heading() },
                     style = titleStyle,
                 )
                 TextButton(
@@ -216,11 +236,11 @@ private fun ReportsHeader(
             Row(
                 modifier = contentModifier,
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small),
             ) {
                 Text(
                     text = "Informes locales",
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).semantics { heading() },
                     style = titleStyle,
                 )
                 TextButton(
@@ -246,43 +266,41 @@ private fun ReportContent(
     ReviewSection(state)
     if (state.stage == ReportsStage.READY && artifact != null) {
         SectionCard("Archivo listo", modifier = Modifier.testTag("reports-ready")) {
-            Text(artifact.suggestedFileName, fontWeight = FontWeight.SemiBold)
-            Text("${artifact.byteSize} bytes · ${artifact.format.mimeType}")
-            Button(
+            Text(artifact.suggestedFileName, style = MaterialTheme.typography.titleSmall)
+            Text(
+                "${artifact.byteSize} bytes · ${artifact.format.mimeType}",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            PrimaryAction(
+                label = "Guardar informe",
                 onClick = onSaveRequested,
-                modifier = Modifier.fillMaxWidth().testTag("reports-save"),
-            ) {
-                Text("Guardar informe")
-            }
-            OutlinedButton(
+                modifier = Modifier.testTag("reports-save"),
+            )
+            SecondaryAction(
+                label = "Compartir",
                 onClick = onShareRequested,
                 modifier = Modifier.fillMaxWidth().testTag("reports-share"),
-            ) {
-                Text("Compartir")
-            }
-            OutlinedButton(
+            )
+            SecondaryAction(
+                label = "Regenerar desde los datos actuales",
                 onClick = actions.regenerate,
                 modifier = Modifier.fillMaxWidth().testTag("reports-regenerate"),
-            ) {
-                Text("Regenerar desde los datos actuales")
-            }
+            )
         }
     } else if (state.stage != ReportsStage.ERROR || state.projection != null) {
-        Button(
+        PrimaryAction(
+            label = "Generar archivo",
             onClick = actions.generate,
             enabled = state.projection != null && !state.isBusy,
-            modifier = Modifier.fillMaxWidth().testTag("reports-generate"),
-        ) {
-            Text("Generar archivo")
-        }
+            modifier = Modifier.testTag("reports-generate"),
+        )
     }
-    OutlinedButton(
+    SecondaryAction(
+        label = "Volver al Resumen",
         onClick = actions.close,
         enabled = !state.isBusy,
         modifier = Modifier.fillMaxWidth().testTag("reports-back-summary"),
-    ) {
-        Text("Volver al Resumen")
-    }
+    )
 }
 
 @Composable
@@ -329,7 +347,7 @@ private fun FormatChoice(
             enabled = !state.isBusy,
             modifier = Modifier.testTag("reports-format-${format.name.lowercase()}-radio"),
         )
-        Text(label, fontWeight = FontWeight.SemiBold)
+        Text(label, style = MaterialTheme.typography.titleSmall)
     }
 }
 
@@ -385,7 +403,7 @@ private fun PrivacySection(state: ReportsUiState, actions: ReportsActions) {
                 )
                 Text(
                     "Seleccionadas: ${state.privacy.selectedPhotoIds.size} de ${ReportPrivacySelection.MAX_REPORT_PHOTOS}",
-                    fontWeight = FontWeight.SemiBold,
+                    style = MaterialTheme.typography.titleSmall,
                 )
                 state.availablePhotos.forEachIndexed { index, photo ->
                     val enabled = !state.isBusy && (photo.available || photo.selected)
@@ -456,14 +474,14 @@ private fun PrivacySwitch(
             )
         }
         if (maxWidth < 240.dp) {
-            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.medium)) {
                 labelContent(Modifier.fillMaxWidth())
                 switchContent(Modifier.align(Alignment.End))
             }
         } else {
             Row(
                 Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.medium),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 labelContent(Modifier.weight(1f))
@@ -471,7 +489,9 @@ private fun PrivacySwitch(
             }
         }
     }
-    unavailableText?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+    unavailableText?.let {
+        Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
 }
 
 @Composable
@@ -485,7 +505,7 @@ private fun ReviewSection(state: ReportsUiState) {
             Text("La vista previa todavía no está disponible.")
             return@SectionCard
         }
-        Text(projection.statusText, fontWeight = FontWeight.SemiBold)
+        Text(projection.statusText, style = MaterialTheme.typography.titleSmall)
         Text(if (projection.hasActivity) "Actividad registrada" else "Sin actividad registrada")
         Text("Rubros: ${projection.sectors.joinToString { it.displayName }.ifBlank { "sin actividad laboral" }}")
         val total = projection.summary.essentials.totalWorked?.value ?: 0L
@@ -499,6 +519,7 @@ private fun ReviewSection(state: ReportsUiState) {
             "Siempre quedan afuera direcciones, IDs, rutas, EXIF, explicaciones internas y montos. " +
                 "Las notas privadas y las fotos sólo se incluyen si las elegiste.",
             style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
@@ -509,13 +530,13 @@ private fun BusyState(message: String, tag: String) {
         modifier = Modifier.fillMaxWidth().testTag(tag),
     ) {
         if (maxWidth < 240.dp) {
-            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp),
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.medium),
                 horizontalAlignment = Alignment.CenterHorizontally) {
                 CircularProgressIndicator()
                 Text(message, style = MaterialTheme.typography.bodyMedium)
             }
         } else {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp),
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.medium),
                 verticalAlignment = Alignment.CenterVertically) {
                 CircularProgressIndicator()
                 Text(message, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)

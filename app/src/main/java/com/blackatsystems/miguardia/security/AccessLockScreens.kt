@@ -15,7 +15,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -30,11 +29,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.blackatsystems.miguardia.R
+import com.blackatsystems.miguardia.ui.components.MiGuardiaButtonShape
+import com.blackatsystems.miguardia.ui.components.MiGuardiaSpacing
 import com.blackatsystems.miguardia.ui.components.ScreenHeading
+import com.blackatsystems.miguardia.ui.components.SecondaryAction
 import com.blackatsystems.miguardia.ui.components.SectionCard
+import com.blackatsystems.miguardia.ui.components.vigiliaScreenBackground
 import androidx.compose.ui.res.stringResource
 
 @Composable
@@ -85,18 +90,18 @@ internal fun AccessLockGate(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .vigiliaScreenBackground()
                 .verticalScroll(rememberScrollState())
-                .padding(24.dp)
+                .padding(MiGuardiaSpacing.large)
                 .testTag("access-lock-gate"),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
                 text = stringResource(R.string.app_name),
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.headlineSmall,
             )
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(MiGuardiaSpacing.extraLarge))
             when (state.phase) {
                 AccessLockPhase.WAITING_FOR_RECOVERY,
                 AccessLockPhase.LOADING,
@@ -104,32 +109,36 @@ internal fun AccessLockGate(
                     CircularProgressIndicator(modifier = Modifier.testTag("access-lock-loading"))
                     Text(
                         text = stringResource(R.string.access_lock_protecting),
-                        modifier = Modifier.padding(top = 16.dp),
+                        modifier = Modifier.padding(top = MiGuardiaSpacing.large),
                     )
                 }
 
                 AccessLockPhase.STORE_ERROR -> {
                     Text(
                         text = stringResource(R.string.access_lock_store_error_title),
+                        modifier = Modifier.semantics { heading() },
                         style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
                     )
                     Text(
                         text = stringResource(R.string.access_lock_store_error_body),
-                        modifier = Modifier.padding(top = 12.dp),
+                        modifier = Modifier.padding(top = MiGuardiaSpacing.medium),
                     )
                     AccessLockMessage(state.message)
                     Button(
                         onClick = onRetryStore,
                         enabled = !state.authenticationInProgress && !state.persistenceInProgress,
-                        modifier = Modifier.fillMaxWidth().padding(top = 20.dp).testTag("access-lock-retry-store"),
+                        shape = MiGuardiaButtonShape,
+                        modifier = Modifier.fillMaxWidth().padding(top = MiGuardiaSpacing.extraLarge)
+                            .testTag("access-lock-retry-store"),
                     ) { Text(stringResource(R.string.retry)) }
-                    OutlinedButton(
+                    SecondaryAction(
+                        label = stringResource(R.string.access_lock_repair),
                         onClick = onRepairStore,
                         enabled = !state.authenticationInProgress && !state.persistenceInProgress &&
                             capability == DeviceAuthenticationCapability.AVAILABLE,
-                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp).testTag("access-lock-repair-store"),
-                    ) { Text(stringResource(R.string.access_lock_repair)) }
+                        modifier = Modifier.fillMaxWidth().padding(top = MiGuardiaSpacing.small)
+                            .testTag("access-lock-repair-store"),
+                    )
                     DeviceCapabilityMessage(capability, onRetryDeviceSecurity, onOpenDeviceSecurity)
                 }
 
@@ -138,24 +147,26 @@ internal fun AccessLockGate(
                         CircularProgressIndicator(modifier = Modifier.testTag("access-lock-privacy-cover"))
                         Text(
                             text = stringResource(R.string.access_lock_protecting),
-                            modifier = Modifier.padding(top = 16.dp),
+                            modifier = Modifier.padding(top = MiGuardiaSpacing.large),
                         )
                     } else {
                         Text(
                             text = stringResource(R.string.access_lock_gate_title),
+                            modifier = Modifier.semantics { heading() },
                             style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
                         )
                         Text(
                             text = stringResource(R.string.access_lock_gate_body),
-                            modifier = Modifier.padding(top = 12.dp),
+                            modifier = Modifier.padding(top = MiGuardiaSpacing.medium),
                         )
                         AccessLockMessage(state.message)
                         Button(
                             onClick = onUnlock,
                             enabled = !state.authenticationInProgress &&
                                 capability == DeviceAuthenticationCapability.AVAILABLE,
-                            modifier = Modifier.fillMaxWidth().padding(top = 20.dp).testTag("access-lock-unlock"),
+                            shape = MiGuardiaButtonShape,
+                            modifier = Modifier.fillMaxWidth().padding(top = MiGuardiaSpacing.extraLarge)
+                                .testTag("access-lock-unlock"),
                         ) {
                             if (state.authenticationInProgress) {
                                 CircularProgressIndicator(
@@ -202,9 +213,9 @@ internal fun AccessLockSettingsScreen(
             .fillMaxSize()
             .padding(contentPadding)
             .verticalScroll(rememberScrollState())
-            .padding(20.dp)
+            .padding(MiGuardiaSpacing.large)
             .testTag("access-lock-settings"),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.large),
     ) {
         ScreenHeading(
             title = stringResource(R.string.access_lock),
@@ -228,6 +239,7 @@ internal fun AccessLockSettingsScreen(
                     if (configuration.enabled) onDisable() else onActivate(disabledDraft)
                 },
                 enabled = !busy && capability == DeviceAuthenticationCapability.AVAILABLE,
+                shape = MiGuardiaButtonShape,
                 modifier = Modifier.fillMaxWidth().testTag("access-lock-enabled-control"),
             ) {
                 Text(
@@ -236,11 +248,12 @@ internal fun AccessLockSettingsScreen(
                 )
             }
             if (configuration.enabled) {
-                OutlinedButton(
+                SecondaryAction(
+                    label = stringResource(R.string.access_lock_now),
                     onClick = onLockNow,
                     enabled = !busy,
                     modifier = Modifier.fillMaxWidth().testTag("access-lock-now"),
-                ) { Text(stringResource(R.string.access_lock_now)) }
+                )
             }
         }
         SectionCard(stringResource(R.string.access_lock_timeout_title)) {
@@ -264,7 +277,7 @@ internal fun AccessLockSettingsScreen(
                 fontWeight = FontWeight.SemiBold,
             )
         }
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(MiGuardiaSpacing.large))
     }
 }
 
@@ -284,12 +297,12 @@ private fun AccessLockTimeoutChoice(
                 role = Role.RadioButton,
                 onClick = onClick,
             )
-            .padding(vertical = 8.dp)
+            .padding(vertical = MiGuardiaSpacing.small)
             .testTag("access-lock-timeout-${timeout.name.lowercase()}"),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         RadioButton(selected = selected, onClick = null, enabled = enabled)
-        Text(timeout.label(), modifier = Modifier.padding(start = 10.dp))
+        Text(timeout.label(), modifier = Modifier.padding(start = MiGuardiaSpacing.medium))
     }
 }
 
@@ -323,14 +336,16 @@ private fun DeviceCapabilityMessage(
         modifier = Modifier.testTag("access-lock-device-capability"),
     )
     if (capability != DeviceAuthenticationCapability.AVAILABLE) {
-        OutlinedButton(
+        SecondaryAction(
+            label = stringResource(R.string.access_lock_retry_security),
             onClick = onRetryDeviceSecurity,
             modifier = Modifier.fillMaxWidth().testTag("access-lock-retry-device-security"),
-        ) { Text(stringResource(R.string.access_lock_retry_security)) }
-        OutlinedButton(
+        )
+        SecondaryAction(
+            label = stringResource(R.string.access_lock_open_security),
             onClick = onOpenDeviceSecurity,
             modifier = Modifier.fillMaxWidth().testTag("access-lock-open-device-security"),
-        ) { Text(stringResource(R.string.access_lock_open_security)) }
+        )
     }
 }
 
@@ -354,6 +369,6 @@ private fun AccessLockMessage(message: AccessLockMessage?) {
         text = text,
         color = MaterialTheme.colorScheme.error,
         fontWeight = FontWeight.SemiBold,
-        modifier = Modifier.padding(top = 8.dp).testTag("access-lock-message"),
+        modifier = Modifier.padding(top = MiGuardiaSpacing.small).testTag("access-lock-message"),
     )
 }

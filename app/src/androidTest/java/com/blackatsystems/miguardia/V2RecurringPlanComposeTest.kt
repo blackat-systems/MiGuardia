@@ -1,6 +1,7 @@
 package com.blackatsystems.miguardia
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -37,6 +38,8 @@ import com.blackatsystems.miguardia.core.domain.work.WorkPlace
 import com.blackatsystems.miguardia.core.domain.work.WorkSector
 import com.blackatsystems.miguardia.core.domain.work.WorkTemplate
 import com.blackatsystems.miguardia.core.domain.work.WorkType
+import com.blackatsystems.miguardia.ui.components.PICKER_CANCEL_TAG
+import com.blackatsystems.miguardia.ui.components.PICKER_CONFIRM_TAG
 import com.blackatsystems.miguardia.ui.management.V2RecurringActions
 import com.blackatsystems.miguardia.ui.management.V2RecurringMode
 import com.blackatsystems.miguardia.ui.management.V2RecurringPatternKind
@@ -305,6 +308,106 @@ class V2RecurringPlanComposeTest {
                 }
             }
         }
+    }
+
+    @Test
+    fun dateCalendarsGiveTheSameTextAsTypingCancelChangesNothingAndNeverReview() {
+        var state by mutableStateOf(formState().copy(startDateText = "", endDateText = ""))
+        var reviews = 0
+        var saves = 0
+        compose.setContent {
+            AndroidFontScaleTheme {
+                Box(Modifier.size(width = 820.dp, height = 460.dp)) {
+                    V2RecurringPlanSurfaceHost(
+                        state = state,
+                        actions = V2RecurringActions(
+                            updateStartDate = { state = state.copy(startDateText = it) },
+                            updateEndDate = { state = state.copy(endDateText = it) },
+                            review = { reviews++ },
+                            save = { saves++ },
+                        ),
+                    )
+                }
+            }
+        }
+
+        compose.onNodeWithTag("v2-recurring-start-date").performScrollTo().performTextInput("02092026")
+        compose.runOnIdle { assertEquals("02/09/2026", state.startDateText) }
+        compose.onNodeWithTag("v2-recurring-start-date-picker").performScrollTo().performClick()
+        compose.onNodeWithTag(PICKER_CONFIRM_TAG).performClick()
+        compose.runOnIdle { assertEquals("02/09/2026", state.startDateText) }
+
+        compose.onNodeWithTag("v2-recurring-end-date").performScrollTo().performTextInput("03102026")
+        compose.onNodeWithTag("v2-recurring-end-date-picker").performScrollTo().performClick()
+        compose.onNodeWithTag(PICKER_CANCEL_TAG).performClick()
+        compose.runOnIdle { assertEquals("03/10/2026", state.endDateText) }
+        compose.onNodeWithTag("v2-recurring-end-date-picker").performScrollTo().performClick()
+        compose.onNodeWithTag(PICKER_CONFIRM_TAG).performClick()
+        compose.onNodeWithTag("v2-recurring-end-date").assertTextContains("03/10/2026")
+        compose.runOnIdle {
+            assertEquals("02/09/2026", state.startDateText)
+            assertEquals("03/10/2026", state.endDateText)
+            // The calendar never reviews or saves on its own.
+            assertEquals(0, reviews)
+            assertEquals(0, saves)
+            assertEquals(V2RecurringStage.FORM, state.stage)
+        }
+    }
+
+    @Test
+    fun emptyDateCalendarStartsOnTodayAndWritesDayMonthYearOnlyAfterConfirming() {
+        var state by mutableStateOf(formState().copy(endDateText = ""))
+        compose.setContent {
+            AndroidFontScaleTheme {
+                Box(Modifier.size(width = 820.dp, height = 460.dp)) {
+                    V2RecurringPlanSurfaceHost(
+                        state,
+                        V2RecurringActions(updateEndDate = { state = state.copy(endDateText = it) }),
+                    )
+                }
+            }
+        }
+        compose.onNodeWithTag("v2-recurring-end-date-picker").performScrollTo().performClick()
+        compose.onNodeWithTag(PICKER_CANCEL_TAG).performClick()
+        compose.runOnIdle { assertEquals("", state.endDateText) }
+        compose.onNodeWithTag("v2-recurring-end-date-picker").performScrollTo().performClick()
+        compose.onNodeWithTag(PICKER_CONFIRM_TAG).performClick()
+        // referenceDate is the screen's today: 23/08/2026, same text typing "23082026" gives.
+        compose.runOnIdle { assertEquals("23/08/2026", state.endDateText) }
+    }
+
+    @Test
+    fun fixedCutDateDisablesTheStartCalendarButKeepsTheEndCalendar() {
+        setSurface(
+            formState().copy(
+                mode = V2RecurringMode.CHANGE,
+                cutDate = START,
+                startDateText = "23/08/2026",
+            ),
+        )
+        compose.onNodeWithTag("v2-recurring-start-date").performScrollTo().assertIsNotEnabled()
+        compose.onNodeWithTag("v2-recurring-start-date-picker").performScrollTo().assertIsNotEnabled()
+        compose.onNodeWithTag("v2-recurring-end-date-picker").performScrollTo().assertIsEnabled()
+    }
+
+    @Test
+    fun dateCalendarStaysUsableAtTwoHundredPercentInAPhoneSizedBox() {
+        var state by mutableStateOf(formState())
+        compose.setContent {
+            AndroidFontScaleTheme(darkTheme = false, fontScale = TestFontScale.EXTRA_LARGE) {
+                Box(Modifier.requiredSize(width = 360.dp, height = 800.dp)) {
+                    V2RecurringPlanSurfaceHost(
+                        state,
+                        V2RecurringActions(updateEndDate = { state = state.copy(endDateText = it) }),
+                    )
+                }
+            }
+        }
+        compose.onNodeWithTag("v2-recurring-end-date-picker").performScrollTo().assertIsDisplayed().performClick()
+        compose.onNodeWithTag(PICKER_CANCEL_TAG).assertIsDisplayed().performClick()
+        compose.onNodeWithTag("v2-recurring-end-date-picker").performScrollTo().performClick()
+        compose.onNodeWithTag(PICKER_CONFIRM_TAG).assertIsDisplayed().performClick()
+        compose.runOnIdle { assertEquals("23/09/2026", state.endDateText) }
     }
 
     private fun setSurface(

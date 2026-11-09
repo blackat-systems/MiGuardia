@@ -1,8 +1,11 @@
 package com.blackatsystems.miguardia
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -13,7 +16,9 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
+import androidx.compose.ui.unit.dp
 import com.blackatsystems.miguardia.core.domain.model.Shift
 import com.blackatsystems.miguardia.core.domain.model.ShiftActualClassSelection
 import com.blackatsystems.miguardia.core.domain.model.ShiftActualDifferenceChoice
@@ -27,7 +32,10 @@ import com.blackatsystems.miguardia.core.domain.model.buildShiftActualSaveMutati
 import com.blackatsystems.miguardia.core.domain.work.ExtraWorkClass
 import com.blackatsystems.miguardia.core.domain.work.WorkSector
 import com.blackatsystems.miguardia.core.domain.work.WorkTypeBehavior
+import com.blackatsystems.miguardia.ui.components.PICKER_CANCEL_TAG
+import com.blackatsystems.miguardia.ui.components.PICKER_CONFIRM_TAG
 import com.blackatsystems.miguardia.ui.management.V2ActualEditorDraft
+import com.blackatsystems.miguardia.ui.management.V2ActualFragmentInput
 import com.blackatsystems.miguardia.ui.management.V2ExtraClassEditorState
 import com.blackatsystems.miguardia.ui.management.V2ShiftActualActions
 import com.blackatsystems.miguardia.ui.management.V2ShiftActualDetailCard
@@ -484,6 +492,220 @@ class V2ShiftActualComposeTest {
         }
         compose.onNodeWithTag("v2-actual-classes-loading").performScrollTo().assertIsDisplayed()
     }
+
+    @Test
+    fun actualTimePickersGiveTheSameTextAsTypingAndCancelChangesNothing() {
+        var state by mutableStateOf(
+            editorState(
+                V2ActualEditorDraft(startDate = "", startTime = "", endDate = DATE.toString(), endTime = ""),
+            ),
+        )
+        var nexts = 0
+        var saves = 0
+        compose.setContent {
+            AndroidFontScaleTheme {
+                V2ShiftActualSurfaceHost(
+                    state,
+                    V2ShiftActualActions(
+                        updateDraft = { transform ->
+                            state = state.copy(editor = state.editor?.let { it.copy(draft = transform(it.draft)) })
+                        },
+                        next = { nexts++ },
+                        save = { saves++ },
+                    ),
+                )
+            }
+        }
+        fun draft() = requireNotNull(state.editor).draft
+
+        // Empty date: cancelling keeps it empty; Aceptar writes the owner date as typed text.
+        compose.onNodeWithTag("v2-actual-start-date-picker").performScrollTo().performClick()
+        compose.onNodeWithTag(PICKER_CANCEL_TAG).performClick()
+        compose.runOnIdle { assertEquals("", draft().startDate) }
+        compose.onNodeWithTag("v2-actual-start-date-picker").performClick()
+        compose.onNodeWithTag(PICKER_CONFIRM_TAG).performClick()
+        compose.runOnIdle { assertEquals(DATE.toString(), draft().startDate) }
+
+        // Lower limit typed, then confirmed in the clock: same text.
+        compose.onNodeWithTag("v2-actual-start-time").performScrollTo().performTextInput("0000")
+        compose.runOnIdle { assertEquals("00:00", draft().startTime) }
+        compose.onNodeWithTag("v2-actual-start-time-picker").performClick()
+        compose.onNodeWithTag(PICKER_CONFIRM_TAG).performClick()
+        compose.runOnIdle { assertEquals("00:00", draft().startTime) }
+
+        // Upper limit typed; cancelling the clock keeps it, confirming writes the same text.
+        compose.onNodeWithTag("v2-actual-end-time").performScrollTo().performTextInput("2359")
+        compose.runOnIdle { assertEquals("23:59", draft().endTime) }
+        compose.onNodeWithTag("v2-actual-end-time-picker").performClick()
+        compose.onNodeWithTag(PICKER_CANCEL_TAG).performClick()
+        compose.runOnIdle { assertEquals("23:59", draft().endTime) }
+        compose.onNodeWithTag("v2-actual-end-time-picker").performClick()
+        compose.onNodeWithTag(PICKER_CONFIRM_TAG).performClick()
+        compose.runOnIdle { assertEquals("23:59", draft().endTime) }
+
+        // Crossing midnight: the calendar opens on the typed next day and writes the same text.
+        val nextDay = DATE.plusDays(1).toString()
+        compose.onNodeWithTag("v2-actual-end-date").performScrollTo().performTextReplacement(nextDay)
+        compose.onNodeWithTag("v2-actual-end-date-picker").performClick()
+        compose.onNodeWithTag(PICKER_CANCEL_TAG).performClick()
+        compose.runOnIdle { assertEquals(nextDay, draft().endDate) }
+        compose.onNodeWithTag("v2-actual-end-date-picker").performClick()
+        compose.onNodeWithTag(PICKER_CONFIRM_TAG).performClick()
+        compose.runOnIdle {
+            assertEquals(DATE.toString(), draft().startDate)
+            assertEquals("00:00", draft().startTime)
+            assertEquals(nextDay, draft().endDate)
+            assertEquals("23:59", draft().endTime)
+            // Pickers never continue, review or save on their own.
+            assertEquals(0, nexts)
+            assertEquals(0, saves)
+            assertEquals(V2ShiftActualStage.ACTUAL_TIME, state.editor?.stage)
+            assertEquals(V2ShiftActualSurface.EDITOR, state.surface)
+        }
+    }
+
+    @Test
+    fun fragmentPickersWriteOnlyTheirOwnDraftAndCrossMidnight() {
+        val fragment = V2ActualFragmentInput(
+            id = FRAGMENT_ONE,
+            startDate = DATE.toString(),
+            startTime = "",
+            endDate = "",
+            endTime = "",
+        )
+        var state by mutableStateOf(
+            editorState(
+                V2ActualEditorDraft(
+                    startDate = DATE.toString(),
+                    startTime = "08:00",
+                    endDate = DATE.plusDays(1).toString(),
+                    endTime = "00:30",
+                    choice = ShiftActualDifferenceChoice.EXTRA_CLASS,
+                    fragments = listOf(fragment),
+                ),
+                stage = V2ShiftActualStage.CLASSIFICATION,
+            ),
+        )
+        var nexts = 0
+        var saves = 0
+        compose.setContent {
+            AndroidFontScaleTheme {
+                V2ShiftActualSurfaceHost(
+                    state,
+                    V2ShiftActualActions(
+                        updateDraft = { transform ->
+                            state = state.copy(editor = state.editor?.let { it.copy(draft = transform(it.draft)) })
+                        },
+                        updateFragment = { id, transform ->
+                            state = state.copy(
+                                editor = state.editor?.let { editor ->
+                                    editor.copy(
+                                        draft = editor.draft.copy(
+                                            fragments = editor.draft.fragments.map { if (it.id == id) transform(it) else it },
+                                        ),
+                                    )
+                                },
+                            )
+                        },
+                        next = { nexts++ },
+                        save = { saves++ },
+                    ),
+                )
+            }
+        }
+        val tag = "v2-actual-fragment-$FRAGMENT_ONE"
+        fun fragmentDraft() = requireNotNull(state.editor).draft.fragments.single()
+
+        compose.onNodeWithTag("$tag-start-time").performScrollTo().performTextInput("2359")
+        compose.onNodeWithTag("$tag-start-time-picker").performClick()
+        compose.onNodeWithTag(PICKER_CONFIRM_TAG).performClick()
+        compose.runOnIdle { assertEquals("23:59", fragmentDraft().startTime) }
+
+        // The empty end date opens on the fragment's start date; cancel writes nothing.
+        compose.onNodeWithTag("$tag-end-date-picker").performScrollTo().performClick()
+        compose.onNodeWithTag(PICKER_CANCEL_TAG).performClick()
+        compose.runOnIdle { assertEquals("", fragmentDraft().endDate) }
+        compose.onNodeWithTag("$tag-end-date-picker").performClick()
+        compose.onNodeWithTag(PICKER_CONFIRM_TAG).performClick()
+        compose.runOnIdle { assertEquals(DATE.toString(), fragmentDraft().endDate) }
+
+        // Next day typed and kept by the calendar; 00:00 typed and kept by the clock.
+        val nextDay = DATE.plusDays(1).toString()
+        compose.onNodeWithTag("$tag-end-date").performScrollTo().performTextReplacement(nextDay)
+        compose.onNodeWithTag("$tag-end-date-picker").performClick()
+        compose.onNodeWithTag(PICKER_CONFIRM_TAG).performClick()
+        compose.onNodeWithTag("$tag-end-time").performScrollTo().performTextInput("0000")
+        compose.onNodeWithTag("$tag-end-time-picker").performClick()
+        compose.onNodeWithTag(PICKER_CANCEL_TAG).performClick()
+        compose.runOnIdle { assertEquals("00:00", fragmentDraft().endTime) }
+        compose.onNodeWithTag("$tag-end-time-picker").performClick()
+        compose.onNodeWithTag(PICKER_CONFIRM_TAG).performClick()
+        compose.runOnIdle {
+            assertEquals(fragment.copy(startTime = "23:59", endDate = nextDay, endTime = "00:00"), fragmentDraft())
+            // The actual interval of the journey is untouched by the fragment pickers.
+            assertEquals("08:00", state.editor?.draft?.startTime)
+            assertEquals("00:30", state.editor?.draft?.endTime)
+            assertEquals(0, nexts)
+            assertEquals(0, saves)
+            assertEquals(V2ShiftActualStage.CLASSIFICATION, state.editor?.stage)
+        }
+    }
+
+    @Test
+    fun largeFontKeepsEveryActualTimePickerReachableAndOpen() {
+        val initial = V2ActualEditorDraft(
+            startDate = DATE.toString(),
+            startTime = "22:00",
+            endDate = DATE.plusDays(1).toString(),
+            endTime = "06:00",
+        )
+        var state by mutableStateOf(editorState(initial))
+        var nexts = 0
+        compose.setContent {
+            AndroidFontScaleTheme(darkTheme = false, fontScale = TestFontScale.EXTRA_LARGE) {
+                Box(Modifier.requiredSize(width = 360.dp, height = 800.dp)) {
+                    V2ShiftActualSurfaceHost(
+                        state,
+                        V2ShiftActualActions(
+                            updateDraft = { transform ->
+                                state = state.copy(editor = state.editor?.let { it.copy(draft = transform(it.draft)) })
+                            },
+                            next = { nexts++ },
+                        ),
+                    )
+                }
+            }
+        }
+
+        listOf(
+            "v2-actual-start-date-picker",
+            "v2-actual-start-time-picker",
+            "v2-actual-end-date-picker",
+            "v2-actual-end-time-picker",
+        ).forEach { picker ->
+            compose.onNodeWithTag(picker).performScrollTo().assertIsDisplayed().performClick()
+            compose.onNodeWithTag(PICKER_CANCEL_TAG).assertIsDisplayed().performClick()
+        }
+        compose.runOnIdle {
+            assertEquals(initial, state.editor?.draft)
+            assertEquals(0, nexts)
+        }
+    }
+
+    private fun editorState(
+        draft: V2ActualEditorDraft,
+        stage: V2ShiftActualStage = V2ShiftActualStage.ACTUAL_TIME,
+    ) = V2ShiftActualUiState(
+        surface = V2ShiftActualSurface.EDITOR,
+        editor = V2ShiftActualEditorState(
+            expectation = expectation(),
+            ordinal = 1,
+            count = 1,
+            ownerDate = DATE,
+            stage = stage,
+            draft = draft,
+        ),
+    )
 
     private fun expectation(): ShiftActualExpectation = ShiftActualExpectation(
         planned = write(),

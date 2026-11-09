@@ -25,6 +25,10 @@ import com.blackatsystems.miguardia.ui.photos.NoteImageSelection
 import com.blackatsystems.miguardia.ui.photos.PrivateNoteImageDialog
 import com.blackatsystems.miguardia.ui.photos.SchedulePhotoFileStore
 import com.blackatsystems.miguardia.ui.theme.vigiliaColors
+import com.blackatsystems.miguardia.ui.components.DestructiveAction
+import com.blackatsystems.miguardia.ui.components.MiGuardiaButtonShape
+import com.blackatsystems.miguardia.ui.components.PrimaryAction
+import androidx.compose.ui.text.font.FontWeight
 import java.time.format.DateTimeFormatter
 import java.text.Collator
 import java.util.Locale
@@ -53,7 +57,12 @@ internal fun UnifiedTemplateSelectionStep(
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia(NoteImageSelection.MAX_IMAGES)) {
         actions.importNoteImages(it)
     }
-    Text("Cargando jornada para los días:", style = MaterialTheme.typography.titleLarge)
+    // Same step-title size as "Elegí uno o varios días" and the review (style v2).
+    Text(
+        "Cargando jornada para los días:",
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.SemiBold,
+    )
     Column(Modifier.fillMaxWidth()) {
             Text(if (datesExpanded && dates.size > 3) fullDates.joinToString("\n") else dates.take(3).joinToString(" - "),
                 modifier = Modifier.testTag("v2-manual-exact-dates").semantics {
@@ -65,7 +74,7 @@ internal fun UnifiedTemplateSelectionStep(
                 Text(if (datesExpanded) "Mostrar menos" else "Mostrar todos")
             }
     }
-    OutlinedButton(onClick = { catalogOpen = !catalogOpen }, enabled = enabled,
+    OutlinedButton(onClick = { catalogOpen = !catalogOpen }, enabled = enabled, shape = MiGuardiaButtonShape,
         modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("manual-institutions").semantics {
             stateDescription = if (catalogOpen) "Instituciones desplegadas" else "Instituciones contraídas"
         }) {
@@ -87,6 +96,7 @@ internal fun UnifiedTemplateSelectionStep(
                 val options = state.templateOptions.filter { it.workPlace.id == place.place.id }
                 val expanded = placeId == place.place.id.toString()
                 OutlinedButton(onClick = { placeId = place.place.id.toString() }, enabled = enabled,
+                    shape = MiGuardiaButtonShape,
                     border = BorderStroke(1.dp, if (expanded) MaterialTheme.vigiliaColors.active else MaterialTheme.colorScheme.outline),
                     colors = ButtonDefaults.outlinedButtonColors(
                         containerColor = if (expanded) MaterialTheme.vigiliaColors.selection else Color.Transparent,
@@ -120,6 +130,7 @@ internal fun UnifiedTemplateSelectionStep(
             modifier = Modifier.testTag("v2-manual-create-template")) { Text("Agregar horario") }
     }
     OutlinedButton(onClick = { actions.requestDayOff(state.selectedDates, true) }, enabled = enabled,
+        shape = MiGuardiaButtonShape,
         modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("v2-mark-day-off")) {
         Text("Marcar como franco")
     }
@@ -173,17 +184,21 @@ internal fun UnifiedTemplateSelectionStep(
                 "${state.noteAttachments.size} ${if (state.noteAttachments.size == 1) "imagen adjunta" else "imágenes adjuntas"}")
         }
     }
-    Button(onClick = actions.requestSave, enabled = enabled && state.selectedOption != null,
-        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("v2-manual-save-direct")) {
-        Text(if (singular) "Guardar jornada" else "Guardar jornadas")
-    }
+    PrimaryAction(
+        label = if (singular) "Guardar jornada" else "Guardar jornadas",
+        onClick = actions.requestSave,
+        enabled = enabled && state.selectedOption != null,
+        modifier = Modifier.testTag("v2-manual-save-direct"),
+    )
     TextButton(actions.requestReview, enabled = enabled && state.selectedOption != null,
         modifier = Modifier.testTag("v2-manual-review")) { Text("Ver fechas y detalles") }
-    TextButton(onClick = actions.requestClear, enabled = enabled,
-        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
-        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("manual-clear-days")) {
-        Text(if (singular) "Limpiar día" else "Limpiar días")
-    }
+    // Clearing only opens its own review dialog; the tonal red marks it as destructive.
+    DestructiveAction(
+        label = if (singular) "Limpiar día" else "Limpiar días",
+        onClick = actions.requestClear,
+        enabled = enabled,
+        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("manual-clear-days"),
+    )
     TextButton(actions.cancel, enabled = !state.isSaving && !state.isLoading,
         modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("manual-cancel-load")) { Text("Cancelar carga") }
     viewingImage?.let { key -> PrivateNoteImageDialog(key, draftImages, onDismiss = { viewingImage = null }) }

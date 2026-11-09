@@ -19,6 +19,44 @@
 - Base: `636e4ae`, subido a `origin/codex/miguardia-3.0` el 8/11 con pedido de Joaquín
 - Actualización: 2026-11-08
 
+## Etapa 13.5 · resto de pantallas y selectores (9/11/2026)
+
+**Hecho, sin teléfono todavía:**
+
+- **Quién lo hizo:** 6 ayudantes, cada uno con archivos propios y el contrato
+  `docs/design/ETAPA_13_5_CONTRATO_AYUDANTES.md`.
+  - Pantallas: Horas; Horario real y Editar jornada; Mi forma de trabajar y Repetir jornadas;
+    Detalle del día, diálogos del Calendario y Carga manual; Feriados, Vacaciones, Fotos, Resumen
+    e Informes; Copias, Bloqueo, Apariencia, Ayuda, Actualizaciones y diálogos de
+    Avisos/Clima/Widget.
+  - Ninguno corrió Gradle ni usó el teléfono. MAIN integró, compiló y revisó.
+- **Selectores:** los 22 campos del inventario tienen selector, conservando la escritura.
+  - Vacaciones ya tenía calendario: ahora usa es-AR (semana desde el lunes) y, con la fecha
+    vacía, sigue exigiendo elegir un día.
+- **Encabezado común:** `SurfaceHeader` acepta `navigationEnabled` y `navigationTestTag`. Con eso,
+  Editar jornada recupera `v2-shift-edit-back` y el botón deshabilitado mientras guarda, y Repetir
+  jornadas también lo deshabilita mientras carga o guarda. `MonthNavigator` acepta etiquetas de
+  prueba.
+- **Pruebas:** `Stage12CalendarExceptionsTest.chooseVacationDate` ahora escribe la fecha en orden
+  es-AR. `Stage135Selectors` queda regenerado: 34 pruebas propias más 258 de regresión de pantalla,
+  todas con datos ficticios. Quedan fuera las que escriben en los datos de la app QA
+  (`Stage4CalendarMatrixTest` y `ReportsComposeTest#surfaceRemainsReachable…`). Como el ejecutor
+  acepta hasta 256 por corrida, hay que correrlas en dos tandas.
+- **Revisión independiente del diff:** ningún defecto grave. Se corrigió uno medio: el calendario
+  de Vacaciones daba por elegido el día de hoy. Lo demás quedó anotado como menor:
+  - el orden de los campos del extra cambió (son las dos horas juntas, como en la maqueta);
+  - un selector abierto se cierra si gira la pantalla y cambia la disposición;
+  - el ancho de los diálogos de Clima y Widget pasó a 620 dp;
+  - los errores del Resumen ahora son un solo mensaje.
+- **Controles:** ninguna etiqueta de prueba borrada; sin colores ni tamaños de letra fijos nuevos.
+  PC: 1349 pruebas, 0 fallas.
+- **Pendiente:**
+  - Samsung, con autorización: dos tandas, capturas y foto de datos;
+  - mirar con la letra al 200% las filas de dos botones de Ayuda y del recorrido, y las sugerencias
+    de nombre de Tipos de horas extra;
+  - decisiones de Joaquín: el «UUID» de Horario real y si «Volver al planificado» va en rojo;
+  - regresión de 12.2 y 13 en el teléfono.
+
 ## Etapa 13.5 retomada (8/11/2026) — avance sobre la pausa
 
 Joaquín pidió «retomá la 13.5». Ya se hicieron los pasos 1 a 7 de la lista de abajo; quedan en el

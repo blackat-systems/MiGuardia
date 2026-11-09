@@ -31,6 +31,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -45,21 +46,27 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.blackatsystems.miguardia.core.domain.model.SchedulePhoto
 import com.blackatsystems.miguardia.ui.components.DestructiveAction
 import com.blackatsystems.miguardia.ui.components.EmptyState
+import com.blackatsystems.miguardia.ui.components.MiGuardiaButtonShape
+import com.blackatsystems.miguardia.ui.components.MiGuardiaSpacing
 import com.blackatsystems.miguardia.ui.components.MonthNavigator
 import com.blackatsystems.miguardia.ui.components.PersistentMessage
 import com.blackatsystems.miguardia.ui.components.PrimaryAction
 import com.blackatsystems.miguardia.ui.components.SurfaceHeader
 import com.blackatsystems.miguardia.ui.components.TransientConfirmation
+import com.blackatsystems.miguardia.ui.components.cardBorder
+import com.blackatsystems.miguardia.ui.components.destructiveButtonColors
+import com.blackatsystems.miguardia.ui.components.vigiliaCardSurface
+import com.blackatsystems.miguardia.ui.components.vigiliaScreenBackground
 import java.time.YearMonth
 import java.time.format.TextStyle
 import java.util.Locale
@@ -139,7 +146,7 @@ private fun PhotosList(
     fileStore: SchedulePhotoFileStore,
 ) {
     val picker = rememberLauncherForActivityResult(PickMultipleVisualMedia()) { actions.import(it) }
-    Column(Modifier.fillMaxSize().safeDrawingPadding()) {
+    Column(Modifier.fillMaxSize().vigiliaScreenBackground().safeDrawingPadding()) {
         SurfaceHeader(
             title = "Fotos del cronograma",
             navigationLabel = "Cerrar",
@@ -148,8 +155,8 @@ private fun PhotosList(
         HorizontalDivider()
         LazyColumn(
             modifier = Modifier.fillMaxWidth().weight(1f),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(MiGuardiaSpacing.large),
+            verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.large),
         ) {
             item {
                 MonthNavigator(
@@ -189,12 +196,12 @@ private fun PhotosList(
             when {
                 state.isLoading -> item {
                     Row(
-                        modifier = Modifier.fillMaxWidth().padding(24.dp),
+                        modifier = Modifier.fillMaxWidth().padding(MiGuardiaSpacing.extraLarge),
                         horizontalArrangement = Arrangement.Center,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         CircularProgressIndicator(modifier = Modifier.size(28.dp))
-                        Spacer(Modifier.width(12.dp))
+                        Spacer(Modifier.width(MiGuardiaSpacing.medium))
                         Text("Cargando fotos…")
                     }
                 }
@@ -234,16 +241,21 @@ private fun PhotoCard(
     }
     var menuExpanded by remember(photo.id) { mutableStateOf(false) }
     val objective = photo.objectiveAbbreviationSnapshot?.let { ", objetivo $it" }.orEmpty()
+    // Style v2: the common card shape and surface; the whole card still opens the viewer.
+    val shape = MaterialTheme.shapes.large
     Card(
         onClick = { actions.view(photo.id) },
         modifier = Modifier
             .fillMaxWidth()
-            .semantics { contentDescription = "Foto ${index + 1} de $total$objective" },
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+            .semantics { contentDescription = "Foto ${index + 1} de $total$objective" }
+            .vigiliaCardSurface(shape, MaterialTheme.colorScheme.surfaceContainer),
+        shape = shape,
+        border = cardBorder(),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
     ) {
         Column(
-            modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(MiGuardiaSpacing.large),
+            verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -254,7 +266,6 @@ private fun PhotoCard(
                     Text(
                         "Foto ${index + 1} de $total",
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
                     )
                     Text(
                         photo.objectiveNameSnapshot ?: "Sin objetivo asociado",
@@ -322,7 +333,7 @@ private fun PhotoViewer(
     val index = state.photos.indexOfFirst { it.id == state.selectedId }
     val photo = state.photos.getOrNull(index)
     Column(
-        modifier = Modifier.fillMaxSize().safeDrawingPadding(),
+        modifier = Modifier.fillMaxSize().vigiliaScreenBackground().safeDrawingPadding(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         SurfaceHeader(
@@ -334,7 +345,10 @@ private fun PhotoViewer(
         if (photo != null) {
             ZoomablePhoto(photo, fileStore, Modifier.weight(1f).fillMaxWidth())
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                modifier = Modifier.fillMaxWidth().padding(
+                    horizontal = MiGuardiaSpacing.large,
+                    vertical = MiGuardiaSpacing.small,
+                ),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -355,7 +369,7 @@ private fun PhotoViewer(
             EmptyState(
                 title = "La foto ya no está disponible",
                 message = "Volvé al listado para elegir otra foto.",
-                modifier = Modifier.padding(24.dp),
+                modifier = Modifier.padding(MiGuardiaSpacing.large),
                 actionLabel = "Volver al listado",
                 onAction = actions.back,
             )
@@ -438,7 +452,11 @@ private fun ConfirmDestructive(
         title = { Text(title) },
         text = { Text(body) },
         confirmButton = {
-            DestructiveAction(label = confirmLabel, onClick = onConfirm)
+            FilledTonalButton(
+                onClick = onConfirm,
+                shape = MiGuardiaButtonShape,
+                colors = destructiveButtonColors(),
+            ) { Text(confirmLabel) }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Cancelar") }

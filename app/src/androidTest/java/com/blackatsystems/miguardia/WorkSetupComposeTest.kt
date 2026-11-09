@@ -1,6 +1,7 @@
 package com.blackatsystems.miguardia
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.getValue
@@ -43,6 +44,8 @@ import com.blackatsystems.miguardia.ui.MiGuardiaApp
 import com.blackatsystems.miguardia.ui.calendar.CalendarInteractionMode
 import com.blackatsystems.miguardia.ui.calendar.CalendarLoadState
 import com.blackatsystems.miguardia.ui.calendar.CalendarUiState
+import com.blackatsystems.miguardia.ui.components.PICKER_CANCEL_TAG
+import com.blackatsystems.miguardia.ui.components.PICKER_CONFIRM_TAG
 import com.blackatsystems.miguardia.ui.management.V2RecurringActions
 import com.blackatsystems.miguardia.testsupport.TestFontScale
 import com.blackatsystems.miguardia.testsupport.AndroidFontScaleTheme
@@ -617,6 +620,149 @@ class WorkSetupComposeTest {
         }
         compose.runOnIdle { assertEquals(6, selections) }
     }
+
+    @Test
+    fun templateClockGivesTheSameTextAsTypingCrossesMidnightAndNeverSaves() {
+        var state by mutableStateOf(templateStepState(startTime = "", endTime = ""))
+        var saves = 0
+        compose.setContent {
+            AndroidFontScaleTheme {
+                WorkSetupSurfaceHost(
+                    state,
+                    WorkSetupActions(
+                        updateTemplateDraft = { transform ->
+                            state = state.copy(templateDraft = transform(state.templateDraft))
+                        },
+                        saveFirstWorkSet = { saves++ },
+                    ),
+                )
+            }
+        }
+        fun draft() = state.templateDraft
+
+        // Crossing midnight: 22:00 to 06:00 typed, then confirmed in the clock without change.
+        compose.onNodeWithTag("work-time-start").performScrollTo().performTextReplacement("2200")
+        compose.runOnIdle { assertEquals("22:00", draft().startTime) }
+        compose.onNodeWithTag("work-time-start-picker").performScrollTo().performClick()
+        compose.onNodeWithTag(PICKER_CONFIRM_TAG).performClick()
+        compose.runOnIdle { assertEquals("22:00", draft().startTime) }
+        compose.onNodeWithTag("work-time-end").performScrollTo().performTextReplacement("0600")
+        compose.onNodeWithTag("work-time-end-picker").performScrollTo().performClick()
+        compose.onNodeWithTag(PICKER_CANCEL_TAG).performClick()
+        compose.runOnIdle { assertEquals("06:00", draft().endTime) }
+        compose.onNodeWithTag("work-time-end-picker").performScrollTo().performClick()
+        compose.onNodeWithTag(PICKER_CONFIRM_TAG).performClick()
+        compose.runOnIdle { assertEquals("06:00", draft().endTime) }
+        compose.onNodeWithText("Termina al día siguiente.").performScrollTo().assertIsDisplayed()
+
+        // Limits 00:00 and 23:59: typing and the clock give the same text.
+        compose.onNodeWithTag("work-time-start").performScrollTo().performTextReplacement("0000")
+        compose.onNodeWithTag("work-time-start-picker").performScrollTo().performClick()
+        compose.onNodeWithTag(PICKER_CONFIRM_TAG).performClick()
+        compose.onNodeWithTag("work-time-end").performScrollTo().performTextReplacement("2359")
+        compose.onNodeWithTag("work-time-end-picker").performScrollTo().performClick()
+        compose.onNodeWithTag(PICKER_CANCEL_TAG).performClick()
+        compose.onNodeWithTag("work-time-end-picker").performScrollTo().performClick()
+        compose.onNodeWithTag(PICKER_CONFIRM_TAG).performClick()
+        compose.runOnIdle {
+            assertEquals("00:00", draft().startTime)
+            assertEquals("23:59", draft().endTime)
+            // The clock never saves on its own.
+            assertEquals(0, saves)
+            assertEquals(WorkSetupSurface.FIRST_WORK_SET, state.surface)
+            assertEquals(WorkSetupStep.TYPE_AND_TEMPLATE, state.step)
+        }
+    }
+
+    @Test
+    fun nightBandReusesTheTimeTagsAndItsClockOnlyWritesTheDraft() {
+        var state by mutableStateOf(
+            needsFirstSetState(WorkSector.PRIVATE_SECURITY).copy(
+                surface = WorkSetupSurface.FIRST_WORK_SET,
+                selectedSector = WorkSector.PRIVATE_SECURITY,
+                placeDraft = WorkPlaceDraft(
+                    name = "Objetivo ficticio",
+                    abbreviation = "OBJ",
+                    nightHoursEnabled = true,
+                    nightStart = "",
+                    nightEnd = "",
+                ),
+            ),
+        )
+        var continued = 0
+        compose.setContent {
+            AndroidFontScaleTheme(darkTheme = false) {
+                WorkSetupSurfaceHost(
+                    state,
+                    WorkSetupActions(
+                        updatePlaceDraft = { transform ->
+                            state = state.copy(placeDraft = transform(state.placeDraft))
+                        },
+                        continueToTemplate = { continued++ },
+                    ),
+                )
+            }
+        }
+        compose.onNodeWithTag("advanced-options-toggle").performScrollTo().performClick()
+        compose.onNodeWithText("Inicio nocturno").performScrollTo().assertIsDisplayed()
+
+        compose.onNodeWithTag("work-time-start").performScrollTo().performTextReplacement("2100")
+        compose.onNodeWithTag("work-time-start-picker").performScrollTo().performClick()
+        compose.onNodeWithTag(PICKER_CANCEL_TAG).performClick()
+        compose.runOnIdle { assertEquals("21:00", state.placeDraft.nightStart) }
+        compose.onNodeWithTag("work-time-start-picker").performScrollTo().performClick()
+        compose.onNodeWithTag(PICKER_CONFIRM_TAG).performClick()
+        compose.onNodeWithTag("work-time-end").performScrollTo().performTextReplacement("0600")
+        compose.onNodeWithTag("work-time-end-picker").performScrollTo().performClick()
+        compose.onNodeWithTag(PICKER_CONFIRM_TAG).performClick()
+        compose.runOnIdle {
+            assertEquals("21:00", state.placeDraft.nightStart)
+            assertEquals("06:00", state.placeDraft.nightEnd)
+            assertEquals(0, continued)
+            assertEquals(WorkSetupStep.PLACE_AND_RULES, state.step)
+        }
+    }
+
+    @Test
+    fun templateClockStaysUsableAtTwoHundredPercentInAPhoneSizedBox() {
+        var state by mutableStateOf(templateStepState(startTime = "22:00", endTime = "06:00"))
+        compose.setContent {
+            AndroidFontScaleTheme(darkTheme = true, fontScale = TestFontScale.EXTRA_LARGE) {
+                Box(Modifier.requiredSize(width = 360.dp, height = 800.dp)) {
+                    WorkSetupSurfaceHost(
+                        state,
+                        WorkSetupActions(
+                            updateTemplateDraft = { transform ->
+                                state = state.copy(templateDraft = transform(state.templateDraft))
+                            },
+                        ),
+                    )
+                }
+            }
+        }
+        compose.onNodeWithTag("work-time-end-picker").performScrollTo().assertIsDisplayed().performClick()
+        compose.onNodeWithTag(PICKER_CANCEL_TAG).assertIsDisplayed().performClick()
+        compose.onNodeWithTag("work-time-start-picker").performScrollTo().assertIsDisplayed().performClick()
+        compose.onNodeWithTag(PICKER_CONFIRM_TAG).assertIsDisplayed().performClick()
+        compose.runOnIdle {
+            assertEquals("22:00", state.templateDraft.startTime)
+            assertEquals("06:00", state.templateDraft.endTime)
+        }
+    }
+
+    private fun templateStepState(startTime: String, endTime: String) =
+        needsFirstSetState(WorkSector.PRIVATE_SECURITY).copy(
+            surface = WorkSetupSurface.FIRST_WORK_SET,
+            step = WorkSetupStep.TYPE_AND_TEMPLATE,
+            selectedSector = WorkSector.PRIVATE_SECURITY,
+            placeDraft = WorkPlaceDraft(name = "Objetivo ficticio", abbreviation = "OBJ"),
+            templateDraft = WorkTemplateDraft(
+                typeName = "Guardia habitual",
+                startTime = startTime,
+                endTime = endTime,
+                colorArgb = 0xFF123456.toInt(),
+            ),
+        )
 
     private fun setApp(
         stateProvider: () -> WorkSetupUiState,

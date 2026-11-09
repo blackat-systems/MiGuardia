@@ -12,6 +12,22 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.CircleShape
 import com.blackatsystems.miguardia.ui.theme.vigiliaColors
 import com.blackatsystems.miguardia.ui.components.StatusBadge
+import com.blackatsystems.miguardia.ui.components.DateFieldFormat
+import com.blackatsystems.miguardia.ui.components.DestructiveAction
+import com.blackatsystems.miguardia.ui.components.MiGuardiaButtonShape
+import com.blackatsystems.miguardia.ui.components.MiGuardiaDatePickerDialog
+import com.blackatsystems.miguardia.ui.components.MiGuardiaSpacing
+import com.blackatsystems.miguardia.ui.components.MiGuardiaTimePickerDialog
+import com.blackatsystems.miguardia.ui.components.PICKER_BUTTON_SUFFIX
+import com.blackatsystems.miguardia.ui.components.PersistentMessage
+import com.blackatsystems.miguardia.ui.components.PickableDateField
+import com.blackatsystems.miguardia.ui.components.PickerTrailingButton
+import com.blackatsystems.miguardia.ui.components.PrimaryAction
+import com.blackatsystems.miguardia.ui.components.SecondaryAction
+import com.blackatsystems.miguardia.ui.components.SectionCard
+import com.blackatsystems.miguardia.ui.components.cardBorder
+import com.blackatsystems.miguardia.ui.components.destructiveButtonColors
+import com.blackatsystems.miguardia.ui.components.vigiliaCardSurface
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -27,7 +43,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
-import androidx.compose.material3.Button
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.AlertDialog
@@ -41,6 +58,7 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -84,6 +102,8 @@ import com.blackatsystems.miguardia.ui.weather.WeatherUiState
 import com.blackatsystems.miguardia.weather.WeatherCredits
 import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.time.format.ResolverStyle
 
@@ -145,9 +165,9 @@ internal fun DayDetailSheet(
             .heightIn(max = 640.dp)
             .testTag("day-detail-scroll")
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp)
-            .padding(bottom = 32.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+            .padding(horizontal = MiGuardiaSpacing.large)
+            .padding(bottom = MiGuardiaSpacing.large),
+        verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.large),
     ) {
         if (editingDay) {
             Text(
@@ -182,26 +202,26 @@ internal fun DayDetailSheet(
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.SemiBold,
             )
-            Button(
+            PrimaryAction(
+                label = "Editar día",
                 onClick = { if (onManageDayOff != null) onManageDayOff() else editingDay = true },
-                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("day-edit-menu"),
-            ) { Text("Editar día") }
+                modifier = Modifier.testTag("day-edit-menu"),
+            )
             TextButton(onClick = { editingDay = true }, modifier = Modifier.testTag("day-other-options")) {
                 Text("Otras opciones del día")
             }
             val orderedShifts = day.shifts.sortedBy { it.shift.startAt }
             if (orderedShifts.isNotEmpty()) {
-                Text("Jornadas del día", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                // Section title stays below the date heading (style v2 hierarchy).
+                Text("Jornadas del día", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             }
             orderedShifts.forEachIndexed { index, calendarShift ->
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("shift-detail-card-${calendarShift.shift.id}"),
+                DayDetailCard(
+                    modifier = Modifier.testTag("shift-detail-card-${calendarShift.shift.id}"),
                 ) {
                     Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.padding(MiGuardiaSpacing.large),
+                        verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small),
                     ) {
                         ShiftDetail(
                             calendarShift = calendarShift,
@@ -295,11 +315,43 @@ internal fun DayDetailSheet(
                 )
             },
             dismissButton = { TextButton(onClick = { pendingMedicalDelete = null }) { Text("Cancelar") } },
-            confirmButton = { TextButton(onClick = {
-                stage2Actions.deleteMedicalLeave(leave)
-                pendingMedicalDelete = null
-            }) { Text("Eliminar") } },
+            confirmButton = {
+                FilledTonalButton(
+                    onClick = {
+                        stage2Actions.deleteMedicalLeave(leave)
+                        pendingMedicalDelete = null
+                    },
+                    shape = MiGuardiaButtonShape,
+                    colors = destructiveButtonColors(),
+                ) { Text("Eliminar") }
+            },
         )
+    }
+}
+
+/**
+ * Common card surface for the day detail (style v2): same shape, colors and hairline as
+ * [SectionCard], for cards whose content brings its own title. The card draws its own
+ * background, so it also sets the text color instead of inheriting it.
+ */
+@Composable
+private fun DayDetailCard(
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    val shape = MaterialTheme.shapes.large
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .vigiliaCardSurface(shape, MaterialTheme.colorScheme.surfaceContainer),
+        shape = shape,
+        border = cardBorder(),
+        colors = CardDefaults.cardColors(
+            containerColor = Color.Transparent,
+            contentColor = MaterialTheme.colorScheme.onSurface,
+        ),
+    ) {
+        content()
     }
 }
 
@@ -326,10 +378,11 @@ private fun DayEditingMenu(
     availabilityActions: AvailabilityActions,
 ) {
     if (day.shifts.isEmpty() && onManageDayOff != null) {
-        OutlinedButton(
+        SecondaryAction(
+            label = "Agregar jornada o franco",
             onClick = onManageDayOff,
-            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("day-detail-manage-day-off"),
-        ) { Text("Agregar jornada o franco") }
+            modifier = Modifier.fillMaxWidth().testTag("day-detail-manage-day-off"),
+        )
     } else if (v2ShiftEditState != null && onEditDay != null) {
         V2DayEditEntry(
             state = v2ShiftEditState,
@@ -339,88 +392,97 @@ private fun DayEditingMenu(
             label = "Agregar jornada o franco",
         )
     } else if (onManageDayOff != null) {
-        OutlinedButton(
+        SecondaryAction(
+            label = "Agregar jornada o franco",
             onClick = onManageDayOff,
-            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("day-detail-manage-day-off"),
-        ) { Text("Agregar jornada o franco") }
+            modifier = Modifier.fillMaxWidth().testTag("day-detail-manage-day-off"),
+        )
     }
-    OutlinedButton(
+    SecondaryAction(
+        label = "Agregar disponibilidad de retén",
         onClick = { availabilityActions.openRetainer(day.date) },
         enabled = !stage2Busy,
-        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("day-add-retainer"),
-    ) { Text("Agregar disponibilidad de retén") }
-    OutlinedButton(
+        modifier = Modifier.fillMaxWidth().testTag("day-add-retainer"),
+    )
+    SecondaryAction(
+        label = "Agregar carpeta médica",
         onClick = onAddMedicalLeave,
         enabled = !stage2Busy && day.vacation == null,
         modifier = Modifier.fillMaxWidth().testTag("day-add-medical-leave"),
-    ) { Text("Agregar carpeta médica") }
+    )
     if (day.explicitStatus == ExplicitDayStatusType.UNDEFINED) {
-        OutlinedButton(
+        SecondaryAction(
+            label = "Quitar marca Sin definir",
             onClick = onToggleUndefined,
             enabled = !stage2Busy,
             modifier = Modifier.fillMaxWidth().testTag("day-toggle-undefined"),
-        ) { Text("Quitar marca Sin definir") }
+        )
     }
     day.shifts.forEach { calendarShift ->
         val shift = calendarShift.shift
         if (stage2Expectations[shift.id] == null) return@forEach
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    "Situación de ${shift.objectiveNameSnapshot} (${shift.objectiveAbbreviationSnapshot})",
-                    fontWeight = FontWeight.SemiBold,
-                )
-                Text(
-                    when (shift.status) {
-                        ShiftStatus.PLANNED -> "Estado actual: Planificada"
-                        ShiftStatus.ABSENT -> "Estado actual: Ausencia"
-                        ShiftStatus.CANCELLED -> "Estado actual: Cancelada"
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        SectionCard(
+            title = "Situación de ${shift.objectiveNameSnapshot} (${shift.objectiveAbbreviationSnapshot})",
+            supportingText = when (shift.status) {
+                ShiftStatus.PLANNED -> "Estado actual: Planificada"
+                ShiftStatus.ABSENT -> "Estado actual: Ausencia"
+                ShiftStatus.CANCELLED -> "Estado actual: Cancelada"
+            },
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small)) {
                     if (shift.status != ShiftStatus.ABSENT) {
-                        OutlinedButton(
+                        SecondaryAction(
+                            label = "Ausencia",
                             onClick = { onSelectSituation(shift, ShiftStatus.ABSENT) },
                             enabled = !stage2Busy,
                             modifier = Modifier.weight(1f).testTag("shift-absence-${shift.id}"),
-                        ) { Text("Ausencia") }
+                        )
                     }
                     if (shift.status != ShiftStatus.CANCELLED) {
-                        OutlinedButton(
+                        SecondaryAction(
+                            label = "Cancelación",
                             onClick = { onSelectSituation(shift, ShiftStatus.CANCELLED) },
                             enabled = !stage2Busy,
                             modifier = Modifier.weight(1f).testTag("shift-cancel-${shift.id}"),
-                        ) { Text("Cancelación") }
+                        )
                     }
                 }
                 if (shift.status != ShiftStatus.PLANNED) {
-                    OutlinedButton(
+                    SecondaryAction(
+                        label = if (shift.status == ShiftStatus.ABSENT) "Editar ausencia" else "Editar cancelación",
                         onClick = { onSelectSituation(shift, shift.status) },
                         enabled = !stage2Busy,
                         modifier = Modifier.fillMaxWidth().testTag("shift-edit-situation-${shift.id}"),
-                    ) { Text(if (shift.status == ShiftStatus.ABSENT) "Editar ausencia" else "Editar cancelación") }
-                    OutlinedButton(
+                    )
+                    SecondaryAction(
+                        label = "Volver a Planificada",
                         onClick = { onSelectSituation(shift, ShiftStatus.PLANNED) },
                         enabled = !stage2Busy,
                         modifier = Modifier.fillMaxWidth().testTag("shift-restore-${shift.id}"),
-                    ) { Text("Volver a Planificada") }
+                    )
                 }
             }
         }
     }
     day.medicalLeaves.forEach { leave ->
-        Card(modifier = Modifier.fillMaxWidth().testTag("medical-leave-card-${leave.id}")) {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Carpeta médica", fontWeight = FontWeight.SemiBold)
+        SectionCard(
+            title = "Carpeta médica",
+            modifier = Modifier.testTag("medical-leave-card-${leave.id}"),
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small)) {
                 Text("${leave.startDate.shortDisplayDate()} – ${leave.endDateInclusive.shortDisplayDate()}")
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = { onEditMedicalLeave(leave) }, modifier = Modifier.weight(1f)) {
-                        Text("Editar")
-                    }
-                    TextButton(onClick = { onDeleteMedicalLeave(leave) }, modifier = Modifier.weight(1f)) {
-                        Text("Eliminar")
-                    }
+                Row(horizontalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small)) {
+                    SecondaryAction(
+                        label = "Editar",
+                        onClick = { onEditMedicalLeave(leave) },
+                        modifier = Modifier.weight(1f),
+                    )
+                    DestructiveAction(
+                        label = "Eliminar",
+                        onClick = { onDeleteMedicalLeave(leave) },
+                        modifier = Modifier.weight(1f).heightIn(min = 48.dp),
+                    )
                 }
             }
         }
@@ -433,10 +495,11 @@ private fun DayEditingMenu(
         )
     }
     if (canRegisterIndependentExtra) {
-        OutlinedButton(
+        SecondaryAction(
+            label = "Registrar trabajo extra",
             onClick = onRegisterIndependentExtra,
             modifier = Modifier.fillMaxWidth().testTag("register-independent-extra-${day.date}"),
-        ) { Text("Registrar trabajo extra") }
+        )
     }
     if (availabilityState.windowsOn(day.date).isNotEmpty()) {
         AvailabilityDaySection(
@@ -462,9 +525,8 @@ private fun DayConditionCard(
         independentExtras.isNotEmpty() ||
         availability.isNotEmpty()
     if (!hasCondition) return
-    Card(modifier = Modifier.fillMaxWidth().testTag("day-condition-card")) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text("Condición del día", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+    SectionCard(title = "Condición del día", modifier = Modifier.testTag("day-condition-card")) {
+        Column(verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small)) {
             when (day.explicitStatus) {
                 ExplicitDayStatusType.DAY_OFF -> Text("Franco")
                 ExplicitDayStatusType.UNDEFINED -> Text("Sin definir")
@@ -510,11 +572,13 @@ private fun ShiftSituationDialog(
     var actor by remember(shift.id, target) {
         mutableStateOf(previous?.cancellationActor ?: CancellationActor.NOT_REPORTED)
     }
+    // The prefilled notice also anchors the pickers when the typed text cannot be read.
+    val prefilledNotice = remember(shift.id, target) {
+        (previous?.notifiedAt ?: Instant.now()).atZone(com.blackatsystems.miguardia.core.domain.AppDefaults.zoneId())
+            .toLocalDateTime().withSecond(0).withNano(0)
+    }
     var noticeText by remember(shift.id, target) {
-        mutableStateOf(
-            (previous?.notifiedAt ?: Instant.now()).atZone(com.blackatsystems.miguardia.core.domain.AppDefaults.zoneId())
-                .toLocalDateTime().withSecond(0).withNano(0).format(DAY_DATE_TIME_FORMATTER),
-        )
+        mutableStateOf(prefilledNotice.format(DAY_DATE_TIME_FORMATTER))
     }
     var evidenceUri by remember(shift.id, target) { mutableStateOf<Uri?>(null) }
     val evidencePicker = rememberLauncherForActivityResult(PickVisualMedia()) { uri -> if (uri != null) evidenceUri = uri }
@@ -538,7 +602,10 @@ private fun ShiftSituationDialog(
             )
         },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small),
+            ) {
                 Text(
                     "${shift.objectiveAbbreviationSnapshot} · " +
                         formatEventTimeRange(shift.startAt, shift.endAt, shift.zoneId, EventTimeRangeStyle.DETAIL),
@@ -569,19 +636,17 @@ private fun ShiftSituationDialog(
                     if (target == ShiftStatus.CANCELLED) {
                         Text("Quién canceló: ${actor.displayName()}")
                         TextButton(onClick = { actor = actor.next() }) { Text("Cambiar") }
-                        OutlinedTextField(
+                        NoticeDateTimeField(
                             value = noticeText,
                             onValueChange = { noticeText = it },
-                            label = { Text("Fecha y hora del aviso") },
-                            supportingText = { Text("Formato: DD/MM/AAAA HH:MM") },
-                            modifier = Modifier.fillMaxWidth(),
+                            fallback = prefilledNotice,
                         )
                         if (previous?.evidence != null) {
                             Text("Hay una evidencia privada guardada. Sólo se reemplaza si elegís otra imagen.")
                         }
                         OutlinedButton(onClick = {
                             evidencePicker.launch(PickVisualMediaRequest(PickVisualMedia.ImageOnly))
-                        }) {
+                        }, shape = MiGuardiaButtonShape) {
                             Text(
                                 when {
                                     evidenceUri != null -> "Reemplazar evidencia elegida"
@@ -636,17 +701,42 @@ private fun MedicalLeaveDialog(
         modifier = Modifier.testTag("medical-leave-dialog"),
         title = { Text(if (previous == null) "Agregar carpeta médica" else "Editar carpeta médica") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small),
+            ) {
                 Text("Registrá un rango inclusivo. Informa días, no horas, y nunca guarda fotos de certificados.")
-                OutlinedTextField(startText, { startText = it }, label = { Text("Desde (DD/MM/AAAA)") },
-                    enabled = !saving, modifier = Modifier.testTag("medical-leave-start"))
-                OutlinedTextField(endText, { endText = it }, label = { Text("Hasta (DD/MM/AAAA)") },
-                    enabled = !saving, modifier = Modifier.testTag("medical-leave-end"))
+                // The label already says DD/MM/AAAA, so no second hint below the field.
+                PickableDateField(
+                    value = startText,
+                    onValueChange = { startText = it },
+                    label = "Desde (DD/MM/AAAA)",
+                    format = DateFieldFormat.DAY_MONTH_YEAR,
+                    supportingText = null,
+                    pickerFallback = { previous?.startDate ?: ownerDate },
+                    pickerTestTag = "medical-leave-start$PICKER_BUTTON_SUFFIX",
+                    enabled = !saving,
+                    modifier = Modifier.testTag("medical-leave-start"),
+                )
+                PickableDateField(
+                    value = endText,
+                    onValueChange = { endText = it },
+                    label = "Hasta (DD/MM/AAAA)",
+                    format = DateFieldFormat.DAY_MONTH_YEAR,
+                    supportingText = null,
+                    // An empty or unreadable end starts the calendar on the chosen start.
+                    pickerFallback = { start ?: previous?.endDateInclusive ?: ownerDate },
+                    pickerTestTag = "medical-leave-end$PICKER_BUTTON_SUFFIX",
+                    enabled = !saving,
+                    modifier = Modifier.testTag("medical-leave-end"),
+                )
                 OutlinedTextField(note, { note = it }, label = { Text("Nota privada (opcional)") },
                     enabled = !saving, modifier = Modifier.testTag("medical-leave-note"))
                 if (saveFailed) {
-                    Text("No se pudo guardar. Revisá los datos e intentá nuevamente.",
-                        color = MaterialTheme.colorScheme.error, modifier = Modifier.testTag("medical-leave-error"))
+                    PersistentMessage(
+                        message = "No se pudo guardar. Revisá los datos e intentá nuevamente.",
+                        modifier = Modifier.testTag("medical-leave-error"),
+                    )
                 }
             }
         },
@@ -664,6 +754,87 @@ private fun MedicalLeaveDialog(
     )
 }
 
+/**
+ * "Fecha y hora del aviso" keeps its single typed field (DD/MM/AAAA HH:MM). The calendar
+ * replaces only the date part and the clock only the time part, writing the same text a person
+ * would type; nothing is confirmed on its own. A part that cannot be read starts from [fallback].
+ */
+@Composable
+private fun NoticeDateTimeField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    fallback: LocalDateTime,
+) {
+    var showDatePicker by rememberSaveable { mutableStateOf(false) }
+    var showTimePicker by rememberSaveable { mutableStateOf(false) }
+    val label = "Fecha y hora del aviso"
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(label) },
+        supportingText = { Text("Formato: DD/MM/AAAA HH:MM") },
+        trailingIcon = {
+            Row {
+                PickerTrailingButton(
+                    iconRes = R.drawable.ic_pick_date,
+                    description = "Elegir fecha en el calendario: $label",
+                    enabled = true,
+                    testTag = "$NOTICE_FIELD_TAG-date$PICKER_BUTTON_SUFFIX",
+                ) { showDatePicker = true }
+                PickerTrailingButton(
+                    iconRes = R.drawable.ic_pick_time,
+                    description = "Elegir hora: $label",
+                    enabled = true,
+                    testTag = "$NOTICE_FIELD_TAG-time$PICKER_BUTTON_SUFFIX",
+                ) { showTimePicker = true }
+            }
+        },
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth().testTag(NOTICE_FIELD_TAG),
+    )
+    if (showDatePicker) {
+        MiGuardiaDatePickerDialog(
+            initial = noticeDatePart(value) ?: fallback.toLocalDate(),
+            onConfirm = { picked ->
+                showDatePicker = false
+                onValueChange(noticeWithDate(value, picked, fallback))
+            },
+            onDismiss = { showDatePicker = false },
+        )
+    }
+    if (showTimePicker) {
+        MiGuardiaTimePickerDialog(
+            initial = noticeTimePart(value) ?: fallback.toLocalTime(),
+            title = label,
+            onConfirm = { picked ->
+                showTimePicker = false
+                onValueChange(noticeWithTime(value, LocalTime.parse(picked), fallback))
+            },
+            onDismiss = { showTimePicker = false },
+        )
+    }
+}
+
+internal const val NOTICE_FIELD_TAG = "shift-notice-at"
+
+private fun noticeTokens(text: String): List<String> = text.trim().split(' ').filter { it.isNotEmpty() }
+
+/** Date part of a typed notice ("23/10/2026 07:30" → 23/10/2026), or null if unreadable. */
+internal fun noticeDatePart(text: String): LocalDate? =
+    noticeTokens(text).getOrNull(0)?.let { runCatching { LocalDate.parse(it, DAY_DATE_FORMATTER) }.getOrNull() }
+
+/** Time part of a typed notice ("23/10/2026 07:30" → 07:30), or null if unreadable. */
+internal fun noticeTimePart(text: String): LocalTime? =
+    noticeTokens(text).getOrNull(1)?.let { runCatching { LocalTime.parse(it, NOTICE_TIME_FORMATTER) }.getOrNull() }
+
+/** Replaces only the date: keeps the typed time, or the fallback time if it cannot be read. */
+internal fun noticeWithDate(text: String, date: LocalDate, fallback: LocalDateTime): String =
+    LocalDateTime.of(date, noticeTimePart(text) ?: fallback.toLocalTime()).format(DAY_DATE_TIME_FORMATTER)
+
+/** Replaces only the time: keeps the typed date, or the fallback date if it cannot be read. */
+internal fun noticeWithTime(text: String, time: LocalTime, fallback: LocalDateTime): String =
+    LocalDateTime.of(noticeDatePart(text) ?: fallback.toLocalDate(), time).format(DAY_DATE_TIME_FORMATTER)
+
 private fun CancellationActor.displayName(): String = when (this) {
     CancellationActor.NOT_REPORTED -> "No informado"
     CancellationActor.EMPLOYER -> "Empleador / organización"
@@ -678,6 +849,8 @@ private val DAY_DATE_FORMATTER: DateTimeFormatter =
     DateTimeFormatter.ofPattern("dd/MM/uuuu").withResolverStyle(ResolverStyle.STRICT)
 private val DAY_DATE_TIME_FORMATTER: DateTimeFormatter =
     DateTimeFormatter.ofPattern("dd/MM/uuuu HH:mm").withResolverStyle(ResolverStyle.STRICT)
+private val NOTICE_TIME_FORMATTER: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("HH:mm").withResolverStyle(ResolverStyle.STRICT)
 
 @Composable
 private fun ShiftDetail(
@@ -698,7 +871,7 @@ private fun ShiftDetail(
         val indicator: @Composable () -> Unit = {
             Box(
                 modifier = Modifier
-                    .padding(top = 5.dp)
+                    .padding(top = MiGuardiaSpacing.extraSmall)
                     .size(14.dp)
                     .clip(CircleShape)
                     .background(Color(shift.colorArgbSnapshot))
@@ -706,7 +879,7 @@ private fun ShiftDetail(
             )
         }
         val details: @Composable (Modifier) -> Unit = { detailsModifier ->
-            Column(verticalArrangement = Arrangement.spacedBy(3.dp), modifier = detailsModifier) {
+            Column(verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.extraSmall), modifier = detailsModifier) {
                 Text(
                     text = AnnotatedString("${shift.objectiveNameSnapshot} (${shift.objectiveAbbreviationSnapshot})"),
                     style = MaterialTheme.typography.titleMedium,
@@ -722,7 +895,7 @@ private fun ShiftDetail(
                             .heightIn(min = 48.dp)
                             .clickable { context.openAddressInMaps(address) }
                             .semantics { contentDescription = "Abrir en Google Maps: $address" }
-                            .padding(vertical = 12.dp),
+                            .padding(vertical = MiGuardiaSpacing.medium),
                     )
                 }
                 Text(AnnotatedString(formatEventTimeRange(shift.startAt, shift.endAt, shift.zoneId, EventTimeRangeStyle.DETAIL)))
@@ -779,14 +952,14 @@ private fun ShiftDetail(
             }
         }
         if (maxWidth < 240.dp) {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small)) {
                 indicator()
                 details(Modifier.fillMaxWidth())
             }
         } else {
             Row(verticalAlignment = Alignment.Top) {
                 indicator()
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(MiGuardiaSpacing.medium))
                 details(Modifier.weight(1f))
             }
         }
@@ -812,8 +985,8 @@ private fun CompactShiftAction(
         shape = MaterialTheme.shapes.small,
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier.padding(horizontal = MiGuardiaSpacing.medium, vertical = MiGuardiaSpacing.small),
+            horizontalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(symbol, fontWeight = FontWeight.SemiBold)
@@ -846,13 +1019,21 @@ internal fun ShiftWeatherBriefCard(
     modifier: Modifier = Modifier,
     onOpen: () -> Unit,
 ) {
+    // Nested inside the shift card: common shape and hairline on a tonal surface, so it reads
+    // as a part of that card instead of a second gradient card.
     Card(
         onClick = onOpen,
         modifier = modifier.fillMaxWidth().testTag("shift-weather-card"),
+        shape = MaterialTheme.shapes.large,
+        border = cardBorder(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            contentColor = MaterialTheme.colorScheme.onSurface,
+        ),
     ) {
         Column(
-            modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+            modifier = Modifier.padding(MiGuardiaSpacing.medium),
+            verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.extraSmall),
         ) {
             Text("Clima durante la jornada", fontWeight = FontWeight.SemiBold)
             when {

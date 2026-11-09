@@ -30,6 +30,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.LocalContentColor
@@ -106,6 +107,11 @@ import com.blackatsystems.miguardia.ui.calendar.calendarCellVisibleSignals
 import com.blackatsystems.miguardia.ui.calendar.calendarCellTextFitsWidth
 import com.blackatsystems.miguardia.ui.calendar.CALENDAR_SIDE_RAIL_WIDTH_DP
 import com.blackatsystems.miguardia.ui.components.PersistentMessage
+import com.blackatsystems.miguardia.ui.components.AutomaticTimeField
+import com.blackatsystems.miguardia.ui.components.MiGuardiaButtonShape
+import com.blackatsystems.miguardia.ui.components.MiGuardiaSpacing
+import com.blackatsystems.miguardia.ui.components.PICKER_BUTTON_SUFFIX
+import com.blackatsystems.miguardia.ui.components.destructiveButtonColors
 import com.blackatsystems.miguardia.ui.components.TransientConfirmation
 import com.blackatsystems.miguardia.ui.hours.HoursAndExtrasActions
 import com.blackatsystems.miguardia.ui.hours.HoursAndExtrasLoadState
@@ -533,7 +539,7 @@ internal fun CalendarScreen(
             title = { Text("Actualización del calendario") },
             text = {
                 Column(Modifier.verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small)) {
                     if (state.loadState == CalendarLoadState.ERROR) ErrorCalendar(
                         state.errorMessage ?: stringResource(R.string.calendar_error), onRetry,
                     )
@@ -557,11 +563,11 @@ internal fun CalendarScreen(
             onDismissRequest = { showManualSelectionOptions = false },
             title = { Text("Opciones para los días seleccionados") },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small)) {
                     OutlinedButton(onClick = {
                         showManualSelectionOptions = false
                         v2ManualShiftLoadActions.requestDayOff(state.editSelectedDates, true)
-                    }, enabled = state.editSelectedDates.isNotEmpty(),
+                    }, enabled = state.editSelectedDates.isNotEmpty(), shape = MiGuardiaButtonShape,
                         modifier = Modifier.fillMaxWidth().testTag("v2-mark-day-off")) { Text("Marcar Franco") }
                     TextButton(onClick = {
                         showManualSelectionOptions = false
@@ -599,12 +605,14 @@ internal fun CalendarScreen(
             title = { Text("¿Descartar esta carga?") },
             text = { Text("Todavía no se guardó ninguna jornada. Si salís, vas a perder lo que elegiste.") },
             confirmButton = {
-                TextButton(
+                FilledTonalButton(
                     onClick = {
                         showManualLoadDiscardConfirmation = false
                         v2ManualShiftLoadActions.cancel()
                         onFinishEditMode()
                     },
+                    shape = MiGuardiaButtonShape,
+                    colors = destructiveButtonColors(),
                 ) { Text("Descartar carga") }
             },
             dismissButton = {
@@ -882,11 +890,11 @@ private fun CalendarBatchActionDialog(
         onDismissRequest = onDismiss,
         title = { Text("¿Qué querés hacer?") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = onManualLoad, modifier = Modifier.fillMaxWidth()) { Text("Cargar jornadas") }
-                OutlinedButton(onClick = onDayOff, modifier = Modifier.fillMaxWidth()) { Text("Marcar Franco") }
-                OutlinedButton(onClick = onUndefined, modifier = Modifier.fillMaxWidth()) { Text("Marcar Sin definir") }
-                OutlinedButton(onClick = onAvailability, modifier = Modifier.fillMaxWidth()) { Text("Agregar Retén") }
+            Column(verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small)) {
+                Button(onClick = onManualLoad, modifier = Modifier.fillMaxWidth(), shape = MiGuardiaButtonShape) { Text("Cargar jornadas") }
+                OutlinedButton(onClick = onDayOff, modifier = Modifier.fillMaxWidth(), shape = MiGuardiaButtonShape) { Text("Marcar Franco") }
+                OutlinedButton(onClick = onUndefined, modifier = Modifier.fillMaxWidth(), shape = MiGuardiaButtonShape) { Text("Marcar Sin definir") }
+                OutlinedButton(onClick = onAvailability, modifier = Modifier.fillMaxWidth(), shape = MiGuardiaButtonShape) { Text("Agregar Retén") }
             }
         },
         confirmButton = {},
@@ -895,7 +903,7 @@ private fun CalendarBatchActionDialog(
 }
 
 @Composable
-private fun CalendarAvailabilityInputDialog(
+internal fun CalendarAvailabilityInputDialog(
     onDismiss: () -> Unit,
     onContinue: (CalendarBatchAvailability) -> Unit,
 ) {
@@ -909,15 +917,37 @@ private fun CalendarAvailabilityInputDialog(
         onDismissRequest = onDismiss,
         title = { Text("Agregar disponibilidad") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small),
+            ) {
                 Text("La misma franja y etiqueta se aplicarán a todos los días como registros independientes.")
-                OutlinedTextField(startText, { startText = it }, label = { Text("Desde (HH:mm)") }, singleLine = true)
-                OutlinedTextField(endText, { endText = it }, label = { Text("Hasta (HH:mm)") }, singleLine = true)
+                // Stacked: a dialog is too narrow for two large time fields side by side. The
+                // clock only writes HH:mm into the draft; "Revisar" stays the person's step.
+                AutomaticTimeField(
+                    value = startText,
+                    onValueChange = { startText = it },
+                    label = "Desde (HH:mm)",
+                    withPicker = true,
+                    pickerTestTag = "calendar-availability-start$PICKER_BUTTON_SUFFIX",
+                    textStyle = MaterialTheme.typography.headlineSmall,
+                    showHint = false,
+                    modifier = Modifier.fillMaxWidth().testTag("calendar-availability-start"),
+                )
+                AutomaticTimeField(
+                    value = endText,
+                    onValueChange = { endText = it },
+                    label = "Hasta (HH:mm)",
+                    withPicker = true,
+                    pickerTestTag = "calendar-availability-end$PICKER_BUTTON_SUFFIX",
+                    textStyle = MaterialTheme.typography.headlineSmall,
+                    modifier = Modifier.fillMaxWidth().testTag("calendar-availability-end"),
+                )
                 AvailabilityLabel.entries.forEach { option ->
                     if (option == label) {
-                        Button(onClick = { labelName = option.name }, modifier = Modifier.fillMaxWidth()) { Text(option.displayName) }
+                        Button(onClick = { labelName = option.name }, modifier = Modifier.fillMaxWidth(), shape = MiGuardiaButtonShape) { Text(option.displayName) }
                     } else {
-                        OutlinedButton(onClick = { labelName = option.name }, modifier = Modifier.fillMaxWidth()) { Text(option.displayName) }
+                        OutlinedButton(onClick = { labelName = option.name }, modifier = Modifier.fillMaxWidth(), shape = MiGuardiaButtonShape) { Text(option.displayName) }
                     }
                 }
             }
@@ -926,6 +956,8 @@ private fun CalendarAvailabilityInputDialog(
             Button(
                 onClick = { onContinue(CalendarBatchAvailability(requireNotNull(start), requireNotNull(end), label)) },
                 enabled = start != null && end != null && start != end,
+                shape = MiGuardiaButtonShape,
+                modifier = Modifier.testTag("calendar-availability-review"),
             ) { Text("Revisar") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } },
@@ -943,7 +975,7 @@ private fun CalendarBatchPreviewDialog(
         onDismissRequest = { if (!busy) onDismiss() },
         title = { Text("Revisá antes de guardar") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small)) {
                 Text("Se aplicará: ${preview.applicable.size}")
                 Text("Ya estaba así: ${preview.unchanged.size}")
                 Text("Conflicto: ${preview.conflicts.size}")
@@ -962,6 +994,7 @@ private fun CalendarBatchPreviewDialog(
             Button(
                 onClick = onApply,
                 enabled = !busy && preview.conflicts.isEmpty() && preview.applicable.isNotEmpty(),
+                shape = MiGuardiaButtonShape,
             ) { Text(if (busy) "Guardando…" else "Confirmar") }
         },
         dismissButton = { TextButton(onClick = onDismiss, enabled = !busy) { Text("Modificar selección") } },

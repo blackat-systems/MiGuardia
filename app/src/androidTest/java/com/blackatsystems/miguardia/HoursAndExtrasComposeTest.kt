@@ -2,6 +2,7 @@ package com.blackatsystems.miguardia
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -18,6 +19,12 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTextReplacement
+import com.blackatsystems.miguardia.ui.components.PICKER_CANCEL_TAG
+import com.blackatsystems.miguardia.ui.components.PICKER_CONFIRM_TAG
+import com.blackatsystems.miguardia.ui.hours.IndependentExtraDraftState
+import com.blackatsystems.miguardia.ui.hours.ReferenceStartChoice
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -354,6 +361,194 @@ class HoursAndExtrasComposeTest {
             }
         }
     }
+
+    @Test
+    fun extraPickersGiveTheSameTextAsTypingAndNeverReviewOrSave() {
+        var state by mutableStateOf(extraEditorState())
+        var reviews = 0
+        var saves = 0
+        compose.setContent {
+            AndroidFontScaleTheme {
+                HoursAndExtrasSurfaceHost(
+                    state,
+                    HoursAndExtrasActions(
+                        updateExtraDraft = { transform ->
+                            state = state.copy(extraDraft = state.extraDraft?.let(transform))
+                        },
+                        reviewExtra = { reviews++ },
+                        saveExtra = { saves++ },
+                    ),
+                )
+            }
+        }
+        fun draft() = requireNotNull(state.extraDraft)
+
+        // Upper limit typed, then confirmed in the clock: same text.
+        compose.onNodeWithTag("extra-start-time").performScrollTo().performTextInput("2359")
+        compose.runOnIdle { assertEquals("23:59", draft().startTime) }
+        compose.onNodeWithTag("extra-start-time-picker").performScrollTo().performClick()
+        compose.onNodeWithTag(PICKER_CONFIRM_TAG).performClick()
+        compose.runOnIdle { assertEquals("23:59", draft().startTime) }
+
+        // Lower limit typed; cancelling the clock keeps it, confirming writes the same text.
+        compose.onNodeWithTag("extra-end-time").performScrollTo().performTextInput("0000")
+        compose.runOnIdle { assertEquals("00:00", draft().endTime) }
+        compose.onNodeWithTag("extra-end-time-picker").performScrollTo().performClick()
+        compose.onNodeWithTag(PICKER_CANCEL_TAG).performClick()
+        compose.runOnIdle { assertEquals("00:00", draft().endTime) }
+        compose.onNodeWithTag("extra-end-time-picker").performClick()
+        compose.onNodeWithTag(PICKER_CONFIRM_TAG).performClick()
+        compose.runOnIdle { assertEquals("00:00", draft().endTime) }
+
+        // Crossing midnight: 23:59 → 00:00 of the next day. The calendar reads the typed
+        // date and writes the same ISO text; cancelling changes nothing.
+        val nextDay = DATE.plusDays(1).toString()
+        compose.onNodeWithTag("extra-end-date").performScrollTo().performTextReplacement(nextDay)
+        compose.runOnIdle { assertEquals(nextDay, draft().endDate) }
+        compose.onNodeWithText("+1 día").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("extra-end-date-picker").performScrollTo().performClick()
+        compose.onNodeWithTag(PICKER_CANCEL_TAG).performClick()
+        compose.runOnIdle { assertEquals(nextDay, draft().endDate) }
+        compose.onNodeWithTag("extra-end-date-picker").performClick()
+        compose.onNodeWithTag(PICKER_CONFIRM_TAG).performClick()
+        compose.runOnIdle {
+            assertEquals(nextDay, draft().endDate)
+            assertEquals("23:59", draft().startTime)
+            assertEquals("00:00", draft().endTime)
+            assertEquals(0, reviews)
+            assertEquals(0, saves)
+            assertEquals(HoursAndExtrasSurface.EXTRA_EDITOR, state.surface)
+            assertEquals(EditorStage.EDIT, draft().stage)
+        }
+    }
+
+    @Test
+    fun emptyExtraEndDatePickerStartsOnTheOwnerDateAndOnlyWritesAfterConfirming() {
+        var state by mutableStateOf(extraEditorState(endDate = ""))
+        compose.setContent {
+            AndroidFontScaleTheme(darkTheme = false) {
+                HoursAndExtrasSurfaceHost(
+                    state,
+                    HoursAndExtrasActions(
+                        updateExtraDraft = { transform ->
+                            state = state.copy(extraDraft = state.extraDraft?.let(transform))
+                        },
+                    ),
+                )
+            }
+        }
+        compose.onNodeWithTag("extra-end-date-picker").performScrollTo().performClick()
+        compose.onNodeWithTag(PICKER_CANCEL_TAG).performClick()
+        compose.runOnIdle { assertEquals("", state.extraDraft?.endDate) }
+        compose.onNodeWithTag("extra-end-date-picker").performClick()
+        compose.onNodeWithTag(PICKER_CONFIRM_TAG).performClick()
+        compose.runOnIdle { assertEquals(DATE.toString(), state.extraDraft?.endDate) }
+    }
+
+    @Test
+    fun referenceDatePickersWriteIsoTextLikeTypingAndNeverReviewOrSave() {
+        var state by mutableStateOf(referenceDatesState())
+        var reviews = 0
+        var saves = 0
+        compose.setContent {
+            AndroidFontScaleTheme {
+                HoursAndExtrasSurfaceHost(
+                    state,
+                    HoursAndExtrasActions(
+                        updateReferenceDraft = { transform ->
+                            state = state.copy(referenceDraft = state.referenceDraft?.let(transform))
+                        },
+                        reviewReference = { reviews++ },
+                        saveReference = { saves++ },
+                    ),
+                )
+            }
+        }
+        fun draft() = requireNotNull(state.referenceDraft)
+
+        // Empty anchor: cancel keeps it empty; confirm writes today's date as typed ISO text.
+        compose.onNodeWithTag("hours-cycle-anchor-picker").performScrollTo().performClick()
+        compose.onNodeWithTag(PICKER_CANCEL_TAG).performClick()
+        compose.runOnIdle { assertEquals("", draft().cycleAnchorDate) }
+        compose.onNodeWithTag("hours-cycle-anchor-picker").performClick()
+        compose.onNodeWithTag(PICKER_CONFIRM_TAG).performClick()
+        compose.runOnIdle { assertEquals(DATE.toString(), draft().cycleAnchorDate) }
+        // Typed date, then confirmed in the calendar: same text.
+        compose.onNodeWithTag("hours-cycle-anchor").performScrollTo().performTextReplacement("2026-12-31")
+        compose.onNodeWithTag("hours-cycle-anchor-picker").performClick()
+        compose.onNodeWithTag(PICKER_CONFIRM_TAG).performClick()
+        compose.runOnIdle { assertEquals("2026-12-31", draft().cycleAnchorDate) }
+
+        // Custom start, prefilled with today like the editor does.
+        compose.onNodeWithTag("hours-custom-start-picker").performScrollTo().performClick()
+        compose.onNodeWithTag(PICKER_CANCEL_TAG).performClick()
+        compose.runOnIdle { assertEquals(DATE.toString(), draft().customStartDate) }
+        compose.onNodeWithTag("hours-custom-start").performScrollTo().performTextReplacement("2026-09-20")
+        compose.onNodeWithTag("hours-custom-start-picker").performScrollTo().performClick()
+        compose.onNodeWithTag(PICKER_CONFIRM_TAG).performClick()
+        compose.runOnIdle {
+            assertEquals("2026-09-20", draft().customStartDate)
+            assertEquals("2026-12-31", draft().cycleAnchorDate)
+            assertEquals(0, reviews)
+            assertEquals(0, saves)
+            assertEquals(EditorStage.EDIT, draft().stage)
+            assertEquals(HoursAndExtrasSurface.REFERENCE_EDITOR, state.surface)
+        }
+    }
+
+    @Test
+    fun largeFontKeepsEveryHoursPickerButtonUsableInAPhoneSizedBox() {
+        var state by mutableStateOf(extraEditorState(endDate = DATE.plusDays(1).toString()))
+        compose.setContent {
+            AndroidFontScaleTheme(darkTheme = false, fontScale = TestFontScale.EXTRA_LARGE) {
+                Box(Modifier.requiredSize(width = 360.dp, height = 800.dp)) {
+                    HoursAndExtrasSurfaceHost(
+                        state,
+                        HoursAndExtrasActions(
+                            updateExtraDraft = { transform ->
+                                state = state.copy(extraDraft = state.extraDraft?.let(transform))
+                            },
+                            updateReferenceDraft = { transform ->
+                                state = state.copy(referenceDraft = state.referenceDraft?.let(transform))
+                            },
+                        ),
+                    )
+                }
+            }
+        }
+        compose.onNodeWithText("+1 día").performScrollTo().assertIsDisplayed()
+        fun opensAndCancels(tag: String) {
+            compose.onNodeWithTag(tag).performScrollTo().assertIsDisplayed().performClick()
+            compose.onNodeWithTag(PICKER_CANCEL_TAG).assertIsDisplayed().performClick()
+        }
+        listOf("extra-start-time-picker", "extra-end-time-picker", "extra-end-date-picker").forEach(::opensAndCancels)
+        compose.runOnIdle { state = referenceDatesState() }
+        listOf("hours-cycle-anchor-picker", "hours-custom-start-picker").forEach(::opensAndCancels)
+    }
+
+    private fun extraEditorState(endDate: String = DATE.toString()): HoursAndExtrasUiState =
+        contentState().copy(
+            surface = HoursAndExtrasSurface.EXTRA_EDITOR,
+            extraDraft = IndependentExtraDraftState(
+                ownerDate = DATE,
+                startTime = "",
+                endDate = endDate,
+                endTime = "",
+            ),
+        )
+
+    private fun referenceDatesState(): HoursAndExtrasUiState =
+        contentState().copy(
+            surface = HoursAndExtrasSurface.REFERENCE_EDITOR,
+            referenceDraft = HoursReferenceDraft(
+                choice = HoursReferenceChoice.FIXED,
+                periodChoice = HoursPeriodChoice.CYCLE,
+                cycleLengthDays = "",
+                cycleAnchorDate = "",
+                startChoice = ReferenceStartChoice.CUSTOM,
+                customStartDate = DATE.toString(),
+            ),
+        )
 
     private fun Rect.containsRendered(other: Rect): Boolean =
         other.left >= left - 1 && other.top >= top - 1 &&

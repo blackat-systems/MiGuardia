@@ -194,7 +194,10 @@ fun SurfaceHeader(
     navigationLabel: String,
     onNavigation: () -> Unit,
     modifier: Modifier = Modifier,
+    navigationEnabled: Boolean = true,
+    navigationTestTag: String? = null,
 ) {
+    val navigationModifier = if (navigationTestTag != null) Modifier.testTag(navigationTestTag) else Modifier
     val titleStyle = MaterialTheme.typography.titleLarge
     val actionStyle = MaterialTheme.typography.labelLarge
     val measurer = rememberTextMeasurer()
@@ -223,11 +226,17 @@ fun SurfaceHeader(
                     modifier = Modifier.weight(1f).semantics { heading() },
                     style = titleStyle,
                 )
-                TextButton(onClick = onNavigation) { Text(navigationLabel) }
+                TextButton(onClick = onNavigation, enabled = navigationEnabled, modifier = navigationModifier) {
+                    Text(navigationLabel)
+                }
             }
         } else {
             Column(Modifier.fillMaxWidth()) {
-                TextButton(onClick = onNavigation, modifier = Modifier.align(Alignment.End)) {
+                TextButton(
+                    onClick = onNavigation,
+                    enabled = navigationEnabled,
+                    modifier = navigationModifier.align(Alignment.End),
+                ) {
                     Text(navigationLabel)
                 }
                 Text(
@@ -248,6 +257,8 @@ fun MonthNavigator(
     onPrevious: () -> Unit,
     onNext: () -> Unit,
     modifier: Modifier = Modifier,
+    previousTestTag: String? = null,
+    nextTestTag: String? = null,
 ) {
     val shape = MaterialTheme.shapes.large
     Card(
@@ -266,7 +277,8 @@ fun MonthNavigator(
         ) {
             TextButton(
                 onClick = onPrevious,
-                modifier = Modifier.semantics { contentDescription = previousDescription },
+                modifier = Modifier.semantics { contentDescription = previousDescription }
+                    .let { if (previousTestTag != null) it.testTag(previousTestTag) else it },
             ) { Text("‹", style = MaterialTheme.typography.headlineSmall) }
             Text(
                 monthLabel,
@@ -276,7 +288,8 @@ fun MonthNavigator(
             )
             TextButton(
                 onClick = onNext,
-                modifier = Modifier.semantics { contentDescription = nextDescription },
+                modifier = Modifier.semantics { contentDescription = nextDescription }
+                    .let { if (nextTestTag != null) it.testTag(nextTestTag) else it },
             ) { Text("›", style = MaterialTheme.typography.headlineSmall) }
         }
     }

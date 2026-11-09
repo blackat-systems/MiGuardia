@@ -20,10 +20,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -38,9 +38,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.blackatsystems.miguardia.core.domain.model.Holiday
 import com.blackatsystems.miguardia.core.domain.model.HolidayConflictPolicy
@@ -49,12 +49,18 @@ import com.blackatsystems.miguardia.core.domain.model.ShiftNoteAttachment
 import com.blackatsystems.miguardia.core.domain.model.ShiftNoteWithAttachments
 import com.blackatsystems.miguardia.ui.components.DestructiveAction
 import com.blackatsystems.miguardia.ui.components.EmptyState
+import com.blackatsystems.miguardia.ui.components.MiGuardiaButtonShape
+import com.blackatsystems.miguardia.ui.components.MiGuardiaSpacing
 import com.blackatsystems.miguardia.ui.components.PersistentMessage
 import com.blackatsystems.miguardia.ui.components.PrimaryAction
 import com.blackatsystems.miguardia.ui.components.ScreenHeading
 import com.blackatsystems.miguardia.ui.components.SectionCard
 import com.blackatsystems.miguardia.ui.components.SurfaceHeader
 import com.blackatsystems.miguardia.ui.components.TransientConfirmation
+import com.blackatsystems.miguardia.ui.components.cardBorder
+import com.blackatsystems.miguardia.ui.components.destructiveButtonColors
+import com.blackatsystems.miguardia.ui.components.vigiliaCardSurface
+import com.blackatsystems.miguardia.ui.components.vigiliaScreenBackground
 import com.blackatsystems.miguardia.ui.photos.SchedulePhotoFileStore
 import com.blackatsystems.miguardia.ui.photos.NoteDraftAttachment
 import com.blackatsystems.miguardia.ui.photos.NoteImageSelection
@@ -143,9 +149,11 @@ fun ExceptionsSurfaceHost(
     BackHandler(onBack = requestClose)
     TransientConfirmation(state.infoMessage, actions.clearMessage, reserveSpace = true) {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-            Column(Modifier.fillMaxSize().safeDrawingPadding()) {
+            Column(Modifier.fillMaxSize().vigiliaScreenBackground().safeDrawingPadding()) {
+                // Style v2: one title per screen. Notes use the former in-content title as the
+                // header ("Notas privadas"), so the content no longer repeats it.
                 SurfaceHeader(
-                    title = if (state.surface == ExceptionsSurface.HOLIDAYS) "Feriados" else "Notas",
+                    title = if (state.surface == ExceptionsSurface.HOLIDAYS) "Feriados" else "Notas privadas",
                     navigationLabel = "Cerrar",
                     onNavigation = requestClose,
                 )
@@ -153,7 +161,10 @@ fun ExceptionsSurfaceHost(
                 state.errorMessage?.let {
                     PersistentMessage(
                         message = it,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                        modifier = Modifier.padding(
+                            horizontal = MiGuardiaSpacing.large,
+                            vertical = MiGuardiaSpacing.extraSmall,
+                        ),
                         onDismiss = actions.clearMessage,
                         onRetry = actions.retry,
                     )
@@ -180,11 +191,13 @@ fun ExceptionsSurfaceHost(
                 )
             },
             confirmButton = {
-                TextButton(
+                FilledTonalButton(
                     onClick = {
                         confirmDiscard = false
                         actions.close()
                     },
+                    shape = MiGuardiaButtonShape,
+                    colors = destructiveButtonColors(),
                 ) { Text("Descartar") }
             },
             dismissButton = {
@@ -199,8 +212,8 @@ private fun HolidayContent(state: ExceptionsUiState, actions: ExceptionsActions)
     var pendingDelete by rememberSaveable { mutableStateOf<String?>(null) }
     val selectedDates = state.holidayDraft.selectedDates
     Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(MiGuardiaSpacing.large),
+        verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.large),
     ) {
         SectionCard(
             title = if (state.holidayDraft.editingId == null) "Fechas del feriado" else "Fecha del feriado",
@@ -222,6 +235,7 @@ private fun HolidayContent(state: ExceptionsUiState, actions: ExceptionsActions)
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("holiday-open-calendar-selection"),
+                shape = MiGuardiaButtonShape,
             ) {
                 Text(if (selectedDates.isEmpty()) "Elegir fechas en el Calendario" else "Cambiar fechas en el Calendario")
             }
@@ -245,9 +259,10 @@ private fun HolidayContent(state: ExceptionsUiState, actions: ExceptionsActions)
                 onClick = actions.cancelHolidayEdit,
                 enabled = !state.isSaving,
                 modifier = Modifier.fillMaxWidth(),
+                shape = MiGuardiaButtonShape,
             ) { Text("Cancelar edición") }
         }
-        Text("Feriados del mes", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        ScreenHeading(title = "Feriados del mes")
         if (state.isLoading) {
             CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
         } else if (state.holidays.isEmpty()) {
@@ -257,14 +272,15 @@ private fun HolidayContent(state: ExceptionsUiState, actions: ExceptionsActions)
             )
         } else {
             state.holidays.forEach { holiday ->
-                Card(Modifier.fillMaxWidth().testTag("holiday-card-${holiday.id}")) {
+                HolidayRowCard(Modifier.testTag("holiday-card-${holiday.id}")) {
                     Row(
-                        Modifier.fillMaxWidth().padding(12.dp),
+                        Modifier.fillMaxWidth().padding(MiGuardiaSpacing.medium),
                         verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.extraSmall),
                     ) {
                         Column(Modifier.weight(1f)) {
-                            Text(holiday.date.holidayDisplayName(), fontWeight = FontWeight.SemiBold)
-                            Text(holiday.name ?: "Feriado")
+                            Text(holiday.date.holidayDisplayName(), style = MaterialTheme.typography.titleMedium)
+                            Text(holiday.name ?: "Feriado", color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         TextButton(
                             onClick = { actions.editHoliday(holiday) },
@@ -279,7 +295,7 @@ private fun HolidayContent(state: ExceptionsUiState, actions: ExceptionsActions)
                 }
             }
         }
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(MiGuardiaSpacing.extraLarge))
     }
     if (state.holidayDraft.conflictDates.isNotEmpty()) {
         AlertDialog(
@@ -362,6 +378,7 @@ fun HolidayCalendarSelectionContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("holiday-cancel-calendar-selection"),
+                shape = MiGuardiaButtonShape,
             ) {
                 Text("Volver a Feriados")
             }
@@ -383,12 +400,13 @@ private fun NotesContent(
         actions.addNoteImages(uris)
     }
     Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(MiGuardiaSpacing.large),
+        verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.large),
     ) {
-        ScreenHeading(
-            title = "Notas privadas",
-            supportingText = "${shift.objectiveNameSnapshot} · ${shift.startTimeSnapshot}–${shift.endTimeSnapshot}",
+        Text(
+            "${shift.objectiveNameSnapshot} · ${shift.startTimeSnapshot}–${shift.endTimeSnapshot}",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         SectionCard(
             title = if (state.noteDraft.editingId == null) "Agregar nota" else "Editar nota",
@@ -405,6 +423,7 @@ private fun NotesContent(
                 onClick = { picker.launch(PickVisualMediaRequest(androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly)) },
                 enabled = !state.isSaving && imageStore != null,
                 modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                shape = MiGuardiaButtonShape,
             ) { Text("Agregar imágenes") }
             if (state.noteDraft.attachments.isNotEmpty() && imageStore != null) {
                 state.noteDraft.attachments.forEachIndexed { index, attachment ->
@@ -413,24 +432,28 @@ private fun NotesContent(
                         onRemove = { pendingAttachmentDelete = attachment.id.toString() })
                 }
             }
-            Button(
+            PrimaryAction(
+                label = "Guardar nota",
                 onClick = actions.saveNote,
-                enabled = !state.isSaving &&
-                    (state.noteDraft.body.isNotBlank() || state.noteDraft.attachments.isNotEmpty()),
-                modifier = Modifier.fillMaxWidth(),
-            ) { Text("Guardar nota") }
+                enabled = state.noteDraft.body.isNotBlank() || state.noteDraft.attachments.isNotEmpty(),
+                working = state.isSaving,
+            )
             if (state.noteDraft.editingId != null) {
                 OutlinedButton(
                     onClick = actions.cancelNoteEdit,
                     enabled = !state.isSaving,
                     modifier = Modifier.fillMaxWidth(),
+                    shape = MiGuardiaButtonShape,
                 ) { Text("Cancelar edición") }
             }
         }
         if (state.isLoading) {
             CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
         } else if (state.noteItems.isEmpty() && state.notes.isEmpty()) {
-            Text("Todavía no hay notas para esta jornada.")
+            Text(
+                "Todavía no hay notas para esta jornada.",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         } else {
             val items = if (state.noteItems.isNotEmpty()) state.noteItems else {
                 state.notes.map { ShiftNoteWithAttachments(it, emptyList()) }
@@ -441,7 +464,7 @@ private fun NotesContent(
                 }
                 SectionCard(title = "Nota", supportingText = supporting) {
                     if (imageStore != null && item.attachments.isNotEmpty()) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small)) {
                             item.attachments.take(3).forEachIndexed { index, attachment ->
                                 PrivateNoteImage(
                                     storageKey = attachment.storageKey,
@@ -458,11 +481,12 @@ private fun NotesContent(
                             }
                         }
                     }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small)) {
                         OutlinedButton(
                             onClick = { actions.editNote(item) },
                             enabled = !state.isSaving,
                             modifier = Modifier.weight(1f),
+                            shape = MiGuardiaButtonShape,
                         ) { Text("Editar") }
                         DestructiveAction(
                             label = "Eliminar",
@@ -513,10 +537,29 @@ private fun ConfirmDeleteDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = { Text(text) },
-        confirmButton = { TextButton(onClick = onConfirm,
-            colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) { Text("Eliminar") } },
+        confirmButton = {
+            FilledTonalButton(
+                onClick = onConfirm,
+                shape = MiGuardiaButtonShape,
+                colors = destructiveButtonColors(),
+            ) { Text("Eliminar") }
+        },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } },
     )
+}
+
+/** Common card surface (style v2) for each holiday row; the caller keeps its test tag. */
+@Composable
+private fun HolidayRowCard(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+    val shape = MaterialTheme.shapes.large
+    Card(
+        modifier = modifier.fillMaxWidth().vigiliaCardSurface(shape, MaterialTheme.colorScheme.surfaceContainer),
+        shape = shape,
+        border = cardBorder(),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+    ) {
+        content()
+    }
 }
 
 private fun LocalDate.holidayDisplayName(): String {

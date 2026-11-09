@@ -174,13 +174,18 @@ fun MiGuardiaDatePickerDialog(
     initial: LocalDate,
     onConfirm: (LocalDate) -> Unit,
     onDismiss: () -> Unit,
+    // false: show the month of [initial] with no day chosen, so "Aceptar" stays disabled until
+    // the person picks one (used where an empty value must not become a date by itself).
+    preselect: Boolean = true,
 ) {
     // Argentine Spanish like the rest of the app: weeks start on Monday, as in the Calendar,
     // whatever language the phone uses (a phone in es-US would start on Sunday).
-    val state = remember(initial) {
+    val state = remember(initial, preselect) {
+        val millis = pickerMillisFromLocalDate(initial)
         DatePickerState(
             locale = PickerLocale,
-            initialSelectedDateMillis = pickerMillisFromLocalDate(initial),
+            initialSelectedDateMillis = millis.takeIf { preselect },
+            initialDisplayedMonthMillis = millis,
         )
     }
     DatePickerDialog(

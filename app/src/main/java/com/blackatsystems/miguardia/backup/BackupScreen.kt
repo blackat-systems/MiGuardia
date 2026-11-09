@@ -19,11 +19,9 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
@@ -36,18 +34,24 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.unit.dp
 import com.blackatsystems.miguardia.core.domain.backup.BackupConflict
 import com.blackatsystems.miguardia.core.domain.backup.BackupConflictResolution
 import com.blackatsystems.miguardia.core.domain.backup.MiGuardiaBackupContract
 import com.blackatsystems.miguardia.core.domain.backup.BackupPhotoMode
 import com.blackatsystems.miguardia.core.domain.work.WorkSector
+import com.blackatsystems.miguardia.ui.components.DestructiveAction
+import com.blackatsystems.miguardia.ui.components.MiGuardiaSpacing
 import com.blackatsystems.miguardia.ui.components.PersistentMessage
+import com.blackatsystems.miguardia.ui.components.PrimaryAction
+import com.blackatsystems.miguardia.ui.components.SecondaryAction
 import com.blackatsystems.miguardia.ui.components.SectionCard
+import com.blackatsystems.miguardia.ui.components.vigiliaScreenBackground
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -94,17 +98,22 @@ fun BackupSurfaceHost(
         modifier = Modifier.fillMaxSize().testTag("backup-surface"),
         color = MaterialTheme.colorScheme.background,
     ) {
-        Column(Modifier.fillMaxSize().safeDrawingPadding()) {
+        Column(Modifier.fillMaxSize().vigiliaScreenBackground().safeDrawingPadding()) {
+            // Own header instead of SurfaceHeader: its action switches between «Cancelar» and
+            // «Volver» and must be disabled while applying or recovering, which the common header
+            // does not support. Same spacing and title style as SurfaceHeader.
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                modifier = Modifier.fillMaxWidth().padding(
+                    horizontal = MiGuardiaSpacing.large,
+                    vertical = MiGuardiaSpacing.small,
+                ),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small),
             ) {
                 Text(
                     "Copias y restauración",
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).semantics { heading() },
                     style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.SemiBold,
                 )
                 TextButton(
                     onClick = if (state.canCancel) actions.cancelOperation else actions.close,
@@ -116,8 +125,8 @@ fun BackupSurfaceHost(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
-                    .padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
+                    .padding(MiGuardiaSpacing.large),
+                verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.large),
             ) {
                 Text(
                     "Creá un archivo local completo o revisá una copia antes de cambiar tus datos.",
@@ -178,7 +187,7 @@ fun BackupSurfaceHost(
                     BackupStage.SUCCESS -> BackupSuccess(state, actions)
                     BackupStage.ERROR -> Unit
                 }
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(MiGuardiaSpacing.medium))
             }
         }
     }
@@ -249,22 +258,20 @@ private fun BackupHome(state: BackupUiState, actions: BackupActions) {
                 tag = "backup-unencrypted-confirmation",
             )
         }
-        Button(
+        PrimaryAction(
+            label = "Crear copia local",
             onClick = actions.create,
             enabled = state.canCreate,
             modifier = Modifier.fillMaxWidth().testTag("backup-create"),
-        ) {
-            Text("Crear copia local")
-        }
+        )
     }
     SectionCard("Restaurar desde un archivo", modifier = Modifier.testTag("backup-restore-card")) {
         Text("MiGuardia validará todo y mostrará el impacto antes de escribir.")
-        OutlinedButton(
+        SecondaryAction(
+            label = "Elegir copia",
             onClick = actions.chooseSource,
             modifier = Modifier.fillMaxWidth().testTag("backup-choose-source"),
-        ) {
-            Text("Elegir copia")
-        }
+        )
     }
 }
 
@@ -293,13 +300,12 @@ private fun PasswordRequired(state: BackupUiState, actions: BackupActions) {
         ) {
             Text(if (state.passwordVisible) "Ocultar contraseña" else "Mostrar contraseña")
         }
-        Button(
+        PrimaryAction(
+            label = "Verificar copia",
             onClick = actions.unlockSource,
             enabled = state.password.isNotEmpty(),
             modifier = Modifier.fillMaxWidth().testTag("backup-unlock"),
-        ) {
-            Text("Verificar copia")
-        }
+        )
     }
 }
 
@@ -351,19 +357,17 @@ private fun BackupPreviewContent(state: BackupUiState, actions: BackupActions) {
             Text("La copia no incluye ${preview.photosMissingFromBackup} imágenes que hoy existen en este dispositivo.")
         }
     }
-    Button(
+    PrimaryAction(
+        label = "Combinar con mis datos",
         onClick = actions.chooseMerge,
         enabled = preview.timelineCompatible && preview.mergeBlockedReason == null,
         modifier = Modifier.fillMaxWidth().testTag("backup-choose-merge"),
-    ) {
-        Text("Combinar con mis datos")
-    }
-    OutlinedButton(
+    )
+    SecondaryAction(
+        label = "Reemplazar todo",
         onClick = actions.chooseReplace,
         modifier = Modifier.fillMaxWidth().testTag("backup-choose-replace"),
-    ) {
-        Text("Reemplazar todo")
-    }
+    )
 }
 
 @Composable
@@ -376,13 +380,12 @@ private fun ConflictResolver(state: BackupUiState, actions: BackupActions) {
     state.conflicts.forEachIndexed { index, conflict ->
         ConflictCard(index + 1, conflict, state.resolutions[conflict.id], actions)
     }
-    Button(
+    PrimaryAction(
+        label = "Confirmar resoluciones",
         onClick = actions.confirmResolutions,
         enabled = state.allConflictsResolved,
         modifier = Modifier.fillMaxWidth().testTag("backup-confirm-resolutions"),
-    ) {
-        Text("Confirmar resoluciones")
-    }
+    )
 }
 
 @Composable
@@ -432,14 +435,18 @@ private fun ResolutionRow(
         modifier = Modifier
             .fillMaxWidth()
             .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
-            .padding(vertical = 8.dp),
+            .padding(vertical = MiGuardiaSpacing.small),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.medium),
     ) {
         RadioButton(selected = selected, onClick = null)
         Column(Modifier.weight(1f)) {
             Text(title, fontWeight = FontWeight.Bold)
-            Text(detail, style = MaterialTheme.typography.bodySmall)
+            Text(
+                detail,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
@@ -460,12 +467,11 @@ private fun ReadyToApply(state: BackupUiState, actions: BackupActions) {
                 )
             }
             Text("El estado actual queda protegido por un journal recuperable hasta verificar el resultado.")
-            Button(
+            PrimaryAction(
+                label = "Combinar con mis datos",
                 onClick = actions.apply,
                 modifier = Modifier.fillMaxWidth().testTag("backup-apply-merge"),
-            ) {
-                Text("Combinar con mis datos")
-            }
+            )
         }
         RestoreChoice.REPLACE_ALL -> SectionCard("Segunda confirmación obligatoria") {
             val incomingTotal = preview.incomingCounts.values.sum()
@@ -495,13 +501,12 @@ private fun ReadyToApply(state: BackupUiState, actions: BackupActions) {
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().testTag("backup-replace-confirmation"),
             )
-            Button(
+            DestructiveAction(
+                label = "Reemplazar todo",
                 onClick = actions.apply,
                 enabled = state.replaceConfirmation == LocalBackupCoordinator.REPLACE_CONFIRMATION,
                 modifier = Modifier.fillMaxWidth().testTag("backup-apply-replace"),
-            ) {
-                Text("Reemplazar todo")
-            }
+            )
         }
         null -> Unit
     }
@@ -514,30 +519,28 @@ private fun BackupSuccess(state: BackupUiState, actions: BackupActions) {
         if (state.successSequence > 0) {
             Text("Avisos y Widgets fueron reconciliados sin generar una notificación de prueba.")
         }
-        Button(
+        PrimaryAction(
+            label = "Volver al Calendario",
             onClick = actions.finishSuccess,
             modifier = Modifier.fillMaxWidth().testTag("backup-finish"),
-        ) {
-            Text("Volver al Calendario")
-        }
+        )
     }
 }
 
 @Composable
 private fun BusyBackup(message: String, tag: String, onCancel: (() -> Unit)? = null) {
     SectionCard("Procesando", modifier = Modifier.testTag(tag)) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.medium)) {
             CircularProgressIndicator()
             Text(message, modifier = Modifier.weight(1f))
         }
         Text("No cierres MiGuardia durante este paso.", style = MaterialTheme.typography.bodySmall)
         if (onCancel != null) {
-            OutlinedButton(
+            SecondaryAction(
+                label = "Cancelar sin cambiar mis datos",
                 onClick = onCancel,
                 modifier = Modifier.fillMaxWidth().testTag("$tag-cancel"),
-            ) {
-                Text("Cancelar sin cambiar mis datos")
-            }
+            )
         }
     }
 }
@@ -558,14 +561,18 @@ private fun SettingToggle(
         modifier = Modifier
             .fillMaxWidth()
             .toggleable(checked, role = Role.Switch, onValueChange = onChecked)
-            .padding(vertical = 8.dp)
+            .padding(vertical = MiGuardiaSpacing.small)
             .testTag(tag),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.medium),
     ) {
         Column(Modifier.weight(1f)) {
             Text(title, fontWeight = FontWeight.Bold)
-            Text(detail, style = MaterialTheme.typography.bodySmall)
+            Text(
+                detail,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
         Switch(checked = checked, onCheckedChange = null)
     }

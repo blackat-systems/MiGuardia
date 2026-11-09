@@ -16,6 +16,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.blackatsystems.miguardia.core.domain.model.ShiftNoteAttachment
+import com.blackatsystems.miguardia.ui.components.MiGuardiaSpacing
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -43,7 +44,9 @@ internal fun PrivateNoteImage(
     if (loaded == null) {
         val message = if (loadedState.loading) "Cargando imagen" else "Imagen no disponible"
         Box(modifier.semantics { contentDescription = "$description, $message" },
-            contentAlignment = Alignment.Center) { Text(message) }
+            contentAlignment = Alignment.Center) {
+            Text(message, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     } else {
         Image(loaded.asImageBitmap(), description, modifier, contentScale = contentScale)
     }
@@ -60,7 +63,7 @@ internal fun NoteDraftAttachment(
 ) {
     val number = index + 1
     Row(Modifier.fillMaxWidth().testTag("note-draft-image-$number"),
-        horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+        horizontalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.medium), verticalAlignment = Alignment.CenterVertically) {
         PrivateNoteImage(attachment.storageKey, imageStore,
             Modifier.size(88.dp).clickable(enabled = enabled, role = Role.Button,
                 onClickLabel = "Ver imagen $number", onClick = onView),

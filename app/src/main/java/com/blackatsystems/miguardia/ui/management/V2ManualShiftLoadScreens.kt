@@ -17,9 +17,8 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -39,6 +38,12 @@ import androidx.compose.ui.unit.dp
 import com.blackatsystems.miguardia.core.domain.shift.OccupiedDatePolicy
 import com.blackatsystems.miguardia.core.domain.work.WorkSetupState
 import com.blackatsystems.miguardia.ui.components.PersistentMessage
+import com.blackatsystems.miguardia.ui.components.MiGuardiaButtonShape
+import com.blackatsystems.miguardia.ui.components.MiGuardiaSpacing
+import com.blackatsystems.miguardia.ui.components.PrimaryAction
+import com.blackatsystems.miguardia.ui.components.SecondaryAction
+import com.blackatsystems.miguardia.ui.components.SectionCard
+import com.blackatsystems.miguardia.ui.components.destructiveButtonColors
 import com.blackatsystems.miguardia.ui.components.AdvancedOptionsSection
 import com.blackatsystems.miguardia.ui.components.ContextHelp
 import com.blackatsystems.miguardia.ui.theme.vigiliaColors
@@ -135,7 +140,7 @@ fun V2ManualShiftLoadContent(
         modifier = modifier
             .fillMaxWidth()
             .testTag("v2-manual-shift-load"),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.medium),
     ) {
         when (state.stage) {
             V2ManualShiftLoadStage.IDLE -> Unit
@@ -171,6 +176,7 @@ fun V2ManualShiftLoadContent(
                 state.creationRequest == null && state.pendingDayOff == null
             Text("Franco: no requiere lugar ni horario.", style = MaterialTheme.typography.bodyMedium)
             OutlinedButton(onClick = { actions.requestDayOff(dates, true) }, enabled = enabled,
+                shape = MiGuardiaButtonShape,
                 modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("v2-mark-day-off")) {
                 Text("Marcar Franco")
             }
@@ -184,13 +190,13 @@ fun V2ManualShiftLoadContent(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 8.dp)
+                    .padding(vertical = MiGuardiaSpacing.small)
                     .testTag("v2-manual-shift-loading"),
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 CircularProgressIndicator(modifier = Modifier.size(28.dp))
-                Text("Cargando horarios…", modifier = Modifier.padding(start = 12.dp))
+                Text("Cargando horarios…", modifier = Modifier.padding(start = MiGuardiaSpacing.medium))
             }
         }
 
@@ -213,8 +219,16 @@ fun V2ManualShiftLoadContent(
                 preview.results.forEach { Text("${it.date.format(DATE_FORMATTER)}: ${it.explanation}") }
                 Text("Cancelar no aplica ningún cambio.")
             } },
-            confirmButton = { TextButton(onClick = actions.confirmBatch,
-                enabled = !state.isSaving && preview.conflicts.isEmpty()) { Text("Confirmar") } },
+            confirmButton = {
+                val enabled = !state.isSaving && preview.conflicts.isEmpty()
+                if (preview.action == com.blackatsystems.miguardia.core.domain.repository.CalendarBatchAction.CLEAR) {
+                    // Clearing removes content: tonal red, as in the other destructive confirmations.
+                    FilledTonalButton(onClick = actions.confirmBatch, enabled = enabled,
+                        shape = MiGuardiaButtonShape, colors = destructiveButtonColors()) { Text("Confirmar") }
+                } else {
+                    TextButton(onClick = actions.confirmBatch, enabled = enabled) { Text("Confirmar") }
+                }
+            },
             dismissButton = { TextButton(onClick = actions.cancelBatch, enabled = !state.isSaving) { Text("Cancelar") } },
             modifier = Modifier.testTag("manual-batch-preview"),
         )
@@ -224,11 +238,12 @@ fun V2ManualShiftLoadContent(
             onDismissRequest = { if (!state.isSaving) actions.cancelDayOff() },
             title = { Text(if (mark) "Marcar Franco" else "Quitar Franco") },
             text = {
-                Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.medium)) {
                     Text(exactDateList(state.selectedDates))
                     Text(if (mark) "Se marcarán estos días como franco. Si alguno tiene una jornada, no se cambiará ninguno."
                         else "Sólo se quitará la marca de franco de estos días. Las jornadas y otras marcas se conservan.")
-                    state.errorMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                    // "Reintentar" stays the dialog's confirm button, so the message has no own actions.
+                    state.errorMessage?.let { PersistentMessage(message = it) }
                     if (state.isSaving) Text("Guardando…")
                 }
             },
@@ -271,28 +286,22 @@ private fun DateSelectionStep(
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
     if (showActions) {
-        Button(
+        PrimaryAction(
+            label = "Terminar de elegir días",
             onClick = onConfirm,
             enabled = enabled && selectedDates.isNotEmpty() && !selectionConfirmed,
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 56.dp)
-                .testTag("v2-manual-confirm-dates"),
-        ) {
-            Text("Terminar de elegir días")
-        }
+            modifier = Modifier.testTag("v2-manual-confirm-dates"),
+        )
     }
     if (showActions && selectionConfirmed) {
-        OutlinedButton(
+        SecondaryAction(
+            label = "Cambiar días",
             onClick = onModify,
             enabled = enabled,
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = 48.dp)
                 .testTag("v2-manual-modify-confirmed-dates"),
-        ) {
-            Text("Cambiar días")
-        }
+        )
     }
 }
 
@@ -349,9 +358,9 @@ internal fun V2TemplateOptionCard(
         ),
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            modifier = Modifier.padding(horizontal = MiGuardiaSpacing.medium, vertical = MiGuardiaSpacing.small),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.medium),
         ) {
             Box(
                 Modifier
@@ -359,7 +368,7 @@ internal fun V2TemplateOptionCard(
                     .heightIn(min = 48.dp)
                     .background(Color(option.template.colorArgb), MaterialTheme.shapes.extraSmall),
             )
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.extraSmall)) {
                 Text(option.objective.abbreviation, fontWeight = FontWeight.SemiBold)
                 Text(option.workType.name, fontWeight = FontWeight.SemiBold)
                 Text(
@@ -385,19 +394,11 @@ private fun ReviewStep(
     onModifyCalendarSelection: () -> Unit,
 ) {
     val option = state.selectedOption ?: return
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .testTag("v2-manual-preview"),
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-        shape = MaterialTheme.shapes.medium,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+    SectionCard(
+        title = "Revisá antes de guardar",
+        modifier = Modifier.testTag("v2-manual-preview"),
     ) {
-        Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            Text("Revisá antes de guardar", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        Column(verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small)) {
             Text(if (state.plannedDates.size == 1) "1 jornada nueva" else "${state.plannedDates.size} jornadas nuevas")
             Text("Fechas: ${exactDateList(state.plannedDates)}", modifier = Modifier.testTag("v2-manual-preview-dates"))
             Text("Lugar: ${option.objective.abbreviation}")
@@ -423,28 +424,24 @@ private fun ReviewStep(
             }
         }
     }
-    Button(
+    PrimaryAction(
+        label = when {
+            state.isSaving -> "Guardando jornadas…"
+            state.plannedDates.size == 1 -> "Guardar jornada"
+            else -> "Guardar ${state.plannedDates.size} jornadas"
+        },
         onClick = actions.save,
-        enabled = state.plannedDates.isNotEmpty() && !state.isSaving && !state.isLoading,
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 56.dp)
-            .testTag("v2-manual-save"),
-    ) {
-        if (state.isSaving) {
-            CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.dp)
-            Text("Guardando jornadas…", modifier = Modifier.padding(start = 8.dp))
-        } else {
-            Text(if (state.plannedDates.size == 1) "Guardar jornada" else "Guardar ${state.plannedDates.size} jornadas")
-        }
-    }
-    OutlinedButton(
+        // Disabled while saving through `working`, which also shows the progress indicator.
+        enabled = state.plannedDates.isNotEmpty() && !state.isLoading,
+        working = state.isSaving,
+        modifier = Modifier.testTag("v2-manual-save"),
+    )
+    SecondaryAction(
+        label = "Cambiar días",
         onClick = onModifyCalendarSelection,
         enabled = !state.isSaving && !state.isLoading,
         modifier = Modifier.fillMaxWidth(),
-    ) {
-        Text("Cambiar días")
-    }
+    )
 }
 
 @Composable
@@ -467,7 +464,7 @@ private fun BackfillDialog(state: V2ManualShiftLoadUiState, actions: V2ManualShi
                 if (state.isSaving) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
-                        Text("Extendiendo configuración…", modifier = Modifier.padding(start = 10.dp))
+                        Text("Extendiendo configuración…", modifier = Modifier.padding(start = MiGuardiaSpacing.small))
                     }
                 }
             }
@@ -500,10 +497,11 @@ private fun OccupiedDatesDialog(state: V2ManualShiftLoadUiState, actions: V2Manu
                         "Fechas con contenido: ${state.occupiedDates.sorted().joinToString { it.format(DATE_FORMATTER) }}."
                     },
                 )
-                Button(
+                FilledTonalButton(
                     enabled = !state.isSaving,
                     onClick = { actions.chooseOccupiedPolicy(OccupiedDatePolicy.REPLACE) },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error, contentColor = MaterialTheme.colorScheme.onError),
+                    shape = MiGuardiaButtonShape,
+                    colors = destructiveButtonColors(),
                     modifier = Modifier.fillMaxWidth(),
                 ) { Text("Sobrescribir") }
                 state.conflictDetails.forEach { Text(it) }
@@ -512,17 +510,20 @@ private fun OccupiedDatesDialog(state: V2ManualShiftLoadUiState, actions: V2Manu
                     OutlinedButton(
                         enabled = !state.isSaving,
                         onClick = { actions.chooseOccupiedPolicy(OccupiedDatePolicy.KEEP_OCCUPIED) },
+                        shape = MiGuardiaButtonShape,
                         modifier = Modifier.fillMaxWidth(),
                     ) { Text("Agregar sólo en días libres") }
                 }
                 OutlinedButton(
                     enabled = !state.isSaving,
                     onClick = { actions.chooseOccupiedPolicy(OccupiedDatePolicy.ADD_SECOND_SHIFT) },
+                    shape = MiGuardiaButtonShape,
                     modifier = Modifier.fillMaxWidth(),
                 ) { Text("Superponer") }
                 OutlinedButton(
                     enabled = !state.isSaving,
                     onClick = { actions.chooseOccupiedPolicy(OccupiedDatePolicy.CANCEL) },
+                    shape = MiGuardiaButtonShape,
                     modifier = Modifier.fillMaxWidth(),
                 ) { Text("Cancelar") }
             }

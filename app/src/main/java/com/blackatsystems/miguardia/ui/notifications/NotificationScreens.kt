@@ -53,6 +53,7 @@ import com.blackatsystems.miguardia.core.domain.model.Shift
 import com.blackatsystems.miguardia.notifications.NotificationAttentionMode
 import com.blackatsystems.miguardia.notifications.NotificationPrivacy
 import com.blackatsystems.miguardia.notifications.NotificationRhythm
+import com.blackatsystems.miguardia.ui.components.MiGuardiaSpacing
 import com.blackatsystems.miguardia.ui.components.PersistentMessage
 import com.blackatsystems.miguardia.ui.components.ScreenHeading
 import com.blackatsystems.miguardia.ui.components.SectionCard
@@ -127,17 +128,19 @@ fun NotificationSurfaceHost(state: NotificationUiState, actions: NotificationAct
         if (result.resultCode == android.app.Activity.RESULT_OK) actions.setSound(selected)
     }
     Dialog(onDismissRequest = actions.close) {
+        // Style v2: the three Stage 14 dialogs (Notificaciones, Clima, Widget) share one
+        // background, width limit and padding.
         Surface(
             shape = MaterialTheme.shapes.extraLarge,
             color = MaterialTheme.colorScheme.surfaceContainerLow,
-            tonalElevation = 6.dp,
+            contentColor = MaterialTheme.colorScheme.onSurface,
         ) {
             Column(
                 modifier = Modifier
                     .widthIn(max = 620.dp)
                     .fillMaxWidth()
-                    .padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                    .padding(MiGuardiaSpacing.large),
+                verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.medium),
             ) {
                 Row(verticalAlignment = Alignment.Top) {
                     ScreenHeading(
@@ -150,7 +153,7 @@ fun NotificationSurfaceHost(state: NotificationUiState, actions: NotificationAct
                 }
                 Column(
                     modifier = Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.medium),
                 ) {
                     Text(
                         if (state.surface == NotificationSurface.GLOBAL) {

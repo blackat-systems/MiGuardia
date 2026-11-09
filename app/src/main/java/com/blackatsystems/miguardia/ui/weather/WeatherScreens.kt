@@ -54,7 +54,9 @@ import com.blackatsystems.miguardia.core.domain.weather.WeatherHour
 import com.blackatsystems.miguardia.core.domain.weather.WeatherUnitSystem
 import com.blackatsystems.miguardia.core.domain.weather.roundedTemperature
 import com.blackatsystems.miguardia.core.domain.weather.spanishLabel
+import com.blackatsystems.miguardia.ui.components.MiGuardiaSpacing
 import com.blackatsystems.miguardia.ui.components.PersistentMessage
+import com.blackatsystems.miguardia.ui.components.cardBorder
 import com.blackatsystems.miguardia.ui.EventTimeRangeStyle
 import com.blackatsystems.miguardia.ui.formatEventTimeRange
 import com.blackatsystems.miguardia.ui.components.ScreenHeading
@@ -117,19 +119,21 @@ fun WeatherSurfaceHost(state: WeatherUiState, actions: WeatherActions) {
         }
     }
     Dialog(onDismissRequest = actions.close) {
+        // Style v2: same background, width limit and padding as Notificaciones and Widget.
         Surface(
             modifier = Modifier.wrapContentHeight().testTag("weather-dialog-surface"),
             shape = MaterialTheme.shapes.extraLarge,
-            tonalElevation = 6.dp,
+            color = MaterialTheme.colorScheme.surfaceContainerLow,
+            contentColor = MaterialTheme.colorScheme.onSurface,
         ) {
             // Dialog's decor already bounds the safe drawing area. Applying
             // safeDrawingPadding again here would reserve those insets twice.
             Column(
                 modifier = Modifier
-                    .widthIn(max = 680.dp)
+                    .widthIn(max = 620.dp)
                     .fillMaxWidth()
-                    .padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                    .padding(MiGuardiaSpacing.large),
+                verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.medium),
             ) {
                 Row(
                     modifier = Modifier.testTag("weather-heading"),
@@ -150,7 +154,7 @@ fun WeatherSurfaceHost(state: WeatherUiState, actions: WeatherActions) {
                     Column(
                         modifier = Modifier.testTag("weather-scroll-content")
                             .verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.medium),
                     ) {
                         Text(
                             if (state.surface == WeatherSurface.GLOBAL) {
@@ -360,13 +364,15 @@ private fun SummaryCard(summary: ShiftWeatherSummary, unit: WeatherUnitSystem) {
 private fun HourCard(hour: WeatherHour, unit: WeatherUnitSystem, zoneId: ZoneId) {
     Card(
         modifier = Modifier.width(148.dp),
+        shape = MaterialTheme.shapes.large,
+        border = cardBorder(),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
         ),
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier.padding(MiGuardiaSpacing.large),
+            verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.extraSmall),
         ) {
             Text(
                 hour.validFrom.atZone(zoneId).format(HourFormatter),

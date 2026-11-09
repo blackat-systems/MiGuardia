@@ -16,9 +16,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -28,6 +28,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
@@ -44,8 +45,18 @@ import com.blackatsystems.miguardia.ui.components.AutomaticTimeField
 import com.blackatsystems.miguardia.ui.components.AdvancedOptionsSection
 import com.blackatsystems.miguardia.ui.components.ContextHelp
 import com.blackatsystems.miguardia.ui.components.ContextHelpButton
+import com.blackatsystems.miguardia.ui.components.DateFieldFormat
+import com.blackatsystems.miguardia.ui.components.Eyebrow
+import com.blackatsystems.miguardia.ui.components.MiGuardiaButtonShape
+import com.blackatsystems.miguardia.ui.components.MiGuardiaSpacing
+import com.blackatsystems.miguardia.ui.components.PICKER_BUTTON_SUFFIX
+import com.blackatsystems.miguardia.ui.components.PickableDateField
+import com.blackatsystems.miguardia.ui.components.PrimaryAction
+import com.blackatsystems.miguardia.ui.components.SecondaryAction
 import com.blackatsystems.miguardia.ui.components.SectionCard
 import com.blackatsystems.miguardia.ui.components.SurfaceHeader
+import com.blackatsystems.miguardia.ui.components.destructiveButtonColors
+import com.blackatsystems.miguardia.ui.components.vigiliaScreenBackground
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
@@ -140,12 +151,12 @@ fun V2ShiftActualDetailCard(
 ) {
     val tagPrefix = "v2-actual-${shift.id}"
     val content: @Composable () -> Unit = {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small)) {
             when (rowState) {
                 null,
                 V2ShiftActualRowState.Loading,
                 -> {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small)) {
                         CircularProgressIndicator(Modifier.testTag("$tagPrefix-loading"))
                         Text("Leyendo horario real…")
                     }
@@ -153,10 +164,11 @@ fun V2ShiftActualDetailCard(
 
                 is V2ShiftActualRowState.Error -> {
                     Text(rowState.message, color = MaterialTheme.colorScheme.error)
-                    OutlinedButton(
+                    SecondaryAction(
+                        label = "Reintentar",
                         onClick = actions.retryInspection,
                         modifier = Modifier.fillMaxWidth().testTag("$tagPrefix-retry"),
-                    ) { Text("Reintentar") }
+                    )
                 }
 
                 is V2ShiftActualRowState.Content -> {
@@ -171,6 +183,7 @@ fun V2ShiftActualDetailCard(
                         if (rowState.canRegister) {
                             Button(
                                 onClick = { actions.begin(shift.id, ordinal, count, ownerDate) },
+                                shape = MiGuardiaButtonShape,
                                 modifier = Modifier.fillMaxWidth().testTag("$tagPrefix-register"),
                             ) { Text("Registrar cambio en el horario estipulado") }
                             Text(
@@ -183,6 +196,7 @@ fun V2ShiftActualDetailCard(
                         ActualSummary(shift, actual)
                         Button(
                             onClick = { actions.begin(shift.id, ordinal, count, ownerDate) },
+                            shape = MiGuardiaButtonShape,
                             modifier = Modifier.fillMaxWidth().testTag("$tagPrefix-correct"),
                         ) { Text("Registrar cambio en el horario estipulado") }
                         Text(
@@ -190,10 +204,11 @@ fun V2ShiftActualDetailCard(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                        OutlinedButton(
+                        SecondaryAction(
+                            label = "Volver al horario planificado",
                             onClick = { actions.requestReturnToPlanned(shift.id) },
                             modifier = Modifier.fillMaxWidth().testTag("$tagPrefix-return-planned"),
-                        ) { Text("Volver al horario planificado") }
+                        )
                     }
                 }
             }
@@ -207,12 +222,12 @@ fun V2ShiftActualDetailCard(
         }
     if (embedded) {
         Column(
-            modifier = accessibleModifier.padding(top = 8.dp),
+            modifier = accessibleModifier.padding(top = MiGuardiaSpacing.small),
             content = { content() },
         )
     } else {
         Card(modifier = accessibleModifier) {
-            Column(modifier = Modifier.padding(16.dp)) { content() }
+            Column(modifier = Modifier.padding(MiGuardiaSpacing.large)) { content() }
         }
     }
 }
@@ -306,9 +321,10 @@ fun V2ShiftActualSurfaceHost(
                 ) { Text("Reintentar lectura") }
             },
             dismissButton = {
-                TextButton(
+                FilledTonalButton(
                     onClick = actions.discardUnavailableRestoredDraft,
-                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                    shape = MiGuardiaButtonShape,
+                    colors = destructiveButtonColors(),
                     modifier = Modifier.testTag("v2-actual-restored-discard"),
                 ) { Text("Descartar borrador") }
             },
@@ -346,10 +362,11 @@ fun V2ShiftActualSurfaceHost(
                 Text("Los cambios que todavía no guardaste se perderán. El horario real persistido no se modificará.")
             },
             confirmButton = {
-                TextButton(
+                FilledTonalButton(
                     onClick = actions.confirmDiscard,
                     enabled = !state.isSaving && !state.isRefreshingSource,
-                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                    shape = MiGuardiaButtonShape,
+                    colors = destructiveButtonColors(),
                     modifier = Modifier.testTag("v2-actual-confirm-discard"),
                 ) { Text("Descartar borrador") }
             },
@@ -366,6 +383,7 @@ private fun ActualEditorScreen(state: V2ShiftActualUiState, actions: V2ShiftActu
     Column(
         Modifier
             .fillMaxSize()
+            .vigiliaScreenBackground()
             .safeDrawingPadding(),
     ) {
         SurfaceHeader("Horario real", "Cerrar", actions.close)
@@ -374,25 +392,27 @@ private fun ActualEditorScreen(state: V2ShiftActualUiState, actions: V2ShiftActu
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp)
+                .padding(MiGuardiaSpacing.large)
                 .testTag("v2-actual-editor-${editor.expectation.planned.shift.id}"),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+            verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.large),
         ) {
-            Text(
-                "Jornada ${editor.ordinal} de ${editor.count}",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Text("UUID: ${editor.expectation.planned.shift.id}", style = MaterialTheme.typography.bodySmall)
+            // One title per screen: the header names the screen; the journey is a small label.
+            Column(verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.extraSmall)) {
+                Eyebrow("Jornada ${editor.ordinal} de ${editor.count}")
+                Text(
+                    "UUID: ${editor.expectation.planned.shift.id}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             editor.errorMessage?.let { PersistentMessage(it) }
             if (editor.sourceConflict) {
-                OutlinedButton(
+                SecondaryAction(
+                    label = if (state.isRefreshingSource) "Refrescando…" else "Refrescar jornada conservando borrador",
                     onClick = actions.refreshEditorSource,
                     enabled = !state.isSaving && !state.isRefreshingSource,
                     modifier = Modifier.fillMaxWidth().testTag("v2-actual-refresh-source"),
-                ) {
-                    Text(if (state.isRefreshingSource) "Refrescando…" else "Refrescar jornada conservando borrador")
-                }
+                )
             }
             when (editor.stage) {
                 V2ShiftActualStage.IDENTITY -> IdentityStage(editor)
@@ -401,35 +421,34 @@ private fun ActualEditorScreen(state: V2ShiftActualUiState, actions: V2ShiftActu
                 V2ShiftActualStage.REVIEW -> ReviewStage(editor)
             }
             if (editor.expectation.previousActual != null) {
-                OutlinedButton(
+                SecondaryAction(
+                    label = "Volver al horario planificado",
                     onClick = { actions.requestReturnToPlanned(editor.expectation.planned.shift.id) },
                     enabled = !state.isSaving && !state.isRefreshingSource,
                     modifier = Modifier.fillMaxWidth().testTag("v2-actual-editor-return-planned"),
-                ) { Text("Volver al horario planificado") }
+                )
             }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                OutlinedButton(
+            // Main action full width; the step back below it, so both keep their whole text
+            // with large Android font sizes.
+            Column(verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small)) {
+                PrimaryAction(
+                    label = when {
+                        state.isSaving -> "Guardando…"
+                        state.isRefreshingSource -> "Refrescando…"
+                        editor.stage == V2ShiftActualStage.REVIEW -> "Guardar"
+                        else -> "Continuar"
+                    },
+                    onClick = if (editor.stage == V2ShiftActualStage.REVIEW) actions.save else actions.next,
+                    enabled = !state.isRefreshingSource && !editor.sourceConflict,
+                    working = state.isSaving,
+                    modifier = Modifier.testTag("v2-actual-next-save"),
+                )
+                SecondaryAction(
+                    label = if (editor.stage == V2ShiftActualStage.IDENTITY) "Cancelar" else "Atrás",
                     onClick = actions.back,
                     enabled = !state.isSaving && !state.isRefreshingSource,
-                    modifier = Modifier.weight(1f),
-                ) { Text(if (editor.stage == V2ShiftActualStage.IDENTITY) "Cancelar" else "Atrás") }
-                Button(
-                    onClick = if (editor.stage == V2ShiftActualStage.REVIEW) actions.save else actions.next,
-                    enabled = !state.isSaving && !state.isRefreshingSource && !editor.sourceConflict,
-                    modifier = Modifier.weight(1f).testTag("v2-actual-next-save"),
-                ) {
-                    Text(
-                        when {
-                            state.isSaving -> "Guardando…"
-                            state.isRefreshingSource -> "Refrescando…"
-                            editor.stage == V2ShiftActualStage.REVIEW -> "Guardar"
-                            else -> "Continuar"
-                        },
-                    )
-                }
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
         }
     }
@@ -463,6 +482,7 @@ private fun ActualTimeStage(editor: V2ShiftActualEditorState, actions: V2ShiftAc
             offset = draft.startOffset,
             zoneId = shift.zoneId,
             tag = "v2-actual-start",
+            pickerFallbackDate = { editor.ownerDate },
             onDate = { value -> actions.updateDraft { it.copy(startDate = value, startOffset = null) } },
             onTime = { value -> actions.updateDraft { it.copy(startTime = value, startOffset = null) } },
             onOffset = { value -> actions.updateDraft { it.copy(startOffset = value.ifBlank { null }) } },
@@ -474,6 +494,7 @@ private fun ActualTimeStage(editor: V2ShiftActualEditorState, actions: V2ShiftAc
             offset = draft.endOffset,
             zoneId = shift.zoneId,
             tag = "v2-actual-end",
+            pickerFallbackDate = { DateFieldFormat.ISO.parseOrNull(draft.startDate) ?: editor.ownerDate },
             onDate = { value -> actions.updateDraft { it.copy(endDate = value, endOffset = null) } },
             onTime = { value -> actions.updateDraft { it.copy(endTime = value, endOffset = null) } },
             onOffset = { value -> actions.updateDraft { it.copy(endOffset = value.ifBlank { null }) } },
@@ -503,43 +524,48 @@ private fun DateTimeFields(
     offset: String?,
     zoneId: ZoneId,
     tag: String,
+    pickerFallbackDate: () -> LocalDate,
     onDate: (String) -> Unit,
     onTime: (String) -> Unit,
     onOffset: (String) -> Unit,
 ) {
     Text(prefix, fontWeight = FontWeight.SemiBold)
+    // The calendar and the clock only write the same text a person would type
+    // (AAAA-MM-DD and HH:mm) into the draft; review and save stay where they were.
+    val dateField = @Composable { modifier: Modifier ->
+        PickableDateField(
+            value = date,
+            onValueChange = onDate,
+            label = "Fecha AAAA-MM-DD",
+            format = DateFieldFormat.ISO,
+            supportingText = null,
+            pickerFallback = pickerFallbackDate,
+            pickerTestTag = "$tag-date$PICKER_BUTTON_SUFFIX",
+            modifier = modifier.testTag("$tag-date"),
+        )
+    }
+    val timeField = @Composable { modifier: Modifier ->
+        AutomaticTimeField(
+            value = time,
+            onValueChange = onTime,
+            label = "Hora",
+            withPicker = true,
+            pickerTestTag = "$tag-time$PICKER_BUTTON_SUFFIX",
+            modifier = modifier.testTag("$tag-time"),
+        )
+    }
+    val fontScale = LocalDensity.current.fontScale
     BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-        if (maxWidth < 360.dp) {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(
-                    value = date,
-                    onValueChange = onDate,
-                    label = { Text("Fecha AAAA-MM-DD") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth().testTag("$tag-date"),
-                )
-                AutomaticTimeField(
-                    value = time,
-                    onValueChange = onTime,
-                    label = "Hora",
-                    modifier = Modifier.fillMaxWidth().testTag("$tag-time"),
-                )
+        // Side by side only when both fields and their buttons fit with Android's font size.
+        if (maxWidth < 360.dp * fontScale) {
+            Column(verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small)) {
+                dateField(Modifier.fillMaxWidth())
+                timeField(Modifier.fillMaxWidth())
             }
         } else {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(
-                    value = date,
-                    onValueChange = onDate,
-                    label = { Text("Fecha AAAA-MM-DD") },
-                    singleLine = true,
-                    modifier = Modifier.weight(1.35f).testTag("$tag-date"),
-                )
-                AutomaticTimeField(
-                    value = time,
-                    onValueChange = onTime,
-                    label = "Hora",
-                    modifier = Modifier.weight(1f).testTag("$tag-time"),
-                )
+            Row(horizontalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small)) {
+                dateField(Modifier.weight(1.35f))
+                timeField(Modifier.weight(1f))
             }
         }
     }
@@ -613,17 +639,18 @@ private fun ClassificationStage(
         if (draft.choice == ShiftActualDifferenceChoice.EXTRA_CLASS) {
             Text("Tipo de horas extra", fontWeight = FontWeight.SemiBold)
             if (state.isLoadingClasses) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small)) {
                     CircularProgressIndicator(Modifier.testTag("v2-actual-classes-loading"))
                     Text("Leyendo tipos de horas extra…")
                 }
             }
             state.classesLoadError?.let { message ->
                 PersistentMessage(message)
-                OutlinedButton(
+                SecondaryAction(
+                    label = "Reintentar tipos",
                     onClick = actions.retryClasses,
                     modifier = Modifier.fillMaxWidth().testTag("v2-actual-classes-retry"),
-                ) { Text("Reintentar tipos") }
+                )
             }
             state.classes
                 .filter { it.isActive || it.id == draft.selectedClassId }
@@ -649,24 +676,27 @@ private fun ClassificationStage(
                         },
                     )
                 }
-            OutlinedButton(
+            SecondaryAction(
+                label = "Crear tipo al guardar",
                 onClick = actions.startInlineClass,
                 enabled = !state.isLoadingClasses && state.classesLoadError == null,
                 modifier = Modifier.fillMaxWidth().testTag("v2-actual-inline-class"),
-            ) { Text("Crear tipo al guardar") }
+            )
             if (draft.isCreatingInlineClass) InlineClassDraft(draft, actions)
             Text("Fragmentos exactos", fontWeight = FontWeight.SemiBold)
             Text(
                 "Elegí las porciones reales fuera del intervalo planificado. Deben sumar exactamente la diferencia.",
                 style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             draft.fragments.forEachIndexed { index, fragment ->
-                FragmentEditor(index, fragment, editor.expectation.planned.shift.zoneId, actions)
+                FragmentEditor(index, fragment, editor.expectation.planned.shift.zoneId, editor.ownerDate, actions)
             }
-            OutlinedButton(
+            SecondaryAction(
+                label = "Agregar fragmento",
                 onClick = actions.addFragment,
                 modifier = Modifier.fillMaxWidth().testTag("v2-actual-add-fragment"),
-            ) { Text("Agregar fragmento") }
+            )
         }
     }
 }
@@ -675,6 +705,7 @@ private fun ClassificationStage(
 private fun ChoiceButton(label: String, selected: Boolean, tag: String, onClick: () -> Unit) {
     OutlinedButton(
         onClick = onClick,
+        shape = MiGuardiaButtonShape,
         modifier = Modifier
             .fillMaxWidth()
             .testTag(tag)
@@ -688,7 +719,7 @@ private fun InlineClassDraft(draft: V2ActualEditorDraft, actions: V2ShiftActualA
         title = "Nueva clase",
         supportingText = "Será un borrador hasta la confirmación final del horario real.",
     ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.extraSmall)) {
             listOf("Horas extras", "Extensión de turno", "Servicio extra").forEach { suggestion ->
                 TextButton(onClick = { actions.updateDraft { it.copy(inlineClassName = suggestion) } }) {
                     Text(suggestion)
@@ -747,10 +778,11 @@ private fun InlineClassDraft(draft: V2ActualEditorDraft, actions: V2ShiftActualA
 @Composable
 private fun YesNoChoice(title: String, value: Boolean?, tag: String, onValue: (Boolean) -> Unit) {
     Text(title)
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Row(horizontalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small)) {
         listOf(true to "Sí", false to "No").forEach { (choice, label) ->
             OutlinedButton(
                 onClick = { onValue(choice) },
+                shape = MiGuardiaButtonShape,
                 modifier = Modifier.weight(1f).testTag("$tag-${label.lowercase()}")
                     .semantics { selected = value == choice },
             ) { Text(if (value == choice) "✓ $label" else label) }
@@ -763,6 +795,7 @@ private fun FragmentEditor(
     index: Int,
     fragment: V2ActualFragmentInput,
     zoneId: ZoneId,
+    ownerDate: LocalDate,
     actions: V2ShiftActualActions,
 ) {
     SectionCard(title = "Fragmento ${index + 1}", supportingText = "UUID: ${fragment.id}") {
@@ -773,6 +806,7 @@ private fun FragmentEditor(
             offset = fragment.startOffset,
             zoneId = zoneId,
             tag = "v2-actual-fragment-${fragment.id}-start",
+            pickerFallbackDate = { ownerDate },
             onDate = { value -> actions.updateFragment(fragment.id) { it.copy(startDate = value, startOffset = null) } },
             onTime = { value -> actions.updateFragment(fragment.id) { it.copy(startTime = value, startOffset = null) } },
             onOffset = { value -> actions.updateFragment(fragment.id) { it.copy(startOffset = value.ifBlank { null }) } },
@@ -784,6 +818,7 @@ private fun FragmentEditor(
             offset = fragment.endOffset,
             zoneId = zoneId,
             tag = "v2-actual-fragment-${fragment.id}-end",
+            pickerFallbackDate = { DateFieldFormat.ISO.parseOrNull(fragment.startDate) ?: ownerDate },
             onDate = { value -> actions.updateFragment(fragment.id) { it.copy(endDate = value, endOffset = null) } },
             onTime = { value -> actions.updateFragment(fragment.id) { it.copy(endTime = value, endOffset = null) } },
             onOffset = { value -> actions.updateFragment(fragment.id) { it.copy(endOffset = value.ifBlank { null }) } },
@@ -816,30 +851,34 @@ private fun ExtraClassCatalogScreen(state: V2ShiftActualUiState, actions: V2Shif
     Column(
         Modifier
             .fillMaxSize()
+            .vigiliaScreenBackground()
             .safeDrawingPadding(),
     ) {
         SurfaceHeader("Tipos de horas extra", "Cerrar", actions.close)
         HorizontalDivider()
         Column(
-            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(MiGuardiaSpacing.large),
+            verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.large),
         ) {
             state.infoMessage?.let { PersistentMessage(it, onDismiss = actions.clearMessage) }
             state.classesLoadError?.let { message ->
                 PersistentMessage(message)
-                OutlinedButton(
+                SecondaryAction(
+                    label = "Reintentar",
                     onClick = actions.retryClasses,
                     modifier = Modifier.fillMaxWidth().testTag("v2-extra-class-retry"),
-                ) { Text("Reintentar") }
+                )
             }
             Text(
                 "Estas clases sólo se usan cuando vos clasificás tiempo adicional concreto. No se crean extras automáticamente.",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Button(
+            PrimaryAction(
+                label = "Crear clase",
                 onClick = actions.startNewClass,
                 enabled = !state.isSaving && !state.isLoadingClasses && state.classesLoadError == null,
-                modifier = Modifier.fillMaxWidth().testTag("v2-extra-class-new"),
-            ) { Text("Crear clase") }
+                modifier = Modifier.testTag("v2-extra-class-new"),
+            )
             state.classEditor?.let { ClassEditor(it, state.isSaving, actions) }
             if (state.isLoadingClasses) CircularProgressIndicator()
             state.classes.forEach { extraClass -> ClassCatalogRow(extraClass, state.isSaving, actions) }
@@ -862,7 +901,7 @@ private fun ClassEditor(
     ) {
         val missingAnswers = listOf(editor.helpsReference, editor.dedicatedSummary).count { it == null }
         editor.errorMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.extraSmall)) {
             listOf("Horas extras", "Extensión de turno", "Servicio extra").forEach { suggestion ->
                 TextButton(onClick = { actions.updateClassEditor { it.copy(name = suggestion) } }) {
                     Text(suggestion)
@@ -915,15 +954,18 @@ private fun ClassEditor(
             )
             Text("Cambiar estas opciones no reinterpreta horas que ya guardaste.")
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = actions.cancelClassEditor, modifier = Modifier.weight(1f)) {
-                Text("Cancelar")
-            }
+        Row(horizontalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small)) {
+            SecondaryAction(
+                label = "Cancelar",
+                onClick = actions.cancelClassEditor,
+                modifier = Modifier.weight(1f),
+            )
             Button(
                 onClick = actions.saveClass,
                 enabled = !isSaving && editor.name.isNotBlank() &&
                     editor.helpsReference != null && editor.dedicatedSummary != null,
-                modifier = Modifier.weight(1f).testTag("v2-extra-class-save"),
+                shape = MiGuardiaButtonShape,
+                modifier = Modifier.weight(1f).heightIn(min = 48.dp).testTag("v2-extra-class-save"),
             ) { Text(if (isSaving) "Guardando…" else "Guardar") }
         }
     }
@@ -941,17 +983,19 @@ private fun ClassCatalogRow(
     ) {
         Text(if (extraClass.helpsMeetHoursReference) "Cuenta para tu meta: Sí" else "Cuenta para tu meta: No")
         Text(if (extraClass.showDedicatedSummary) "Se ve por separado: Sí" else "Se ve por separado: No")
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(
+        Row(horizontalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small)) {
+            SecondaryAction(
+                label = "Editar",
                 onClick = { actions.editClass(extraClass.id) },
                 enabled = !isSaving,
                 modifier = Modifier.weight(1f),
-            ) { Text("Editar") }
-            OutlinedButton(
+            )
+            SecondaryAction(
+                label = if (extraClass.isActive) "Archivar" else "Reactivar",
                 onClick = { actions.toggleClassActive(extraClass.id) },
                 enabled = !isSaving,
                 modifier = Modifier.weight(1f).testTag("v2-extra-class-toggle-${extraClass.id}"),
-            ) { Text(if (extraClass.isActive) "Archivar" else "Reactivar") }
+            )
         }
     }
 }

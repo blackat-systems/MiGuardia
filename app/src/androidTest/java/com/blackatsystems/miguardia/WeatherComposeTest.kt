@@ -123,7 +123,7 @@ class WeatherComposeTest {
                         shiftHours = emptyList(), shiftSummary = null)
                 }
                 constrainQaDialog(viewport.first, viewport.second)
-                assertWrappedBottom("weather-loading", 20f * density, density)
+                assertWrappedBottom("weather-loading", 16f * density, density)
                 assertHeaderContainedAndUncovered()
 
                 compose.runOnIdle {
@@ -146,7 +146,7 @@ class WeatherComposeTest {
                 constrainQaDialog(viewport.first, viewport.second)
                 compose.onNodeWithTag("weather-provider-details").performScrollTo().performClick()
                 compose.onNodeWithText(WeatherCredits.PRESENTATION).performScrollTo().assertIsDisplayed()
-                assertWrappedBottom("weather-provider-expanded", 20f * density, density)
+                assertWrappedBottom("weather-provider-expanded", 16f * density, density)
                 assertHeaderContainedAndUncovered()
                 // Return to collapsed state before testing the next text/theme configuration.
                 compose.onNodeWithTag("weather-provider-details").performScrollTo().performClick()

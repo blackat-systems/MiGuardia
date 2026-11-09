@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.blackatsystems.miguardia.core.domain.widget.WidgetMode
 import com.blackatsystems.miguardia.core.domain.widget.WidgetPrivacy
+import com.blackatsystems.miguardia.ui.components.MiGuardiaSpacing
 import com.blackatsystems.miguardia.ui.components.PersistentMessage
 import com.blackatsystems.miguardia.ui.components.ScreenHeading
 import com.blackatsystems.miguardia.ui.components.SectionCard
@@ -47,16 +48,18 @@ data class WidgetActions(
 fun WidgetSurfaceHost(state: WidgetUiState, actions: WidgetActions) {
     if (state.surface == WidgetSurface.NONE) return
     Dialog(onDismissRequest = actions.close) {
+        // Style v2: same background, width limit and padding as Notificaciones and Clima.
         Surface(
-            modifier = Modifier.widthIn(max = 680.dp).fillMaxWidth(),
+            modifier = Modifier.widthIn(max = 620.dp).fillMaxWidth(),
             shape = MaterialTheme.shapes.extraLarge,
-            tonalElevation = 6.dp,
+            color = MaterialTheme.colorScheme.surfaceContainerLow,
+            contentColor = MaterialTheme.colorScheme.onSurface,
         ) {
             Column(
                 modifier = Modifier
-                    .padding(20.dp)
+                    .padding(MiGuardiaSpacing.large)
                     .testTag("widget-management-surface"),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.medium),
             ) {
                 Row(verticalAlignment = Alignment.Top) {
                     ScreenHeading(title = "Widget de inicio", modifier = Modifier.weight(1f))
@@ -66,7 +69,7 @@ fun WidgetSurfaceHost(state: WidgetUiState, actions: WidgetActions) {
                 }
                 Column(
                     modifier = Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.medium),
                 ) {
                     Text(
                         "Gestioná las instancias que agregaste a la pantalla de inicio de Android.",

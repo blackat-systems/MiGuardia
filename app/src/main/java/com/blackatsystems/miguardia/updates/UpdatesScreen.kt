@@ -6,14 +6,20 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.*
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import com.blackatsystems.miguardia.R
-import com.blackatsystems.miguardia.ui.components.ScreenHeading
+import com.blackatsystems.miguardia.ui.components.MiGuardiaSpacing
+import com.blackatsystems.miguardia.ui.components.PrimaryAction
+import com.blackatsystems.miguardia.ui.components.SecondaryAction
 import com.blackatsystems.miguardia.ui.components.SectionCard
+import com.blackatsystems.miguardia.ui.components.vigiliaScreenBackground
 import java.util.Locale
 
 @Composable
@@ -34,16 +40,18 @@ internal fun UpdatesScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .vigiliaScreenBackground()
                 .safeDrawingPadding()
                 .verticalScroll(rememberScrollState())
-                .padding(20.dp)
+                .padding(MiGuardiaSpacing.large)
                 .testTag("updates-screen"),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.large),
         ) {
-            TextButton(onClick = onClose, modifier = Modifier.testTag("updates-back")) { Text("Volver") }
-            ScreenHeading(
-                title = stringResource(R.string.updates_title),
-                supportingText = stringResource(R.string.updates_intro),
+            UpdatesHeader(title = stringResource(R.string.updates_title), onClose = onClose)
+            Text(
+                stringResource(R.string.updates_intro),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
                 "Versión instalada: ${state.installed?.versionName ?: "No disponible"}",
@@ -83,30 +91,35 @@ internal fun UpdatesScreen(
                     LinearProgressIndicator(Modifier.fillMaxWidth())
                 }
                 when (state.stage) {
-                    UpdateStage.AVAILABLE -> Button(
+                    UpdateStage.AVAILABLE -> PrimaryAction(
+                        label = "Descargar actualización",
                         onClick = onDownload,
                         enabled = state.retryRemainingMillis == 0L,
-                        modifier = Modifier.fillMaxWidth().testTag("updates-download"),
-                    ) { Text("Descargar actualización") }
+                        modifier = Modifier.testTag("updates-download"),
+                    )
                     UpdateStage.READY -> {
                         Text("Elegí una ubicación fácil de encontrar, por ejemplo Descargas.")
-                        Button(onClick = onSave, modifier = Modifier.fillMaxWidth().testTag("updates-save")) {
-                            Text("Guardar APK")
-                        }
+                        PrimaryAction(
+                            label = "Guardar APK",
+                            onClick = onSave,
+                            modifier = Modifier.testTag("updates-save"),
+                        )
                     }
                     else -> if (!state.busy) {
-                        Button(
+                        PrimaryAction(
+                            label = "Buscar actualización",
                             onClick = onSearch,
                             enabled = state.retryRemainingMillis == 0L,
-                            modifier = Modifier.fillMaxWidth().testTag("updates-search"),
-                        ) { Text("Buscar actualización") }
+                            modifier = Modifier.testTag("updates-search"),
+                        )
                     }
                 }
                 if (state.busy || state.stage == UpdateStage.READY || state.stage == UpdateStage.AVAILABLE) {
-                    OutlinedButton(
+                    SecondaryAction(
+                        label = "Cancelar",
                         onClick = onCancel,
                         modifier = Modifier.fillMaxWidth().testTag("updates-cancel"),
-                    ) { Text("Cancelar") }
+                    )
                 }
                 if (state.stage == UpdateStage.SAVED) {
                     Text(
@@ -121,6 +134,42 @@ internal fun UpdatesScreen(
             SectionCard("Instalación manual") {
                 Text(stringResource(R.string.updates_install_help))
                 Text("Si querés, antes podés crear una copia desde Copias de seguridad en el menú.")
+            }
+        }
+    }
+}
+
+/**
+ * Same layout as the common SurfaceHeader (title on the left, action on the right, action on top
+ * when the longest word does not fit beside it), kept local because the action needs its
+ * `updates-back` tag and must stay inside the scroll container that the tests scroll to.
+ */
+@Composable
+private fun UpdatesHeader(title: String, onClose: () -> Unit) {
+    val titleStyle = MaterialTheme.typography.titleLarge
+    val actionStyle = MaterialTheme.typography.labelLarge
+    val measurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val longestWord = title.split(' ').maxByOrNull { it.length }.orEmpty()
+        val wordWidth = measurer.measure(longestWord, titleStyle, softWrap = false).size.width
+        val actionWidth = measurer.measure("Volver", actionStyle, softWrap = false).size.width +
+            with(density) { (24.dp + MiGuardiaSpacing.small).roundToPx() }
+        val back: @Composable (Modifier) -> Unit = { modifier ->
+            TextButton(onClick = onClose, modifier = modifier.testTag("updates-back")) { Text("Volver") }
+        }
+        if (wordWidth + actionWidth <= constraints.maxWidth) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small),
+            ) {
+                Text(title, modifier = Modifier.weight(1f).semantics { heading() }, style = titleStyle)
+                back(Modifier)
+            }
+        } else {
+            Column(Modifier.fillMaxWidth()) {
+                back(Modifier.align(Alignment.End))
+                Text(title, modifier = Modifier.fillMaxWidth().semantics { heading() }, style = titleStyle)
             }
         }
     }

@@ -1456,7 +1456,9 @@ class Stage12CalendarExceptionsTest {
         val resource = context.resources.getIdentifier("m3c_date_picker_switch_to_input_mode", "string", QA)
         check(resource != 0)
         touchDescription(context.getString(resource))
-        val locale = context.resources.configuration.locales[0]
+        // Stage 13.5: the vacation calendar now uses es-AR (day/month/year, weeks from Monday)
+        // like the rest of the app, whatever language the phone uses.
+        val locale = Locale.forLanguageTag("es-AR")
         val pattern = java.time.format.DateTimeFormatterBuilder.getLocalizedDateTimePattern(
             java.time.format.FormatStyle.SHORT, null, java.time.chrono.IsoChronology.INSTANCE, locale)
         val order = Regex("[dMy]+").findAll(pattern).map { it.value.first() }.toList()
