@@ -71,8 +71,11 @@
     23 bases idénticas.
 - **Restos de pruebas:** 30 capturas en `cache/` de la app QA, dejadas por
   `WeatherComposeTest#credits…` y `UpdatesScreenTest`. Se copiaron a
-  `capturas/v3-cache/` y esas dos pruebas salieron de `Stage135Selectors`. **Borrarlas del teléfono
-  espera la autorización de Joaquín.**
+  `capturas/v3-cache/` y esas dos pruebas salieron de `Stage135Selectors`.
+  - Con autorización de Joaquín (9/11) se borraron sólo esas dos carpetas: se controló antes que
+    tuvieran exactamente las 30 capturas copiadas.
+  - Foto posterior (`v3/after-cleanup/`): 23 bases idénticas a la referencia y 353 archivos, sin
+    faltantes ni sobrantes.
 - **Pendiente:**
   - mirar con la letra al 200% las filas de dos botones de Ayuda y del recorrido, y las sugerencias
     de nombre de Tipos de horas extra;
