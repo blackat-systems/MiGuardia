@@ -5,8 +5,8 @@
 - Próxima etapa: **14 · Sistema y aceptación final** (docs/prompts/ETAPA_14_SISTEMA_Y_ACEPTACION.md),
   NO iniciada. Pendientes heredados de 13.5: ver «⏳» en la lista de 13.5. Después: 15 · Entrega.
 - Etapas anteriores: 13 · Datos y archivos y 12.2 · Cálculos y consulta, CERRADAS por Joaquín (8/11).
-- Base en GitHub: `ac2b6c0` en `origin/codex/miguardia-3.0`. **Hay 14 commits locales sin subir**
-  (13.5); el push espera el pedido de Joaquín.
+- Base en GitHub: `7fef1c5` (cierre de 13.5), subido a `origin/codex/miguardia-3.0` el 9/11 a
+  pedido de Joaquín.
 - Pareja instalada en el Samsung: QA `ef83068d…` + ejecutor `14b1e066…`
   (`.local-evidence/claude-20261108-13-5/regresion/build/hashes.txt`). Datos QA: 23 bases, foto
   `humana/after/` (9/11).
@@ -49,7 +49,7 @@
   - prueba intermitente `BetaCoordinatorTest#lostResponse…`;
   - si el Widget adopta la paleta nueva;
   - TalkBack sobre las pantallas nuevas, con escucha humana.
-- ⏳ **Push a GitHub:** la rama tiene 13 commits locales; espera el pedido de Joaquín.
+- ✅ **Push a GitHub** (9/11, a pedido de Joaquín): `ac2b6c0..7fef1c5`.
 
 ## Etapa 13.5 · resto de pantallas y selectores (9/11/2026)
 
