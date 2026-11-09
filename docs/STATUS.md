@@ -70,8 +70,12 @@ commit `180201e`.
     primero: falló dos veces igual, y la foto de la pantalla completa mostró la causa.
 - **Datos QA:** 23 bases idénticas a las del inicio de la etapa. Quedaron **50 archivos nuevos en
   `files/stage4/`**, las capturas que guarda `Stage4CalendarMatrixTest`, una prueba que se sumó a
-  la regresión. Ya están copiados a la PC. **Borrarlos del teléfono espera la autorización de
-  Joaquín.**
+  la regresión. Se copiaron a la PC y, con autorización de Joaquín (8/11), se borró sólo
+  `files/stage4`: se controló antes que tuviera exactamente esos 50 archivos y que no existiera
+  en la foto previa. Foto posterior (`v2/final/after-cleanup/`): 23 bases y 353 archivos,
+  idénticos a antes de la sesión, salvo `files/profileInstalled`.
+  **Ojo en próximas corridas:** `Stage4CalendarMatrixTest` vuelve a escribir en `files/stage4`;
+  después de cada corrida hay que copiarlo y pedir autorización para borrarlo.
 - **PC:** 1349 pruebas, 0 fallas.
 
 ## ⏸ PAUSA — Etapa 13.5 (8/11/2026, pedido de Joaquín: «frenamos acá»)
