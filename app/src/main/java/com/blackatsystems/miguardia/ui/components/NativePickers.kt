@@ -1,6 +1,7 @@
 package com.blackatsystems.miguardia.ui.components
 
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.MaterialTheme
@@ -25,7 +26,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.blackatsystems.miguardia.ui.theme.vigiliaColors
@@ -225,17 +225,25 @@ fun PickableDateField(
         value = value,
         onValueChange = onValueChange,
         label = { Text(label) },
-        supportingText = supportingText?.let { { Text(it) } },
-        trailingIcon = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                badge?.let { FieldBadge(it) }
-                PickerTrailingButton(
-                    iconRes = R.drawable.ic_pick_date,
-                    description = "Elegir en el calendario: $label",
-                    enabled = enabled,
-                    testTag = pickerTestTag,
-                ) { showPicker = true }
+        // The badge lives on the supporting line, not beside the calendar button: with large
+        // Android text the trailing slot had no room and the button could not be used.
+        supportingText = if (supportingText != null || badge != null) {
+            {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    badge?.let { FieldBadge(it) }
+                    supportingText?.let { Text(it) }
+                }
             }
+        } else {
+            null
+        },
+        trailingIcon = {
+            PickerTrailingButton(
+                iconRes = R.drawable.ic_pick_date,
+                description = "Elegir en el calendario: $label",
+                enabled = enabled,
+                testTag = pickerTestTag,
+            ) { showPicker = true }
         },
         singleLine = true,
         enabled = enabled,

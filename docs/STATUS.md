@@ -51,9 +51,28 @@ commit `180201e`.
     `BetaCoordinatorTest#lostResponseRestartAndIdempotentRetryKeepExactBodyThenEraseMessage`, con
     un `IllegalArgumentException`. Es código beta que no se tocó, y sola pasó 3 de 3.
   - Es INFERIDO que se trata de una carrera de tiempos: no está reproducida.
-- **Paso 8 pendiente:** Samsung, con autorización de Joaquín. La familia `Stage135Selectors` ahora
-  incluye la regresión de estilo: Calendario (7 + 2), próxima jornada (29), Horas (7) y Resumen (13),
-  todas con datos ficticios.
+- **Paso 8 hecho (Samsung, 8/11, con autorización de Joaquín): 75/75 ✅.**
+  - Pareja: QA `034ce9ef…` + ejecutor `16ba5434…`; hashes en
+    `.local-evidence/claude-20261108-13-5/v2/final/hashes.txt`.
+  - Capturas en `capturas/v2-final/` (28) y matriz del Calendario en `capturas/calendario-matriz/`
+    (48 imágenes).
+- **Errores encontrados y corregidos en esta sesión:**
+  - **Texto negro en la tarjeta de arriba del Calendario, en oscuro** (lo vio Joaquín). El
+    contenedor transparente del Calendario no pasaba color de texto. Ahora lo pasa, y además
+    `HeroCard` define el suyo. Prueba nueva: `Stage135HeroContentColorTest`.
+  - **Letra al 200%: título «Disponibilid/ad» cortado y el botón del calendario que no abría.**
+    Ahora el encabezado sube «Cerrar» y corta sólo entre palabras. «+1 día» pasó a la línea de
+    ayuda del campo. Prueba nueva:
+    `AvailabilityComposeTest#largeFontKeepsHeaderWordsWholeAndTheCalendarButtonUsable`.
+    Antes del arreglo falló contra la versión anterior («Header split inside a word at 12») y
+    después pasó.
+  - La captura fallida del selector no era culpa de Joaquín usando el teléfono, como se supuso
+    primero: falló dos veces igual, y la foto de la pantalla completa mostró la causa.
+- **Datos QA:** 23 bases idénticas a las del inicio de la etapa. Quedaron **50 archivos nuevos en
+  `files/stage4/`**, las capturas que guarda `Stage4CalendarMatrixTest`, una prueba que se sumó a
+  la regresión. Ya están copiados a la PC. **Borrarlos del teléfono espera la autorización de
+  Joaquín.**
+- **PC:** 1349 pruebas, 0 fallas.
 
 ## ⏸ PAUSA — Etapa 13.5 (8/11/2026, pedido de Joaquín: «frenamos acá»)
 

@@ -57,6 +57,10 @@ import java.time.ZoneOffset
 import java.time.YearMonth
 import java.util.UUID
 import org.junit.Assert.assertEquals
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.text.TextLayoutResult
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -418,6 +422,45 @@ class AvailabilityComposeTest {
         compose.onNodeWithTag("availability-config-date-picker").performClick()
         compose.onNodeWithTag(PICKER_CONFIRM_TAG).performClick()
         compose.runOnIdle { assertEquals("2026-12-31", state.configurationDraft?.effectiveDate) }
+    }
+
+    @Test
+    fun largeFontKeepsHeaderWordsWholeAndTheCalendarButtonUsable() {
+        // Found on the Samsung with style v2 (8/11/2026): at 200% the header broke
+        // "Disponibilid/ad" and the calendar button beside the "+1 día" tag never opened.
+        var state by mutableStateOf(
+            contentState().copy(
+                surface = AvailabilitySurface.WINDOW_EDITOR,
+                windowDraft = AvailabilityWindowDraftState(
+                    ownerDate = OWNER,
+                    startTime = "22:00",
+                    endDate = OWNER.plusDays(1).toString(),
+                    endTime = "06:00",
+                ),
+            ),
+        )
+        compose.setContent {
+            AndroidFontScaleTheme(darkTheme = false, fontScale = TestFontScale.EXTRA_LARGE) {
+                Box(Modifier.requiredSize(width = 360.dp, height = 800.dp)) {
+                    AvailabilitySurfaceHost(
+                        state,
+                        AvailabilityActions(updateWindow = { state = state.copy(windowDraft = it) }),
+                    )
+                }
+            }
+        }
+        val layouts = mutableListOf<TextLayoutResult>()
+        compose.onNodeWithText("Disponibilidad").performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(layouts) }
+        val layout = layouts.single()
+        val text = layout.layoutInput.text.text
+        for (line in 0 until layout.lineCount - 1) {
+            val end = layout.getLineEnd(line)
+            assertTrue("Header split inside a word at $end: $text", end >= text.length || text[end - 1] == ' ' || text[end] == ' ')
+        }
+        compose.onNodeWithText("+1 día").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("availability-end-date-picker").performScrollTo().assertIsDisplayed().performClick()
+        compose.onNodeWithTag(PICKER_CANCEL_TAG).assertIsDisplayed().performClick()
+        compose.runOnIdle { assertEquals(OWNER.plusDays(1).toString(), state.windowDraft?.endDate) }
     }
 
     private fun contentState(disabled: Boolean = false): AvailabilityUiState = AvailabilityUiState(

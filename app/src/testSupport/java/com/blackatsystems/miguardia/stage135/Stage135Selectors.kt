@@ -11,10 +11,14 @@ object Stage135Selectors {
     private const val AVAILABILITY = "com.blackatsystems.miguardia.AvailabilityComposeTest"
 
     /** Pruebas propias de la etapa. Sólo ellas activan la regla de la etapa en el ejecutor. */
-    val own: Set<String> = setOf(AVAILABILITY_CAPTURE) + listOf(
+    const val HERO_CONTENT_COLOR: String =
+        "com.blackatsystems.miguardia.stage135.Stage135HeroContentColorTest#heroTextUsesTheThemeTextColorWithoutAParentSurface"
+
+    val own: Set<String> = setOf(AVAILABILITY_CAPTURE, HERO_CONTENT_COLOR) + listOf(
         "windowPickersGiveTheSameTextAsTypingAndCancelChangesNothing",
         "emptyDateFieldPickerStartsOnTheOwnerDateAndOnlyWritesAfterConfirming",
         "configurationDateKeepsTypingAndAddsTheCalendar",
+        "largeFontKeepsHeaderWordsWholeAndTheCalendarButtonUsable",
     ).map { "$AVAILABILITY#$it" }
 
     /**

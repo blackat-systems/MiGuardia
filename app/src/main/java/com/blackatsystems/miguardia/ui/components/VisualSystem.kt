@@ -33,7 +33,9 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -193,20 +195,48 @@ fun SurfaceHeader(
     onNavigation: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Row(
+    val titleStyle = MaterialTheme.typography.titleLarge
+    val actionStyle = MaterialTheme.typography.labelLarge
+    val measurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    BoxWithConstraints(
         modifier = modifier.fillMaxWidth().padding(
             horizontal = MiGuardiaSpacing.large,
             vertical = MiGuardiaSpacing.small,
         ),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small),
     ) {
-        Text(
-            text = title,
-            modifier = Modifier.weight(1f).semantics { heading() },
-            style = MaterialTheme.typography.titleLarge,
-        )
-        TextButton(onClick = onNavigation) { Text(navigationLabel) }
+        // Large Android text with the wider style v2 font can leave no room for a whole word
+        // next to the action (seen: "Disponibilid/ad" at 200%). Then the action goes on top
+        // and the title takes the full width, breaking only between words.
+        val longestWord = title.split(' ').maxByOrNull { it.length }.orEmpty()
+        val wordWidth = measurer.measure(longestWord, titleStyle, softWrap = false).size.width
+        val actionWidth = measurer.measure(navigationLabel, actionStyle, softWrap = false).size.width +
+            with(density) { (24.dp + MiGuardiaSpacing.small).roundToPx() }
+        val fitsBeside = wordWidth + actionWidth <= constraints.maxWidth
+        if (fitsBeside) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small),
+            ) {
+                Text(
+                    text = title,
+                    modifier = Modifier.weight(1f).semantics { heading() },
+                    style = titleStyle,
+                )
+                TextButton(onClick = onNavigation) { Text(navigationLabel) }
+            }
+        } else {
+            Column(Modifier.fillMaxWidth()) {
+                TextButton(onClick = onNavigation, modifier = Modifier.align(Alignment.End)) {
+                    Text(navigationLabel)
+                }
+                Text(
+                    text = title,
+                    modifier = Modifier.fillMaxWidth().semantics { heading() },
+                    style = titleStyle,
+                )
+            }
+        }
     }
 }
 
@@ -316,7 +346,11 @@ fun HeroCard(
         ),
     ) {
         Eyebrow(title)
-        content()
+        // The hero draws its own background, so it also sets its own text color instead of
+        // inheriting whatever the parent provides.
+        CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onSurface) {
+            content()
+        }
     }
 }
 

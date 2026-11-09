@@ -116,7 +116,21 @@ class Stage135AvailabilityCaptureTest {
     }
 
     private fun save(node: SemanticsNodeInteraction, file: File) {
-        val bitmap = node.captureToImage().asAndroidBitmap()
+        val bitmap = runCatching { node.captureToImage().asAndroidBitmap() }.getOrElse { failure ->
+            // Diagnosis (8/11/2026): when Compose cannot copy a node (for example a dialog taller
+            // than its window), keep the whole screen and the bounds, then fail as before.
+            val instrumentation = InstrumentationRegistry.getInstrumentation()
+            val screen = instrumentation.uiAutomation.takeScreenshot()
+            File(file.parentFile, file.nameWithoutExtension + "-pantalla.png").outputStream().use {
+                screen?.compress(Bitmap.CompressFormat.PNG, 100, it)
+            }
+            val bounds = runCatching { node.fetchSemanticsNode().boundsInWindow.toString() }.getOrDefault("?")
+            val metrics = instrumentation.targetContext.resources.displayMetrics
+            File(file.parentFile, file.nameWithoutExtension + "-diagnostico.txt").writeText(
+                "nodo=$bounds pantalla=${metrics.widthPixels}x${metrics.heightPixels} error=${failure.message}",
+            )
+            throw failure
+        }
         file.outputStream().use { check(bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)) }
         bitmap.recycle()
     }

@@ -1283,7 +1283,10 @@ fun MiGuardiaApp(
     ) {
         Scaffold(
             // Style v2: page color plus the soft top glow; the Scaffold itself stays transparent.
+            // A transparent container has no matching content color, so pass the theme's own:
+            // without it, text that inherits the color falls back to black (seen on the phone).
             containerColor = Color.Transparent,
+            contentColor = MaterialTheme.colorScheme.onBackground,
             modifier = modifier.fillMaxSize().vigiliaScreenBackground().onSizeChanged {
                 calendarWindowHeightPx = it.height
                 calendarWindowWidthPx = it.width
