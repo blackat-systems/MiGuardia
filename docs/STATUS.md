@@ -1,25 +1,18 @@
 # Estado actual de MiGuardia 3.0
 
-- Etapa: 13 · Datos y archivos — CERRADA por Joaquín (8/11): A166–A207, C078, C079 y C095 ✅
-- Etapa en curso: **13.5 · Estética y facilidad de uso** — LISTA PARA CERRAR el 9/11 (ver la lista abajo; falta que Joaquín la cierre) (agregada por Joaquín el 8/11) — INICIADA el 8/11; prompt en
-  docs/prompts/ETAPA_13_5_ESTETICA_Y_FACILIDAD.md. **Lista aprobada por Joaquín (8/11):**
-  [inventario y propuesta](design/ETAPA_13_5_INVENTARIO.md) (reglas comunes, pulido por pantalla, 22 campos).
-  **Paleta Tokyo Night** (Joaquín, 8/11: Night + acento azul; sólo colores, forma Vigilia igual) aplicada en
-  el tema; PC 1344/0; Samsung 15/15 (capturas, Disponibilidad y colores) con QA `5e4f5931…` + ejecutor `45155a10…`
-  (`tokyo/build/hashes.txt`); datos QA 23 bases idénticas. Widget sigue con colores anteriores (etapa 14).
-  **Esquinas asimétricas** en tarjetas y tema (Joaquín, 8/11, opción C de 3 maquetas): Samsung 15/15 con QA
-  `d6f9a0f1…` + ejecutor `7e278f06…` (`esquinas/build/hashes.txt`, pareja instalada); datos QA 23 bases idénticas.
-  ✅ Disponibilidad (ejemplo): selector de hora y fecha + pulido; Samsung 12/12 y capturas antes/después
-  (`.local-evidence/claude-20261108-13-5/`); datos QA 23 bases idénticas. ⏳ El resto de las pantallas y
-  campos; vista humana de los selectores; regresión 12.2 y 13 al final. Pareja instalada: la de esquinas (arriba); correr con
-  `.local-evidence/claude-20261108-13-5/run.sh` (selectores de la etapa en `Stage135Selectors`).
-  Después: 14 · Sistema y aceptación final
-  (docs/prompts/ETAPA_14_SISTEMA_Y_ACEPTACION.md) y 15 · Entrega
-- Etapa anterior: 12.2 · Cálculos y consulta — CERRADA por Joaquín (8/11)
-- Base: `636e4ae`, subido a `origin/codex/miguardia-3.0` el 8/11 con pedido de Joaquín
-- Actualización: 2026-11-08
+- Etapa: **13.5 · Estética y facilidad de uso — CERRADA por Joaquín (9/11)**. Están la lista
+  ✅/⏳ y el detalle abajo, y las decisiones en [inventario y decisiones](design/ETAPA_13_5_INVENTARIO.md).
+- Próxima etapa: **14 · Sistema y aceptación final** (docs/prompts/ETAPA_14_SISTEMA_Y_ACEPTACION.md),
+  NO iniciada. Pendientes heredados de 13.5: ver «⏳» en la lista de 13.5. Después: 15 · Entrega.
+- Etapas anteriores: 13 · Datos y archivos y 12.2 · Cálculos y consulta, CERRADAS por Joaquín (8/11).
+- Base en GitHub: `ac2b6c0` en `origin/codex/miguardia-3.0`. **Hay 14 commits locales sin subir**
+  (13.5); el push espera el pedido de Joaquín.
+- Pareja instalada en el Samsung: QA `ef83068d…` + ejecutor `14b1e066…`
+  (`.local-evidence/claude-20261108-13-5/regresion/build/hashes.txt`). Datos QA: 23 bases, foto
+  `humana/after/` (9/11).
+- Actualización: 2026-11-09
 
-## Etapa 13.5 · Estética y facilidad de uso — LISTA PARA CERRAR (9/11/2026)
+## Etapa 13.5 · Estética y facilidad de uso — CERRADA por Joaquín (9/11/2026)
 
 **Lista de la etapa** (✅ probado · ⏳ falta · ❌ falla). Ninguna ❌.
 
