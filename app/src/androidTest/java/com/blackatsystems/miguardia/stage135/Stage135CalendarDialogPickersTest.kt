@@ -247,7 +247,8 @@ class Stage135CalendarDialogPickersTest {
     private fun notice(): String =
         compose.onNodeWithTag(NOTICE_FIELD_TAG).fetchSemanticsNode().config[SemanticsProperties.EditableText].text
 
-    private fun assertNotice(expected: String) = compose.runOnIdle { assertEquals(expected, notice()) }
+    // Reading a node already waits for idle; it must not run inside runOnIdle (main thread).
+    private fun assertNotice(expected: String) = assertEquals(expected, notice())
 
     private companion object {
         const val START = "calendar-availability-start"

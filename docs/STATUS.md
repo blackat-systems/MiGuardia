@@ -50,8 +50,30 @@
   - los errores del Resumen ahora son un solo mensaje.
 - **Controles:** ninguna etiqueta de prueba borrada; sin colores ni tamaños de letra fijos nuevos.
   PC: 1349 pruebas, 0 fallas.
+- **Samsung (9/11, con autorización de Joaquín): 292/292 ✅.**
+  - Pareja: QA `56e3368a…` + ejecutor `9db1bd10…`; hashes en `.local-evidence/claude-20261108-13-5/v3/`
+    (`build/` y `build2/`).
+  - Tandas: la primera dio 144/146 y la segunda 146/146.
+  - Las 2 fallas eran de la prueba nueva del aviso de cancelación, no de la app: leía un nodo
+    dentro de `runOnIdle`. Corregida, la clase dio 6/6.
+- **Antes de instalar, la foto de datos no coincidió con la del inicio de la etapa.** Había una
+  jornada nueva el 9/11, de 08:00 a 09:00, creada a las 02:10.
+  - El registro de uso de Android muestra que una persona abrió la app QA a las 02:10:30
+    (motivo `u-mf`) y que la jornada se guardó 6 segundos después, con «Cargar jornadas». No corrió
+    ninguna prueba ni ningún ayudante (cero comandos adb o Gradle en sus registros). Joaquín dijo
+    que no fue él.
+  - Por decisión de Joaquín se quitó desde la propia app QA: «Editar día» → «Limpiar día», con la
+    revisión, que mostraba sólo esa jornada.
+  - Las jornadas volvieron a ser idénticas a las del inicio de la etapa. Quedó una marca de «día sin
+    definir» explícito para el 9/11 (`explicit_day_statuses`: 1 fila). La app no tiene cómo quitarla
+    sola y no se tocó la base por fuera.
+  - Esa foto (`v3/after-delete/`) es la referencia de la sesión. Contra ella, la foto posterior da
+    23 bases idénticas.
+- **Restos de pruebas:** 30 capturas en `cache/` de la app QA, dejadas por
+  `WeatherComposeTest#credits…` y `UpdatesScreenTest`. Se copiaron a
+  `capturas/v3-cache/` y esas dos pruebas salieron de `Stage135Selectors`. **Borrarlas del teléfono
+  espera la autorización de Joaquín.**
 - **Pendiente:**
-  - Samsung, con autorización: dos tandas, capturas y foto de datos;
   - mirar con la letra al 200% las filas de dos botones de Ayuda y del recorrido, y las sugerencias
     de nombre de Tipos de horas extra;
   - decisiones de Joaquín: el «UUID» de Horario real y si «Volver al planificado» va en rojo;

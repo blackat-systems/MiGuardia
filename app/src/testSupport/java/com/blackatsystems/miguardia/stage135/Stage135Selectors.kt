@@ -50,7 +50,8 @@ object Stage135Selectors {
     /**
      * Pruebas ya revisadas de las pantallas que la etapa pule: corren como regresión sólo junto
      * con alguna propia; solas siguen las reglas de su etapa de origen. Quedan fuera las que
-     * escriben en los datos de la app QA (matriz del Calendario y la geometría de Informes).
+     * escriben en los datos de la app QA: matriz del Calendario, geometría de Informes, créditos de
+     * Clima y la de Actualizaciones (dejaron capturas en cache/ el 9/11).
      */
     val screenRegression: Set<String> = setOf(
         "com.blackatsystems.miguardia.AvailabilityComposeTest#configurationShowsThreeExactNamesNoUseDateAndReviewBeforeSave",
@@ -245,7 +246,6 @@ object Stage135Selectors {
         "com.blackatsystems.miguardia.NotificationComposeTest#hiddenNotificationsOfferIndividualAndBatchRestore",
         "com.blackatsystems.miguardia.WeatherComposeTest#shortDialogWrapsLoadingThenKeepsMissingLocationAndExpandedCreditsReachable",
         "com.blackatsystems.miguardia.WeatherComposeTest#lowLandscapeDialogKeepsHeaderAndOneCloseTapOutsideNoticeAndScroll",
-        "com.blackatsystems.miguardia.WeatherComposeTest#creditsRemainReadableInBothThemesAndEveryAndroidFontScale",
         "com.blackatsystems.miguardia.WeatherComposeTest#creditsOpenOnlyTheSelectedHttpsLinkAndKeepTheReturnAction",
         "com.blackatsystems.miguardia.WeatherComposeTest#missingBrowserReportsFailureAndAllowsReturn",
         "com.blackatsystems.miguardia.WeatherComposeTest#blockedBrowserReportsFailureAndAllowsReturn",
@@ -264,7 +264,6 @@ object Stage135Selectors {
         "com.blackatsystems.miguardia.WidgetComposeTest#internalManagementNamesInstancesWithoutShowingTechnicalIds",
         "com.blackatsystems.miguardia.WidgetComposeTest#managementCloseStaysVisibleAfterScrollingInBothThemesAndEveryFontScale",
         "com.blackatsystems.miguardia.WidgetComposeTest#internalManagementExposesLoadingErrorRetryAndEmptyStates",
-        "com.blackatsystems.miguardia.updates.UpdatesScreenTest#statesActionsAndFullTextRemainReachableInBothThemesOrientationsAndAllAndroidFontScales",
         "com.blackatsystems.miguardia.security.AccessLockComposeTest#closedGateDoesNotComposeSensitiveContentAndReturnsToItAfterSuccess",
         "com.blackatsystems.miguardia.security.AccessLockComposeTest#authenticationInProgressKeepsTheGateClosedAndTheDisabledButtonIndicatorVisible",
         "com.blackatsystems.miguardia.security.AccessLockComposeTest#storeErrorStaysGenericAndRepairRequiresSecureDeviceCapability",
