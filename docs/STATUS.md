@@ -1,7 +1,7 @@
 # Estado actual de MiGuardia 3.0
 
 - Etapa: 13 · Datos y archivos — CERRADA por Joaquín (8/11): A166–A207, C078, C079 y C095 ✅
-- Etapa en curso: **13.5 · Estética y facilidad de uso** — retomada el 8/11 (ver «Etapa 13.5 retomada» abajo) (agregada por Joaquín el 8/11) — INICIADA el 8/11; prompt en
+- Etapa en curso: **13.5 · Estética y facilidad de uso** — LISTA PARA CERRAR el 9/11 (ver la lista abajo; falta que Joaquín la cierre) (agregada por Joaquín el 8/11) — INICIADA el 8/11; prompt en
   docs/prompts/ETAPA_13_5_ESTETICA_Y_FACILIDAD.md. **Lista aprobada por Joaquín (8/11):**
   [inventario y propuesta](design/ETAPA_13_5_INVENTARIO.md) (reglas comunes, pulido por pantalla, 22 campos).
   **Paleta Tokyo Night** (Joaquín, 8/11: Night + acento azul; sólo colores, forma Vigilia igual) aplicada en
@@ -18,6 +18,45 @@
 - Etapa anterior: 12.2 · Cálculos y consulta — CERRADA por Joaquín (8/11)
 - Base: `636e4ae`, subido a `origin/codex/miguardia-3.0` el 8/11 con pedido de Joaquín
 - Actualización: 2026-11-08
+
+## Etapa 13.5 · Estética y facilidad de uso — LISTA PARA CERRAR (9/11/2026)
+
+**Lista de la etapa** (✅ probado · ⏳ falta · ❌ falla). Ninguna ❌.
+
+- ✅ **Inventario y propuesta aprobados por Joaquín** (`docs/design/ETAPA_13_5_INVENTARIO.md`). Además,
+  decisiones de Joaquín en la etapa:
+  - paleta Tokyo Night (Night con acento azul);
+  - esquinas asimétricas;
+  - estilo v2 con Plus Jakarta Sans;
+  - Horario real sin UUID visible;
+  - «Volver al planificado» en rojo.
+- ✅ **Selector nativo en los 22 campos**, conservando la escritura.
+  - Probado en PC y Samsung: igual a escribir, Cancelar no cambia nada, 00:00 y 23:59, cruce de
+    medianoche, nunca guarda solo, y botón usable con letra al 200%.
+  - Vacaciones: calendario en es-AR, sin día elegido si la fecha está vacía.
+- ✅ **Todas las pantallas pulidas en estilo v2**, sin funciones, estados ni pantallas perdidas.
+  - Revisión independiente del diff sin defectos graves; el defecto medio se corrigió.
+  - Capturas antes/después de Disponibilidad (claro, oscuro, letra 100 y 200%, con los selectores)
+    y del Calendario, Clima y Actualizaciones, en `.local-evidence/claude-20261108-13-5/capturas/`.
+- ✅ **PC:** `verify.py --profile local`, 1349 pruebas, 0 fallas.
+- ✅ **Samsung:** 292/292 pruebas de pantalla de la etapa; regresión de 12.2 15/15, 13 16/16 y
+  Horario real 14/14.
+- ✅ **Prueba humana de los selectores** (Joaquín, 9/11): «en términos generales anda bien, está
+  utilizable». La foto de datos posterior es idéntica: no se guardó nada.
+- ✅ **Datos QA:** 23 bases idénticas en cada sesión. Diferencias explicadas:
+  - la jornada cargada a mano el 9/11, quitada desde la app, con una marca de «día sin definir» que
+    queda;
+  - capturas de prueba copiadas y borradas con autorización.
+- ⏳ **Mejoras posteriores** que Joaquín quiere hacer («después mejoramos ciertos aspectos»): sin
+  detalle todavía; se definen cuando las pida.
+- ⏳ **Observaciones menores para la etapa 14:**
+  - un selector abierto se cierra si gira la pantalla y cambia la disposición;
+  - filas de dos botones de Ayuda y del recorrido, y sugerencias de nombre de Tipos de horas
+    extra, a mirar con letra al 200%;
+  - prueba intermitente `BetaCoordinatorTest#lostResponse…`;
+  - si el Widget adopta la paleta nueva;
+  - TalkBack sobre las pantallas nuevas, con escucha humana.
+- ⏳ **Push a GitHub:** la rama tiene 13 commits locales; espera el pedido de Joaquín.
 
 ## Etapa 13.5 · resto de pantallas y selectores (9/11/2026)
 
