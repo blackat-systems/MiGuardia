@@ -31,6 +31,7 @@ object Stage135Selectors {
         "com.blackatsystems.miguardia.V2ShiftActualComposeTest#actualTimePickersGiveTheSameTextAsTypingAndCancelChangesNothing",
         "com.blackatsystems.miguardia.V2ShiftActualComposeTest#fragmentPickersWriteOnlyTheirOwnDraftAndCrossMidnight",
         "com.blackatsystems.miguardia.V2ShiftActualComposeTest#largeFontKeepsEveryActualTimePickerReachableAndOpen",
+        "com.blackatsystems.miguardia.V2ShiftActualComposeTest#internalIdsAreHiddenAndReturnToPlannedStaysAConsciousConfirmation",
         "com.blackatsystems.miguardia.V2ShiftEditComposeTest#commonHeaderPutsNavigationOnTheRightAndIgnoresTouchesWhileSaving",
         "com.blackatsystems.miguardia.WorkSetupComposeTest#templateClockGivesTheSameTextAsTypingCrossesMidnightAndNeverSaves",
         "com.blackatsystems.miguardia.WorkSetupComposeTest#nightBandReusesTheTimeTagsAndItsClockOnlyWritesTheDraft",

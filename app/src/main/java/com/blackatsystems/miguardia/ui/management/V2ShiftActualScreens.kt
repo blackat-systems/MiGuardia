@@ -341,9 +341,12 @@ fun V2ShiftActualSurfaceHost(
                 )
             },
             confirmButton = {
-                TextButton(
+                // It removes the actual times: red like the other removals (Joaquín, 9/11/2026).
+                FilledTonalButton(
                     onClick = actions.confirmReturnToPlanned,
                     enabled = !state.isSaving,
+                    shape = MiGuardiaButtonShape,
+                    colors = destructiveButtonColors(),
                     modifier = Modifier.testTag("v2-actual-confirm-return-planned"),
                 ) { Text("Volver al planificado") }
             },
@@ -397,14 +400,8 @@ private fun ActualEditorScreen(state: V2ShiftActualUiState, actions: V2ShiftActu
             verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.large),
         ) {
             // One title per screen: the header names the screen; the journey is a small label.
-            Column(verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.extraSmall)) {
-                Eyebrow("Jornada ${editor.ordinal} de ${editor.count}")
-                Text(
-                    "UUID: ${editor.expectation.planned.shift.id}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+            // The internal id is not shown (decided by Joaquín on 9/11/2026); it stays in the data.
+            Eyebrow("Jornada ${editor.ordinal} de ${editor.count}")
             editor.errorMessage?.let { PersistentMessage(it) }
             if (editor.sourceConflict) {
                 SecondaryAction(
@@ -798,7 +795,7 @@ private fun FragmentEditor(
     ownerDate: LocalDate,
     actions: V2ShiftActualActions,
 ) {
-    SectionCard(title = "Fragmento ${index + 1}", supportingText = "UUID: ${fragment.id}") {
+    SectionCard(title = "Fragmento ${index + 1}") {
         DateTimeFields(
             prefix = "Inicio extra",
             date = fragment.startDate,

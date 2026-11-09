@@ -10,6 +10,8 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
@@ -690,6 +692,45 @@ class V2ShiftActualComposeTest {
             assertEquals(initial, state.editor?.draft)
             assertEquals(0, nexts)
         }
+    }
+
+    @Test
+    fun internalIdsAreHiddenAndReturnToPlannedStaysAConsciousConfirmation() {
+        // Decided by Joaquín on 9/11/2026: no "UUID: …" lines for the journey or its fragments,
+        // and "Volver al planificado" (it removes the actual times) is a red, confirmed action.
+        val fragment = V2ActualFragmentInput(
+            id = FRAGMENT_ONE,
+            startDate = DATE.toString(),
+            startTime = "08:00",
+            endDate = DATE.toString(),
+            endTime = "09:00",
+        )
+        var state by mutableStateOf(
+            editorState(
+                V2ActualEditorDraft(
+                    startDate = DATE.toString(),
+                    startTime = "08:00",
+                    endDate = DATE.toString(),
+                    endTime = "17:00",
+                    choice = ShiftActualDifferenceChoice.EXTRA_CLASS,
+                    fragments = listOf(fragment),
+                ),
+                stage = V2ShiftActualStage.CLASSIFICATION,
+            ),
+        )
+        var confirmed = 0
+        compose.setContent {
+            AndroidFontScaleTheme {
+                V2ShiftActualSurfaceHost(state, V2ShiftActualActions(confirmReturnToPlanned = { confirmed++ }))
+            }
+        }
+        compose.onNodeWithText("Fragmento 1").performScrollTo().assertIsDisplayed()
+        compose.onAllNodesWithText("UUID", substring = true).assertCountEquals(0)
+        compose.runOnIdle {
+            state = state.copy(editor = state.editor?.copy(showReturnConfirmation = true))
+        }
+        compose.onNodeWithTag("v2-actual-confirm-return-planned").assertIsDisplayed().performClick()
+        compose.runOnIdle { assertEquals(1, confirmed) }
     }
 
     private fun editorState(

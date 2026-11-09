@@ -79,8 +79,16 @@
 - **Pendiente:**
   - mirar con la letra al 200% las filas de dos botones de Ayuda y del recorrido, y las sugerencias
     de nombre de Tipos de horas extra;
-  - decisiones de Joaquín: el «UUID» de Horario real y si «Volver al planificado» va en rojo;
-  - regresión de 12.2 y 13 en el teléfono.
+  - ~~decisiones de Joaquín~~ **decididas el 9/11:**
+    - Horario real ya no muestra «UUID: …», ni de la jornada ni de los fragmentos; el dato sigue
+      guardado.
+    - «Volver al planificado» es rojo tonal, con la misma confirmación.
+    - Prueba: `V2ShiftActualComposeTest#internalIdsAreHiddenAndReturnToPlannedStaysAConsciousConfirmation`.
+  - ~~regresión de 12.2 y 13~~ **hecha en el Samsung (9/11): 12.2 15/15 ✅, 13 16/16 ✅ y Horario real
+    14/14 ✅**, sin las sesiones humanas.
+    - Pareja: QA `ef83068d…` + ejecutor `14b1e066…` (`regresion/build/hashes.txt`).
+    - Foto antes y después: 23 bases idénticas y ningún archivo nuevo.
+  - prueba del selector con el dedo de Joaquín (pasos guiados, sin guardar).
 
 ## Etapa 13.5 retomada (8/11/2026) — avance sobre la pausa
 
