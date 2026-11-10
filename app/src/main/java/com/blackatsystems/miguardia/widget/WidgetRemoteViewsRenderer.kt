@@ -11,6 +11,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
 import android.util.SizeF
+import android.util.TypedValue
 import android.view.View
 import android.widget.RemoteViews
 import com.blackatsystems.miguardia.MainActivity
@@ -31,6 +32,13 @@ private const val COMPACT_WIDTH_DP = 180f
 private const val COMPACT_HEIGHT_DP = 96f
 /** Desde este alto la vista compacta tiene lugar para que el nombre y el horario usen dos renglones. */
 private const val COMPACT_TALL_HEIGHT_DP = 150f
+/**
+ * Desde este ancho, con ese mismo alto, la vista compacta usa letra más grande. Es el tamaño con que
+ * varios inicios (Samsung: todo el ancho por dos filas) colocan el Widget: con la letra chica quedaban
+ * dos renglones perdidos en una tarjeta grande.
+ */
+private const val COMPACT_ROOMY_WIDTH_DP = 300f
+private const val LARGE_FONT_SCALE = 1.3f
 private const val EXPANDED_WIDTH_DP = 250f
 private const val EXPANDED_HEIGHT_DP = 360f
 
@@ -121,6 +129,9 @@ class WidgetRemoteViewsRenderer(
         val palette = currentPalette()
         val compactViews = createViews(compact, appWidgetId, null, palette)
         val compactTallViews = createViews(compact, appWidgetId, null, palette, compactTextLines = 2)
+        val compactRoomyViews = createViews(
+            compact, appWidgetId, null, palette, compactTextLines = 2, compactLargeText = true,
+        )
         val expandedWeather = weatherText.takeIf {
             preferences.includeWeather &&
                 preferences.privacy == WidgetPrivacy.COMPLETE &&
@@ -132,6 +143,7 @@ class WidgetRemoteViewsRenderer(
                 mapOf(
                     SizeF(COMPACT_WIDTH_DP, COMPACT_HEIGHT_DP) to compactViews,
                     SizeF(COMPACT_WIDTH_DP, COMPACT_TALL_HEIGHT_DP) to compactTallViews,
+                    SizeF(COMPACT_ROOMY_WIDTH_DP, COMPACT_TALL_HEIGHT_DP) to compactRoomyViews,
                     SizeF(EXPANDED_WIDTH_DP, EXPANDED_HEIGHT_DP) to expandedViews,
                 ),
             )
@@ -163,6 +175,7 @@ class WidgetRemoteViewsRenderer(
         palette: WidgetPalette = currentPalette(),
         elapsedRealtime: Long = SystemClock.elapsedRealtime(),
         compactTextLines: Int = 1,
+        compactLargeText: Boolean = false,
     ): RemoteViews {
         val expanded = projection.size == WidgetSize.EXPANDED
         val layout = if (expanded) R.layout.widget_next_event_expanded else R.layout.widget_next_event_compact
@@ -185,6 +198,16 @@ class WidgetRemoteViewsRenderer(
                 // One row high: one line each. With more height the name and the schedule may wrap.
                 setInt(R.id.widget_primary, "setMaxLines", compactTextLines)
                 setInt(R.id.widget_schedule, "setMaxLines", compactTextLines)
+                // With Android's text already enlarged the regular sizes fill the space; making them
+                // bigger still would push the schedule out.
+                if (compactLargeText && context.resources.configuration.fontScale < LARGE_FONT_SCALE) {
+                    // Sizes in sp: Android's own font scale still applies on top.
+                    setTextViewTextSize(R.id.widget_title, TypedValue.COMPLEX_UNIT_SP, 14f)
+                    setTextViewTextSize(R.id.widget_primary, TypedValue.COMPLEX_UNIT_SP, 22f)
+                    setTextViewTextSize(R.id.widget_schedule, TypedValue.COMPLEX_UNIT_SP, 16f)
+                    setTextViewTextSize(R.id.widget_countdown, TypedValue.COMPLEX_UNIT_SP, 16f)
+                    setTextViewTextSize(R.id.widget_simultaneous, TypedValue.COMPLEX_UNIT_SP, 14f)
+                }
             }
             setTextColor(R.id.widget_title, palette.secondaryText)
             setTextColor(R.id.widget_primary, palette.primaryText)

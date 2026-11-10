@@ -63,7 +63,8 @@ class Stage14WidgetRemoteViewsTest {
     // W020: las vistas del Widget siguen la letra de Android (150 y 200 %).
     @Test
     fun simulatedAndroidFontScaleReallyEnlargesTheWidgetText() {
-        HostSize.entries.forEach { host ->
+        // The roomy view enlarges its own text only at the standard scale, so the plain ratio does not apply.
+        HostSize.entries.filterNot { it.compactLargeText }.forEach { host ->
             val standard = inflate(host, TestFontScale.STANDARD).findViewById<TextView>(R.id.widget_title).textSize
             val large = inflate(host, TestFontScale.LARGE).findViewById<TextView>(R.id.widget_title).textSize
             val extraLarge = inflate(host, TestFontScale.EXTRA_LARGE).findViewById<TextView>(R.id.widget_title).textSize
@@ -122,6 +123,7 @@ class Stage14WidgetRemoteViewsTest {
             "${HostSize.COMPACT.label} · letra 150 % · horario: no entra ni su primer renglón",
             "${HostSize.COMPACT.label} · letra 200 % · horario: no entra ni su primer renglón",
             "${HostSize.COMPACT_TALL.label} · letra 200 % · horario: no entra ni su primer renglón",
+            "${HostSize.COMPACT_ROOMY.label} · letra 200 % · horario: no entra ni su primer renglón",
         )
         assertEquals("Con letra grande", knownLimits.sorted(), problems.sorted())
     }
@@ -253,13 +255,15 @@ class Stage14WidgetRemoteViewsTest {
 
     private fun inflate(host: HostSize, scale: TestFontScale): View {
         val scaled = fontContext(scale)
-        val view = renderer.createViews(
+        // The renderer reads Android's font scale from its own context, as it does in the app.
+        val view = WidgetRemoteViewsRenderer(scaled).createViews(
             projection(host.size, countdown = WidgetCountdown(START, countsToEnd = false)),
             appWidgetId = APP_WIDGET_ID,
             weatherText = null,
             palette = palette,
             elapsedRealtime = 50_000L,
             compactTextLines = host.compactTextLines,
+            compactLargeText = host.compactLargeText,
         ).apply(scaled, null)
         val density = scaled.resources.displayMetrics.density
         view.measure(
@@ -376,12 +380,19 @@ class Stage14WidgetRemoteViewsTest {
         val widthDp: Int,
         val heightDp: Int,
         val compactTextLines: Int = 1,
+        val compactLargeText: Boolean = false,
     ) {
         /** Una fila de alto y tres celdas de ancho en una grilla como la del Samsung: el tamaño inicial. */
         COMPACT("Compacta 240×96 dp", WidgetSize.COMPACT, 240, 96),
 
         /** El menor ancho declarado, con el alto desde el que los textos pueden usar dos renglones. */
         COMPACT_TALL("Compacta alta 180×150 dp", WidgetSize.COMPACT, 180, 150, compactTextLines = 2),
+
+        /** Ancha y de dos filas, con letra más grande: como la coloca el inicio del Samsung. */
+        COMPACT_ROOMY(
+            "Compacta amplia 300×150 dp", WidgetSize.COMPACT, 300, 150,
+            compactTextLines = 2, compactLargeText = true,
+        ),
         EXPANDED("Ampliada 250×360 dp", WidgetSize.EXPANDED, 250, 360),
     }
 
