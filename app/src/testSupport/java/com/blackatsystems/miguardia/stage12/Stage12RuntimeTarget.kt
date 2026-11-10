@@ -56,6 +56,14 @@ internal object Stage12RuntimeTarget {
             }
             return
         }
+        if (selectors.any { it in com.blackatsystems.miguardia.stage14.Stage14Selectors.family }) {
+            check((target == Target.SAMSUNG_TEMPORAL_API37 || target == Target.SAMSUNG) &&
+                selectors.all { it in com.blackatsystems.miguardia.stage14.Stage14Selectors.family } &&
+                clock == "REAL" && clockExplicit && !hasSummaryObservation) {
+                "Stage 14 system surfaces run only their own Samsung methods with an explicit real clock"
+            }
+            return
+        }
         if (selectors.any { it in com.blackatsystems.miguardia.stage13.Stage13DataSelectors.family }) {
             check((target == Target.SAMSUNG_TEMPORAL_API37 || target == Target.SAMSUNG) &&
                 selectors.all { it in com.blackatsystems.miguardia.stage13.Stage13DataSelectors.family } &&

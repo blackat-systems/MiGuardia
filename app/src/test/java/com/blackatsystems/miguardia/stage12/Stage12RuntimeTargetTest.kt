@@ -280,6 +280,20 @@ class Stage12RuntimeTargetTest {
             Stage12RuntimeTarget.requireSelection(api37(), listOf(selector), "REAL", false, true)
         }
     }
+    @Test fun stage14RuleAdmitsOnlyItsOwnFamilyOnSamsungWithARealClock() {
+        val own = com.blackatsystems.miguardia.stage14.Stage14Selectors.family.toList()
+        Stage12RuntimeTarget.requireSelection(api37(), own, "REAL", false, true)
+        Stage12RuntimeTarget.requireSelection(api37(), own.take(1), "REAL", false, true)
+        assertThrows(IllegalStateException::class.java) {
+            Stage12RuntimeTarget.requireSelection(api37(), own.take(1) + Stage12B1Selectors.OWNED_LOAD_EDIT, "REAL", false, true)
+        }
+        assertThrows(IllegalStateException::class.java) {
+            Stage12RuntimeTarget.requireSelection(api37(), own, "FIXED", false, true)
+        }
+        assertThrows(IllegalStateException::class.java) {
+            Stage12RuntimeTarget.requireSelection(api37(), own, "REAL", false, false)
+        }
+    }
     @Test fun stage135RuleNeedsAnOwnMethodAndAdmitsOnlyItsScreenRegression() {
         val own = com.blackatsystems.miguardia.stage135.Stage135Selectors.own.toList()
         val regression = com.blackatsystems.miguardia.stage135.Stage135Selectors.screenRegression.toList()

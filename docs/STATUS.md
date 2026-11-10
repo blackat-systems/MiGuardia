@@ -6,7 +6,8 @@
     de PC y de pantalla, sin teléfono): ver la sección de abajo.
   - **Aislamiento decidido por Joaquín (9/11): mixto.** Automático sobre base y preferencias propias de
     cada corrida; con su dedo, sobre la app QA, sólo cambian preferencias y se devuelven.
-  - **Siguiente: tanda 2 en el Samsung**, con autorización de Joaquín en el momento.
+  - **Tanda 2 en el Samsung, primera corrida hecha (10/11): 122 de 129 pasan, 6 fallan, 1 omitida.**
+    Cuatro defectos confirmados; ver la sección de abajo. Falta decidir los arreglos.
   - Espera decisión de Joaquín, sin bloquear: si el Widget adopta la paleta nueva; si cuentan las
     pruebas de interoperabilidad web.
   - Pendientes heredados de 13.5: ver «⏳» en la lista de 13.5. Después: 15 · Entrega.
@@ -15,10 +16,54 @@
 - Etapas anteriores: 13 · Datos y archivos y 12.2 · Cálculos y consulta, CERRADAS por Joaquín (8/11).
 - Base en GitHub: `7fef1c5` (cierre de 13.5), subido a `origin/codex/miguardia-3.0` el 9/11 a
   pedido de Joaquín.
-- Pareja instalada en el Samsung: QA `ef83068d…` + ejecutor `14b1e066…`
-  (`.local-evidence/claude-20261108-13-5/regresion/build/hashes.txt`). Datos QA: 23 bases, foto
-  `humana/after/` (9/11).
+- Pareja instalada en el Samsung (10/11, verificada sacando el hash del teléfono): QA `c9c4f554…` +
+  ejecutor `5dda3cd4…` (`.local-evidence/claude-20261110-14/build/hashes.txt`). Datos QA: 23 bases, foto
+  `claude-20261110-14/after-corrida1/` (10/11). Correr con
+  `QA=… RUNNER=… bash .local-evidence/claude-20261110-14/run_classes.sh <salida> [Clase…]`.
 - Actualización: 2026-11-10
+
+## Etapa 14.1 · tanda 2: primera corrida en el Samsung (10/11/2026, con autorización de Joaquín)
+
+- **Teléfono:** Samsung SM-S938B, Android nivel 37. Pareja: QA `c9c4f554…` + ejecutor `5dda3cd4…`,
+  instaladas encima de las anteriores (sin desinstalar) y verificadas por hash.
+- **Corrida:** las 129 pruebas de `Stage14Selectors`, una clase por invocación
+  (`.local-evidence/claude-20261110-14/corrida1/`). **122 ✅ · 6 ❌ · 1 omitida.**
+- **Datos QA:** foto antes, después de instalar y después de correr: **23 bases idénticas**, ningún archivo
+  previo faltante. Diferencias:
+  - 16 archivos vacíos nuevos `cache/stage14-widget-*.db.lck`, restos de las bases propias de las pruebas
+    del Widget (el mismo resto de Room que en la etapa 13). Borrarlos espera autorización de Joaquín;
+    falta que esas pruebas los limpien.
+  - cambiaron `files/profileInstalled` y `shared_prefs/android.app.ActivityThread.IDS.xml`. INFERIDO que
+    son marcas de Android al instalar e iniciar; la segunda no había aparecido antes.
+
+**Defectos confirmados en el teléfono** (❌ con causa conocida):
+
+- ❌ **Sin conexión, el Widget pide Clima en bucle:** 52 pedidos en 2 segundos
+  (`Stage14WidgetEngineTest#failingWeatherIsNotRequestedOverAndOverWithoutANewReason`). Causa en
+  `DefaultWeatherRepository.kt:52` + `WidgetRuntime.kt:267`. Sólo con Widget ampliado + Clima + Completa.
+- ❌ **Una descarga de Clima en curso frena los redibujados del Widget**
+  (`Stage14WidgetEngineTest#aChangeMadeWhileWeatherIsDownloadingIsStillDrawnWithoutWaitingForTheDownload`).
+- ❌ **Letra al 200%, vertical:** «Siguient/e» partida en la fila de dos botones del recorrido, en los
+  pasos tarjeta de hoy, mes y grilla, y detalle del día, en ambos temas
+  (`Stage14HelpScreensTest#tourRowKeepsBothLabelsWholeOnCalendarStepsInPortrait…`). La introducción, la
+  lista de temas y el diálogo de omitir pasaron.
+- ❌ **Widget en su tamaño mínimo declarado:** con letra normal, en compacto (180×96 dp) se cortan con «…»
+  el texto principal y el horario; en ampliado el horario ocupa dos renglones y se ve uno. Con letra al
+  150 y 200% se corta también el título (`Stage14WidgetRemoteViewsTest`, dos métodos). Falta decidir si
+  el criterio se mide en ese tamaño o en el de la grilla real del Samsung.
+
+**Falla sin causa confirmada (no es defecto de la app hasta reproducirla):**
+
+- ❌ `Stage14AppearanceScreensTest#changingTheModeChangesThePageBackgroundOfTheRealTheme`: al pasar a
+  Oscuro, el punto de la página que mira la prueba salió gris claro en vez del fondo oscuro. Ese gris no
+  es ningún fondo de la app; INFERIDO que la prueba mira un punto ocupado por otro elemento. Las otras
+  tres pruebas de Apariencia pasaron.
+
+**Omitida:** `Stage14NotificationViewModelTest#testNotificationWithPermissionReportsItWasSent`, porque la app
+QA tiene las notificaciones bloqueadas en el teléfono. Se cubre en la sesión con el dedo de Joaquín.
+
+**Confirmado como arreglado:** personalizar una jornada con la general sin anticipos
+(`Stage14NotificationScreensTest`, 24/24) y el singular de Actualizaciones (`Stage14UpdatesScreenTest`, 8/8).
 
 ## Etapa 14.1 · tanda 1: pruebas de PC y de pantalla (9–10/11/2026)
 
