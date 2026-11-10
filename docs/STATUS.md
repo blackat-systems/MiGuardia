@@ -6,6 +6,11 @@
     de PC y de pantalla, sin teléfono): ver la sección de abajo.
   - **Aislamiento decidido por Joaquín (9/11): mixto.** Automático sobre base y preferencias propias de
     cada corrida; con su dedo, sobre la app QA, sólo cambian preferencias y se devuelven.
+  - **Decisión de Joaquín (10/11): lo pendiente con el teléfono pasa a la etapa 15**, que él toma como la
+    final. Pasan: instalar la última versión, la pasada completa de pantalla con foto de datos, ver el
+    «17 °C», probar el Widget quitándolo y agregándolo, y TalkBack. **Sin decidir todavía:** si la
+    aceptación final de los 441 casos (14.2) también se hace dentro de la 15 o antes; MAIN recomendó
+    hacerla dentro de la 15 pero antes de firmar, porque se firma la versión que se aceptó.
   - **Aviso permanente: hecho y con sus pruebas de pantalla aprobadas en el Samsung (10/11).** Diseño y
     límites en [ETAPA_14_AVISO_PERMANENTE.md](design/ETAPA_14_AVISO_PERMANENTE.md). PC: 1411 pruebas, 0
     fallas; compilación completa aprobada.
