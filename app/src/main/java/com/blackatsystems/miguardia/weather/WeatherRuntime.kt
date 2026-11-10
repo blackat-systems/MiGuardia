@@ -54,9 +54,12 @@ class WeatherRuntime internal constructor(
         }
     }
 
-    suspend fun latestForShift(shift: Shift): WeatherForecast? = cacheLifecycleMutex.withLock {
-        repositoryFor(shift)?.latest()
-    }
+    /**
+     * Lee el último pronóstico guardado sin esperar a una descarga en curso: quien dibuja (Widget,
+     * avisos, pantalla) muestra lo que hay y vuelve a leer cuando la descarga termina. El archivo se
+     * reemplaza de forma atómica y los borrados avisan por [cacheInvalidations].
+     */
+    suspend fun latestForShift(shift: Shift): WeatherForecast? = repositoryFor(shift)?.latest()
 
     suspend fun hasLocationFor(shift: Shift): Boolean = objectiveLocationFor(shift) != null
 

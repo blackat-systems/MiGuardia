@@ -616,6 +616,8 @@ class Stage14WidgetEngineTest {
             closeAllEngines()
             store.close()
             context.deleteDatabase(databaseName)
+            // Room deja un bloqueo vacío junto a la base; deleteDatabase no lo borra.
+            java.io.File(context.cacheDir, "$databaseName.lck").delete()
         }
     }
 

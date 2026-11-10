@@ -6,8 +6,16 @@
     de PC y de pantalla, sin teléfono): ver la sección de abajo.
   - **Aislamiento decidido por Joaquín (9/11): mixto.** Automático sobre base y preferencias propias de
     cada corrida; con su dedo, sobre la app QA, sólo cambian preferencias y se devuelven.
-  - **Tanda 2 en el Samsung, primera corrida hecha (10/11): 122 de 129 pasan, 6 fallan, 1 omitida.**
-    Cuatro defectos confirmados; ver la sección de abajo. Falta decidir los arreglos.
+  - **Tanda 2 en el Samsung (10/11):** tras arreglar tres defectos, **126 de 129 pasan, 2 fallan, 1
+    omitida.** Las 2 que fallan son los textos cortados del Widget en su tamaño mínimo, sin decidir.
+  - **Pedidos de Joaquín (10/11), sin empezar:**
+    - **Aviso permanente con contador**, como etapa propia antes de la aceptación final. Falta el diseño
+      corto y su aprobación. Ya existe parte: aviso con cuenta regresiva, fijo durante la jornada y tres
+      niveles de privacidad en el bloqueo.
+    - **Modo claro: un degradado oscurece una tarjeta y no se lee.** No reproducido todavía: los colores
+      declarados para claro son todos claros. Falta que Joaquín muestre la pantalla para capturarla.
+    - **Criterio de letra grande:** usable, no pulida; ningún arreglo de letra grande cambia la vista
+      normal. Prioridad: que se vea bien con letra normal en cualquier teléfono.
   - Espera decisión de Joaquín, sin bloquear: si el Widget adopta la paleta nueva; si cuentan las
     pruebas de interoperabilidad web.
   - Pendientes heredados de 13.5: ver «⏳» en la lista de 13.5. Después: 15 · Entrega.
@@ -16,9 +24,9 @@
 - Etapas anteriores: 13 · Datos y archivos y 12.2 · Cálculos y consulta, CERRADAS por Joaquín (8/11).
 - Base en GitHub: `7fef1c5` (cierre de 13.5), subido a `origin/codex/miguardia-3.0` el 9/11 a
   pedido de Joaquín.
-- Pareja instalada en el Samsung (10/11, verificada sacando el hash del teléfono): QA `c9c4f554…` +
-  ejecutor `5dda3cd4…` (`.local-evidence/claude-20261110-14/build/hashes.txt`). Datos QA: 23 bases, foto
-  `claude-20261110-14/after-corrida1/` (10/11). Correr con
+- Pareja instalada en el Samsung (10/11): QA `64cbb2e5…` (verificada sacando el hash del teléfono) +
+  ejecutor `aa061a79…` (`.local-evidence/claude-20261110-14/build3/hashes.txt`). Datos QA: 23 bases, foto
+  `claude-20261110-14/after-corrida2/` (10/11). Correr con
   `QA=… RUNNER=… bash .local-evidence/claude-20261110-14/run_classes.sh <salida> [Clase…]`.
 - Actualización: 2026-11-10
 
@@ -64,6 +72,30 @@ QA tiene las notificaciones bloqueadas en el teléfono. Se cubre en la sesión c
 
 **Confirmado como arreglado:** personalizar una jornada con la general sin anticipos
 (`Stage14NotificationScreensTest`, 24/24) y el singular de Actualizaciones (`Stage14UpdatesScreenTest`, 8/8).
+
+### Arreglos y segunda corrida (10/11/2026, con el «sí, arreglalos» de Joaquín)
+
+- ✅ **Bucle de Clima del Widget:** el motor ya no observa la hora del último intento ni la espera del
+  proveedor, sólo lo que cambia el dibujo (`WidgetRuntime.kt`). La prueba pasó en el Samsung.
+- ✅ **Redibujado frenado por la descarga:** leer el último pronóstico ya no espera a una descarga en
+  curso (`WeatherRuntime.latestForShift`). La prueba pasó en el Samsung.
+- ✅ **«Siguiente» al 200%:** la fila de dos botones de la introducción de Ayuda y del recorrido se apila
+  cuando un rótulo no entra en su mitad; con letra normal queda igual que antes (`HelpStepActions`). Las
+  8 pruebas de Ayuda pasaron.
+- ✅ **La falla de Apariencia era de la prueba:** con el diagnóstico agregado, toda la página estaba en el
+  color oscuro correcto y sólo la franja inferior salía gris claro. INFERIDO que es la barra de
+  navegación de Android sobre la pantalla de prueba, que no fija el estilo de barras de la app. La prueba
+  ahora mira el borde izquierdo: 4 de 4.
+- ✅ **Restos:** las pruebas del Widget borran su archivo de bloqueo; la segunda corrida no dejó ninguno.
+- **Corridas:** `corrida2` con QA `64cbb2e5…` + ejecutor `b1fe2bd1…`: 125 ✅ · 3 ❌ · 1 omitida. `corrida3`,
+  sólo Apariencia con el ejecutor `aa061a79…` (cambia únicamente esa prueba): 4 de 4. Sumado: **126 ✅ ·
+  2 ❌ · 1 omitida** sobre la misma app QA.
+- **PC:** `verify.py --profile local --fresh-tests`, 1393 pruebas, 0 fallas. `verify.py --profile build`
+  no se repitió después de estos arreglos.
+- **Datos QA:** foto después de la segunda corrida: 23 bases idénticas, 369 archivos, sólo cambió
+  `files/profileInstalled`. Siguen en el teléfono los 16 `.lck` vacíos de la primera corrida; borrarlos
+  espera autorización de Joaquín.
+- ❌ **Sigue abierto:** textos cortados del Widget en su tamaño mínimo declarado (2 pruebas).
 
 ## Etapa 14.1 · tanda 1: pruebas de PC y de pantalla (9–10/11/2026)
 

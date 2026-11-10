@@ -113,9 +113,13 @@ internal fun SemanticsNodeInteractionsProvider.stage14ButtonRowProblems(
     problems += startNode.stage14ClipProblems("button «$startLabel» beside «$endLabel»")
     val start = startNode.boundsInRoot
     val end = endNode.boundsInRoot
-    if (start.right > end.left + 1f) problems += "«$startLabel» ($start) steps on «$endLabel» ($end)"
+    // Side by side while both labels fit; stacked in the same order when they do not. Never overlapping.
     val sameRow = start.top < end.bottom && end.top < start.bottom
-    if (!sameRow) problems += "«$startLabel» ($start) and «$endLabel» ($end) are not on the same row"
+    if (sameRow) {
+        if (start.right > end.left + 1f) problems += "«$startLabel» ($start) steps on «$endLabel» ($end)"
+    } else if (start.bottom > end.top + 1f) {
+        problems += "«$startLabel» ($start) is not above «$endLabel» ($end) when stacked"
+    }
     if (start.height + 1f < minTouchPx) problems += "«$startLabel» is ${start.height}px tall, under $minTouchPx"
     if (end.height + 1f < minTouchPx) problems += "«$endLabel» is ${end.height}px tall, under $minTouchPx"
     return problems

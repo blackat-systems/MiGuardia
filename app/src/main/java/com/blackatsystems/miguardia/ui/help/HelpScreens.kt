@@ -57,6 +57,9 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.blackatsystems.miguardia.ui.components.MiGuardiaButtonShape
 import com.blackatsystems.miguardia.ui.components.MiGuardiaSpacing
@@ -228,24 +231,29 @@ private fun HelpIntroductionScreen(state: HelpUiState, actions: HelpActions, mod
                 ErrorCard(message, actions.retryCompletion)
             }
             Spacer(Modifier.height(MiGuardiaSpacing.extraLarge))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.medium),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                SecondaryAction(
-                    label = "Atrás",
-                    onClick = actions.back,
-                    enabled = !state.isSaving,
-                    modifier = Modifier.weight(1f).testTag("help-introduction-back"),
-                )
-                PrimaryAction(
-                    label = if (session.stepIndex == INTRODUCTION_STEP_COUNT - 1) "Ver recorrido" else "Siguiente",
-                    onClick = actions.next,
-                    enabled = !state.isSaving,
-                    modifier = Modifier.weight(1f).testTag("help-introduction-next"),
-                )
-            }
+            val introductionNextLabel =
+                if (session.stepIndex == INTRODUCTION_STEP_COUNT - 1) "Ver recorrido" else "Siguiente"
+            HelpStepActions(
+                startLabel = "Atrás",
+                endLabel = introductionNextLabel,
+                spacing = MiGuardiaSpacing.medium,
+                start = { slot ->
+                    SecondaryAction(
+                        label = "Atrás",
+                        onClick = actions.back,
+                        enabled = !state.isSaving,
+                        modifier = slot.testTag("help-introduction-back"),
+                    )
+                },
+                end = { slot ->
+                    PrimaryAction(
+                        label = introductionNextLabel,
+                        onClick = actions.next,
+                        enabled = !state.isSaving,
+                        modifier = slot.testTag("help-introduction-next"),
+                    )
+                },
+            )
             if (session.mode == HelpSessionMode.AUTOMATIC) {
                 TextButton(
                     onClick = actions.requestExit,
@@ -387,23 +395,28 @@ fun HelpTourOverlay(
                     )
                 }
                 state.errorMessage?.let { ErrorCard(it, actions.retryCompletion) }
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    SecondaryAction(
-                        label = "Atrás",
-                        onClick = actions.back,
-                        enabled = !state.isSaving,
-                        modifier = Modifier.weight(1f).testTag("help-tour-back"),
-                    )
-                    PrimaryAction(
-                        label = if (step == HelpTourStep.HELP) "Finalizar" else "Siguiente",
-                        onClick = if (step == HelpTourStep.HELP) actions.finish else actions.next,
-                        enabled = !state.isSaving,
-                        modifier = Modifier.weight(1f).testTag("help-tour-next"),
-                    )
-                }
+                val tourNextLabel = if (step == HelpTourStep.HELP) "Finalizar" else "Siguiente"
+                HelpStepActions(
+                    startLabel = "Atrás",
+                    endLabel = tourNextLabel,
+                    spacing = MiGuardiaSpacing.small,
+                    start = { slot ->
+                        SecondaryAction(
+                            label = "Atrás",
+                            onClick = actions.back,
+                            enabled = !state.isSaving,
+                            modifier = slot.testTag("help-tour-back"),
+                        )
+                    },
+                    end = { slot ->
+                        PrimaryAction(
+                            label = tourNextLabel,
+                            onClick = if (step == HelpTourStep.HELP) actions.finish else actions.next,
+                            enabled = !state.isSaving,
+                            modifier = slot.testTag("help-tour-next"),
+                        )
+                    },
+                )
                 if (session.mode == HelpSessionMode.AUTOMATIC) {
                     TextButton(
                         onClick = actions.requestExit,
@@ -581,5 +594,49 @@ fun HelpScreen(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+    }
+}
+
+/**
+ * Los dos botones de un paso («Atrás» y el que avanza). Van lado a lado, repartiendo el ancho, mientras
+ * cada rótulo entre entero en su mitad. Con la letra de Android muy grande la palabra más larga ya no
+ * entra (visto: «Siguient/e» al 200 %): entonces se apilan a todo el ancho, en el mismo orden.
+ */
+@Composable
+private fun HelpStepActions(
+    startLabel: String,
+    endLabel: String,
+    spacing: Dp,
+    start: @Composable (Modifier) -> Unit,
+    end: @Composable (Modifier) -> Unit,
+) {
+    val measurer = rememberTextMeasurer()
+    val labelStyle = MaterialTheme.typography.labelLarge
+    val density = LocalDensity.current
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        // Relleno horizontal de un botón de Material (24 dp por lado) más un margen de redondeo.
+        val chrome = with(density) { 52.dp.roundToPx() }
+        val half = (constraints.maxWidth - with(density) { spacing.roundToPx() }) / 2
+        fun fits(label: String): Boolean = label.split(' ').all { word ->
+            measurer.measure(word, labelStyle, softWrap = false).size.width + chrome <= half
+        }
+        if (fits(startLabel) && fits(endLabel)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(spacing),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                start(Modifier.weight(1f))
+                end(Modifier.weight(1f))
+            }
+        } else {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(spacing),
+            ) {
+                start(Modifier.fillMaxWidth())
+                end(Modifier.fillMaxWidth())
+            }
+        }
     }
 }

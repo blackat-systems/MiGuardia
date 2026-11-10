@@ -194,11 +194,25 @@ class Stage14AppearanceScreensTest {
     private fun assertPagePixel(expected: Color, context: String) {
         compose.waitForIdle()
         val pixels = compose.onNodeWithTag(PAGE).captureToImage().toPixelMap()
-        val actual = pixels[pixels.width / 2, pixels.height - 2]
+        // Left edge at mid height: inside the page and outside the content padding. Not the bottom
+        // edge: there the test Activity (which does not set the app's system bar style) shows
+        // Android's own navigation bar scrim, light gray over a dark page (seen on the Samsung).
+        val actual = pixels[2, pixels.height / 2]
         val close = abs(actual.red - expected.red) < CHANNEL_TOLERANCE &&
             abs(actual.green - expected.green) < CHANNEL_TOLERANCE &&
             abs(actual.blue - expected.blue) < CHANNEL_TOLERANCE
-        assertTrue("$context: page drawn as $actual, expected $expected", close)
+        // Other points of the same capture, to tell a wrong page from a point covered by something else.
+        val samples = listOf(
+            "top-left" to pixels[2, 2],
+            "left-middle" to pixels[2, pixels.height / 2],
+            "right-middle" to pixels[pixels.width - 3, pixels.height / 2],
+            "bottom-left" to pixels[2, pixels.height - 2],
+            "bottom-quarter" to pixels[pixels.width / 2, pixels.height * 3 / 4],
+        ).joinToString { (name, color) -> "$name=$color" }
+        assertTrue(
+            "$context: page drawn as $actual, expected $expected; size ${pixels.width}x${pixels.height}; $samples",
+            close,
+        )
     }
 
     private companion object {

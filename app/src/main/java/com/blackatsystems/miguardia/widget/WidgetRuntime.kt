@@ -42,7 +42,9 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.joinAll
@@ -264,7 +266,12 @@ class WidgetRuntime(
                 combine(
                     sources.observe(today),
                     preferences.instances,
-                    weatherRuntime.preferences.preferences,
+                    // Sólo lo que cambia el dibujo. La hora del último intento y la espera pedida por el
+                    // proveedor también viven en esas preferencias: observarlas enteras hacía que cada
+                    // descarga fallida disparara otra de inmediato.
+                    weatherRuntime.preferences.preferences
+                        .map { Triple(it.enabled, it.providerExplanationAccepted, it.unitSystem) }
+                        .distinctUntilChanged(),
                     weatherRuntime.cacheInvalidations.onStart { emit(null) },
                 ) { source, configs, _, _ -> source to configs }
                     .collect { (source, configs) ->
