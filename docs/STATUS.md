@@ -1,58 +1,46 @@
 # Estado actual de MiGuardia 3.0
 
-- Etapa: **14 · Sistema y aceptación final — INICIADA el 9/11**, parte 14.1 · Superficies del sistema
-  (docs/prompts/ETAPA_14_SISTEMA_Y_ACEPTACION.md). Base `1dd3899`, sin diferencias al arrancar.
-  - Hecho: [mapa de cobertura](design/ETAPA_14_MAPA_COBERTURA.md) de los 113 casos y **tanda 1** (pruebas
-    de PC y de pantalla, sin teléfono): ver la sección de abajo.
-  - **Aislamiento decidido por Joaquín (9/11): mixto.** Automático sobre base y preferencias propias de
-    cada corrida; con su dedo, sobre la app QA, sólo cambian preferencias y se devuelven.
-  - **Decisión de Joaquín (10/11): se agrega la etapa 16 · Experiencia de uso**, para decidir el diseño
-    de la experiencia (menú lateral, detalle en las tarjetas, simplificar pantallas con mucho texto).
-    Va después de resolver el funcionamiento interno. Ver la fila 16 del
-    [plan maestro](PLAN_MAESTRO_CIERRE_3_0.md).
-  - **Pedido de Joaquín (10/11): terminar primero el funcionamiento interno.** En curso, en la PC: el
-    Widget adopta la paleta nueva y se resuelve su letra grande; tercer control del aviso permanente;
-    las opciones del aviso viajan en las Copias. Después, las pruebas en el teléfono que quedaron
-    pendientes, con su autorización en el momento.
-  - **Decisión de Joaquín (10/11): lo pendiente con el teléfono pasa a la etapa 15.** Pasan: instalar la última versión, la pasada completa de pantalla con foto de datos, ver el
-    «17 °C», probar el Widget quitándolo y agregándolo, y TalkBack. **Sin decidir todavía:** si la
-    aceptación final de los 441 casos (14.2) también se hace dentro de la 15 o antes; MAIN recomendó
-    hacerla dentro de la 15 pero antes de firmar, porque se firma la versión que se aceptó.
-  - **Aviso permanente: hecho y con sus pruebas de pantalla aprobadas en el Samsung (10/11).** Diseño y
-    límites en [ETAPA_14_AVISO_PERMANENTE.md](design/ETAPA_14_AVISO_PERMANENTE.md). PC: 1411 pruebas, 0
-    fallas; compilación completa aprobada.
-  - **Corrida 5 en el Samsung (10/11, autorizada por Joaquín):** QA `547426d9…` + ejecutor `dda5048d…`,
-    las 134 de `Stage14Selectors`: **132 ✅ · 1 ❌ · 1 omitida.** La falla es la conocida (horario del
-    Widget compacto mínimo al 200%); la omitida, el aviso de prueba con las notificaciones bloqueadas.
-    Foto antes y después: 23 bases idénticas, 370 archivos; sólo cambiaron las dos marcas de Android
-    (`files/profileInstalled` y `shared_prefs/android.app.ActivityThread.IDS.xml`).
-  - **Siguiente: sesión con el dedo de Joaquín**, paso a paso. Va a cambiar preferencias de la app QA
-    (avisos, aviso permanente, bloqueo, tema, Widget); se anotan y se devuelven al terminar.
-  - Pendiente de su permiso: borrar los 16 `.lck` vacíos del teléfono. Sin decidir: horario del Widget
-    compacto al 200%; tercer control del aviso permanente; llevar sus dos opciones a las Copias.
-  - **Tanda 2 en el Samsung (10/11):** tras arreglar cuatro defectos, **127 de 129 pasan, 1 falla, 1
-    omitida.** La que falla: con letra al 200%, en el Widget compacto mínimo no entra el horario.
-  - **Pedidos de Joaquín (10/11), sin empezar:**
-    - **Aviso permanente con contador:** hecho en la PC, ver arriba.
-    - **Modo claro: un degradado oscureció una tarjeta y no se leía.** Joaquín lo vio una vez el 10/11 y
-      no se repitió («sólo fue un bug momentáneo»). Sin reproducir; los colores declarados para claro son
-      todos claros. Queda anotado por si vuelve.
-    - **Criterio de letra grande:** usable, no pulida; ningún arreglo de letra grande cambia la vista
-      normal. Prioridad: que se vea bien con letra normal en cualquier teléfono.
-  - Espera decisión de Joaquín, sin bloquear: si el Widget adopta la paleta nueva; si cuentan las
-    pruebas de interoperabilidad web.
-  - Pendientes heredados de 13.5: ver «⏳» en la lista de 13.5. Después: 15 · Entrega.
+- Etapa: **14 · Sistema — CERRADA por Joaquín el 10/11/2026**, con pendientes que pasan a la 15. El
+  detalle de lo hecho está en las secciones «Etapa 14.1» de abajo.
+- **Próxima: 15 · Cierre funcional, aceptación y entrega**
+  ([prompt de arranque](prompts/ETAPA_15_CIERRE_Y_ENTREGA.md)), NO iniciada. Después: 16 · Experiencia
+  de uso (decisiones de diseño: menú lateral, detalle en las tarjetas, simplificar pantallas con mucho
+  texto), que va recién cuando el funcionamiento interno esté resuelto.
+- **Último código:** `c99806b` (paleta nueva y letra grande del Widget, tercer control del aviso). PC:
+  `verify.py --profile local --fresh-tests` 1413 pruebas, 0 fallas, y `--profile build` aprobado sobre
+  ese commit. **Sin instalar ni correr en el Samsung.**
+- **Hecho en la 14:** mapa de cobertura de los 113 casos; 138 pruebas instrumentadas nuevas
+  (`Stage14Selectors`) y pruebas de PC; aviso permanente con tres controles
+  ([diseño](design/ETAPA_14_AVISO_PERMANENTE.md)); Widget con cuatro vistas por tamaño y la paleta de la
+  app; ocho defectos arreglados (bucle de Clima del Widget, redibujado frenado, personalizar avisos sin
+  anticipos, error de Clima fuera de vista, «Siguiente» partida al 200%, textos cortados del Widget,
+  singular de Actualizaciones, «17–17 °C»); sesión con el dedo de Joaquín (aviso permanente, Widget,
+  bloqueo, Clima con y sin red, Actualizaciones y apoyo).
+- **Pasa a la 15, en este orden:**
+  1. PC: las tres opciones del aviso permanente en las Copias (pedido de Joaquín, no empezado; diseño y
+     lugares a tocar en el prompt de la 15).
+  2. PC: pasar los 113 casos de 14.1 a ✅/⏳/❌ caso por caso (hoy están contados por superficie).
+  3. Samsung, con autorización: instalar el último código y correr las 138 con foto de datos. La última
+     pasada completa fue de 134 con `build5` (132 ✅); después sólo se repitieron las clases tocadas.
+  4. Con el dedo de Joaquín: Widget con la paleta nueva, quitarlo y agregarlo (tamaño inicial y si baja a
+     una fila), «17 °C», tercer interruptor, TalkBack de oído.
+  5. Permiso para borrar los 16 `cache/stage14-widget-*.db.lck` vacíos del teléfono.
+  6. Aceptación final de los 441 casos sobre la candidata congelada (falta definir versión y código; hoy
+     `2.0.2` / 6). Era la segunda parte de la 14 y no se hizo.
+  7. Firma, prueba de actualización desde la 2.0.2 y publicación, cada una con autorización específica.
+- **Límites conocidos, sin decidir:** con letra de Android al 150% o más, el contador del Widget de una
+  fila queda cortado (el horario sí entra; calculado, sin medir en el teléfono); en una fila un nombre
+  largo termina en «…».
 - Etapa anterior: **13.5 · Estética y facilidad de uso — CERRADA por Joaquín (9/11)**. Están la lista
   ✅/⏳ y el detalle abajo, y las decisiones en [inventario y decisiones](design/ETAPA_13_5_INVENTARIO.md).
 - Etapas anteriores: 13 · Datos y archivos y 12.2 · Cálculos y consulta, CERRADAS por Joaquín (8/11).
 - En GitHub: rama `origin/codex/miguardia-3.0` subida el 10/11 a pedido de Joaquín, con pull request
   abierto contra `main` (https://github.com/blackat-systems/MiGuardia/pull/1). No está para mergear:
   la etapa 14 sigue en curso.
-- Pareja instalada en el Samsung (10/11): QA `6580449e…` + ejecutor `e9597ece…`
-  (`.local-evidence/claude-20261110-14/build11/hashes.txt`). La última corrida completa de las 134 fue
-  con `build5`; después sólo se repitieron las clases del Widget. Datos QA: 23 bases, foto
-  `claude-20261110-14/after-corrida5/` (10/11), que incluye una jornada del 10/11 cargada a mano por
-  Joaquín mientras probaba. **Esa foto es la referencia nueva.** Correr con
+- Pareja instalada en el Samsung (10/11): QA `1bd0be8d…` + ejecutor `2de14034…`
+  (`.local-evidence/claude-20261110-14/build12/hashes.txt`). **Es anterior al último código:** no
+  tiene el «17 °C», la paleta nueva del Widget, su letra grande ni el tercer control. Datos QA: 23 bases, foto de referencia
+  `claude-20261110-14/after-dedo/` (10/11, después de la sesión con el dedo de Joaquín). Correr con
   `QA=… RUNNER=… bash .local-evidence/claude-20261110-14/run_classes.sh <salida> [Clase…]`.
 - Actualización: 2026-11-10
 
