@@ -6,9 +6,6 @@
     de PC y de pantalla, sin teléfono): ver la sección de abajo.
   - **Aislamiento decidido por Joaquín (9/11): mixto.** Automático sobre base y preferencias propias de
     cada corrida; con su dedo, sobre la app QA, sólo cambian preferencias y se devuelven.
-  - **⚠ ABIERTO, lo primero a resolver: apareció una jornada en la base QA que ninguna prueba creó**
-    (10/11 00:27:56, cuatro segundos después de abrirse la app). Es la segunda vez; ver «Jornada que
-    aparece al abrir la app».
   - **Tanda 2 en el Samsung (10/11):** tras arreglar cuatro defectos, **127 de 129 pasan, 1 falla, 1
     omitida.** La que falla: con letra al 200%, en el Widget compacto mínimo no entra el horario.
   - **Pedidos de Joaquín (10/11), sin empezar:**
@@ -30,7 +27,8 @@
   pedido de Joaquín.
 - Pareja instalada en el Samsung (10/11, verificada sacando el hash del teléfono): QA `6fef3744…` +
   ejecutor `77114d3e…` (`.local-evidence/claude-20261110-14/build4/hashes.txt`). Datos QA: 23 bases, foto
-  `claude-20261110-14/after-corrida4/` (10/11), **con una jornada nueva sin explicar** (ver abajo). Correr con
+  `claude-20261110-14/after-corrida4/` (10/11), que incluye una jornada del 10/11 cargada a mano por
+  Joaquín mientras probaba. **Esa foto es la referencia nueva.** Correr con
   `QA=… RUNNER=… bash .local-evidence/claude-20261110-14/run_classes.sh <salida> [Clase…]`.
 - Actualización: 2026-11-10
 
@@ -77,7 +75,7 @@ QA tiene las notificaciones bloqueadas en el teléfono. Se cubre en la sesión c
 **Confirmado como arreglado:** personalizar una jornada con la general sin anticipos
 (`Stage14NotificationScreensTest`, 24/24) y el singular de Actualizaciones (`Stage14UpdatesScreenTest`, 8/8).
 
-### Jornada que aparece al abrir la app (10/11/2026) — ABIERTO, sin causa confirmada
+### Jornada nueva en la base QA (10/11/2026) — EXPLICADA: la cargó Joaquín
 
 - **Hecho (VERIFICADO):** entre la foto `after-corrida2` y la `after-corrida4` la base `miguardia-v2.db`
   ganó una jornada (`shifts` 4 → 5 y `shift_work_snapshots` 4 → 5): fecha 10/11/2026, estado planificada,
@@ -90,11 +88,13 @@ QA tiene las notificaciones bloqueadas en el teléfono. Se cubre en la sesión c
 - **Antecedente igual (13.5):** el 9/11 a las 02:10 apareció una jornada para el 9/11, seis segundos
   después de abrirse la app, también con «Cargar jornadas»; Joaquín dijo que no fue él y se quitó con
   «Limpiar día».
-- **HIPÓTESIS, sin probar:** al abrirse, la app retoma sola una carga de jornadas que quedó guardada
-  (un borrador o una operación pendiente) y la escribe para el día de hoy. Si es así, es un defecto de
-  la app: escribe sin una acción consciente. La alternativa es que Joaquín la haya cargado a mano.
-- **Falta:** que Joaquín diga si la cargó él; si no, reproducir abriendo la app con el arnés aislado y
-  revisar qué estado de «Cargar jornadas» sobrevive al cierre. No se tocó la base.
+- **Resuelto (10/11):** Joaquín confirmó que fue él («estaba probando nada más»). No es un defecto de la
+  app y la hipótesis de una carga que se retoma sola queda descartada para este caso. La jornada queda
+  en la base QA como dato suyo; no se tocó.
+- El antecedente del 9/11 sigue sin explicación propia (esa vez dijo que no había sido él). Si vuelve a
+  aparecer una jornada sin que nadie use el teléfono, reproducir con el arnés aislado.
+- **Para las próximas sesiones:** si Joaquín usa la app QA entre dos fotos, la comparación va a dar
+  diferencias; preguntarle antes de investigarlas.
 
 ### Textos del Widget (10/11/2026)
 
