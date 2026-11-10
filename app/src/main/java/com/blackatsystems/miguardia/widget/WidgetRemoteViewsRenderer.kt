@@ -29,6 +29,8 @@ import com.blackatsystems.miguardia.weather.WeatherCredits
 
 private const val COMPACT_WIDTH_DP = 180f
 private const val COMPACT_HEIGHT_DP = 96f
+/** Desde este alto la vista compacta tiene lugar para que el nombre y el horario usen dos renglones. */
+private const val COMPACT_TALL_HEIGHT_DP = 150f
 private const val EXPANDED_WIDTH_DP = 250f
 private const val EXPANDED_HEIGHT_DP = 360f
 
@@ -118,6 +120,7 @@ class WidgetRemoteViewsRenderer(
         )
         val palette = currentPalette()
         val compactViews = createViews(compact, appWidgetId, null, palette)
+        val compactTallViews = createViews(compact, appWidgetId, null, palette, compactTextLines = 2)
         val expandedWeather = weatherText.takeIf {
             preferences.includeWeather &&
                 preferences.privacy == WidgetPrivacy.COMPLETE &&
@@ -128,6 +131,7 @@ class WidgetRemoteViewsRenderer(
             RemoteViews(
                 mapOf(
                     SizeF(COMPACT_WIDTH_DP, COMPACT_HEIGHT_DP) to compactViews,
+                    SizeF(COMPACT_WIDTH_DP, COMPACT_TALL_HEIGHT_DP) to compactTallViews,
                     SizeF(EXPANDED_WIDTH_DP, EXPANDED_HEIGHT_DP) to expandedViews,
                 ),
             )
@@ -158,6 +162,7 @@ class WidgetRemoteViewsRenderer(
         weatherText: String?,
         palette: WidgetPalette = currentPalette(),
         elapsedRealtime: Long = SystemClock.elapsedRealtime(),
+        compactTextLines: Int = 1,
     ): RemoteViews {
         val expanded = projection.size == WidgetSize.EXPANDED
         val layout = if (expanded) R.layout.widget_next_event_expanded else R.layout.widget_next_event_compact
@@ -176,6 +181,11 @@ class WidgetRemoteViewsRenderer(
             setInt(R.id.widget_accent, "setBackgroundColor", accent)
             setTextViewText(R.id.widget_title, text.title)
             setTextViewText(R.id.widget_primary, text.primary)
+            if (!expanded) {
+                // One row high: one line each. With more height the name and the schedule may wrap.
+                setInt(R.id.widget_primary, "setMaxLines", compactTextLines)
+                setInt(R.id.widget_schedule, "setMaxLines", compactTextLines)
+            }
             setTextColor(R.id.widget_title, palette.secondaryText)
             setTextColor(R.id.widget_primary, palette.primaryText)
             setOptionalText(R.id.widget_schedule, text.schedule, palette.secondaryText)

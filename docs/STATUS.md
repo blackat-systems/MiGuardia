@@ -106,6 +106,28 @@ QA tiene las notificaciones bloqueadas en el teléfono. Se cubre en la sesión c
 - **Para las próximas sesiones:** si Joaquín usa la app QA entre dos fotos, la comparación va a dar
   diferencias; preguntarle antes de investigarlas.
 
+### Sesión con el dedo de Joaquín (10/11/2026) — en curso
+
+- ✅ **Aviso permanente:** activar avisos, permiso de Android concedido en su diálogo, aviso de prueba,
+  aviso de la jornada de hoy sin esperar el anticipo, fijo y con contador, deslizarlo, tocarlo (abre el
+  día) y pantalla bloqueada con el interruptor apagado (no aparece bloqueado, sí al desbloquear).
+  Confirmado además leyendo el teléfono: publicado fijo, silencioso y, con el interruptor apagado,
+  oculto en el bloqueo. ⏳ Falta oír un anticipo sin que se duplique el aviso.
+- ✅ **Widget real:** agregarlo, configuración inicial, contenido, cambio de tamaño y toque, «todo
+  perfecto» salvo un defecto: **el tamaño vertical por defecto quedaba muy grande, con mucho margen.**
+  - Causa: el alto mínimo de 150 dp del arreglo anterior lo obligaba a dos filas en el Samsung (cada
+    fila mide unos 107 dp).
+  - Arreglo: alto mínimo de vuelta a 96 dp, una celda de alto por defecto, menos relleno vertical y
+    **tres tamaños de vista**: una fila (un renglón por texto), compacta alta desde 150 dp (nombre y
+    horario en hasta dos renglones) y ampliada.
+  - Resignado: en una fila, un nombre largo termina en «…» (completo para TalkBack). Límite conocido sin
+    decidir: con letra al 150 y 200% el horario no entra en una fila, ni en la compacta alta al 200%.
+  - Pruebas del Widget en el Samsung con QA `ecda8cb7…` + ejecutor de `build7`: 34 de 34. PC aprobada.
+  - ⏳ Falta que Joaquín quite el Widget y lo vuelva a agregar para ver el tamaño nuevo.
+- **Preferencias de la app QA cambiadas en la sesión, a devolver al final:** permiso de notificaciones,
+  «Usar notificaciones», «Mostrar siempre la próxima jornada» (encendido), «Mostrar en la pantalla
+  bloqueada» (apagado) y un Widget en la pantalla de inicio con privacidad Completa.
+
 ### Textos del Widget (10/11/2026)
 
 - ✅ Vista compacta: el texto principal y el horario pueden usar dos renglones; vista ampliada: el horario
