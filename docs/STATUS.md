@@ -6,6 +6,10 @@
     de PC y de pantalla, sin teléfono): ver la sección de abajo.
   - **Aislamiento decidido por Joaquín (9/11): mixto.** Automático sobre base y preferencias propias de
     cada corrida; con su dedo, sobre la app QA, sólo cambian preferencias y se devuelven.
+  - **⏸ PAUSA (10/11, pedido de Joaquín: «seguimos en un ratito»).** Árbol limpio, todo en commits
+    locales sobre `origin` (sin push). Retomar por: (1) diseño corto del aviso permanente para que lo
+    apruebe, antes de escribir código; (2) después, sesión con el dedo de Joaquín. Pendiente de su
+    permiso: borrar los 16 `.lck` vacíos del teléfono. Sin decidir: horario del Widget compacto al 200%.
   - **Tanda 2 en el Samsung (10/11):** tras arreglar cuatro defectos, **127 de 129 pasan, 1 falla, 1
     omitida.** La que falla: con letra al 200%, en el Widget compacto mínimo no entra el horario.
   - **Pedidos de Joaquín (10/11), sin empezar:**
