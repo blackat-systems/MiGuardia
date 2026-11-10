@@ -19,10 +19,12 @@ el [mapa de cobertura](ETAPA_14_MAPA_COBERTURA.md) y los resultados de las corri
 ## Límites de esta lista
 
 - **Las pruebas automáticas pasaron sobre el último código** (`580b2c3`) en la corrida completa de la
-  etapa 15 (10/11, `.local-evidence/claude-20261110-15/corrida1/`): 143 esperadas, **137 ✅, 0 ❌ y 6
-  omitidas**. Las 6 omitidas son pruebas aisladas del motor del Widget (5 de `Stage14WidgetRuntimeTest` y
-  1 de `Stage14WidgetViewModelTest`) que se saltean solas mientras haya un Widget real en la pantalla de
-  inicio; su última pasada fue con una versión anterior. Las pruebas «13.5» no se repitieron en la 15.
+  etapa 15 (10/11, `.local-evidence/claude-20261110-15/corrida1/`): 143 esperadas, 137 ✅, 0 ❌ y 6
+  omitidas. Las 6 omitidas son pruebas aisladas del motor del Widget que se saltean solas mientras haya
+  un Widget real en la pantalla de inicio; pasaron cuando Joaquín lo quitó (`corrida2-sin-widget/`).
+  **Total: 143 de 143 ✅.** Las pruebas «13.5» no se repitieron en la 15.
+- «Dedo» sin fecha es la sesión de la etapa 14 (10/11); «Dedo (15)» es la de la etapa 15, el mismo día,
+  ya con el último código instalado.
 - **Cada caso se asignó a sus pruebas por el nombre y la descripción de cada prueba y por las notas de
   STATUS**, no releyendo el cuerpo de las 143. Donde el nombre no alcanzaba, se buscó en el código; lo que
   no tiene evidencia directa quedó en ⏳.
@@ -33,16 +35,16 @@ el [mapa de cobertura](ETAPA_14_MAPA_COBERTURA.md) y los resultados de las corri
 | Superficie | Casos | ✅ | ⏳ | ❌ |
 |---|---|---|---|---|
 | Avisos (A208–A231, C080) | 25 | 12 | 13 | 0 |
-| Clima (A232–A245, C081–C084) | 18 | 13 | 5 | 0 |
+| Clima (A232–A245, C081–C084) | 18 | 14 | 4 | 0 |
 | Bloqueo (A246–A259) | 14 | 14 | 0 | 0 |
-| Apariencia y Ayuda (A260–A271) | 12 | 10 | 2 | 0 |
+| Apariencia y Ayuda (A260–A271) | 12 | 11 | 1 | 0 |
 | Actualizaciones y apoyo (A272–A286, X014) | 16 | 12 | 4 | 0 |
-| Widget y recorridos (W001–W024, X003, X012, X013, X015) | 28 | 18 | 9 | 1 |
-| **Total** | **113** | **79** | **33** | **1** |
+| Widget y recorridos (W001–W024, X003, X012, X013, X015) | 28 | 20 | 8 | 0 |
+| **Total** | **113** | **83** | **30** | **0** |
 
-De los 33 ⏳: 21 se cierran con el dedo de Joaquín (entre ellos A214, A243 y W020, que ya pasaron la corrida
-sobre el último código y sólo esperan una mirada), 3 recién con la versión firmada (A276, A278 y X014) y 9
-no tienen hoy una prueba que los cubra en el teléfono (ver «Lo que queda sin camino automático»).
+De los 30 ⏳: 18 se cierran con el dedo de Joaquín, 3 recién con la versión firmada (A276, A278 y X014) y 9
+no tienen hoy una prueba que los cubra en el teléfono (ver «Lo que queda sin camino automático»). En la
+sesión con el dedo de la etapa 15 se cerraron A243, A265, W015 y W020.
 
 ## Avisos
 
@@ -89,7 +91,7 @@ no tienen hoy una prueba que los cubra en el teléfono (ver «Lo que queda sin c
 | A240 intervalo exacto | ✅ | 13.5 + PC | — |
 | A241 actualizar a mano | ⏳ | Pantalla: `…#tappingRefreshAsksOnce…`. Aislada: `…#manualRefreshForcesADownload…`. Dedo: con red real la hora de «Última actualización» cambió | Joaquín dijo «queda igual»: confirmar si se ve el aviso «Pronóstico actualizado.» |
 | A242 distinguir estados | ✅ | Pantalla: `…#shiftDetailLabelsFreshOldAndExpired…`, `…DeclaresPartialCoverage…`, `…#shiftOutsideTheForecastWindow…`, `…#dayCardLabels…` | — |
-| A243 temperatura, lluvia, viento | ⏳ | Pantalla: `…#shiftDetailShowsFeelsLikeRainWindAndGusts…` y `…NeverDrawsAValueTheProviderDidNotGive`. PC: «17 °C» en vez de «17–17 °C» | Ver «17 °C» en el Samsung en una jornada de una hora (el arreglo ya está instalado) · Dedo |
+| A243 temperatura, lluvia, viento | ✅ | Pantalla: `…#shiftDetailShowsFeelsLikeRainWindAndGusts…` y `…NeverDrawsAValueTheProviderDidNotGive`. PC: «17 °C» en vez de «17–17 °C». Dedo (15): una sola temperatura en la jornada de una hora | — |
 | A244 no tocar otro objetivo | ✅ | 13.5 + PC | — |
 | A245 error de red o navegador | ✅ | Pantalla: `…#refreshErrorKeepsTheLastForecast…` y `…#failedRefreshBringsTheErrorIntoView…`. Dedo: modo avión, con captura | — |
 | C081 explicar antes de activar | ⏳ | 13.5 | El diálogo de ubicación de Android · Dedo |
@@ -125,7 +127,7 @@ no tienen hoy una prueba que los cubra en el teléfono (ver «Lo que queda sin c
 | A262 tema oscuro | ✅ | Pantalla: `Stage14AppearanceScreensTest#lightToDarkToggleSendsDark…` y `…#changingTheModeChangesThePageBackground…` | — |
 | A263 seguir el sistema | ✅ | PC | — |
 | A264 letra nativa | ✅ | 13.5 + Pantalla: `…#everyControlStaysReachableWithWholeTextAtEveryFontScaleAndTheme` | — |
-| A265 TalkBack | ⏳ | 13.5 (tres controles del Calendario) | TalkBack de oído, con guía · Dedo. Tampoco hay prueba del árbol real bajo una pantalla completa |
+| A265 TalkBack | ✅ | 13.5 (tres controles del Calendario). Dedo y oído (15): «TalkBack funciona normal» | No detalló si recorrió una pantalla completa hasta el final; sigue sin prueba del árbol real bajo una pantalla completa |
 | A266 nueve temas de Ayuda | ✅ | Pantalla: `Stage14HelpScreensTest#eachOfTheNineTopicsOpens…` y `…#openingAnotherTopicCollapsesThePreviousOne` | — |
 | A267 recorrido | ✅ | 13.5 | — |
 | A268 recorrido | ✅ | 13.5 | — |
@@ -176,12 +178,12 @@ Desde la app QA nunca se puede descargar: su paquete y su firma no son los públ
 | W012 guardar/cancelar | ✅ | Pantalla: `Stage14WidgetScreensTest#activeSaveLocksSaveAndCancel…` y `…#failedSaveShowsTheError…` | — |
 | W013 recrear | ⏳ | 13.5 | Widget quitado mientras se configura |
 | W014 instancias independientes | ⏳ | Aislada: `Stage14WidgetEngineTest#twoInstancesKeepTheirOwnOptions…` | Dos Widgets reales en la pantalla de inicio · Dedo |
-| W015 tamaños | ❌ | Dedo: cambió de tamaño a dos filas y quedó bien | **El Samsung no deja bajarlo a una fila.** Sin causa confirmada: falta quitarlo y volver a agregarlo |
+| W015 tamaños | ✅ | Dedo (15): quitado y vuelto a agregar, queda en 5 columnas por 2 filas (405×208 dp) y el texto se adapta; «comportamiento correcto» | Límite aceptado: el Samsung no admite una fila ni recién agregado, así que la vista de una fila no se alcanza en este teléfono. Ajuste posible sin probar: declarar un alto mínimo más chico sólo para achicarlo |
 | W016 filas y contador | ✅ | PC + vistas | — |
 | W017 cuenta regresiva | ⏳ | Aislada: `Stage14WidgetRemoteViewsTest#expiredCountdownIsHidden…` | Verla correr en el Widget real: no quedó dicho · Dedo |
 | W018 tocar abre lo exacto | ⏳ | Dedo: lo tocó y abrió bien | Tocar con la jornada ya eliminada · Dedo |
 | W019 tocar el crédito de Clima | ⏳ | — | Tocarlo en un Widget ampliado con Clima · Dedo |
-| W020 tema y letra | ⏳ | Aislada: `Stage14WidgetRemoteViewsTest`, 8 de 8 sobre el último código (paleta nueva y vistas con letra al 150 y 200%) | Verlo en claro y en oscuro en el Widget real · Dedo |
+| W020 tema y letra | ✅ | Aislada: `Stage14WidgetRemoteViewsTest`, 8 de 8 sobre el último código (paleta nueva y vistas con letra al 150 y 200%). Dedo (15): se ve bien en claro y en oscuro | — |
 | W021 carga y error | ✅ | Aislada: `Stage14WidgetEngineTest#readFailureDrawsTheErrorView…` y `…ViewModelTest#refreshFailureShowsTheReadError…` | — |
 | W022 se actualiza con los cambios | ✅ | Aislada: `…#engineRedrawsByItselfWhenAShiftIsSaved…` y `Stage14WidgetRuntimeTest#theSourceTheEngineObservesReemits…` | — |
 | W023 inicio/fin/medianoche/reinicio | ⏳ | Aislada: `…#upcomingShiftSchedulesItsStart`, `…#ongoingShiftInAutomaticSchedulesItsEnd`, `…#emptyBaseSchedulesTheNextLocalMidnight…` | Reinicio del teléfono, cambio de hora y de zona |

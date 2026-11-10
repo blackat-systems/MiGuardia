@@ -1,9 +1,9 @@
 # Estado actual de MiGuardia 3.0
 
 - Etapa: **15 · Cierre funcional, aceptación y entrega — EN CURSO** desde el 10/11/2026
-  ([prompt de arranque](prompts/ETAPA_15_CIERRE_Y_ENTREGA.md)). **Parte A (en la PC) hecha. Parte B
-  (Samsung): corrida automática hecha sobre el último código; faltan los pasos con el dedo de Joaquín.**
-  Detalle en «Etapa 15 · parte B» y «parte A» abajo.
+  ([prompt de arranque](prompts/ETAPA_15_CIERRE_Y_ENTREGA.md)). **Partes A (PC) y B (Samsung y dedo de
+  Joaquín) hechas. Sigue la parte C (aceptación final), que necesita que Joaquín diga qué versión y
+  código lleva la candidata.** Detalle en «Etapa 15 · parte B» y «parte A» abajo.
 - Etapa anterior: **14 · Sistema — CERRADA por Joaquín el 10/11/2026**, con pendientes que pasaron a la
   15 (secciones «Etapa 14.1» de abajo). Después de la 15: 16 · Experiencia de uso (decisiones de diseño:
   menú lateral, detalle en las tarjetas, simplificar pantallas con mucho texto), que va recién cuando el
@@ -20,32 +20,32 @@
   bloqueo, Clima con y sin red, Actualizaciones y apoyo).
 - **La 15, en este orden:**
   1. ✅ PC: las tres opciones del aviso permanente viajan en las Copias (pedido de Joaquín).
-  2. ✅ PC: los 113 casos de 14.1, uno por uno: [lista](design/ETAPA_14_LISTA_CASOS.md),
-     **79 ✅ · 33 ⏳ · 1 ❌**.
-  3. ✅ Samsung (10/11, con autorización): último código instalado; `Stage14Selectors` 143 esperadas,
-     **137 ✅ · 0 ❌ · 6 omitidas** (se saltean solas por el Widget real puesto); etapa 13
-     (`Stage13DataSelectors`) **16 de 16 ✅**; datos QA intactos. ⏳ Las 6 omitidas se corren cuando
-     Joaquín quite el Widget.
-  4. ⏳ Con el dedo de Joaquín: Widget con la paleta nueva, quitarlo y agregarlo (tamaño inicial y si baja
-     a una fila), «17 °C», tercer interruptor, TalkBack de oído, y crear una copia, restaurarla y ver que
-     vuelven las tres opciones del aviso.
-  5. Permiso para borrar los 16 `cache/stage14-widget-*.db.lck` vacíos del teléfono.
+  2. ✅ PC: los 113 casos de 14.1, uno por uno: [lista](design/ETAPA_14_LISTA_CASOS.md). Después de la
+     parte B: **83 ✅ · 30 ⏳ · 0 ❌**.
+  3. ✅ Samsung (10/11, con autorización): último código instalado; `Stage14Selectors` **143 de 143 ✅**
+     (137 en la corrida y las 6 del motor del Widget cuando Joaquín lo quitó); etapa 13
+     (`Stage13DataSelectors`) **16 de 16 ✅**; datos QA intactos tras las corridas.
+  4. ✅ Con el dedo de Joaquín (10/11): Widget con la paleta nueva en claro y oscuro, quitarlo y agregarlo,
+     «17 °C», tercer interruptor y TalkBack de oído. ⏳ De Copias quedó sin ver a la vista que «Usar copia»
+     cambia los tres interruptores (detalle en la parte B).
+  5. ✅ Borrados, con permiso de Joaquín, los 16 `cache/stage14-widget-*.db.lck` vacíos.
   6. Aceptación final de los 441 casos sobre la candidata congelada (falta definir versión y código; hoy
      `2.0.2` / 6). Era la segunda parte de la 14 y no se hizo.
   7. Firma, prueba de actualización desde la 2.0.2 y publicación, cada una con autorización específica.
-- **Límites conocidos, sin decidir:** con letra de Android al 150% o más, el contador del Widget de una
-  fila queda cortado (el horario sí entra; calculado, sin medir en el teléfono); en una fila un nombre
-  largo termina en «…».
+- **Límites conocidos:** el Samsung no admite el Widget en una fila, ni recién agregado: lo pone en 5
+  columnas por 2 filas y Joaquín lo dio por correcto (10/11). Por eso la vista de una fila no se alcanza
+  en este teléfono, y sus límites (contador cortado con letra al 150% o más, nombre largo en «…») quedan
+  sin medir.
 - Etapa anterior: **13.5 · Estética y facilidad de uso — CERRADA por Joaquín (9/11)**. Están la lista
   ✅/⏳ y el detalle abajo, y las decisiones en [inventario y decisiones](design/ETAPA_13_5_INVENTARIO.md).
 - Etapas anteriores: 13 · Datos y archivos y 12.2 · Cálculos y consulta, CERRADAS por Joaquín (8/11).
 - En GitHub: rama `origin/codex/miguardia-3.0` subida el 10/11 a pedido de Joaquín, con pull request
   abierto contra `main` (https://github.com/blackat-systems/MiGuardia/pull/1). No está para mergear:
-  la etapa 15 sigue en curso. Los commits de la parte A de la 15 son locales, sin subir.
+  la etapa 15 sigue en curso. Los commits de las partes A y B de la 15 son locales, sin subir.
 - Pareja instalada en el Samsung (10/11, etapa 15): QA `30ab836b…` + ejecutor `412da65d…`
   (`.local-evidence/claude-20261110-15/build1/hashes.txt`), compilada del último código y verificada por
-  hash sacando los APK del teléfono. Datos QA: 23 bases, foto de referencia
-  `claude-20261110-15/after-corridas/` (10/11, después de las corridas de la 15). Correr con
+  hash sacando los APK del teléfono. Datos QA: 23 bases y 199 archivos, foto de referencia
+  `claude-20261110-15/final-parte-b/` (10/11, después de la sesión con el dedo de la 15). Correr con
   `QA=… RUNNER=… bash .local-evidence/claude-20261110-14/run_classes.sh <salida> [Clase…]`.
 - Actualización: 2026-11-10
 
@@ -58,9 +58,10 @@
 - ✅ **Etapa 14, las 143 de `Stage14Selectors`** (`claude-20261110-15/corrida1/`): **137 ✅ · 0 ❌ · 6
   omitidas.** Pasaron por primera vez en el teléfono las 5 de Copias del aviso permanente, la del tercer
   interruptor, las dos nuevas de vistas del Widget y la del aviso de prueba con permiso (antes omitida).
-- ⏳ **Las 6 omitidas** son 5 de `Stage14WidgetRuntimeTest` y 1 de `Stage14WidgetViewModelTest`: se
-  saltean solas mientras haya un Widget real en la pantalla de inicio, para no pisarlo. Se corren cuando
-  Joaquín lo quite, antes de volver a agregarlo.
+- ✅ **Las 6 omitidas** eran 5 de `Stage14WidgetRuntimeTest` y 1 de `Stage14WidgetViewModelTest`: se
+  saltean solas mientras haya un Widget real en la pantalla de inicio, para no pisarlo. Con el Widget
+  quitado por Joaquín pasaron las dos clases completas, 6 de 6 y 2 de 2 (`corrida2-sin-widget/`).
+  **Etapa 14: 143 de 143 ✅ sobre el último código.**
 - ✅ **Etapa 13, las 16 de `Stage13DataSelectors`** (`claude-20261110-15/etapa13/`): **16 de 16.** Un
   primer intento no arrancó ninguna prueba por un error del guion de la corrida (nombres con un salto de
   línea de Windows); quedó guardado aparte en `etapa13-intento-invalido/` y no cuenta como resultado.
@@ -70,8 +71,50 @@
 - **Contra la referencia anterior** (`claude-20261110-14/after-dedo/`), la foto de antes tenía tres archivos
   cambiados: preferencias y caché de Clima y `files/profileInstalled`. INFERIDO que son la instalación de
   las 02:39 y la prueba de Clima en modo avión de las 02:41, posteriores a aquella foto.
-- Siguen en el teléfono los 16 `cache/stage14-widget-*.db.lck` vacíos de la primera corrida de la 14;
-  borrarlos espera el permiso de Joaquín.
+- ✅ **Borrados los 16 `cache/stage14-widget-*.db.lck`** de la primera corrida de la 14, con el permiso
+  de Joaquín («sí, borrá»). Antes se comprobó en el teléfono que eran los mismos 16 nombres de la foto y
+  que pesaban 0 bytes; se borraron por nombre exacto y no quedó ninguno.
+
+### Sesión con el dedo de Joaquín (10/11/2026, último código instalado)
+
+- ✅ **Widget con la paleta nueva:** «se ve bien» en claro y en oscuro.
+- ✅ **Quitar y volver a agregar el Widget:** el Samsung lo pone en 5 columnas por 2 filas (405×208 dp,
+  leído en el teléfono) y **sólo admite dos filas**; «comportamiento correcto, el texto se adapta al
+  tamaño». Queda descartado que el inicio guardara un tamaño viejo. Pasa de falla a límite aceptado.
+  Ajuste posible, sin probar y sin pedir: declarar un alto mínimo más chico sólo para achicarlo.
+- ✅ **Clima:** una sola temperatura en la jornada de una hora (antes «17–17 °C»).
+- ✅ **Tercer interruptor** del aviso permanente: está y explica lo que hace. El efecto en un aviso real
+  sólo se ve durante una jornada; no se miró.
+- ✅ **TalkBack de oído:** «funciona normal». No detalló cada punto de la guía.
+- **Copias a mano, a medias:**
+  - ✅ La copia creada lleva las tres opciones con los valores que Joaquín había puesto (captura de las
+    05:13: «Copia: true / false / false» con el nombre de cada opción).
+  - A las 05:12 se aplicó una restauración con «Combinar» dejando «Conservar actual», que es lo que viene
+    marcado: las tres opciones quedaron como estaban. Parecía que no había pasado nada.
+  - ⏳ No se vio con el dedo que «Usar copia» cambie los tres interruptores. Lo cubren las 5 pruebas
+    automáticas de Copias que pasaron en el Samsung.
+- **Queja de Joaquín sobre esa pantalla:** «la idea era hacer algo simple, no resolver problemas
+  booleanos». Va a la etapa 16 (abajo).
+
+**Foto de datos después de la sesión** (`claude-20261110-15/final-parte-b/`, referencia nueva): 23 bases
+y 199 archivos. Contra la foto de después de las corridas:
+
+- Una fila nueva: franco marcado el 19/11 (`explicit_day_statuses`). **Lo marcó Joaquín** («sí, fui yo»).
+- 16 archivos menos: los `.lck` borrados con permiso.
+- Unos 170 archivos menos en `files/reports/artifacts/` y la caché de Clima: **los vació la restauración
+  de las 05:12, como hace la app en toda restauración** (informes guardados y caché de Clima). En este
+  teléfono esos informes eran recibos viejos de pruebas de la etapa 12, no datos de Joaquín; están en las
+  fotos anteriores de `.local-evidence/`.
+- Preferencias que Joaquín tocó: avisos, Clima, Widget, tema; y el archivo de preferencias del Resumen,
+  que la restauración escribe por primera vez.
+- Dos temporales de la restauración que quedó abierta en pantalla (`files/backups/staging/`); se van al
+  salir de esa pantalla o al abrir la app otra vez. Conviene confirmarlo en la próxima foto.
+
+**Para la etapa 16 (experiencia de uso), pedido por Joaquín al ver la pantalla de conflictos de Copias:**
+
+- Que diga «Encendido / Apagado» y «Ajuste», no «true / false» ni `portable_preferences`.
+- Que «Combinar» no arme un cuestionario por cada ajuste distinto: conservar los del teléfono.
+- Que confirmar todo con «Conservar actual» avise con claridad que no cambió nada.
 
 ## Etapa 15 · parte A: en la PC (10/11/2026)
 
