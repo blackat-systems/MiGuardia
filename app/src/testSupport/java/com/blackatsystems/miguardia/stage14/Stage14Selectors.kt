@@ -3,7 +3,8 @@ package com.blackatsystems.miguardia.stage14
 /**
  * Métodos de la etapa 14.1 (superficies del sistema) que el ejecutor QA normal admite juntos.
  * Son pruebas de pantalla con estado ficticio o aisladas con base y preferencias propias de la prueba:
- * no abren los datos de la app QA. Generado el 10/11/2026 desde las clases de `androidTest/.../stage14`.
+ * no abren los datos de la app QA. Generado el 10/11/2026 desde las clases de `androidTest/.../stage14`
+ * (clases por nombre, métodos en el orden del archivo); incluye las Copias del aviso permanente (etapa 15).
  */
 object Stage14Selectors {
     val family: Set<String> = setOf(
@@ -64,6 +65,11 @@ object Stage14Selectors {
         "com.blackatsystems.miguardia.stage14.Stage14NotificationViewModelTest#shiftReadFailureIsReportedAndRetryLoadsTheOverride",
         "com.blackatsystems.miguardia.stage14.Stage14NotificationViewModelTest#shiftWriteFailuresAreReportedAndNothingIsStored",
         "com.blackatsystems.miguardia.stage14.Stage14NotificationViewModelTest#preferenceReadFailureIsReportedAndRetryLoadsTheStoredValues",
+        "com.blackatsystems.miguardia.stage14.Stage14PermanentNotificationCopiesTest#newCopyCarriesTheThreeChoicesAndRestoringItBringsThemBack",
+        "com.blackatsystems.miguardia.stage14.Stage14PermanentNotificationCopiesTest#earlierCopyOfSeventeenPreferencesIsRestoredAndLeavesTheThreeChoicesAtFactoryValue",
+        "com.blackatsystems.miguardia.stage14.Stage14PermanentNotificationCopiesTest#copyWithAnUnknownPreferenceIsRejectedWithoutWritingAnything",
+        "com.blackatsystems.miguardia.stage14.Stage14PermanentNotificationCopiesTest#restoreInterruptedBeforeTheChoicesExistedIsRolledBackAfterUpdating",
+        "com.blackatsystems.miguardia.stage14.Stage14PermanentNotificationCopiesTest#restoreVerifiedBeforeTheChoicesExistedIsConfirmedAfterUpdating",
         "com.blackatsystems.miguardia.stage14.Stage14PermanentNotificationScreensTest#permanentNotificationStartsOffExplainsItselfAndSendsTrueWhenTurnedOn",
         "com.blackatsystems.miguardia.stage14.Stage14PermanentNotificationScreensTest#lockScreenSwitchStartsOnAndWarnsWhenNothingWillShowWhileLocked",
         "com.blackatsystems.miguardia.stage14.Stage14PermanentNotificationScreensTest#activeCountdownSwitchStartsOnAndExplainsTheScheduleOnlyChoice",

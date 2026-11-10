@@ -139,8 +139,17 @@ class PublicUpgradeBackupFixtureTest {
                     else -> item
                 }
             }
-            check(preferences.size == 17)
-            check(preferences.none { it.key.contains("beta") || it.key.contains("lock") || it.key.contains("onboarding") })
+            // The public origin writes seventeen preferences. The three permanent notification
+            // choices exist only in the current app, so the origin copy must not carry them and
+            // restoring it has to leave them at the factory value this source still has.
+            val addedAfterOrigin = setOf(
+                "notifications.always_show_next",
+                "notifications.countdown_while_active",
+                "notifications.show_on_lock_screen",
+            )
+            val originPreferences = preferences.filterNot { it.key in addedAfterOrigin }
+            check(preferences.size == 20 && originPreferences.size == 17)
+            check(originPreferences.none { it.key.contains("beta") || it.key.contains("lock") || it.key.contains("onboarding") })
             sourcePreferences.replace(preferences, expected)
             check(preferences == sourcePreferences.capture(expected)) { "Portable preferences did not round-trip" }
             BackupPhotoFiles(sourceContext).verify(expected, mapOf(PHOTO_STORAGE_KEY to sha256(photo)))
@@ -148,7 +157,7 @@ class PublicUpgradeBackupFixtureTest {
             val coordinator = LocalBackupCoordinator(sourceContext, sourceStore, sourcePreferences, clock = fixedClock, zoneId = ZONE)
             val originOutput = File(outputRoot, "MiGuardia_origen_RoomV6_sintetico.miguardia-backup")
             LegacyUpgradeFixtureContainer.write(
-                originOutput, LegacyUpgradeFixtureContainer.entries(origin, preferences, photo, fixedClock.millis()),
+                originOutput, LegacyUpgradeFixtureContainer.entries(origin, originPreferences, photo, fixedClock.millis()),
                 fixedClock.millis(),
             )
             val originHash = sha256(originOutput)
@@ -156,7 +165,7 @@ class PublicUpgradeBackupFixtureTest {
                 assertEquals(6, extracted.manifest.roomVersion)
                 assertEquals(origin.tables.associate { it.name to it.records.size }, extracted.manifest.tableCounts)
                 assertEquals(expected, extracted.payload.database)
-                assertEquals(preferences, extracted.payload.preferences)
+                assertEquals(originPreferences, extracted.payload.preferences)
                 assertEquals(sha256(photo), sha256(extracted.photoFile(PHOTO_STORAGE_KEY)))
             }
             check(originHash == sha256(originOutput))
@@ -224,7 +233,7 @@ class PublicUpgradeBackupFixtureTest {
                 .put("adb_serial_operator_attestation", "emulator-5582")
                 .put("avd_runtime_verified", AVD_NAME).put("api", Build.VERSION.SDK_INT)
                 .put("date", day.toString()).put("room_version", expected.roomVersion)
-                .put("tables", counts).put("portable_preferences", preferences.size)
+                .put("tables", counts).put("portable_preferences", originPreferences.size)
                 .put("backup_sha256", sha256(output)).put("backup_bytes", output.length())
                 .put("photo_sha256", sha256(photo)).put("photo_width", PHOTO_WIDTH).put("photo_height", PHOTO_HEIGHT)
                 .put("notifications_enabled", false).put("weather_enabled", false)

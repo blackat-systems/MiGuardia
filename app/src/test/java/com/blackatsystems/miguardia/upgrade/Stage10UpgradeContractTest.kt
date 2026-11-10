@@ -1,5 +1,7 @@
 package com.blackatsystems.miguardia.upgrade
 
+import com.blackatsystems.miguardia.core.domain.backup.BackupPreference
+import com.blackatsystems.miguardia.core.domain.backup.BackupPreferenceType
 import java.io.File
 import java.time.LocalDate
 import org.junit.Assert.*
@@ -100,6 +102,27 @@ class Stage10UpgradeContractTest {
         rejected { Stage10UpgradeContract.requireCapturedPreferences(actual.drop(1), wanted(), source, Long.MAX_VALUE, true) }
         rejected { Stage10UpgradeContract.requireCapturedPreferences(actual.map { if (it.key == Stage10UpgradeContract.DISMISSED_KEY) it.copy(values = listOf("shift:11111111-1111-4111-8111-111111111111")) else it }, wanted(), source, Long.MAX_VALUE, true) }
         rejected { Stage10UpgradeContract.requireCapturedPreferences(actual.map { if (it.key == Stage10UpgradeContract.DISMISSED_KEY) it.copy(type = com.blackatsystems.miguardia.core.domain.backup.BackupPreferenceType.TEXT) else it }, wanted(), source, Long.MAX_VALUE, true) }
+    }
+    private fun added(always: String = "false", countdown: String = "true", lock: String = "true") = listOf(
+        "notifications.always_show_next" to always, "notifications.countdown_while_active" to countdown, "notifications.show_on_lock_screen" to lock,
+    ).map { (key, value) -> BackupPreference(key, BackupPreferenceType.BOOLEAN, listOf(value)) }
+    private fun upgraded(origin: List<BackupPreference> = wanted(), extra: List<BackupPreference> = added()) = (origin + extra).sortedBy { it.key }
+    @Test fun choicesAddedAfterTheOriginArriveTogetherAtFactoryValueOrNotAtAll() {
+        val source = source()
+        val end = Stage10UpgradeContract.dismissalEnd(source, Stage10UpgradeContract.KNOWN_DISMISSED)
+        assertEquals(added().map { it.key to it.values.single() }, Stage10UpgradeContract.addedAfterOrigin.toList())
+        assertEquals(wanted(), Stage10UpgradeContract.carriedFromOrigin(wanted()))
+        assertEquals(wanted(), Stage10UpgradeContract.carriedFromOrigin(upgraded()))
+        assertEquals(emptySet<String>(), Stage10UpgradeContract.requireCapturedPreferences(upgraded(), wanted(), source, Long.MAX_VALUE, false))
+        assertEquals(setOf(Stage10UpgradeContract.KNOWN_DISMISSED), Stage10UpgradeContract.requireCapturedPreferences(upgraded(withoutDismissal()), wanted(), source, end, true))
+        listOf(added(always = "true"), added(countdown = "false"), added(lock = "false"), added().drop(1), added().dropLast(1),
+            added().map { it.copy(type = BackupPreferenceType.TEXT) }).forEach { extra ->
+            rejected { Stage10UpgradeContract.requireCapturedPreferences(upgraded(extra = extra), wanted(), source, Long.MAX_VALUE, false) }
+            rejected { Stage10UpgradeContract.requireCapturedPreferences(upgraded(extra = extra), wanted(), source, Long.MAX_VALUE, true) }
+        }
+        rejected { Stage10UpgradeContract.requireCapturedPreferences(upgraded(wanted().drop(1)), wanted(), source, Long.MAX_VALUE, false) }
+        rejected { Stage10UpgradeContract.requireCapturedPreferences(upgraded(withoutDismissal()), wanted(), source, Long.MAX_VALUE, false) }
+        rejected { Stage10UpgradeContract.requireCapturedPreferences(upgraded(withoutDismissal()), wanted(), source, end - 1, true) }
     }
     @Test fun observedPlatformCounterIsOnlyAnExplicitExpiryCaptureAnnex() {
         val bytes = "<?xml version='1.0' encoding='utf-8' standalone='yes' ?>\n<map>\n    <int name=\"IDSCount\" value=\"1\" />\n</map>\n".toByteArray()

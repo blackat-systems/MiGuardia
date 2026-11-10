@@ -3,9 +3,9 @@
 Fecha: 2026-11-10 · Pedido por Joaquín el 10/11 («notificación constante, persistente, con contador,
 personalizable de forma sencilla») para que entre en la 3.0, antes de la aceptación final.
 
-Estado: **hecho en la PC; falta el Samsung y la mirada de Joaquín.** Joaquín aprobó hacerlo y pidió
-avanzar con todo lo que se pudiera en la PC; el detalle de abajo es lo que propuse en la sesión y él no
-cambió. Si al verlo quiere otra cosa, se ajusta.
+Estado: **hecho; Joaquín lo usó en el Samsung el 10/11** (aviso fijo con contador, deslizarlo, tocarlo
+y pantalla bloqueada). Después se agregaron el tercer control (10/11) y el viaje de las tres opciones en
+las Copias (etapa 15, 10/11): esas dos partes están probadas en la PC y falta verlas en el Samsung.
 
 ## Qué había antes
 
@@ -17,12 +17,13 @@ cambió. Si al verlo quiere otra cosa, se ajusta.
 
 ## Qué agrega
 
-Dos controles nuevos en Avisos, en una tarjeta «Aviso permanente»:
+Tres controles nuevos en Avisos, en una tarjeta «Aviso permanente»:
 
 | Control | Por defecto | Qué hace |
 |---|---|---|
 | Mostrar siempre la próxima jornada | Apagado | El primer evento que todavía no terminó queda siempre a la vista, aunque falte una semana. |
 | Mostrar en la pantalla bloqueada | Encendido | Apagado, ningún aviso de jornada aparece con el teléfono bloqueado. |
+| Contar hasta el final durante la jornada | Encendido | Apagado, durante la jornada el aviso muestra sólo el horario, sin cuenta regresiva. |
 
 Con «Mostrar siempre» encendido:
 
@@ -47,10 +48,23 @@ Con «Mostrar siempre» apagado, la app se comporta exactamente como antes.
 ## Límites conocidos
 
 - **Desde Android 14 cualquier aviso fijo se puede deslizar.** La app no lo puede impedir.
-- **Las dos opciones nuevas no viajan en las Copias.** Son del teléfono; agregarlas al formato de Copia
-  es un cambio de contrato que no se hizo.
-- **No se hizo** el tercer control que se había conversado (durante la jornada, contador o sólo horario):
-  hoy siempre cuenta hasta el final. Se agrega si Joaquín lo quiere.
+
+## En las Copias (etapa 15, pedido de Joaquín)
+
+- **Las tres opciones viajan en la Copia.** Una copia nueva lleva 20 preferencias: las 17 de siempre más
+  `notifications.always_show_next`, `notifications.show_on_lock_screen` y
+  `notifications.countdown_while_active`.
+- **Una copia anterior (17 preferencias) se sigue restaurando.** Como no trae las tres opciones, al
+  restaurarla quedan de fábrica: apagado, encendido, encendido. La vista previa cuenta 20 ajustes porque
+  la app completa la lista antes de comparar.
+- **Con «Combinar»** y una copia anterior, cada opción que en el teléfono esté distinta de fábrica aparece
+  como un conflicto más («Mostrar siempre la próxima jornada tiene valores diferentes.»); «Conservar lo
+  actual» la deja como está. Alternativa sin decidir: que «Combinar» no pregunte por lo que la copia no trae.
+- **Una clave desconocida, repetida o faltante se rechaza** igual que antes, sin escribir nada.
+- **Restauración interrumpida antes de actualizar la app:** el registro de recuperación que dejó la versión
+  anterior tiene 17 preferencias; la app nueva lo completa igual y termina la recuperación.
+- **Ensayo de actualización desde la versión pública:** la copia de origen sigue teniendo 17. El contrato
+  del ensayo acepta, después de actualizar, las 17 intactas más las tres nuevas sólo en su valor de fábrica.
 
 ## Dónde está
 
@@ -58,14 +72,23 @@ Con «Mostrar siempre» apagado, la app se comporta exactamente como antes.
 - Qué se muestra: `notifications/NotificationVisibility.kt` (`permanentNotificationEventKeys`) y
   `NotificationReconciler.kt`.
 - Aviso: `notifications/ShiftNotificationPresenter.kt` (fijo, contador, pantalla bloqueada).
-- Preferencias: `notifications/NotificationPreferencesStore.kt` (`alwaysShowNext`, `showOnLockScreen`).
+- Preferencias: `notifications/NotificationPreferencesStore.kt` (`alwaysShowNext`, `showOnLockScreen`,
+  `countdownWhileActive`).
+- Copias: `backup/PortablePreferencesGateway.kt` (`completePortablePreferences`) y la verificación de
+  `backup/LocalBackupCoordinator.kt`.
 - Pantalla: `ui/notifications/NotificationScreens.kt`, tarjeta «Aviso permanente».
 
 ## Cómo se prueba
 
-- **PC:** `Stage14PermanentNotificationPlanTest` (8) y `Stage14PermanentNotificationRulesTest` (10).
-- **Pantalla (Samsung, pendiente):** `Stage14PermanentNotificationScreensTest` (5): los dos interruptores,
-  sus textos, letra al 200% y el guardado en un archivo temporal.
+- **PC:** `Stage14PermanentNotificationPlanTest` (8) y `Stage14PermanentNotificationRulesTest` (11).
+  Copias: `PortablePreferenceCompletionTest` (4), una prueba de conflictos en `BackupContractTest` y el
+  contrato del ensayo de actualización (`Stage10UpgradeContractTest`, `Stage10EmulatorContractTest`).
+- **Pantalla (Samsung):** `Stage14PermanentNotificationScreensTest` (6): los tres interruptores, sus
+  textos, letra al 200% y el guardado en un archivo temporal. Cinco pasaron el 10/11; la del tercer
+  interruptor no corrió todavía.
+- **Copias (Samsung, pendiente):** `Stage14PermanentNotificationCopiesTest` (5), en una carpeta temporal
+  propia: copia nueva ida y vuelta, copia anterior de 17, clave desconocida y las dos recuperaciones de
+  una restauración interrumpida antes de actualizar.
 - **Con el dedo de Joaquín (pendiente):** ver el aviso con una jornada lejana y con una cercana, el paso a
   cuenta regresiva, deslizarlo, la pantalla bloqueada con el interruptor encendido y apagado, y que un
   anticipo suene sin duplicar el aviso.

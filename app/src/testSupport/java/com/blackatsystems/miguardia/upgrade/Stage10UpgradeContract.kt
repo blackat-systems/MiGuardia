@@ -3,6 +3,7 @@ package com.blackatsystems.miguardia.upgrade
 import com.blackatsystems.miguardia.core.domain.backup.BackupDatabaseSnapshot
 import com.blackatsystems.miguardia.core.domain.backup.BackupPayloadCodec
 import com.blackatsystems.miguardia.core.domain.backup.BackupPreference
+import com.blackatsystems.miguardia.core.domain.backup.BackupPreferenceType
 import com.blackatsystems.miguardia.core.domain.backup.MiGuardiaBackupSchemaV6
 import com.blackatsystems.miguardia.core.domain.backup.BackupValue
 import java.io.InputStream
@@ -82,16 +83,36 @@ object Stage10UpgradeContract {
         else (planned.values[shifts.columns.indexOf("endEpochMillis")] as BackupValue.Integer).value
     }
 
+    /**
+     * Keys the current app exports and the public origin never had (permanent notification choices).
+     * Nobody chose them before the upgrade, so a capture holds all three at their factory value or,
+     * when the origin build captures, none of them.
+     */
+    val addedAfterOrigin = mapOf(
+        "notifications.always_show_next" to "false",
+        "notifications.countdown_while_active" to "true",
+        "notifications.show_on_lock_screen" to "true",
+    )
+
+    /** The origin's seventeen preferences inside a capture, once the keys added later are checked and set aside. */
+    fun carriedFromOrigin(actual: List<BackupPreference>): List<BackupPreference> {
+        val added = actual.filter { it.key in addedAfterOrigin }
+        require(added.isEmpty() || added.map { it.key } == addedAfterOrigin.keys.toList()) { "Added choices must arrive together" }
+        added.forEach { require(it.type == BackupPreferenceType.BOOLEAN && it.values == listOf(addedAfterOrigin.getValue(it.key))) { "An upgrade must leave added choices at factory value" } }
+        return actual.filterNot { it.key in addedAfterOrigin }
+    }
+
     fun requireCapturedPreferences(actual: List<BackupPreference>, wanted: List<BackupPreference>, database: BackupDatabaseSnapshot,
                                    capturedAt: Long, allowExpired: Boolean): Set<String> {
-        if (!allowExpired) { require(actual == wanted); return emptySet() }
-        require(actual.size == 17 && actual.map { it.key } == wanted.map { it.key })
-        actual.zip(wanted).forEach { (value, before) ->
+        val carried = carriedFromOrigin(actual)
+        if (!allowExpired) { require(carried == wanted); return emptySet() }
+        require(carried.size == 17 && carried.map { it.key } == wanted.map { it.key })
+        carried.zip(wanted).forEach { (value, before) ->
             require(value.type == before.type)
             if (value.key != DISMISSED_KEY) require(value == before)
         }
         val before = wanted.single { it.key == DISMISSED_KEY }.values
-        val after = actual.single { it.key == DISMISSED_KEY }.values
+        val after = carried.single { it.key == DISMISSED_KEY }.values
         require(before.distinct() == before && after.distinct() == after && before.containsAll(after))
         return (before.toSet() - after.toSet()).also { removed ->
             removed.forEach { require(capturedAt >= dismissalEnd(database, it)) { "Live dismissal must survive" } }

@@ -279,7 +279,10 @@ class UpgradeFixtureSnapshotsTest {
         return ContainerFixture(source, photo, preferences, LegacyUpgradeFixtureContainer.entries(source, preferences, photo, CREATED_AT))
     }
 
-    /** Explicit fictitious values from PortablePreferencesGateway's 17-key public allowlist. */
+    /**
+     * Explicit fictitious values for the 17 keys the public origin writes. The current app adds three
+     * optional ones (PortablePreferencesGateway); an origin copy does not carry them.
+     */
     private fun portablePreferences(): List<BackupPreference> = listOf(
         preference("profile.display_name", BackupPreferenceType.TEXT, "Fixture ficticia Stage 9"),
         preference("display.theme", BackupPreferenceType.TEXT, "LIGHT"),

@@ -128,6 +128,9 @@ class NotificationPreferencesStore internal constructor(
         values[Privacy] = preferences.privacy.name
         values[AttentionMode] = preferences.attentionMode.name
         values[ReminderMinutes] = preferences.globalReminderLeadMinutes.map(Long::toString).toSet()
+        values[AlwaysShowNext] = preferences.alwaysShowNext
+        values[ShowOnLockScreen] = preferences.showOnLockScreen
+        values[CountdownWhileActive] = preferences.countdownWhileActive
     }
 
     suspend fun setEnabled(value: Boolean) = update { it[Enabled] = value }

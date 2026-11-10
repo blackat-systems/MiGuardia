@@ -64,6 +64,18 @@ class Stage10EmulatorContractTest {
         rejected { Stage10EmulatorContract.requirePreferences(wanted().dropLast(1), wanted(), scenario, scenario.shortEnd, true) }
         rejected { Stage10EmulatorContract.requirePreferences(values(Stage10EmulatorContract.keys + "shift:unknown"), wanted(), scenario, scenario.shortEnd, true) }
     }
+    @Test fun choicesAddedAfterTheOriginAreAcceptedOnlyTogetherAndAtFactoryValue() {
+        val added = Stage10UpgradeContract.addedAfterOrigin.map { (key, value) -> BackupPreference(key, BackupPreferenceType.BOOLEAN, listOf(value)) }
+        fun upgraded(extra: List<BackupPreference>) = (wanted() + extra).sortedBy { it.key }
+        Stage10EmulatorContract.requirePreferences(upgraded(added), wanted(), scenario, scenario.shortEnd - 1, true)
+        Stage10EmulatorContract.requirePreferences(upgraded(added), wanted(), scenario, scenario.shortEnd - 1, false)
+        rejected { Stage10EmulatorContract.requirePreferences(upgraded(added.drop(1)), wanted(), scenario, scenario.shortEnd - 1, true) }
+        added.forEach { item ->
+            val flipped = added.map { if (it.key == item.key) it.copy(values = listOf((item.values.single() != "true").toString())) else it }
+            rejected { Stage10EmulatorContract.requirePreferences(upgraded(flipped), wanted(), scenario, scenario.shortEnd - 1, true) }
+        }
+        rejected { Stage10EmulatorContract.requirePreferences(upgraded(added).filter { it.key != "weather.unit" }, wanted(), scenario, scenario.shortEnd - 1, true) }
+    }
     @Test fun baselineAndCaptureWindowsFailAtTheirBoundaries() {
         scenario.requireTime("seed-v6", started)
         rejected { scenario.requireTime("seed-v6", started + 60_000L) }

@@ -81,6 +81,9 @@ class PortablePreferencesGateway(
             text(WEATHER_UNIT, weather.unitSystem.name),
             bool(WEATHER_NOTIFICATIONS, weather.includeInNotifications),
             bool(WEATHER_EXPLANATION, weather.providerExplanationAccepted),
+            bool(NOTIFICATIONS_ALWAYS_SHOW_NEXT, notifications.alwaysShowNext),
+            bool(NOTIFICATIONS_LOCK_SCREEN, notifications.showOnLockScreen),
+            bool(NOTIFICATIONS_COUNTDOWN, notifications.countdownWhileActive),
         ).sortedBy(BackupPreference::key)
     }
 
@@ -88,12 +91,7 @@ class PortablePreferencesGateway(
         preferences: List<BackupPreference>,
         database: BackupDatabaseSnapshot,
     ): List<BackupPreference> {
-        if (preferences.map { it.key } != EXPECTED_KEYS.sorted() ||
-            preferences.map { it.key }.distinct().size != EXPECTED_KEYS.size
-        ) {
-            throw InvalidBackupException("Las preferencias portables no coinciden con el contrato vigente.")
-        }
-        return preferences.map { preference ->
+        return completePortablePreferences(preferences).map { preference ->
             if (preference.key != MiGuardiaBackupContract.DISMISSED_EVENT_KEYS_PREFERENCE) {
                 preference
             } else {
@@ -149,6 +147,9 @@ class PortablePreferencesGateway(
             privacy = enumValue(byKey.getValue(NOTIFICATIONS_PRIVACY).requiredText()),
             attentionMode = enumValue(byKey.getValue(NOTIFICATIONS_ATTENTION).requiredText()),
             soundUri = null,
+            alwaysShowNext = byKey.getValue(NOTIFICATIONS_ALWAYS_SHOW_NEXT).requiredBoolean(),
+            showOnLockScreen = byKey.getValue(NOTIFICATIONS_LOCK_SCREEN).requiredBoolean(),
+            countdownWhileActive = byKey.getValue(NOTIFICATIONS_COUNTDOWN).requiredBoolean(),
         )
         val dismissedEventKeys = byKey
             .getValue(MiGuardiaBackupContract.DISMISSED_EVENT_KEYS_PREFERENCE)
@@ -312,45 +313,78 @@ class PortablePreferencesGateway(
         values,
     )
 
-    private companion object {
-        const val DISPLAY_NAME = "profile.display_name"
-        const val THEME = "display.theme"
-        const val ZOOM = "display.zoom_percent"
-        const val SUMMARY_ORDER = "summary.ordered_families"
-        const val SUMMARY_HIDDEN = "summary.hidden_families"
-        const val SUMMARY_INTRO = "summary.intro_seen"
-        const val NOTIFICATIONS_ENABLED = "notifications.enabled"
-        const val NOTIFICATIONS_PRECISE = "notifications.precise_timing"
-        const val NOTIFICATIONS_REMINDERS = "notifications.reminder_minutes"
-        const val NOTIFICATIONS_PERSISTENT = "notifications.persistent"
-        const val NOTIFICATIONS_PRIVACY = "notifications.privacy"
-        const val NOTIFICATIONS_ATTENTION = "notifications.attention"
-        const val WEATHER_ENABLED = "weather.enabled"
-        const val WEATHER_UNIT = "weather.unit"
-        const val WEATHER_NOTIFICATIONS = "weather.include_notifications"
-        const val WEATHER_EXPLANATION = "weather.explanation_accepted"
-        val EXPECTED_KEYS = listOf(
-            DISPLAY_NAME,
-            THEME,
-            ZOOM,
-            SUMMARY_ORDER,
-            SUMMARY_HIDDEN,
-            SUMMARY_INTRO,
-            NOTIFICATIONS_ENABLED,
-            NOTIFICATIONS_PRECISE,
-            NOTIFICATIONS_REMINDERS,
-            NOTIFICATIONS_PERSISTENT,
-            NOTIFICATIONS_PRIVACY,
-            NOTIFICATIONS_ATTENTION,
-            MiGuardiaBackupContract.DISMISSED_EVENT_KEYS_PREFERENCE,
-            WEATHER_ENABLED,
-            WEATHER_UNIT,
-            WEATHER_NOTIFICATIONS,
-            WEATHER_EXPLANATION,
-        )
-        const val MAX_DISPLAY_NAME = 100
-        const val MAX_PREFERENCE_TEXT = 256
-        const val MAX_LIST_VALUES = 64
-        const val MAX_DISMISSED_EVENT_KEYS = 16_384
+}
+
+private const val DISPLAY_NAME = "profile.display_name"
+private const val THEME = "display.theme"
+private const val ZOOM = "display.zoom_percent"
+private const val SUMMARY_ORDER = "summary.ordered_families"
+private const val SUMMARY_HIDDEN = "summary.hidden_families"
+private const val SUMMARY_INTRO = "summary.intro_seen"
+private const val NOTIFICATIONS_ENABLED = "notifications.enabled"
+private const val NOTIFICATIONS_PRECISE = "notifications.precise_timing"
+private const val NOTIFICATIONS_REMINDERS = "notifications.reminder_minutes"
+private const val NOTIFICATIONS_PERSISTENT = "notifications.persistent"
+private const val NOTIFICATIONS_PRIVACY = "notifications.privacy"
+private const val NOTIFICATIONS_ATTENTION = "notifications.attention"
+private const val NOTIFICATIONS_ALWAYS_SHOW_NEXT = "notifications.always_show_next"
+private const val NOTIFICATIONS_LOCK_SCREEN = "notifications.show_on_lock_screen"
+private const val NOTIFICATIONS_COUNTDOWN = "notifications.countdown_while_active"
+private const val WEATHER_ENABLED = "weather.enabled"
+private const val WEATHER_UNIT = "weather.unit"
+private const val WEATHER_NOTIFICATIONS = "weather.include_notifications"
+private const val WEATHER_EXPLANATION = "weather.explanation_accepted"
+private const val MAX_DISPLAY_NAME = 100
+private const val MAX_PREFERENCE_TEXT = 256
+private const val MAX_LIST_VALUES = 64
+private const val MAX_DISMISSED_EVENT_KEYS = 16_384
+
+/** The seventeen keys every Copia has carried since the first public format. */
+private val REQUIRED_KEYS = listOf(
+    DISPLAY_NAME,
+    THEME,
+    ZOOM,
+    SUMMARY_ORDER,
+    SUMMARY_HIDDEN,
+    SUMMARY_INTRO,
+    NOTIFICATIONS_ENABLED,
+    NOTIFICATIONS_PRECISE,
+    NOTIFICATIONS_REMINDERS,
+    NOTIFICATIONS_PERSISTENT,
+    NOTIFICATIONS_PRIVACY,
+    NOTIFICATIONS_ATTENTION,
+    MiGuardiaBackupContract.DISMISSED_EVENT_KEYS_PREFERENCE,
+    WEATHER_ENABLED,
+    WEATHER_UNIT,
+    WEATHER_NOTIFICATIONS,
+    WEATHER_EXPLANATION,
+).sorted()
+
+/**
+ * Keys added after the first public format, with the value restored from a Copia written before
+ * they existed: the factory value of each choice.
+ */
+private val OPTIONAL_KEY_DEFAULTS: Map<String, Boolean> = NotificationPreferences().let { factory ->
+    mapOf(
+        NOTIFICATIONS_ALWAYS_SHOW_NEXT to factory.alwaysShowNext,
+        NOTIFICATIONS_LOCK_SCREEN to factory.showOnLockScreen,
+        NOTIFICATIONS_COUNTDOWN to factory.countdownWhileActive,
+    )
+}
+
+/**
+ * Validates the keys of a Copia's preferences and returns them with every optional key present,
+ * so that comparison, the restore journal and verification always work on the same full list.
+ * An earlier Copia (the required keys alone, or with some of the optional ones) is accepted and
+ * completed with factory values; an unknown, repeated, missing or unordered key is rejected.
+ */
+internal fun completePortablePreferences(preferences: List<BackupPreference>): List<BackupPreference> {
+    val keys = preferences.map(BackupPreference::key)
+    if (keys != keys.distinct().sorted() || keys.filterNot(OPTIONAL_KEY_DEFAULTS::containsKey) != REQUIRED_KEYS) {
+        throw InvalidBackupException("Las preferencias portables no coinciden con el contrato vigente.")
     }
+    val missing = OPTIONAL_KEY_DEFAULTS.filterKeys { it !in keys }.map { (key, value) ->
+        BackupPreference(key, BackupPreferenceType.BOOLEAN, listOf(value.toString()))
+    }
+    return if (missing.isEmpty()) preferences else (preferences + missing).sortedBy(BackupPreference::key)
 }

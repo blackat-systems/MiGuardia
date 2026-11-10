@@ -135,8 +135,9 @@ object Stage10EmulatorContract {
         if (it.key == Stage10UpgradeContract.DISMISSED_KEY) it.copy(values = keys) else it
     }
 
-    fun requirePreferences(actual: List<BackupPreference>, wanted: List<BackupPreference>, scenario: Scenario, now: Long, v8: Boolean) {
+    fun requirePreferences(captured: List<BackupPreference>, wanted: List<BackupPreference>, scenario: Scenario, now: Long, v8: Boolean) {
         require(now < scenario.longEnd)
+        val actual = Stage10UpgradeContract.carriedFromOrigin(captured)
         require(actual.size == 17 && actual.map { it.key } == wanted.map { it.key })
         actual.zip(wanted).forEach { (value, before) ->
             require(value.type == before.type)

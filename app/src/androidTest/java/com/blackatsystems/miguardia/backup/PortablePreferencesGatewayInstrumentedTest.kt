@@ -126,8 +126,12 @@ class PortablePreferencesGatewayInstrumentedTest {
 
             val database = snapshotWithShift(EVENT_SHIFT_ID)
             val portable = gateway.capture(database)
-            assertEquals(17, portable.size)
-            assertFalse(portable.any { it.key.contains("lock", ignoreCase = true) })
+            assertEquals(20, portable.size)
+            // The access lock stays on the device. «Show on lock screen» is a notification choice.
+            assertEquals(
+                listOf("notifications.show_on_lock_screen"),
+                portable.map { it.key }.filter { it.contains("lock", ignoreCase = true) },
+            )
             assertFalse(portable.any { it.key.contains("sound") || it.key.contains("retry") })
             assertEquals(
                 listOf(EVENT_KEY),
@@ -220,7 +224,7 @@ class PortablePreferencesGatewayInstrumentedTest {
                 assertEquals(legacyZoom, restored.zoom)
                 assertEquals(AppThemeMode.SYSTEM, restored.theme)
                 assertEquals(legacyZoom.percent, display.getInt(MainActivity.APP_ZOOM_PERCENT, -1))
-                assertEquals(17, capturedAgain.size)
+                assertEquals(20, capturedAgain.size)
                 assertEquals(incoming, capturedAgain)
             }
         }

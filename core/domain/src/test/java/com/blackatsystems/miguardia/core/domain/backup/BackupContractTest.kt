@@ -1119,6 +1119,35 @@ class BackupContractTest {
     }
 
     @Test
+    fun permanentNotificationChoicesThatDifferAreNamedInTheirConflictAndFollowTheChosenSide() {
+        val labels = mapOf(
+            "notifications.always_show_next" to "Mostrar siempre la próxima jornada",
+            "notifications.countdown_while_active" to "Contar hasta el final durante la jornada",
+            "notifications.show_on_lock_screen" to "Mostrar en la pantalla bloqueada",
+        )
+        val current = labels.keys.map { BackupPreference(it, BackupPreferenceType.BOOLEAN, listOf("true")) }
+        val incoming = labels.keys.map { BackupPreference(it, BackupPreferenceType.BOOLEAN, listOf("false")) }
+
+        assertTrue(BackupComparator.compare(emptySnapshot(), emptySnapshot(), current, current).conflicts.isEmpty())
+        val comparison = BackupComparator.compare(emptySnapshot(), emptySnapshot(), current, incoming)
+
+        assertEquals(
+            labels.values.map { "$it tiene valores diferentes." },
+            comparison.conflicts.map(BackupConflict::summary),
+        )
+        val resolutions = comparison.conflicts.mapIndexed { index, conflict ->
+            ResolvedBackupConflict(
+                conflict.id,
+                if (index == 0) BackupConflictResolution.USE_BACKUP else BackupConflictResolution.KEEP_CURRENT,
+            )
+        }
+        assertEquals(
+            listOf(incoming[0], current[1], current[2]),
+            BackupComparator.mergePreferences(current, incoming, comparison.conflicts, resolutions),
+        )
+    }
+
+    @Test
     fun validDismissedNotificationKeysAreUnionedWithoutAConflict() {
         val key = MiGuardiaBackupContract.DISMISSED_EVENT_KEYS_PREFERENCE
         val current = listOf(

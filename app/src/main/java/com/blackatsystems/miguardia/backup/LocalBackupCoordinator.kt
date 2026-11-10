@@ -844,7 +844,9 @@ class LocalBackupCoordinator(
     ): PortableSettings {
         localDataStore.backups.verifyLiveAfterReopen(expectedDatabase, snapshotMemoryLimitBytes)
         val actualPreferences = preferences.capture(expectedDatabase)
-        if (actualPreferences != expectedPreferences) {
+        // A journal written before a preference existed does not list it. What gets applied is the
+        // completed list, so that is what the reopened state has to match.
+        if (actualPreferences != completePortablePreferences(expectedPreferences)) {
             throw InvalidBackupException("Las preferencias reabiertas no coinciden con la restauración.")
         }
         photoFiles.verify(expectedDatabase, expectedPhotoHashes)
