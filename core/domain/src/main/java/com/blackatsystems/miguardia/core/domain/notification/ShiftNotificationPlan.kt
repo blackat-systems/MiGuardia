@@ -14,7 +14,17 @@ enum class NotificationBoundaryType {
     REMINDER,
     START,
     END,
+
+    /**
+     * Silent wake-up for an event that is already on display: nothing is announced, the visible
+     * notification is only drawn again. The permanent notification uses it to start its live
+     * countdown. Keep it last: stored keys and ordering rely on the earlier positions.
+     */
+    REFRESH,
 }
+
+/** The permanent notification shows a live countdown only this close to the start of its event. */
+val PermanentNotificationCountdownWindow: Duration = Duration.ofHours(24)
 
 data class NotificationBoundaryIdentity(
     val eventIdentity: NextEventIdentity,
@@ -84,6 +94,7 @@ fun buildNotificationPlan(
     globalReminderLeadMinutes: Collection<Long>,
     projection: NextEventResult,
     shiftOverrides: List<ShiftNotificationConfig>,
+    countdownRefreshLead: Duration? = null,
 ): ShiftNotificationPlan {
     require(projection.referenceInstant == now) {
         "El plan y la proyeccion laboral deben compartir el instante de referencia"
@@ -116,6 +127,21 @@ fun buildNotificationPlan(
                                         type = NotificationBoundaryType.REMINDER,
                                         triggerAt = triggerAt,
                                         leadMinutes = leadMinutes,
+                                    ),
+                                    event = event,
+                                ),
+                            )
+                        }
+                    }
+                    if (countdownRefreshLead != null) {
+                        val refreshAt = runCatching { event.start.minus(countdownRefreshLead) }.getOrNull()
+                        if (refreshAt != null && refreshAt > now) {
+                            yield(
+                                NotificationBoundary(
+                                    identity = NotificationBoundaryIdentity(
+                                        eventIdentity = event.identity,
+                                        type = NotificationBoundaryType.REFRESH,
+                                        triggerAt = refreshAt,
                                     ),
                                     event = event,
                                 ),

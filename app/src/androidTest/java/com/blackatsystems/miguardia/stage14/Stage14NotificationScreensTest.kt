@@ -95,7 +95,7 @@ class Stage14NotificationScreensTest {
         compose.onNodeWithText("MiGuardia no mostrará avisos hasta que los actives.").assertExists()
         compose.onNodeWithText("Avisos activados").assertDoesNotExist()
         compose.onNodeWithText("Usar notificaciones").assertExists()
-        compose.onNode(isToggleable()).assertIsOff()
+        compose.onNodeWithTag("notification-enabled").assertIsOff()
         // Con avisos apagados sólo quedan el estado, la vista previa y el acceso a Ajustes.
         compose.onNodeWithText("Vista previa").performScrollTo().assertExists()
         compose.onNodeWithText("1. Permití los avisos").assertDoesNotExist()
@@ -104,7 +104,7 @@ class Stage14NotificationScreensTest {
         compose.onNodeWithText("Ver opciones avanzadas").assertDoesNotExist()
         compose.onAllNodesWithText("Abrir ajustes de notificaciones").assertCountEquals(1)
 
-        compose.onNode(isToggleable()).performScrollTo().performClick()
+        compose.onNodeWithTag("notification-enabled").performScrollTo().performClick()
         compose.onNodeWithText("Activar avisos").performScrollTo().performClick()
         compose.runOnIdle { assertEquals(listOf(true, true), enabledRequests) }
     }
@@ -128,18 +128,18 @@ class Stage14NotificationScreensTest {
         compose.onNodeWithText("Te guiamos en tres pasos. Podés cambiar cada detalle cuando quieras.").assertExists()
         compose.onNodeWithText("Activar avisos").assertDoesNotExist()
         compose.onNodeWithText("1. Permití los avisos").assertExists()
-        compose.onNode(isToggleable()).assertIsOn().performScrollTo().performClick()
+        compose.onNodeWithTag("notification-enabled").assertIsOn().performScrollTo().performClick()
 
         compose.runOnIdle { assertEquals(listOf(false), enabledRequests) }
         compose.onNodeWithText("Avisos desactivados").assertExists()
-        compose.onNode(isToggleable()).assertIsOff()
+        compose.onNodeWithTag("notification-enabled").assertIsOff()
         compose.onNodeWithText("1. Permití los avisos").assertDoesNotExist()
         compose.onNodeWithText("Cuándo te acompaña").assertDoesNotExist()
 
         compose.onNodeWithText("Activar avisos").performScrollTo().performClick()
         compose.runOnIdle { assertEquals(listOf(false, true), enabledRequests) }
         compose.onNodeWithText("Avisos activados").assertExists()
-        compose.onNode(isToggleable()).assertIsOn()
+        compose.onNodeWithTag("notification-enabled").assertIsOn()
         compose.onNodeWithText("Cuándo te acompaña").assertExists()
     }
 
@@ -460,7 +460,8 @@ class Stage14NotificationScreensTest {
             .performScrollTo()
             .assertExists()
 
-        compose.onAllNodes(isToggleable()).assertCountEquals(2)
+        // Usar notificaciones, los dos del aviso permanente y la puntualidad exacta.
+        compose.onAllNodes(isToggleable()).assertCountEquals(4)
         preciseTimingSwitch().assertIsOff().performScrollTo().performClick()
         compose.runOnIdle { assertEquals(listOf(true), received) }
         preciseTimingSwitch().assertIsOn().performScrollTo().performClick()
@@ -1030,7 +1031,7 @@ class Stage14NotificationScreensTest {
     )
 
     /** Con las opciones avanzadas abiertas: primero «Usar notificaciones», después puntualidad. */
-    private fun preciseTimingSwitch(): SemanticsNodeInteraction = compose.onAllNodes(isToggleable())[1]
+    private fun preciseTimingSwitch(): SemanticsNodeInteraction = compose.onNodeWithTag("notification-precise-timing")
 
     private val targetPackage: String
         get() = ApplicationProvider.getApplicationContext<Context>().packageName

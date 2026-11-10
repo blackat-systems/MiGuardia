@@ -66,6 +66,18 @@ internal fun retainLiveDismissedEventKeys(
     identity.trackingKey.takeIf { sourceIsStillLive }
 }
 
+/**
+ * Aviso permanente: el primer evento elegible que todavía no terminó, en el orden compartido de la
+ * proyección. Uno solo: si la persona lo descartó, no se lo reemplaza por el que sigue.
+ */
+internal fun permanentNotificationEventKeys(
+    eligibleEvents: List<NextEventItem>,
+    now: Instant,
+): Set<String> = eligibleEvents
+    .firstOrNull { event -> now < event.end }
+    ?.let { event -> setOf(event.identity.trackingKey) }
+    .orEmpty()
+
 internal data class NotificationDisplayReconciliation(
     val eventKeysToCancel: Set<String>,
     val eventKeysToDisplay: Set<String>,
@@ -79,11 +91,13 @@ internal fun reconcileNotificationVisibility(
     startedEligibleEventKeys: Set<String>,
     displayedEventKeys: Set<String>,
     retainedDismissedEventKeys: Set<String>,
+    permanentEventKeys: Set<String> = emptySet(),
 ): NotificationDisplayReconciliation {
     val shouldDisplay = buildSet {
         if (notificationsEnabled && notificationPermissionGranted) {
             addAll(displayedEventKeys.filter { it in eligibleEventKeys && it !in retainedDismissedEventKeys })
             addAll(startedEligibleEventKeys.filterNot(retainedDismissedEventKeys::contains))
+            addAll(permanentEventKeys.filter { it in eligibleEventKeys && it !in retainedDismissedEventKeys })
         }
     }
     return NotificationDisplayReconciliation(

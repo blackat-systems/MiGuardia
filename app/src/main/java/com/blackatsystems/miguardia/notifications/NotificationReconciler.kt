@@ -5,6 +5,7 @@ import com.blackatsystems.miguardia.core.domain.AppDefaults
 import com.blackatsystems.miguardia.core.domain.model.ShiftNotificationConfig
 import com.blackatsystems.miguardia.core.domain.notification.NotificationBoundaryIdentity
 import com.blackatsystems.miguardia.core.domain.notification.NotificationBoundaryType
+import com.blackatsystems.miguardia.core.domain.notification.PermanentNotificationCountdownWindow
 import com.blackatsystems.miguardia.core.domain.notification.buildNotificationPlan
 import com.blackatsystems.miguardia.core.domain.notification.earliestBoundaries
 import com.blackatsystems.miguardia.core.domain.notification.reconcileNotificationPlan
@@ -223,6 +224,8 @@ internal class NotificationReconciler(
             globalReminderLeadMinutes = source.preferences.globalReminderLeadMinutes,
             projection = projection,
             shiftOverrides = source.configs,
+            countdownRefreshLead = PermanentNotificationCountdownWindow
+                .takeIf { source.preferences.alwaysShowNext },
         )
         val installationPlan = plan.earliestBoundaries(MAX_PENDING_NOTIFICATION_ALARMS)
         val installed = preferences.installedBoundaryKeys()
@@ -269,6 +272,11 @@ internal class NotificationReconciler(
                 .mapTo(linkedSetOf()) { event -> event.identity.trackingKey },
             displayedEventKeys = displayed,
             retainedDismissedEventKeys = retainedDismissed,
+            permanentEventKeys = if (source.preferences.alwaysShowNext) {
+                permanentNotificationEventKeys(eligible, now)
+            } else {
+                emptySet()
+            },
         )
         visibility.eventKeysToCancel.forEach(presenter::cancel)
         visibility.eventKeysToDisplay.forEach { eventKey ->
@@ -333,6 +341,9 @@ internal class NotificationReconciler(
             }
             NotificationBoundaryType.START -> triggerAt == event.start && now < event.end
             NotificationBoundaryType.END -> false
+            // Announces nothing by itself: the reconciliation that follows every delivery redraws
+            // whatever is already on display.
+            NotificationBoundaryType.REFRESH -> false
         }
     }
 

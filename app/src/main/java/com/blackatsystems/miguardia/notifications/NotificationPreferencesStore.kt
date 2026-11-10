@@ -51,6 +51,10 @@ data class NotificationPreferences(
     val privacy: NotificationPrivacy = NotificationPrivacy.COMPLETE,
     val attentionMode: NotificationAttentionMode = NotificationAttentionMode.SOUND_AND_VIBRATION,
     val soundUri: Uri? = null,
+    /** Aviso permanente: la próxima jornada queda siempre a la vista, no recién con el primer anticipo. */
+    val alwaysShowNext: Boolean = false,
+    /** Si es falso, ningún aviso de jornada aparece en la pantalla bloqueada. */
+    val showOnLockScreen: Boolean = true,
 ) {
     companion object {
         const val DEFAULT_REMINDER_MINUTES = 12L * 60L
@@ -128,6 +132,8 @@ class NotificationPreferencesStore internal constructor(
     suspend fun setPreciseTiming(value: Boolean) = update { it[PreciseTiming] = value }
     suspend fun setPersistentWhileActive(value: Boolean) = update { it[Persistent] = value }
     suspend fun setPrivacy(value: NotificationPrivacy) = update { it[Privacy] = value.name }
+    suspend fun setAlwaysShowNext(value: Boolean) = update { it[AlwaysShowNext] = value }
+    suspend fun setShowOnLockScreen(value: Boolean) = update { it[ShowOnLockScreen] = value }
     suspend fun setAttentionMode(value: NotificationAttentionMode) = update {
         it[AttentionMode] = value.name
     }
@@ -257,6 +263,8 @@ class NotificationPreferencesStore internal constructor(
                 ?.let { runCatching { NotificationAttentionMode.valueOf(it) }.getOrNull() }
                 ?: NotificationAttentionMode.SOUND_AND_VIBRATION,
             soundUri = values[SoundUri]?.let(Uri::parse),
+            alwaysShowNext = values[AlwaysShowNext] ?: false,
+            showOnLockScreen = values[ShowOnLockScreen] ?: true,
         )
     }
 
@@ -269,6 +277,8 @@ class NotificationPreferencesStore internal constructor(
         val AttentionMode = stringPreferencesKey("attention_mode")
         val ReminderMinutes = stringSetPreferencesKey("global_reminder_minutes")
         val SoundUri = stringPreferencesKey("sound_uri")
+        val AlwaysShowNext = booleanPreferencesKey("always_show_next")
+        val ShowOnLockScreen = booleanPreferencesKey("show_on_lock_screen")
         val InstalledBoundaryKeys = stringSetPreferencesKey("installed_boundary_keys")
         val InstalledExactMode = booleanPreferencesKey("installed_exact_mode")
         val DisplayedShiftIds = stringSetPreferencesKey("displayed_shift_ids")

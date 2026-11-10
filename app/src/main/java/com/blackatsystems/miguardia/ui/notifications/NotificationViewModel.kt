@@ -118,6 +118,8 @@ class NotificationViewModel(
     fun setPreciseTiming(value: Boolean) = launchWrite { preferencesStore.setPreciseTiming(value) }
     fun setPersistent(value: Boolean) = launchWrite { preferencesStore.setPersistentWhileActive(value) }
     fun setPrivacy(value: NotificationPrivacy) = launchWrite { preferencesStore.setPrivacy(value) }
+    fun setAlwaysShowNext(value: Boolean) = launchWrite { preferencesStore.setAlwaysShowNext(value) }
+    fun setShowOnLockScreen(value: Boolean) = launchWrite { preferencesStore.setShowOnLockScreen(value) }
     fun setAttentionMode(value: NotificationAttentionMode) = launchWrite {
         preferencesStore.setAttentionMode(value)
     }

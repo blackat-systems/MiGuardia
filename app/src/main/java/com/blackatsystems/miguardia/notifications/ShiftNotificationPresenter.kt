@@ -24,6 +24,7 @@ import com.blackatsystems.miguardia.MainActivity
 import com.blackatsystems.miguardia.R
 import com.blackatsystems.miguardia.core.domain.nextevent.NextEventIdentity
 import com.blackatsystems.miguardia.core.domain.nextevent.NextEventItem
+import com.blackatsystems.miguardia.core.domain.notification.PermanentNotificationCountdownWindow
 import com.blackatsystems.miguardia.weather.WeatherCredits
 import java.security.MessageDigest
 import java.time.Duration
@@ -70,6 +71,11 @@ internal class ShiftNotificationPresenter(private val context: Context) {
     ) {
         com.blackatsystems.miguardia.QaInstrumentationScope.requireExternalAction(context, "notification.show")
         val ongoing = now >= event.start
+        val countdownVisible = notificationCountdownVisible(
+            alwaysShowNext = preferences.alwaysShowNext,
+            ongoing = ongoing,
+            untilStart = Duration.between(now, event.start),
+        )
         val timeRange = formatEventTimeRange(
             event.start, event.end, event.zoneId, EventTimeRangeStyle.COMPACT_DATED,
         )
@@ -85,6 +91,7 @@ internal class ShiftNotificationPresenter(private val context: Context) {
                 countdownBase = event.countdownBase(now, ongoing),
                 countdownLabel = if (ongoing) "Finaliza en %s" else "Comienza en %s",
                 privacy = preferences.privacy,
+                countdownVisible = countdownVisible,
             )
             is NextEventItem.Availability -> NotificationCard(
                 state = if (ongoing) "DISPONIBILIDAD ACTIVA" else "PRÓXIMA DISPONIBILIDAD",
@@ -97,12 +104,15 @@ internal class ShiftNotificationPresenter(private val context: Context) {
                 countdownBase = event.countdownBase(now, ongoing),
                 countdownLabel = if (ongoing) "Finaliza en %s" else "Comienza en %s",
                 privacy = preferences.privacy,
+                countdownVisible = countdownVisible,
             )
         }
         val views = createViews(card)
         val channelId = ensureChannel(preferences)
         val dismissPendingIntent = dismissIntent(event.identity)
-        val persistentDuringActiveEvent = preferences.persistentWhileActive && ongoing
+        // The permanent notification stays put before the start too; otherwise only a running event does.
+        val persistentDuringActiveEvent =
+            preferences.alwaysShowNext || (preferences.persistentWhileActive && ongoing)
         views.expanded.setOnClickPendingIntent(R.id.notification_dismiss, dismissPendingIntent)
         if (WeatherCredits.forDisplayedWeather(card.expandedWeather()) != null) {
             views.expanded.setOnClickPendingIntent(
@@ -128,7 +138,7 @@ internal class ShiftNotificationPresenter(private val context: Context) {
             builder.addAction(secureAction("Cómo llegar", MainActivity.ACTION_DIRECTIONS, event, now))
         }
         if (silentUpdate) builder.setSilent(true)
-        applyPrivacy(builder, channelId, card)
+        applyPrivacy(builder, channelId, card, preferences.showOnLockScreen)
         cancelLegacyTag(event.identity)
         notifySafely(event.identity.trackingKey, NOTIFICATION_ID, builder.build())
     }
@@ -164,7 +174,7 @@ internal class ShiftNotificationPresenter(private val context: Context) {
             .setAutoCancel(true)
             .setOngoing(false)
             .setTimeoutAfter(PREVIEW_TIMEOUT_MILLIS)
-        applyPrivacy(builder, channelId, card)
+        applyPrivacy(builder, channelId, card, preferences.showOnLockScreen)
         notifySafely(PREVIEW_TAG, PREVIEW_NOTIFICATION_ID, builder.build())
     }
 
@@ -192,7 +202,9 @@ internal class ShiftNotificationPresenter(private val context: Context) {
             .setGroupSummary(true)
             .setOnlyAlertOnce(true)
             .setSilent(true)
-            .setVisibility(summary.visibility)
+            .setVisibility(
+                if (preferences.showOnLockScreen) summary.visibility else NotificationCompat.VISIBILITY_SECRET,
+            )
             .setPublicVersion(publicVersion(channelId, summary.publicTitle, summary.publicText))
             .build()
         notifySafely(GROUP_SUMMARY_TAG, GROUP_SUMMARY_ID, notification)
@@ -253,7 +265,7 @@ internal class ShiftNotificationPresenter(private val context: Context) {
     }
 
     private fun RemoteViews.configureCountdown(card: NotificationCard) {
-        val visible = card.privacy != NotificationPrivacy.HIDDEN
+        val visible = card.privacy != NotificationPrivacy.HIDDEN && card.countdownVisible
         setViewVisibility(R.id.notification_countdown, if (visible) View.VISIBLE else View.GONE)
         if (visible) {
             setChronometer(R.id.notification_countdown, card.countdownBase, card.countdownLabel, true)
@@ -270,7 +282,13 @@ internal class ShiftNotificationPresenter(private val context: Context) {
         builder: NotificationCompat.Builder,
         channelId: String,
         card: NotificationCard,
+        showOnLockScreen: Boolean,
     ) {
+        if (!showOnLockScreen) {
+            // Nothing on the lock screen, whatever the privacy level chosen for the unlocked phone.
+            builder.setVisibility(NotificationCompat.VISIBILITY_SECRET)
+            return
+        }
         when (card.privacy) {
             NotificationPrivacy.COMPLETE -> builder.setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             NotificationPrivacy.REDUCED -> builder
@@ -442,6 +460,7 @@ internal class ShiftNotificationPresenter(private val context: Context) {
         val countdownBase: Long,
         val countdownLabel: String,
         val privacy: NotificationPrivacy,
+        val countdownVisible: Boolean = true,
     ) {
         fun displayedAccent(): Int = if (privacy == NotificationPrivacy.HIDDEN) HIDDEN_ACCENT else accentColor
         fun compactTitle(): String = when (privacy) {
@@ -499,6 +518,17 @@ internal data class NotificationGroupSummaryContent(
     val publicTitle: String,
     val publicText: String,
 )
+
+/**
+ * A running event always counts down to its end. Before the start, the permanent notification shows a
+ * live countdown only inside its window: further away, the dated schedule says it better than a long
+ * count of hours. Without the permanent notification nothing changes.
+ */
+internal fun notificationCountdownVisible(
+    alwaysShowNext: Boolean,
+    ongoing: Boolean,
+    untilStart: Duration,
+): Boolean = ongoing || !alwaysShowNext || untilStart <= PermanentNotificationCountdownWindow
 
 internal fun notificationGroupSummaryContent(
     count: Int,

@@ -68,6 +68,8 @@ data class NotificationActions(
     val setPreciseTiming: (Boolean) -> Unit = {},
     val setPersistent: (Boolean) -> Unit = {},
     val setPrivacy: (NotificationPrivacy) -> Unit = {},
+    val setAlwaysShowNext: (Boolean) -> Unit = {},
+    val setShowOnLockScreen: (Boolean) -> Unit = {},
     val setAttentionMode: (NotificationAttentionMode) -> Unit = {},
     val applyRhythm: (NotificationRhythm) -> Unit = {},
     val setSound: (Uri?) -> Unit = {},
@@ -91,6 +93,8 @@ data class NotificationActions(
             setPreciseTiming = viewModel::setPreciseTiming,
             setPersistent = viewModel::setPersistent,
             setPrivacy = viewModel::setPrivacy,
+            setAlwaysShowNext = viewModel::setAlwaysShowNext,
+            setShowOnLockScreen = viewModel::setShowOnLockScreen,
             setAttentionMode = viewModel::setAttentionMode,
             applyRhythm = viewModel::applyRhythm,
             setSound = viewModel::setSound,
@@ -237,7 +241,12 @@ private fun GlobalSettings(
             "MiGuardia no mostrará avisos hasta que los actives."
         },
     ) {
-        ToggleRow("Usar notificaciones", state.preferences.enabled, actions.setEnabled)
+        ToggleRow(
+            label = "Usar notificaciones",
+            checked = state.preferences.enabled,
+            onChange = actions.setEnabled,
+            testTag = "notification-enabled",
+        )
         if (!state.preferences.enabled) {
             Button(onClick = { actions.setEnabled(true) }, modifier = Modifier.fillMaxWidth()) {
                 Text("Activar avisos")
@@ -304,6 +313,39 @@ private fun GlobalSettings(
         }
     }
     SectionCard(
+        title = "Aviso permanente",
+        supportingText = if (state.preferences.alwaysShowNext) {
+            "Tu próxima jornada queda siempre a la vista."
+        } else {
+            "El aviso aparece recién con el primer anticipo."
+        },
+    ) {
+        ToggleRow(
+            label = "Mostrar siempre la próxima jornada",
+            checked = state.preferences.alwaysShowNext,
+            onChange = actions.setAlwaysShowNext,
+            testTag = "notification-always-show-next",
+        )
+        ToggleRow(
+            label = "Mostrar en la pantalla bloqueada",
+            checked = state.preferences.showOnLockScreen,
+            onChange = actions.setShowOnLockScreen,
+            testTag = "notification-lock-screen",
+        )
+        Text(
+            if (state.preferences.alwaysShowNext) {
+                "Queda fijo entre tus notificaciones y los anticipos sólo deciden cuándo suena. " +
+                    "La cuenta regresiva aparece cuando faltan 24 horas o menos. " +
+                    "Si lo deslizás, vuelve con la jornada siguiente."
+            } else {
+                "Activalo para ver siempre cuánto falta, sin esperar al primer anticipo."
+            },
+        )
+        if (!state.preferences.showOnLockScreen) {
+            Text("Con el teléfono bloqueado no se muestra ningún aviso de jornada.")
+        }
+    }
+    SectionCard(
         title = "Permanencia",
         supportingText = if (state.preferences.persistentWhileActive) {
             "Queda visible mientras el evento está en curso."
@@ -360,7 +402,12 @@ private fun GlobalSettings(
             supportingText = "Es opcional. Sin este acceso, Android puede demorar algunos minutos el aviso.",
         ) {
             PermissionRow("Puntualidad exacta", state.systemAccess.exactAlarmAccessGranted, requestExactAccess)
-            ToggleRow("Intentar publicar exactamente a horario", state.preferences.preciseTiming, actions.setPreciseTiming)
+            ToggleRow(
+                label = "Intentar publicar exactamente a horario",
+                checked = state.preferences.preciseTiming,
+                onChange = actions.setPreciseTiming,
+                testTag = "notification-precise-timing",
+            )
             Text("Es una notificación común: nunca funciona como despertador.")
         }
         SectionCard("Privacidad") {
@@ -629,14 +676,23 @@ private fun ReminderEditor(title: String, values: List<Long>, onChange: (Collect
 }
 
 @Composable
-private fun ToggleRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+private fun ToggleRow(
+    label: String,
+    checked: Boolean,
+    onChange: (Boolean) -> Unit,
+    testTag: String? = null,
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text(label, modifier = Modifier.weight(1f))
-        Switch(checked = checked, onCheckedChange = onChange)
+        Switch(
+            checked = checked,
+            onCheckedChange = onChange,
+            modifier = if (testTag != null) Modifier.testTag(testTag) else Modifier,
+        )
     }
 }
 
