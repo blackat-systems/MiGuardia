@@ -148,7 +148,10 @@ QA tiene las notificaciones bloqueadas en el teléfono. Se cubre en la sesión c
   largo, así que quedaba fuera de la vista. Ahora la pantalla sube sola hasta el mensaje cuando aparece
   un error (`WeatherScreens.kt`). Prueba nueva
   `Stage14WeatherScreensTest#failedRefreshBringsTheErrorIntoViewFromTheBottomOfALongForecast`; la clase
-  dio 17 de 17 en el Samsung con QA `1bd0be8d…` (`build12`). ⏳ Falta que Joaquín lo repita en modo avión.
+  dio 17 de 17 en el Samsung con QA `1bd0be8d…` (`build12`). ✅ Joaquín lo repitió en modo avión (captura
+  del 10/11, 02:41): se ve «No pudimos conectar. Se conserva el último pronóstico disponible.» con
+  «Reintentar» y «Cerrar», y el pronóstico sigue debajo. Observación menor de esa captura: con mínima y
+  máxima iguales el resumen dice «17–17 °C» y «16–16 °C»; sin tocar.
 - ⏳ **«Actualizar» con red:** Joaquín dijo «queda igual». La hora de «Última actualización» sí cambió
   (02:35 en su captura), así que la descarga ocurrió; no se confirmó si vio el aviso «Pronóstico
   actualizado.».
