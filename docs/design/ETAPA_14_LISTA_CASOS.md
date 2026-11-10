@@ -18,10 +18,11 @@ el [mapa de cobertura](ETAPA_14_MAPA_COBERTURA.md) y los resultados de las corri
 
 ## Límites de esta lista
 
-- **Las pruebas automáticas pasaron sobre versiones anteriores al último código.** La última pasada
-  completa en el Samsung fue de 134 pruebas (`corrida5`, 132 ✅, 1 ❌ y 1 omitida); después sólo se
-  repitieron las clases tocadas. Cada ✅ con «Pantalla» o «Aislada» vale para esa versión hasta que la
-  corrida completa de la etapa 15 la repita sobre el último código.
+- **Las pruebas automáticas pasaron sobre el último código** (`580b2c3`) en la corrida completa de la
+  etapa 15 (10/11, `.local-evidence/claude-20261110-15/corrida1/`): 143 esperadas, **137 ✅, 0 ❌ y 6
+  omitidas**. Las 6 omitidas son pruebas aisladas del motor del Widget (5 de `Stage14WidgetRuntimeTest` y
+  1 de `Stage14WidgetViewModelTest`) que se saltean solas mientras haya un Widget real en la pantalla de
+  inicio; su última pasada fue con una versión anterior. Las pruebas «13.5» no se repitieron en la 15.
 - **Cada caso se asignó a sus pruebas por el nombre y la descripción de cada prueba y por las notas de
   STATUS**, no releyendo el cuerpo de las 143. Donde el nombre no alcanzaba, se buscó en el código; lo que
   no tiene evidencia directa quedó en ⏳.
@@ -39,9 +40,9 @@ el [mapa de cobertura](ETAPA_14_MAPA_COBERTURA.md) y los resultados de las corri
 | Widget y recorridos (W001–W024, X003, X012, X013, X015) | 28 | 18 | 9 | 1 |
 | **Total** | **113** | **79** | **33** | **1** |
 
-De los 33 ⏳: 18 se cierran con el dedo de Joaquín, 3 con la corrida del Samsung sobre el último código más
-una mirada (A214, A243 y W020), 3 recién con la versión firmada (A276, A278 y X014) y 9 no tienen hoy una
-prueba que los cubra en el teléfono (ver «Lo que queda sin camino automático»).
+De los 33 ⏳: 21 se cierran con el dedo de Joaquín (entre ellos A214, A243 y W020, que ya pasaron la corrida
+sobre el último código y sólo esperan una mirada), 3 recién con la versión firmada (A276, A278 y X014) y 9
+no tienen hoy una prueba que los cubra en el teléfono (ver «Lo que queda sin camino automático»).
 
 ## Avisos
 
@@ -53,7 +54,7 @@ prueba que los cubra en el teléfono (ver «Lo que queda sin camino automático�
 | A211 denegado vs bloqueado | ⏳ | Pantalla + PC | Leerlo con la app bloqueada en Ajustes · Dedo |
 | A212 abrir ajustes de avisos | ✅ | Pantalla: `…#openingNotificationSettingsTargetsThisAppAndRefreshesAccessOnReturn` y `…#disabledStateStillOpens…` | — |
 | A213 vista previa ficticia | ✅ | 13.5 | — |
-| A214 aviso de prueba | ⏳ | Dedo: lo recibió. Aislada: `Stage14NotificationViewModelTest#testNotificationWithoutPermission…` | `…#testNotificationWithPermissionReportsItWasSent` quedó omitida (el permiso estaba bloqueado; hoy está concedido). No se anotó si se va solo al minuto |
+| A214 aviso de prueba | ⏳ | Dedo: lo recibió. Aislada: `Stage14NotificationViewModelTest#testNotificationWithoutPermission…` y `…#testNotificationWithPermissionReportsItWasSent` (pasó en la corrida de la 15, con el permiso ya concedido) | No se anotó si se va solo al minuto |
 | A215 ritmo | ✅ | 13.5 + PC | — |
 | A216 «Personalizado» | ✅ | 13.5 + PC | — |
 | A217 6/8/12/24 h | ✅ | Pantalla: `…#eachQuickLeadButtonSendsItsMinutes…` | — |
@@ -88,7 +89,7 @@ prueba que los cubra en el teléfono (ver «Lo que queda sin camino automático�
 | A240 intervalo exacto | ✅ | 13.5 + PC | — |
 | A241 actualizar a mano | ⏳ | Pantalla: `…#tappingRefreshAsksOnce…`. Aislada: `…#manualRefreshForcesADownload…`. Dedo: con red real la hora de «Última actualización» cambió | Joaquín dijo «queda igual»: confirmar si se ve el aviso «Pronóstico actualizado.» |
 | A242 distinguir estados | ✅ | Pantalla: `…#shiftDetailLabelsFreshOldAndExpired…`, `…DeclaresPartialCoverage…`, `…#shiftOutsideTheForecastWindow…`, `…#dayCardLabels…` | — |
-| A243 temperatura, lluvia, viento | ⏳ | Pantalla: `…#shiftDetailShowsFeelsLikeRainWindAndGusts…` y `…NeverDrawsAValueTheProviderDidNotGive`. PC: «17 °C» en vez de «17–17 °C» | Ver «17 °C» en el Samsung: el arreglo no está instalado |
+| A243 temperatura, lluvia, viento | ⏳ | Pantalla: `…#shiftDetailShowsFeelsLikeRainWindAndGusts…` y `…NeverDrawsAValueTheProviderDidNotGive`. PC: «17 °C» en vez de «17–17 °C» | Ver «17 °C» en el Samsung en una jornada de una hora (el arreglo ya está instalado) · Dedo |
 | A244 no tocar otro objetivo | ✅ | 13.5 + PC | — |
 | A245 error de red o navegador | ✅ | Pantalla: `…#refreshErrorKeepsTheLastForecast…` y `…#failedRefreshBringsTheErrorIntoView…`. Dedo: modo avión, con captura | — |
 | C081 explicar antes de activar | ⏳ | 13.5 | El diálogo de ubicación de Android · Dedo |
@@ -180,7 +181,7 @@ Desde la app QA nunca se puede descargar: su paquete y su firma no son los públ
 | W017 cuenta regresiva | ⏳ | Aislada: `Stage14WidgetRemoteViewsTest#expiredCountdownIsHidden…` | Verla correr en el Widget real: no quedó dicho · Dedo |
 | W018 tocar abre lo exacto | ⏳ | Dedo: lo tocó y abrió bien | Tocar con la jornada ya eliminada · Dedo |
 | W019 tocar el crédito de Clima | ⏳ | — | Tocarlo en un Widget ampliado con Clima · Dedo |
-| W020 tema y letra | ⏳ | Aislada: vistas con letra al 150 y 200%, 6 de 6 con la versión anterior | Paleta nueva y vista de letra grande: sin instalar. Dos pruebas nuevas sin correr. Verlo en claro y oscuro · Dedo |
+| W020 tema y letra | ⏳ | Aislada: `Stage14WidgetRemoteViewsTest`, 8 de 8 sobre el último código (paleta nueva y vistas con letra al 150 y 200%) | Verlo en claro y en oscuro en el Widget real · Dedo |
 | W021 carga y error | ✅ | Aislada: `Stage14WidgetEngineTest#readFailureDrawsTheErrorView…` y `…ViewModelTest#refreshFailureShowsTheReadError…` | — |
 | W022 se actualiza con los cambios | ✅ | Aislada: `…#engineRedrawsByItselfWhenAShiftIsSaved…` y `Stage14WidgetRuntimeTest#theSourceTheEngineObservesReemits…` | — |
 | W023 inicio/fin/medianoche/reinicio | ⏳ | Aislada: `…#upcomingShiftSchedulesItsStart`, `…#ongoingShiftInAutomaticSchedulesItsEnd`, `…#emptyBaseSchedulesTheNextLocalMidnight…` | Reinicio del teléfono, cambio de hora y de zona |

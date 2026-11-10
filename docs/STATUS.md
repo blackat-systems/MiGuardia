@@ -1,17 +1,16 @@
 # Estado actual de MiGuardia 3.0
 
 - Etapa: **15 · Cierre funcional, aceptación y entrega — EN CURSO** desde el 10/11/2026
-  ([prompt de arranque](prompts/ETAPA_15_CIERRE_Y_ENTREGA.md)). **Parte A (en la PC) hecha. Sigue la
-  parte B (Samsung), que espera la autorización de Joaquín en el momento.** Detalle en «Etapa 15 ·
-  parte A» abajo.
+  ([prompt de arranque](prompts/ETAPA_15_CIERRE_Y_ENTREGA.md)). **Parte A (en la PC) hecha. Parte B
+  (Samsung): corrida automática hecha sobre el último código; faltan los pasos con el dedo de Joaquín.**
+  Detalle en «Etapa 15 · parte B» y «parte A» abajo.
 - Etapa anterior: **14 · Sistema — CERRADA por Joaquín el 10/11/2026**, con pendientes que pasaron a la
   15 (secciones «Etapa 14.1» de abajo). Después de la 15: 16 · Experiencia de uso (decisiones de diseño:
   menú lateral, detalle en las tarjetas, simplificar pantallas con mucho texto), que va recién cuando el
   funcionamiento interno esté resuelto.
 - **Último código:** `580b2c3` (las tres opciones del aviso permanente viajan en las Copias). PC:
   `verify.py --profile local --fresh-tests` 1420 pruebas, 0 fallas, y `--profile build` aprobado sobre
-  ese código. **Sin instalar ni correr en el Samsung:** tampoco el código anterior, `c99806b` (paleta
-  nueva y letra grande del Widget, tercer control del aviso).
+  ese código. **Instalado y corrido en el Samsung el 10/11** (parte B).
 - **Hecho en la 14:** mapa de cobertura de los 113 casos; 138 pruebas instrumentadas nuevas
   (`Stage14Selectors`) y pruebas de PC; aviso permanente con tres controles
   ([diseño](design/ETAPA_14_AVISO_PERMANENTE.md)); Widget con cuatro vistas por tamaño y la paleta de la
@@ -23,10 +22,10 @@
   1. ✅ PC: las tres opciones del aviso permanente viajan en las Copias (pedido de Joaquín).
   2. ✅ PC: los 113 casos de 14.1, uno por uno: [lista](design/ETAPA_14_LISTA_CASOS.md),
      **79 ✅ · 33 ⏳ · 1 ❌**.
-  3. ⏳ Samsung, con autorización: foto de datos, instalar el último código y correr las 143 de
-     `Stage14Selectors` (las 138 de la 14 más 5 de Copias) y, porque se tocaron las Copias, las de la
-     etapa 13 (`Stage13DataSelectors`). La última pasada completa fue de 134 con `build5` (132 ✅);
-     después sólo se repitieron las clases tocadas.
+  3. ✅ Samsung (10/11, con autorización): último código instalado; `Stage14Selectors` 143 esperadas,
+     **137 ✅ · 0 ❌ · 6 omitidas** (se saltean solas por el Widget real puesto); etapa 13
+     (`Stage13DataSelectors`) **16 de 16 ✅**; datos QA intactos. ⏳ Las 6 omitidas se corren cuando
+     Joaquín quite el Widget.
   4. ⏳ Con el dedo de Joaquín: Widget con la paleta nueva, quitarlo y agregarlo (tamaño inicial y si baja
      a una fila), «17 °C», tercer interruptor, TalkBack de oído, y crear una copia, restaurarla y ver que
      vuelven las tres opciones del aviso.
@@ -43,12 +42,36 @@
 - En GitHub: rama `origin/codex/miguardia-3.0` subida el 10/11 a pedido de Joaquín, con pull request
   abierto contra `main` (https://github.com/blackat-systems/MiGuardia/pull/1). No está para mergear:
   la etapa 15 sigue en curso. Los commits de la parte A de la 15 son locales, sin subir.
-- Pareja instalada en el Samsung (10/11): QA `1bd0be8d…` + ejecutor `2de14034…`
-  (`.local-evidence/claude-20261110-14/build12/hashes.txt`). **Es anterior al último código:** no
-  tiene el «17 °C», la paleta nueva del Widget, su letra grande ni el tercer control. Datos QA: 23 bases, foto de referencia
-  `claude-20261110-14/after-dedo/` (10/11, después de la sesión con el dedo de Joaquín). Correr con
+- Pareja instalada en el Samsung (10/11, etapa 15): QA `30ab836b…` + ejecutor `412da65d…`
+  (`.local-evidence/claude-20261110-15/build1/hashes.txt`), compilada del último código y verificada por
+  hash sacando los APK del teléfono. Datos QA: 23 bases, foto de referencia
+  `claude-20261110-15/after-corridas/` (10/11, después de las corridas de la 15). Correr con
   `QA=… RUNNER=… bash .local-evidence/claude-20261110-14/run_classes.sh <salida> [Clase…]`.
 - Actualización: 2026-11-10
+
+## Etapa 15 · parte B: corrida en el Samsung (10/11/2026, con autorización de Joaquín)
+
+- **Teléfono:** Samsung SM-S938B, Android nivel 37. Antes tenía la pareja anotada (QA `1bd0be8d…` +
+  ejecutor `2de14034…`), verificada por hash.
+- **Pareja nueva:** QA `30ab836b…` + ejecutor `412da65d…`, compilada del código `580b2c3`, instalada
+  encima (sin desinstalar) y verificada por hash.
+- ✅ **Etapa 14, las 143 de `Stage14Selectors`** (`claude-20261110-15/corrida1/`): **137 ✅ · 0 ❌ · 6
+  omitidas.** Pasaron por primera vez en el teléfono las 5 de Copias del aviso permanente, la del tercer
+  interruptor, las dos nuevas de vistas del Widget y la del aviso de prueba con permiso (antes omitida).
+- ⏳ **Las 6 omitidas** son 5 de `Stage14WidgetRuntimeTest` y 1 de `Stage14WidgetViewModelTest`: se
+  saltean solas mientras haya un Widget real en la pantalla de inicio, para no pisarlo. Se corren cuando
+  Joaquín lo quite, antes de volver a agregarlo.
+- ✅ **Etapa 13, las 16 de `Stage13DataSelectors`** (`claude-20261110-15/etapa13/`): **16 de 16.** Un
+  primer intento no arrancó ninguna prueba por un error del guion de la corrida (nombres con un salto de
+  línea de Windows); quedó guardado aparte en `etapa13-intento-invalido/` y no cuenta como resultado.
+- ✅ **Datos QA:** foto antes, después de instalar y después de las corridas: **23 bases idénticas**, 373
+  archivos, ninguno nuevo ni faltante; sólo cambió `files/profileInstalled` (marca de Android al
+  instalar). Las pruebas nuevas de Copias no dejaron ningún resto.
+- **Contra la referencia anterior** (`claude-20261110-14/after-dedo/`), la foto de antes tenía tres archivos
+  cambiados: preferencias y caché de Clima y `files/profileInstalled`. INFERIDO que son la instalación de
+  las 02:39 y la prueba de Clima en modo avión de las 02:41, posteriores a aquella foto.
+- Siguen en el teléfono los 16 `cache/stage14-widget-*.db.lck` vacíos de la primera corrida de la 14;
+  borrarlos espera el permiso de Joaquín.
 
 ## Etapa 15 · parte A: en la PC (10/11/2026)
 
