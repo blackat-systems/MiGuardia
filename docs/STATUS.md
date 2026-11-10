@@ -1,12 +1,13 @@
 # Estado actual de MiGuardia 3.0
 
-- Etapa: **15 · Cierre funcional — HECHA el 10/11/2026** (partes A, en la PC, y B, Samsung y dedo de
-  Joaquín). Falta que Joaquín la dé por cerrada. Detalle en «Etapa 15 · parte B» y «parte A» abajo.
+- Etapa: **15 · Cierre funcional — CERRADA por Joaquín el 10/11/2026** (partes A, en la PC, y B,
+  Samsung y dedo de Joaquín). Detalle en «Etapa 15 · parte B» y «parte A» abajo.
 - **Orden nuevo, decidido por Joaquín el 10/11:** la aceptación final y la entrega salieron de la 15 y
   van **después** de la 16, para que lo de la 16 salga en la 3.0 y la pasada completa no haya que
   repetirla.
-  - **Próxima: 16 · Experiencia de uso** (decisiones de diseño: menú lateral, detalle en las tarjetas,
-    simplificar pantallas con mucho texto, pantalla de conflictos de Copias). NO iniciada.
+  - **Próxima: 16 · Experiencia de uso** ([prompt de arranque](prompts/ETAPA_16_EXPERIENCIA_DE_USO.md)):
+    decisiones de diseño sobre el menú lateral, el detalle en las tarjetas, las pantallas con mucho
+    texto y la pantalla de conflictos de Copias. NO iniciada; conviene arrancarla en una sesión nueva.
   - **Después: 17 · Aceptación final y entrega** (candidata congelada, pasada de los 441 casos, firma,
     ensayo de actualización desde la 2.0.2 y publicación).
   - **Versión de la candidata, decidida por Joaquín: 3.0.0, código 7.** No está aplicada: el código
