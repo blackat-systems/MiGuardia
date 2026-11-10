@@ -82,12 +82,34 @@ class Stage14WidgetRemoteViewsTest {
         assertTrue("Textos cortados con letra estándar:\n${cut.joinToString("\n")}", cut.isEmpty())
     }
 
-    // W020 / V015: con letra al 150 y 200 % los textos principales no quedan cortados ni con «…».
+    // W020 / V015. Criterio decidido el 10/11/2026: con la letra de Android al 150 y 200 % el Widget tiene
+    // que seguir siendo usable, no entrar entero. En su tamaño mínimo el texto puede terminar en «…», pero
+    // cada texto se empieza a leer (su primer renglón entra) y TalkBack recibe el contenido completo.
     @Test
-    fun largeAndExtraLargeFontKeepTitlePrimaryAndScheduleCompleteAtTheDeclaredMinimumSizes() {
-        val cut = cutTexts(TestFontScale.LARGE) + cutTexts(TestFontScale.EXTRA_LARGE)
+    fun largeAndExtraLargeFontKeepEveryTextStartedAndCompleteForTalkBack() {
+        val problems = buildList {
+            listOf(TestFontScale.LARGE, TestFontScale.EXTRA_LARGE).forEach { scale ->
+                HostSize.entries.forEach { host ->
+                    val view = inflate(host, scale)
+                    val context = "${host.label} · letra ${scale.percent} %"
+                    val spoken = view.findViewById<View>(R.id.widget_root).contentDescription?.toString().orEmpty()
+                    MAIN_TEXTS.forEach { (label, viewId) ->
+                        val text = view.findViewById<TextView>(viewId)
+                        val layout = text.layout
+                        if (text.visibility != View.VISIBLE || layout == null || layout.lineCount == 0) {
+                            add("$context · $label: no se ve")
+                        } else if (text.height < layout.getLineBottom(0) + text.compoundPaddingTop) {
+                            add("$context · $label: no entra ni su primer renglón")
+                        }
+                        if (!spoken.contains(text.text.toString(), ignoreCase = true)) {
+                            add("$context · $label: «${text.text}» no está en lo que lee TalkBack («$spoken»)")
+                        }
+                    }
+                }
+            }
+        }
 
-        assertTrue("Textos cortados con letra grande:\n${cut.joinToString("\n")}", cut.isEmpty())
+        assertTrue("Con letra grande:\n${problems.joinToString("\n")}", problems.isEmpty())
     }
 
     // W017: con la cuenta regresiva vencida se oculta el contador y el horario absoluto sigue visible.
@@ -334,7 +356,7 @@ class Stage14WidgetRemoteViewsTest {
      * `WidgetRemoteViewsRenderer.kt:30-33`). Un launcher real suele dar más ancho.
      */
     private enum class HostSize(val label: String, val size: WidgetSize, val widthDp: Int, val heightDp: Int) {
-        COMPACT("Compacta 180×96 dp", WidgetSize.COMPACT, 180, 96),
+        COMPACT("Compacta 180×150 dp", WidgetSize.COMPACT, 180, 150),
         EXPANDED("Ampliada 250×360 dp", WidgetSize.EXPANDED, 250, 360),
     }
 

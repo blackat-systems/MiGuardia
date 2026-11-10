@@ -119,7 +119,7 @@ object Stage14Selectors {
         "com.blackatsystems.miguardia.stage14.Stage14WidgetEngineTest#unconfiguredInstanceIsDrawnWithTheSafeDefaultAndNeverAsksWeather",
         "com.blackatsystems.miguardia.stage14.Stage14WidgetRemoteViewsTest#simulatedAndroidFontScaleReallyEnlargesTheWidgetText",
         "com.blackatsystems.miguardia.stage14.Stage14WidgetRemoteViewsTest#standardFontShowsTitlePrimaryAndScheduleCompleteAtTheDeclaredMinimumSizes",
-        "com.blackatsystems.miguardia.stage14.Stage14WidgetRemoteViewsTest#largeAndExtraLargeFontKeepTitlePrimaryAndScheduleCompleteAtTheDeclaredMinimumSizes",
+        "com.blackatsystems.miguardia.stage14.Stage14WidgetRemoteViewsTest#largeAndExtraLargeFontKeepEveryTextStartedAndCompleteForTalkBack",
         "com.blackatsystems.miguardia.stage14.Stage14WidgetRemoteViewsTest#expiredCountdownIsHiddenAndTheAbsoluteScheduleStaysVisible",
         "com.blackatsystems.miguardia.stage14.Stage14WidgetRemoteViewsTest#recoveryViewShowsItsTextsWithoutLaborDataAndOpensTheApp",
         "com.blackatsystems.miguardia.stage14.Stage14WidgetRemoteViewsTest#completePrivacyNeverShowsOrCarriesTheStoredObjectiveAddress",

@@ -6,14 +6,18 @@
     de PC y de pantalla, sin teléfono): ver la sección de abajo.
   - **Aislamiento decidido por Joaquín (9/11): mixto.** Automático sobre base y preferencias propias de
     cada corrida; con su dedo, sobre la app QA, sólo cambian preferencias y se devuelven.
-  - **Tanda 2 en el Samsung (10/11):** tras arreglar tres defectos, **126 de 129 pasan, 2 fallan, 1
-    omitida.** Las 2 que fallan son los textos cortados del Widget en su tamaño mínimo, sin decidir.
+  - **⚠ ABIERTO, lo primero a resolver: apareció una jornada en la base QA que ninguna prueba creó**
+    (10/11 00:27:56, cuatro segundos después de abrirse la app). Es la segunda vez; ver «Jornada que
+    aparece al abrir la app».
+  - **Tanda 2 en el Samsung (10/11):** tras arreglar cuatro defectos, **127 de 129 pasan, 1 falla, 1
+    omitida.** La que falla: con letra al 200%, en el Widget compacto mínimo no entra el horario.
   - **Pedidos de Joaquín (10/11), sin empezar:**
     - **Aviso permanente con contador**, como etapa propia antes de la aceptación final. Falta el diseño
       corto y su aprobación. Ya existe parte: aviso con cuenta regresiva, fijo durante la jornada y tres
       niveles de privacidad en el bloqueo.
-    - **Modo claro: un degradado oscurece una tarjeta y no se lee.** No reproducido todavía: los colores
-      declarados para claro son todos claros. Falta que Joaquín muestre la pantalla para capturarla.
+    - **Modo claro: un degradado oscureció una tarjeta y no se leía.** Joaquín lo vio una vez el 10/11 y
+      no se repitió («sólo fue un bug momentáneo»). Sin reproducir; los colores declarados para claro son
+      todos claros. Queda anotado por si vuelve.
     - **Criterio de letra grande:** usable, no pulida; ningún arreglo de letra grande cambia la vista
       normal. Prioridad: que se vea bien con letra normal en cualquier teléfono.
   - Espera decisión de Joaquín, sin bloquear: si el Widget adopta la paleta nueva; si cuentan las
@@ -24,9 +28,9 @@
 - Etapas anteriores: 13 · Datos y archivos y 12.2 · Cálculos y consulta, CERRADAS por Joaquín (8/11).
 - Base en GitHub: `7fef1c5` (cierre de 13.5), subido a `origin/codex/miguardia-3.0` el 9/11 a
   pedido de Joaquín.
-- Pareja instalada en el Samsung (10/11): QA `64cbb2e5…` (verificada sacando el hash del teléfono) +
-  ejecutor `aa061a79…` (`.local-evidence/claude-20261110-14/build3/hashes.txt`). Datos QA: 23 bases, foto
-  `claude-20261110-14/after-corrida2/` (10/11). Correr con
+- Pareja instalada en el Samsung (10/11, verificada sacando el hash del teléfono): QA `6fef3744…` +
+  ejecutor `77114d3e…` (`.local-evidence/claude-20261110-14/build4/hashes.txt`). Datos QA: 23 bases, foto
+  `claude-20261110-14/after-corrida4/` (10/11), **con una jornada nueva sin explicar** (ver abajo). Correr con
   `QA=… RUNNER=… bash .local-evidence/claude-20261110-14/run_classes.sh <salida> [Clase…]`.
 - Actualización: 2026-11-10
 
@@ -72,6 +76,39 @@ QA tiene las notificaciones bloqueadas en el teléfono. Se cubre en la sesión c
 
 **Confirmado como arreglado:** personalizar una jornada con la general sin anticipos
 (`Stage14NotificationScreensTest`, 24/24) y el singular de Actualizaciones (`Stage14UpdatesScreenTest`, 8/8).
+
+### Jornada que aparece al abrir la app (10/11/2026) — ABIERTO, sin causa confirmada
+
+- **Hecho (VERIFICADO):** entre la foto `after-corrida2` y la `after-corrida4` la base `miguardia-v2.db`
+  ganó una jornada (`shifts` 4 → 5 y `shift_work_snapshots` 4 → 5): fecha 10/11/2026, estado planificada,
+  objetivo «AQA», creada el 10/11 a las 00:27:56. Su identificador es del tipo que genera «Cargar
+  jornadas» (`V2ManualShiftLoadViewModel.kt:1246` y `:1349`).
+- **No fue una prueba:** la corrida anterior había terminado a las 00:25 y la siguiente empezó a las
+  00:39. El registro de uso de Android muestra que la pantalla principal de la app QA se abrió a las
+  00:27:52, cuatro segundos antes. A las 00:28 se guardó además el tema Claro
+  (`shared_prefs/miguardia_display_preferences.xml`, archivo nuevo).
+- **Antecedente igual (13.5):** el 9/11 a las 02:10 apareció una jornada para el 9/11, seis segundos
+  después de abrirse la app, también con «Cargar jornadas»; Joaquín dijo que no fue él y se quitó con
+  «Limpiar día».
+- **HIPÓTESIS, sin probar:** al abrirse, la app retoma sola una carga de jornadas que quedó guardada
+  (un borrador o una operación pendiente) y la escribe para el día de hoy. Si es así, es un defecto de
+  la app: escribe sin una acción consciente. La alternativa es que Joaquín la haya cargado a mano.
+- **Falta:** que Joaquín diga si la cargó él; si no, reproducir abriendo la app con el arnés aislado y
+  revisar qué estado de «Cargar jornadas» sobrevive al cierre. No se tocó la base.
+
+### Textos del Widget (10/11/2026)
+
+- ✅ Vista compacta: el texto principal y el horario pueden usar dos renglones; vista ampliada: el horario
+  también (antes se cortaba sin aviso). Alto mínimo declarado del Widget: de 96 a 150 dp
+  (`widget_next_event_info.xml`); el tamaño inicial 3×2 no cambia. Con letra normal, nada se corta en
+  el tamaño mínimo (`Stage14WidgetRemoteViewsTest#standardFont…`, pasa en el Samsung).
+- **Criterio de letra grande aplicado:** al 150 y 200% el Widget puede terminar un texto en «…», pero cada
+  texto tiene que empezar a leerse y TalkBack recibirlo completo. La prueba se cambió a ese criterio.
+- ❌ Con ese criterio queda una falla: compacto mínimo (180×150 dp) al 200%, el horario no entra ni en su
+  primer renglón. Sin decidir.
+- ⏳ Cómo respeta el inicio de Samsung el alto mínimo nuevo sólo se ve agregando el Widget con el dedo.
+- **Corrida 4:** QA `6fef3744…` + ejecutor `77114d3e…`, las 129: 127 ✅ · 1 ❌ · 1 omitida. PC:
+  `verify.py --profile local --fresh-tests` y `--profile build` aprobados sobre este código.
 
 ### Arreglos y segunda corrida (10/11/2026, con el «sí, arreglalos» de Joaquín)
 
