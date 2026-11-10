@@ -107,7 +107,7 @@ QA tiene las notificaciones bloqueadas en el teléfono. Se cubre en la sesión c
 - **Para las próximas sesiones:** si Joaquín usa la app QA entre dos fotos, la comparación va a dar
   diferencias; preguntarle antes de investigarlas.
 
-### Sesión con el dedo de Joaquín (10/11/2026) — en curso
+### Sesión con el dedo de Joaquín (10/11/2026) — hecha, con pendientes
 
 - ✅ **Aviso permanente:** activar avisos, permiso de Android concedido en su diálogo, aviso de prueba,
   aviso de la jornada de hoy sin esperar el anticipo, fijo y con contador, deslizarlo, tocarlo (abre el
@@ -134,9 +134,25 @@ QA tiene las notificaciones bloqueadas en el teléfono. Se cubre en la sesión c
     dejemos así».** Pareja instalada: QA `6580449e…` + ejecutor `e9597ece…` (`build11`); vistas del Widget
     6 de 6 en el Samsung.
   - ⏳ No se vio todavía achicado a una fila ni recién agregado de cero.
-- **Preferencias de la app QA cambiadas en la sesión, a devolver al final:** permiso de notificaciones,
-  «Usar notificaciones», «Mostrar siempre la próxima jornada» (encendido), «Mostrar en la pantalla
-  bloqueada» (apagado) y un Widget en la pantalla de inicio con privacidad Completa.
+- ✅ **Bloqueo de acceso:** activar con huella o PIN, salir y volver (pantalla «MiGuardia está
+  bloqueada»), cancelar la autenticación (sigue bloqueada, con su mensaje), Recientes sin mostrar
+  pantallas y desactivar. Leído en el teléfono: quedó desactivado, plazo inmediato.
+- ✅ **Clima con red real:** el lugar de la jornada no tenía ubicación para el clima; Joaquín se la cambió
+  y entonces mostró pronóstico. Quedó un archivo de caché de Clima nuevo.
+- ✅ **Actualizaciones:** «Buscar actualización» respondió que no hay versión publicada.
+- ✅ **Apoyo:** abrió el navegador en la página para donar y volvió bien.
+- **Temas:** Joaquín dijo «todo salió bien»; la preferencia de tema cambió en el teléfono, así que los
+  tocó. ⏳ No dijo expresamente si volvió a verse la tarjeta oscura en modo claro.
+- ⏳ **Sin hacer:** «Actualizar» de Clima y modo avión (no lo mencionó); TalkBack de oído; oír un anticipo;
+  Widget achicado a una fila y recién agregado.
+- **Foto después de la sesión** (`claude-20261110-14/after-dedo/`, referencia nueva): 23 bases, 373
+  archivos. Contra la foto anterior cambiaron sólo cosas explicadas: el lugar y el objetivo que Joaquín
+  editó (`objectives` y `work_places`, mismas filas, otro contenido); preferencias de avisos, Clima,
+  Widget, tema y bloqueo; caché de Clima; cola del Widget; y las dos marcas de Android.
+- **Quedó cambiado en la app QA por la sesión** (no se devolvió; Joaquín decide): permiso de
+  notificaciones concedido, avisos activados, aviso permanente encendido, «Mostrar en la pantalla
+  bloqueada» apagado, Clima habilitado, ubicación del lugar, y un Widget en la pantalla de inicio en
+  privacidad Completa.
 
 ### Textos del Widget (10/11/2026)
 
