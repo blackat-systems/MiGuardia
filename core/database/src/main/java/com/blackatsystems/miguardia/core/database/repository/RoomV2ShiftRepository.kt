@@ -18,6 +18,8 @@ import com.blackatsystems.miguardia.core.database.validation.requireValidV2Local
 import com.blackatsystems.miguardia.core.database.validation.requireExactShiftSnapshotInstants
 import com.blackatsystems.miguardia.core.database.validation.validated
 import com.blackatsystems.miguardia.core.domain.model.ShiftWorkSnapshot
+import com.blackatsystems.miguardia.core.domain.model.ShiftDeletionExpectation
+import com.blackatsystems.miguardia.core.domain.model.normalized
 import com.blackatsystems.miguardia.core.domain.model.Objective
 import com.blackatsystems.miguardia.core.domain.model.RecurringNoteVersion
 import com.blackatsystems.miguardia.core.domain.model.RecurringMedicalLeaveVersion
@@ -155,6 +157,47 @@ internal class RoomV2ShiftRepository(
         database.requireValidV2LocalData()
     }
 
+    override suspend fun captureDeletionExpectations(
+        shiftIds: Set<UUID>,
+    ): Map<UUID, ShiftDeletionExpectation> = database.withTransaction {
+        database.requireValidV2LocalData()
+        shiftIds.associateWith { captureDeletionInside(it) }
+    }
+
+    private suspend fun captureDeletionInside(id: UUID): ShiftDeletionExpectation {
+        val encoded = id.toString()
+        val pair = requireExistingV2Write(id)
+        val notes = database.shiftNoteDao().getForShift(encoded)
+        val attachments = notes.flatMap { database.shiftNoteAttachmentDao().getForNote(it.id) }
+            .sortedBy { it.id }
+        val actual = actualReader.readExpectationInside(encoded)
+        val situation = database.shiftSituationDao().get(encoded)
+        val notification = database.shiftNotificationConfigDao().getForShift(encoded)
+        val occurrence = recurringDao.getOccurrenceForShift(encoded)
+        // Length-prefixed fields prevent delimiters inside private note text from colliding.
+        // The digest never exposes that text to the presentation or to logs.
+        val fields = listOf(pair, notes, attachments, actual, situation,
+            notification?.config, notification?.reminders?.sortedBy { it.leadMinutes }, occurrence)
+        val canonical = fields.joinToString("") { value ->
+            val text = value.toString()
+            "${text.length}:$text"
+        }
+        val token = MessageDigest.getInstance("SHA-256")
+            .digest(canonical.toByteArray(StandardCharsets.UTF_8))
+            .joinToString("") { "%02x".format(it) }
+        return ShiftDeletionExpectation(
+            shiftId = id,
+            token = token,
+            noteCount = notes.size,
+            attachmentStorageKeys = attachments.mapTo(linkedSetOf()) { it.storageKey },
+            hasActual = actual?.previousActual != null,
+            hasSituation = situation != null,
+            notificationCount = notification?.reminders?.size ?: 0,
+            hasRecurringOccurrence = occurrence != null,
+            situationEvidenceStorageKey = situation?.evidenceStorageKey,
+        )
+    }
+
     override suspend fun deleteShift(
         expected: V2ShiftWrite,
         expectedActual: com.blackatsystems.miguardia.core.domain.model.ShiftActualExpectation?,
@@ -215,6 +258,38 @@ internal class RoomV2ShiftRepository(
         val history = database.requireValidV2LocalData()
         val validationCache = IncomingWriteValidationCache()
 
+        // A technical retry is recognized only by identical inserted identities and full data.
+        // A second intentional load must carry fresh IDs. Never partly replay a batch.
+        if (mutation.shiftsToInsert.isNotEmpty() && mutation.shiftsToUpdate.isEmpty()) {
+            val stored = mutation.shiftsToInsert.map { dao.getShiftWithSnapshot(it.shift.id.toString()) }
+            if (stored.any { it != null }) {
+                val exact = stored.zip(mutation.shiftsToInsert).all { (row, expected) ->
+                    row?.toDomainWrite() == expected
+                } && mutation.shiftIdsToDelete.all { database.shiftDao().getById(it.toString()) == null } &&
+                    mutation.notesToInsert.all { expected ->
+                        database.shiftNoteDao().getById(expected.note.id.toString())?.toDomain() == expected.note &&
+                            database.shiftNoteAttachmentDao().getForNote(expected.note.id.toString())
+                                .map { it.toDomain() } == expected.attachments
+                    } && mutation.explicitDayStatusDatesToClear.none { date ->
+                        database.explicitDayStatusDao().getAll().any { it.localDate == date.toString() }
+                    }
+                if (exact) return@writeShiftData
+                throw ConflictingLocalWriteException("La carga ya existe con datos diferentes. Revisá nuevamente.")
+            }
+        }
+
+        val statuses = database.explicitDayStatusDao().getAll().map { it.toDomain() }.associateBy { it.date }
+        mutation.explicitStatusExpectations.forEach { (date, expected) ->
+            if (statuses[date] != expected) {
+                throw ConflictingLocalWriteException("El estado del día cambió. Revisá nuevamente la carga.")
+            }
+        }
+        mutation.deletionExpectations.forEach { (id, expected) ->
+            if (captureDeletionInside(id) != expected) {
+                throw ConflictingLocalWriteException("Los datos asociados a una jornada cambiaron. Revisá las pérdidas nuevamente.")
+            }
+        }
+
         val writeDates = (mutation.shiftsToInsert + mutation.shiftsToUpdate)
             .mapTo(hashSetOf()) { write -> write.shift.localStartDate }
         val expectedIds = expectedOccupancy.observedShifts
@@ -248,8 +323,13 @@ internal class RoomV2ShiftRepository(
         mutation.shiftIdsToDelete.forEach { id ->
             val stored = database.shiftDao().getById(id.toString())?.toDomain()
                 ?: missingShift(id)
-            if (stored.localStartDate !in writeDates) {
-                invalid("Una carga V2 sólo puede reemplazar jornadas de las fechas que guarda.")
+            if ((mutation.shiftsToInsert + mutation.shiftsToUpdate).none { candidate ->
+                    stored.startAt < candidate.shift.endAt && candidate.shift.startAt < stored.endAt
+                }) {
+                invalid("Sobrescribir sólo puede quitar jornadas cuyos intervalos se superponen.")
+            }
+            if (stored.localStartDate !in writeDates && id !in mutation.deletionExpectations) {
+                invalid("Reemplazar una jornada de otra fecha requiere revisar todos sus datos asociados.")
             }
         }
 
@@ -315,7 +395,8 @@ internal class RoomV2ShiftRepository(
             recurringDao.getOccurrenceForShift(shiftId.toString())?.let { entity ->
                 val occurrence = entity.toDomainOccurrence()
                 val replacementTimestamp = writeTimestampsByDate[occurrence.localDate]
-                    ?: invalid("Una jornada recurrente sólo puede reemplazarse por otra de la misma fecha.")
+                    ?: writeTimestampsByDate.values.maxOrNull()
+                    ?: invalid("El reemplazo requiere una jornada nueva.")
                 val excluded = occurrence.copy(
                     shiftId = null,
                     state = RecurringOccurrenceState.EXCLUDED,
@@ -356,6 +437,13 @@ internal class RoomV2ShiftRepository(
         }
         mutation.shiftsToInsert.forEach { write ->
             dao.insertPair(write.shift.validated().toEntity(), write.snapshot.toEntity())
+        }
+        mutation.notesToInsert.forEach { aggregate ->
+            val note = if (aggregate.attachments.isEmpty()) aggregate.note.normalized()
+                else aggregate.note.copy(body = aggregate.note.body.trim())
+            require(note.updatedAt >= note.createdAt)
+            database.shiftNoteDao().insert(note.toEntity())
+            database.shiftNoteAttachmentDao().insertAll(aggregate.attachments.map { it.toEntity() })
         }
         mutation.shiftsToUpdate.forEach { write ->
             val (shiftRows, snapshotRows) = dao.updatePair(

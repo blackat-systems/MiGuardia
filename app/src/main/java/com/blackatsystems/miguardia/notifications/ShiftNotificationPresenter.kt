@@ -1,5 +1,7 @@
 package com.blackatsystems.miguardia.notifications
 
+import com.blackatsystems.miguardia.ui.EventTimeRangeStyle
+import com.blackatsystems.miguardia.ui.formatEventTimeRange
 import android.Manifest
 import android.app.Notification
 import android.app.NotificationChannel
@@ -22,16 +24,17 @@ import com.blackatsystems.miguardia.MainActivity
 import com.blackatsystems.miguardia.R
 import com.blackatsystems.miguardia.core.domain.nextevent.NextEventIdentity
 import com.blackatsystems.miguardia.core.domain.nextevent.NextEventItem
+import com.blackatsystems.miguardia.core.domain.notification.PermanentNotificationCountdownWindow
 import com.blackatsystems.miguardia.weather.WeatherCredits
 import java.security.MessageDigest
 import java.time.Duration
 import java.time.Instant
-import java.time.format.DateTimeFormatter
 
 internal class ShiftNotificationPresenter(private val context: Context) {
-    private val manager = NotificationManagerCompat.from(context)
+    private val manager by lazy { NotificationManagerCompat.from(context) }
 
     fun showRecoveryForExisting() {
+        if (com.blackatsystems.miguardia.QaInstrumentationScope.suppress(context, "notification.recovery-sweep")) return
         val native = context.getSystemService(NotificationManager::class.java)
         runCatching {
             native.activeNotifications.forEach { active ->
@@ -41,6 +44,7 @@ internal class ShiftNotificationPresenter(private val context: Context) {
     }
 
     internal fun recoveryNotification(original: Notification? = null): Notification {
+        com.blackatsystems.miguardia.QaInstrumentationScope.requireExternalAction(context, "notification.recovery-channel")
         val channel = "miguardia-beta-access-v1"
         context.getSystemService(NotificationManager::class.java).createNotificationChannel(
             NotificationChannel(channel, "Recuperación local", NotificationManager.IMPORTANCE_LOW).apply {
@@ -65,14 +69,17 @@ internal class ShiftNotificationPresenter(private val context: Context) {
         weatherText: String? = null,
         silentUpdate: Boolean = false,
     ) {
+        com.blackatsystems.miguardia.QaInstrumentationScope.requireExternalAction(context, "notification.show")
         val ongoing = now >= event.start
-        val timeRange = when (event) {
-            is NextEventItem.Shift ->
-                "${event.startTimeSnapshot.format(TimeFormatter)}–${event.endTimeSnapshot.format(TimeFormatter)}"
-            is NextEventItem.Availability ->
-                "${event.start.atZone(event.zoneId).toLocalTime().format(TimeFormatter)}–" +
-                    event.end.atZone(event.zoneId).toLocalTime().format(TimeFormatter)
-        }
+        val countdownVisible = notificationCountdownVisible(
+            alwaysShowNext = preferences.alwaysShowNext,
+            ongoing = ongoing,
+            untilStart = Duration.between(now, event.start),
+            countdownWhileActive = preferences.countdownWhileActive,
+        )
+        val timeRange = formatEventTimeRange(
+            event.start, event.end, event.zoneId, EventTimeRangeStyle.COMPACT_DATED,
+        )
         val card = when (event) {
             is NextEventItem.Shift -> NotificationCard(
                 state = if (ongoing) "JORNADA EN CURSO" else "PRÓXIMA JORNADA",
@@ -85,6 +92,7 @@ internal class ShiftNotificationPresenter(private val context: Context) {
                 countdownBase = event.countdownBase(now, ongoing),
                 countdownLabel = if (ongoing) "Finaliza en %s" else "Comienza en %s",
                 privacy = preferences.privacy,
+                countdownVisible = countdownVisible,
             )
             is NextEventItem.Availability -> NotificationCard(
                 state = if (ongoing) "DISPONIBILIDAD ACTIVA" else "PRÓXIMA DISPONIBILIDAD",
@@ -97,12 +105,15 @@ internal class ShiftNotificationPresenter(private val context: Context) {
                 countdownBase = event.countdownBase(now, ongoing),
                 countdownLabel = if (ongoing) "Finaliza en %s" else "Comienza en %s",
                 privacy = preferences.privacy,
+                countdownVisible = countdownVisible,
             )
         }
         val views = createViews(card)
         val channelId = ensureChannel(preferences)
         val dismissPendingIntent = dismissIntent(event.identity)
-        val persistentDuringActiveEvent = preferences.persistentWhileActive && ongoing
+        // The permanent notification stays put before the start too; otherwise only a running event does.
+        val persistentDuringActiveEvent =
+            preferences.alwaysShowNext || (preferences.persistentWhileActive && ongoing)
         views.expanded.setOnClickPendingIntent(R.id.notification_dismiss, dismissPendingIntent)
         if (WeatherCredits.forDisplayedWeather(card.expandedWeather()) != null) {
             views.expanded.setOnClickPendingIntent(
@@ -128,12 +139,13 @@ internal class ShiftNotificationPresenter(private val context: Context) {
             builder.addAction(secureAction("Cómo llegar", MainActivity.ACTION_DIRECTIONS, event, now))
         }
         if (silentUpdate) builder.setSilent(true)
-        applyPrivacy(builder, channelId, card)
+        applyPrivacy(builder, channelId, card, preferences.showOnLockScreen)
         cancelLegacyTag(event.identity)
         notifySafely(event.identity.trackingKey, NOTIFICATION_ID, builder.build())
     }
 
     fun showTestNotification(preferences: NotificationPreferences) {
+        com.blackatsystems.miguardia.QaInstrumentationScope.requireExternalAction(context, "notification.preview")
         val card = NotificationCard(
             state = "PRUEBA · PRÓXIMA JORNADA",
             objective = "Jornada habitual · Hospital Norte",
@@ -163,17 +175,19 @@ internal class ShiftNotificationPresenter(private val context: Context) {
             .setAutoCancel(true)
             .setOngoing(false)
             .setTimeoutAfter(PREVIEW_TIMEOUT_MILLIS)
-        applyPrivacy(builder, channelId, card)
+        applyPrivacy(builder, channelId, card, preferences.showOnLockScreen)
         notifySafely(PREVIEW_TAG, PREVIEW_NOTIFICATION_ID, builder.build())
     }
 
     fun cancel(eventKey: String) {
+        com.blackatsystems.miguardia.QaInstrumentationScope.requireExternalAction(context, "notification.cancel")
         val identity = NextEventIdentity.parseTrackingKey(eventKey) ?: return
         manager.cancel(identity.trackingKey, NOTIFICATION_ID)
         cancelLegacyTag(identity)
     }
 
     fun updateGroupSummary(count: Int, preferences: NotificationPreferences) {
+        com.blackatsystems.miguardia.QaInstrumentationScope.requireExternalAction(context, "notification.group-summary")
         if (count <= 1) {
             manager.cancel(GROUP_SUMMARY_TAG, GROUP_SUMMARY_ID)
             return
@@ -189,7 +203,9 @@ internal class ShiftNotificationPresenter(private val context: Context) {
             .setGroupSummary(true)
             .setOnlyAlertOnce(true)
             .setSilent(true)
-            .setVisibility(summary.visibility)
+            .setVisibility(
+                if (preferences.showOnLockScreen) summary.visibility else NotificationCompat.VISIBILITY_SECRET,
+            )
             .setPublicVersion(publicVersion(channelId, summary.publicTitle, summary.publicText))
             .build()
         notifySafely(GROUP_SUMMARY_TAG, GROUP_SUMMARY_ID, notification)
@@ -250,7 +266,7 @@ internal class ShiftNotificationPresenter(private val context: Context) {
     }
 
     private fun RemoteViews.configureCountdown(card: NotificationCard) {
-        val visible = card.privacy != NotificationPrivacy.HIDDEN
+        val visible = card.privacy != NotificationPrivacy.HIDDEN && card.countdownVisible
         setViewVisibility(R.id.notification_countdown, if (visible) View.VISIBLE else View.GONE)
         if (visible) {
             setChronometer(R.id.notification_countdown, card.countdownBase, card.countdownLabel, true)
@@ -267,7 +283,13 @@ internal class ShiftNotificationPresenter(private val context: Context) {
         builder: NotificationCompat.Builder,
         channelId: String,
         card: NotificationCard,
+        showOnLockScreen: Boolean,
     ) {
+        if (!showOnLockScreen) {
+            // Nothing on the lock screen, whatever the privacy level chosen for the unlocked phone.
+            builder.setVisibility(NotificationCompat.VISIBILITY_SECRET)
+            return
+        }
         when (card.privacy) {
             NotificationPrivacy.COMPLETE -> builder.setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             NotificationPrivacy.REDUCED -> builder
@@ -280,6 +302,7 @@ internal class ShiftNotificationPresenter(private val context: Context) {
     }
 
     private fun notifySafely(tag: String?, id: Int, notification: Notification) {
+        com.blackatsystems.miguardia.QaInstrumentationScope.requireExternalAction(context, "notification.notify")
         if (
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
             PackageManager.PERMISSION_GRANTED || !manager.areNotificationsEnabled()
@@ -315,6 +338,7 @@ internal class ShiftNotificationPresenter(private val context: Context) {
         event: NextEventItem,
         boundary: Instant,
     ): PendingIntent {
+        com.blackatsystems.miguardia.QaInstrumentationScope.requireExternalAction(context, "notification.activity-identity")
         val intent = Intent(context, MainActivity::class.java)
             .setAction(action)
             .setData(
@@ -347,6 +371,7 @@ internal class ShiftNotificationPresenter(private val context: Context) {
     }
 
     private fun dismissIntent(identity: NextEventIdentity): PendingIntent {
+        com.blackatsystems.miguardia.QaInstrumentationScope.requireExternalAction(context, "notification.dismiss-identity")
         val intent = Intent(context, ShiftAlarmReceiver::class.java)
             .setAction(ShiftAlarmReceiver.ACTION_NOTIFICATION_DISMISSED)
             .setData(
@@ -365,12 +390,14 @@ internal class ShiftNotificationPresenter(private val context: Context) {
     }
 
     private fun cancelLegacyTag(identity: NextEventIdentity) {
+        com.blackatsystems.miguardia.QaInstrumentationScope.requireExternalAction(context, "notification.cancel-legacy")
         if (identity is NextEventIdentity.Shift) {
             manager.cancel(identity.shiftId.toString(), NOTIFICATION_ID)
         }
     }
 
     private fun ensureChannel(preferences: NotificationPreferences): String {
+        com.blackatsystems.miguardia.QaInstrumentationScope.requireExternalAction(context, "notification.channel-sweep")
         val notificationManager = context.getSystemService(NotificationManager::class.java)
         val effectiveSound = preferences.soundUri
             ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
@@ -434,6 +461,7 @@ internal class ShiftNotificationPresenter(private val context: Context) {
         val countdownBase: Long,
         val countdownLabel: String,
         val privacy: NotificationPrivacy,
+        val countdownVisible: Boolean = true,
     ) {
         fun displayedAccent(): Int = if (privacy == NotificationPrivacy.HIDDEN) HIDDEN_ACCENT else accentColor
         fun compactTitle(): String = when (privacy) {
@@ -481,7 +509,6 @@ internal class ShiftNotificationPresenter(private val context: Context) {
         private const val PREVIEW_TIMEOUT_MILLIS = 60_000L
         private const val VIGILIA_ACCENT = 0xFF8B5CFF.toInt()
         private const val HIDDEN_ACCENT = 0xFF665E70.toInt()
-        private val TimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
     }
 }
 
@@ -492,6 +519,22 @@ internal data class NotificationGroupSummaryContent(
     val publicTitle: String,
     val publicText: String,
 )
+
+/**
+ * A running event counts down to its end unless the person chose to see only the schedule. Before the
+ * start, the permanent notification shows a live countdown only inside its window: further away, the
+ * dated schedule says it better than a long count of hours. With the defaults nothing changes.
+ */
+internal fun notificationCountdownVisible(
+    alwaysShowNext: Boolean,
+    ongoing: Boolean,
+    untilStart: Duration,
+    countdownWhileActive: Boolean = true,
+): Boolean = if (ongoing) {
+    countdownWhileActive
+} else {
+    !alwaysShowNext || untilStart <= PermanentNotificationCountdownWindow
+}
 
 internal fun notificationGroupSummaryContent(
     count: Int,

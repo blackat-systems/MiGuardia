@@ -69,7 +69,7 @@ class NextEventViewModel(
                     when (observation) {
                         is NextEventObservation.Loading -> NextEventUiState(
                             loadState = NextEventLoadState.LOADING,
-                            result = currentLastValidResult(observation.date),
+                            result = currentLastValidResult(observation.date)?.withoutLiveCountdown(),
                         )
 
                         is NextEventObservation.Content -> {
@@ -91,7 +91,7 @@ class NextEventViewModel(
                     emit(
                         NextEventUiState(
                             loadState = NextEventLoadState.ERROR,
-                            result = currentLastValidResult(currentDate),
+                            result = currentLastValidResult(currentDate)?.withoutLiveCountdown(),
                             errorMessage = "No pudimos actualizar los eventos laborales de hoy.",
                         ),
                     )
@@ -102,7 +102,7 @@ class NextEventViewModel(
                     emit(
                         NextEventUiState(
                             loadState = NextEventLoadState.ERROR,
-                            result = currentLastValidResult(),
+                            result = currentLastValidResult()?.withoutLiveCountdown(),
                             errorMessage = "No pudimos actualizar los eventos laborales de hoy.",
                         ),
                     )
@@ -121,10 +121,25 @@ class NextEventViewModel(
         retryToken.update { it + 1L }
     }
 
+    /** Re-read sources and the injected wall clock even after a short background pause. */
+    fun refreshOnResume() {
+        lastValidResult = null
+        retry()
+    }
+
     private fun currentLastValidResult(
         date: LocalDate = clock.instant().atZone(zoneId).toLocalDate(),
     ): TodayCardProjection? = lastValidResult?.takeIf { result ->
-        result.date == date
+        result.date == date && clock.instant() < result.referenceInstant.plus(
+            nextRefreshDelay(result.referenceInstant, zoneId, result),
+        )
+    }
+
+    // A failed source cannot keep a live counter valid until tomorrow. Preserve
+    // static summaries only; retry/resume reconstructs the next eligible event.
+    private fun TodayCardProjection.withoutLiveCountdown(): TodayCardProjection? = takeIf {
+        futureEvent.primaryEvent == com.blackatsystems.miguardia.core.domain.nextevent.NextEventPrimary.NONE ||
+            futureEvent.primaryEvent == com.blackatsystems.miguardia.core.domain.nextevent.NextEventPrimary.DAY_OFF
     }
 
     private suspend fun awaitCivilDateChange(failedDate: LocalDate) {

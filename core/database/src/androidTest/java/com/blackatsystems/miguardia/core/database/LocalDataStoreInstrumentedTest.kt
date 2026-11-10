@@ -5,7 +5,12 @@ import android.database.sqlite.SQLiteDatabase
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import com.blackatsystems.miguardia.core.domain.model.ShiftNote
+import com.blackatsystems.miguardia.core.domain.model.ShiftNoteAttachment
 import java.security.MessageDigest
+import java.time.Instant
+import java.util.UUID
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -34,7 +39,7 @@ class LocalDataStoreInstrumentedTest {
     }
 
     @Test
-    fun v2DatabaseStartsAtVersionSixWithTheExactTwentySevenTables() {
+    fun v2DatabaseStartsAtVersionSevenWithTheExactTwentyEightTables() {
         database = MiGuardiaV2Database.build(context)
         val sqlite = database.openHelper.writableDatabase
         val tables = linkedSetOf<String>()
@@ -45,7 +50,7 @@ class LocalDataStoreInstrumentedTest {
             while (cursor.moveToNext()) tables += cursor.getString(0)
         }
 
-        assertEquals(6, sqlite.version)
+        assertEquals(7, sqlite.version)
         assertEquals(EXPECTED_TABLES, tables)
         assertFalse("schedule_combinations" in tables)
         assertFalse("shift_novelties" in tables)
@@ -81,7 +86,54 @@ class LocalDataStoreInstrumentedTest {
     }
 
     @Test
-    fun exportedV2SchemasKeepVersionsOneToFiveAndMatchVersionSix() {
+    fun imageOnlyNotePersistsAttachmentsInOrderAndDeleteCascades() = runBlocking {
+        database = MiGuardiaV2Database.build(context, V2_TEST_DB)
+        val store = LocalDataStore(database)
+        val sqlite = database.openHelper.writableDatabase
+        val now = Instant.parse("2026-09-12T12:00:00Z")
+        val objectiveId = UUID.fromString("10000000-0000-4000-8000-000000000001")
+        val shiftId = UUID.fromString("10000000-0000-4000-8000-000000000002")
+        val noteId = UUID.fromString("10000000-0000-4000-8000-000000000003")
+        sqlite.execSQL(
+            "INSERT INTO objectives VALUES (?, ?, ?, NULL, NULL, 1, ?, ?, NULL, NULL)",
+            arrayOf<Any?>(objectiveId.toString(), "Objetivo", "OBJ", now.toEpochMilli(), now.toEpochMilli()),
+        )
+        sqlite.execSQL(
+            "INSERT INTO shifts VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, NULL, ?, ?, ?, ?)",
+            arrayOf<Any?>(
+                shiftId.toString(), now.toEpochMilli(), now.plusSeconds(3_600).toEpochMilli(),
+                "America/Argentina/Cordoba", "2026-09-12", "Objetivo", "OBJ", "09:00", "10:00",
+                -13_408_615, "PLANNED", objectiveId.toString(), now.toEpochMilli(), now.toEpochMilli(),
+            ),
+        )
+        val attachments = listOf(0, 1).map { position ->
+            val id = UUID(0L, 10L + position)
+            ShiftNoteAttachment(
+                id = id,
+                noteId = noteId,
+                storageKey = "note_${id}.png",
+                mimeType = "image/png",
+                byteSize = 67,
+                pixelWidth = 1,
+                pixelHeight = 1,
+                position = position,
+                createdAt = now,
+                updatedAt = now,
+            )
+        }
+
+        store.shiftNotes.saveWithAttachments(ShiftNote(noteId, shiftId, "", now, now), attachments)
+
+        assertEquals(attachments, store.shiftNotes.getWithAttachments(noteId)?.attachments)
+        store.shiftNotes.delete(noteId)
+        assertEquals(0, sqlite.query("SELECT COUNT(*) FROM shift_note_attachments").use { cursor ->
+            cursor.moveToFirst()
+            cursor.getInt(0)
+        })
+    }
+
+    @Test
+    fun exportedV2SchemasKeepVersionsOneToSixAndMatchVersionSeven() {
         val assetRoot = "com.blackatsystems.miguardia.core.database.MiGuardiaV2Database"
         val versionOne = InstrumentationRegistry.getInstrumentation().context.assets.open(
             "$assetRoot/1.json",
@@ -101,6 +153,9 @@ class LocalDataStoreInstrumentedTest {
         val versionSix = InstrumentationRegistry.getInstrumentation().context.assets.open(
             "$assetRoot/6.json",
         ).use { input -> input.readBytes() }
+        val versionSeven = InstrumentationRegistry.getInstrumentation().context.assets.open(
+            "$assetRoot/7.json",
+        ).use { input -> input.readBytes() }
 
         assertEquals(EXPECTED_SCHEMA_ONE_SHA256, sha256(versionOne))
         assertEquals(EXPECTED_SCHEMA_TWO_SHA256, sha256(versionTwo))
@@ -108,6 +163,7 @@ class LocalDataStoreInstrumentedTest {
         assertEquals(EXPECTED_SCHEMA_FOUR_SHA256, sha256(versionFour))
         assertEquals(EXPECTED_SCHEMA_FIVE_SHA256, sha256(versionFive))
         assertEquals(EXPECTED_SCHEMA_SIX_SHA256, sha256(versionSix))
+        assertEquals(EXPECTED_SCHEMA_SEVEN_SHA256, sha256(versionSeven))
     }
 
     @Test
@@ -187,6 +243,7 @@ class LocalDataStoreInstrumentedTest {
         const val EXPECTED_SCHEMA_FOUR_SHA256 = "796f1e7a02e095b956160b4135303df3bae49b1644d0d9ac6d226878d5b1cc6b"
         const val EXPECTED_SCHEMA_FIVE_SHA256 = "40b43c38d5fbcab0dcc871a0996749ffaae577b6aa67740e97aa10d005a8acc4"
         const val EXPECTED_SCHEMA_SIX_SHA256 = "bb5818ea0c086a73b6dffff6f1f3f0e547f6bbe05adcd519d363845679545268"
+        const val EXPECTED_SCHEMA_SEVEN_SHA256 = "33bdc2c93f54f9e792737918fc851fd3d5f14e959de6496541fc435efda52c3d"
         val EXPECTED_TABLES = linkedSetOf(
             "objectives",
             "shifts",
@@ -195,6 +252,7 @@ class LocalDataStoreInstrumentedTest {
             "medical_leaves",
             "holidays",
             "shift_notes",
+            "shift_note_attachments",
             "vacations",
             "schedule_photos",
             "shift_notification_configs",

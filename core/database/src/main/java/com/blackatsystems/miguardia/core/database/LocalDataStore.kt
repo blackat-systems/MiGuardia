@@ -2,6 +2,7 @@ package com.blackatsystems.miguardia.core.database
 
 import android.content.Context
 import com.blackatsystems.miguardia.core.database.repository.RoomExplicitDayStatusRepository
+import com.blackatsystems.miguardia.core.database.repository.RoomCalendarBatchRepository
 import com.blackatsystems.miguardia.core.database.repository.RoomAvailabilityWindowRepository
 import com.blackatsystems.miguardia.core.database.repository.RoomHolidayRepository
 import com.blackatsystems.miguardia.core.database.repository.RoomIndependentExtraWorkRepository
@@ -13,12 +14,14 @@ import com.blackatsystems.miguardia.core.database.repository.RoomShiftRepository
 import com.blackatsystems.miguardia.core.database.repository.RoomShiftActualRepository
 import com.blackatsystems.miguardia.core.database.repository.RoomShiftNoteRepository
 import com.blackatsystems.miguardia.core.database.repository.RoomShiftNotificationConfigRepository
+import com.blackatsystems.miguardia.core.database.repository.RoomShiftSituationRepository
 import com.blackatsystems.miguardia.core.database.repository.RoomVacationRepository
 import com.blackatsystems.miguardia.core.database.repository.RoomV2ShiftRepository
 import com.blackatsystems.miguardia.core.database.repository.RoomWorkCatalogRepository
 import com.blackatsystems.miguardia.core.database.repository.RoomWorkConfigurationRepository
 import com.blackatsystems.miguardia.core.database.backup.BackupDatabaseGateway
 import com.blackatsystems.miguardia.core.domain.repository.ExplicitDayStatusRepository
+import com.blackatsystems.miguardia.core.domain.repository.CalendarBatchRepository
 import com.blackatsystems.miguardia.core.domain.repository.AvailabilityWindowRepository
 import com.blackatsystems.miguardia.core.domain.repository.HolidayRepository
 import com.blackatsystems.miguardia.core.domain.repository.IndependentExtraWorkRepository
@@ -31,6 +34,7 @@ import com.blackatsystems.miguardia.core.domain.repository.ShiftRepository
 import com.blackatsystems.miguardia.core.domain.repository.ShiftActualRepository
 import com.blackatsystems.miguardia.core.domain.repository.ShiftNoteRepository
 import com.blackatsystems.miguardia.core.domain.repository.ShiftNotificationConfigRepository
+import com.blackatsystems.miguardia.core.domain.repository.ShiftSituationRepository
 import com.blackatsystems.miguardia.core.domain.repository.VacationRepository
 import com.blackatsystems.miguardia.core.domain.repository.V2ShiftRepository
 import com.blackatsystems.miguardia.core.domain.repository.V2RecurringShiftRepository
@@ -63,11 +67,12 @@ class LocalDataStore internal constructor(
     val medicalLeaves: MedicalLeaveRepository =
         RoomMedicalLeaveRepository(database)
     val holidays: HolidayRepository = RoomHolidayRepository(database)
-    val shiftNotes: ShiftNoteRepository = RoomShiftNoteRepository(database.shiftNoteDao())
+    val shiftNotes: ShiftNoteRepository = RoomShiftNoteRepository(database)
     val vacations: VacationRepository = RoomVacationRepository(database)
     val schedulePhotos: SchedulePhotoRepository = RoomSchedulePhotoRepository(database.schedulePhotoDao())
     val shiftNotificationConfigs: ShiftNotificationConfigRepository =
         RoomShiftNotificationConfigRepository(database)
+    val shiftSituations: ShiftSituationRepository = RoomShiftSituationRepository(database, recurringClock)
     val workConfiguration: WorkConfigurationRepository =
         RoomWorkConfigurationRepository(database)
     val workCatalog: WorkCatalogRepository = RoomWorkCatalogRepository(database)
@@ -75,6 +80,7 @@ class LocalDataStore internal constructor(
     val shiftActuals: ShiftActualRepository = roomShiftActual
     val independentExtraWork: IndependentExtraWorkRepository = roomIndependentExtras
     val availabilityWindows: AvailabilityWindowRepository = roomAvailability
+    val calendarBatches: CalendarBatchRepository = RoomCalendarBatchRepository(database, recurringClock)
     val recurringShiftWriter: V2RecurringShiftRepository = roomV2Shifts
     val recurringPlans: RecurringPlanRepository = roomV2Shifts
     val monthlyReportSnapshots: MonthlyReportSnapshotRepository =

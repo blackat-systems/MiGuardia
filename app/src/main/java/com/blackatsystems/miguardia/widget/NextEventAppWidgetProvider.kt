@@ -37,6 +37,7 @@ class NextEventAppWidgetProvider : AppWidgetProvider() {
     }
 
     override fun onDeleted(context: Context, appWidgetIds: IntArray) {
+        if (com.blackatsystems.miguardia.QaInstrumentationScope.suppress(context, "widget.deletion-callback")) return
         val application = application(context) ?: return
         if (runCatching { application.widgetDeferredActions.enqueueDeletion(appWidgetIds) }.isFailure) return
         if (!application.startupRecoveryGate.isReady) return
@@ -58,6 +59,7 @@ class NextEventAppWidgetProvider : AppWidgetProvider() {
     }
 
     override fun onReceive(context: Context, intent: Intent) {
+        if (com.blackatsystems.miguardia.QaInstrumentationScope.suppress(context, "widget.receiver")) return
         if (intent.action == AppWidgetManager.ACTION_APPWIDGET_RESTORED) {
             val oldIds = intent.getIntArrayExtra(AppWidgetManager.EXTRA_APPWIDGET_OLD_IDS) ?: intArrayOf()
             val newIds = intent.getIntArrayExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS) ?: intArrayOf()
@@ -110,8 +112,10 @@ class NextEventAppWidgetProvider : AppWidgetProvider() {
     private fun application(context: Context): MiGuardiaApplication? =
         context.applicationContext as? MiGuardiaApplication
 
-    private fun canUseData(context: Context): Boolean =
-        (context.applicationContext as? MiGuardiaApplication)?.startupRecoveryGate?.isReady == true
+    private fun canUseData(context: Context): Boolean {
+        if (com.blackatsystems.miguardia.QaInstrumentationScope.suppress(context, "widget.direct-callback")) return false
+        return (context.applicationContext as? MiGuardiaApplication)?.startupRecoveryGate?.isReady == true
+    }
 
     private fun widgetRuntimeIds(context: Context): IntArray =
         AppWidgetManager.getInstance(context).getAppWidgetIds(

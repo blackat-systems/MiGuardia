@@ -17,8 +17,8 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -38,6 +38,12 @@ import androidx.compose.ui.unit.dp
 import com.blackatsystems.miguardia.core.domain.shift.OccupiedDatePolicy
 import com.blackatsystems.miguardia.core.domain.work.WorkSetupState
 import com.blackatsystems.miguardia.ui.components.PersistentMessage
+import com.blackatsystems.miguardia.ui.components.MiGuardiaButtonShape
+import com.blackatsystems.miguardia.ui.components.MiGuardiaSpacing
+import com.blackatsystems.miguardia.ui.components.PrimaryAction
+import com.blackatsystems.miguardia.ui.components.SecondaryAction
+import com.blackatsystems.miguardia.ui.components.SectionCard
+import com.blackatsystems.miguardia.ui.components.destructiveButtonColors
 import com.blackatsystems.miguardia.ui.components.AdvancedOptionsSection
 import com.blackatsystems.miguardia.ui.components.ContextHelp
 import com.blackatsystems.miguardia.ui.theme.vigiliaColors
@@ -49,10 +55,18 @@ import java.util.Locale
 import java.util.UUID
 
 data class V2ManualShiftLoadActions(
+    val beginTemplateForPlace: (UUID) -> Unit = {},
+    val updateNote: (String) -> Unit = {},
+    val importNoteImages: (List<android.net.Uri>) -> Unit = {},
+    val removeNoteImage: (UUID) -> Unit = {},
+    val requestClear: () -> Unit = {},
+    val confirmBatch: () -> Unit = {},
+    val cancelBatch: () -> Unit = {},
     val beginCreation: (WorkCreationKind) -> Unit = {},
     val receiveCreationResult: (WorkCreationResult) -> Unit = {},
     val start: (WorkSetupState) -> Unit = {},
     val confirmDates: (Set<LocalDate>) -> Unit = {},
+    val updateSelectedDates: (Set<LocalDate>) -> Unit = {},
     val requestDayOff: (Set<LocalDate>, Boolean) -> Unit = { _, _ -> },
     val confirmDayOff: () -> Unit = {},
     val cancelDayOff: () -> Unit = {},
@@ -75,10 +89,18 @@ data class V2ManualShiftLoadActions(
 ) {
     companion object {
         fun from(viewModel: V2ManualShiftLoadViewModel) = V2ManualShiftLoadActions(
+            beginTemplateForPlace = viewModel::beginTemplateForPlace,
+            updateNote = viewModel::updateNote,
+            importNoteImages = viewModel::importNoteImages,
+            removeNoteImage = viewModel::removeNoteImage,
+            requestClear = viewModel::requestClear,
+            confirmBatch = viewModel::confirmBatch,
+            cancelBatch = viewModel::cancelBatch,
             beginCreation = viewModel::beginCreation,
             receiveCreationResult = viewModel::receiveCreationResult,
             start = viewModel::start,
             confirmDates = viewModel::confirmDates,
+            updateSelectedDates = viewModel::updateSelectedDates,
             requestDayOff = viewModel::requestDayOff,
             confirmDayOff = viewModel::confirmDayOff,
             cancelDayOff = viewModel::cancelDayOff,
@@ -112,27 +134,31 @@ fun V2ManualShiftLoadContent(
     onConfirmCalendarSelection: () -> Unit,
     onModifyCalendarSelection: () -> Unit,
     modifier: Modifier = Modifier,
+    showDateSelectionActions: Boolean = true,
 ) {
     Column(
         modifier = modifier
             .fillMaxWidth()
             .testTag("v2-manual-shift-load"),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.medium),
     ) {
         when (state.stage) {
             V2ManualShiftLoadStage.IDLE -> Unit
-            V2ManualShiftLoadStage.SELECT_DATES -> DateSelectionStep(
-                selectedDates = calendarSelectedDates,
-                selectionConfirmed = calendarSelectionConfirmed,
-                enabled = calendarContentReady && !state.isLoading && !state.isSaving && state.creationRequest == null && state.pendingDayOff == null,
-                onConfirm = onConfirmCalendarSelection,
-                onModify = onModifyCalendarSelection,
-            )
+            V2ManualShiftLoadStage.SELECT_DATES -> if (showDateSelectionActions) {
+                DateSelectionStep(
+                    selectedDates = calendarSelectedDates,
+                    selectionConfirmed = calendarSelectionConfirmed,
+                    enabled = calendarContentReady && !state.isLoading && !state.isSaving && state.creationRequest == null && state.pendingDayOff == null,
+                    onConfirm = onConfirmCalendarSelection,
+                    onModify = onModifyCalendarSelection,
+                    showActions = true,
+                )
+            }
             V2ManualShiftLoadStage.CHOOSE_TEMPLATE,
             V2ManualShiftLoadStage.CONFIRM_BACKFILL,
             V2ManualShiftLoadStage.CHOOSE_OCCUPIED_POLICY,
             V2ManualShiftLoadStage.CONFIRM_WARNINGS,
-            -> TemplateSelectionStep(
+            -> UnifiedTemplateSelectionStep(
                 state = state,
                 actions = actions,
                 onModifyCalendarSelection = onModifyCalendarSelection,
@@ -144,12 +170,13 @@ fun V2ManualShiftLoadContent(
             )
         }
 
-        if (state.stage == V2ManualShiftLoadStage.SELECT_DATES || state.stage == V2ManualShiftLoadStage.CHOOSE_TEMPLATE) {
+        if (state.stage == V2ManualShiftLoadStage.SELECT_DATES) {
             val dates = if (state.stage == V2ManualShiftLoadStage.SELECT_DATES) calendarSelectedDates else state.selectedDates
             val enabled = calendarContentReady && dates.isNotEmpty() && !state.isLoading && !state.isSaving &&
                 state.creationRequest == null && state.pendingDayOff == null
             Text("Franco: no requiere lugar ni horario.", style = MaterialTheme.typography.bodyMedium)
             OutlinedButton(onClick = { actions.requestDayOff(dates, true) }, enabled = enabled,
+                shape = MiGuardiaButtonShape,
                 modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("v2-mark-day-off")) {
                 Text("Marcar Franco")
             }
@@ -163,13 +190,13 @@ fun V2ManualShiftLoadContent(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 8.dp)
+                    .padding(vertical = MiGuardiaSpacing.small)
                     .testTag("v2-manual-shift-loading"),
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 CircularProgressIndicator(modifier = Modifier.size(28.dp))
-                Text("Cargando horarios…", modifier = Modifier.padding(start = 12.dp))
+                Text("Cargando horarios…", modifier = Modifier.padding(start = MiGuardiaSpacing.medium))
             }
         }
 
@@ -184,16 +211,39 @@ fun V2ManualShiftLoadContent(
         V2ManualShiftLoadStage.CONFIRM_WARNINGS -> WarningsDialog(state, actions)
         else -> Unit
     }
+    state.batchPreview?.let { preview ->
+        AlertDialog(
+            onDismissRequest = actions.cancelBatch,
+            title = { Text(if (preview.action == com.blackatsystems.miguardia.core.domain.repository.CalendarBatchAction.CLEAR) "Revisá la limpieza" else "Revisá los francos") },
+            text = { Column(Modifier.verticalScroll(rememberScrollState())) {
+                preview.results.forEach { Text("${it.date.format(DATE_FORMATTER)}: ${it.explanation}") }
+                Text("Cancelar no aplica ningún cambio.")
+            } },
+            confirmButton = {
+                val enabled = !state.isSaving && preview.conflicts.isEmpty()
+                if (preview.action == com.blackatsystems.miguardia.core.domain.repository.CalendarBatchAction.CLEAR) {
+                    // Clearing removes content: tonal red, as in the other destructive confirmations.
+                    FilledTonalButton(onClick = actions.confirmBatch, enabled = enabled,
+                        shape = MiGuardiaButtonShape, colors = destructiveButtonColors()) { Text("Confirmar") }
+                } else {
+                    TextButton(onClick = actions.confirmBatch, enabled = enabled) { Text("Confirmar") }
+                }
+            },
+            dismissButton = { TextButton(onClick = actions.cancelBatch, enabled = !state.isSaving) { Text("Cancelar") } },
+            modifier = Modifier.testTag("manual-batch-preview"),
+        )
+    }
     state.pendingDayOff?.let { mark ->
         AlertDialog(
             onDismissRequest = { if (!state.isSaving) actions.cancelDayOff() },
             title = { Text(if (mark) "Marcar Franco" else "Quitar Franco") },
             text = {
-                Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.medium)) {
                     Text(exactDateList(state.selectedDates))
                     Text(if (mark) "Se marcarán estos días como franco. Si alguno tiene una jornada, no se cambiará ninguno."
                         else "Sólo se quitará la marca de franco de estos días. Las jornadas y otras marcas se conservan.")
-                    state.errorMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                    // "Reintentar" stays the dialog's confirm button, so the message has no own actions.
+                    state.errorMessage?.let { PersistentMessage(message = it) }
                     if (state.isSaving) Text("Guardando…")
                 }
             },
@@ -217,11 +267,12 @@ private fun DateSelectionStep(
     enabled: Boolean,
     onConfirm: () -> Unit,
     onModify: () -> Unit,
+    showActions: Boolean,
 ) {
     Text(
         text = "Elegí uno o varios días",
         style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.Bold,
+        fontWeight = FontWeight.SemiBold,
     )
     Text(
         text = if (selectedDates.isEmpty()) {
@@ -234,128 +285,34 @@ private fun DateSelectionStep(
         modifier = Modifier.testTag("v2-manual-selected-date-count"),
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
-    Button(
-        onClick = onConfirm,
-        enabled = enabled && selectedDates.isNotEmpty() && !selectionConfirmed,
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 56.dp)
-            .testTag("v2-manual-confirm-dates"),
-    ) {
-        Text("Terminar de elegir días")
+    if (showActions) {
+        PrimaryAction(
+            label = "Terminar de elegir días",
+            onClick = onConfirm,
+            enabled = enabled && selectedDates.isNotEmpty() && !selectionConfirmed,
+            modifier = Modifier.testTag("v2-manual-confirm-dates"),
+        )
     }
-    if (selectionConfirmed) {
-        OutlinedButton(
+    if (showActions && selectionConfirmed) {
+        SecondaryAction(
+            label = "Cambiar días",
             onClick = onModify,
             enabled = enabled,
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = 48.dp)
                 .testTag("v2-manual-modify-confirmed-dates"),
-        ) {
-            Text("Cambiar días")
-        }
+        )
     }
 }
 
-@Composable
-private fun TemplateSelectionStep(
-    state: V2ManualShiftLoadUiState,
-    actions: V2ManualShiftLoadActions,
-    onModifyCalendarSelection: () -> Unit,
-) {
-    Text(
-        text = "Elegí lugar, tipo y horario",
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.Bold,
-    )
-    Text(
-        text = exactDateList(state.selectedDates),
-        modifier = Modifier.testTag("v2-manual-exact-dates"),
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
-    Column(
-        modifier = Modifier.fillMaxWidth().selectableGroup(),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        state.templateOptions.forEach { option ->
-            V2TemplateOptionCard(
-                option = option,
-                selected = option.template.id == state.selectedTemplateId,
-                enabled = !state.isLoading && !state.isSaving && state.creationRequest == null,
-                onClick = { actions.chooseTemplate(option.template.id) },
-            )
-        }
-    }
-    OutlinedButton(
-        onClick = { actions.beginCreation(WorkCreationKind.PLACE_AND_TEMPLATE) },
-        enabled = state.canCreate,
-        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("v2-manual-create-place"),
-    ) {
-        Text("Crear ${state.sector?.suggestedVocabulary?.placeLabel?.lowercase(Locale.forLanguageTag("es-AR")) ?: "lugar"}")
-    }
-    OutlinedButton(
-        onClick = { actions.beginCreation(WorkCreationKind.TEMPLATE) },
-        enabled = state.canCreate,
-        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("v2-manual-create-template"),
-    ) { Text("Crear horario") }
-    if (state.creationResult != null) {
-        Text("El resultado está guardado. Reintentá la lectura para actualizar esta carga.")
-    }
-    if (state.templateOptions.isNotEmpty()) {
-        Button(
-            onClick = actions.requestSave,
-            enabled = state.selectedTemplateId != null && !state.isLoading && !state.isSaving && state.creationRequest == null,
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 56.dp)
-                .testTag("v2-manual-save-direct"),
-        ) {
-            Text(if (state.selectedDates.size == 1) "Guardar jornada" else "Guardar ${state.selectedDates.size} jornadas")
-        }
-        AdvancedOptionsSection(
-            help = ContextHelp(
-                title = "Detalles antes de guardar",
-                whatItDoes = "Permite agregar un puesto o ver todas las fechas antes de guardar.",
-                howToUseIt = "No hace falta abrirlo para una carga normal. MiGuardia igual controla días ocupados y advertencias.",
-                example = "Podés escribir Puesto 3 o revisar una carga de diez días antes de confirmarla.",
-            ),
-        ) {
-            OutlinedTextField(
-                value = state.position,
-                onValueChange = actions.updatePosition,
-                enabled = !state.isLoading && !state.isSaving && state.creationRequest == null,
-                label = { Text("Puesto o función (opcional)") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth().testTag("v2-manual-position"),
-            )
-            OutlinedButton(
-                onClick = actions.requestReview,
-                enabled = state.selectedTemplateId != null && !state.isLoading && !state.isSaving && state.creationRequest == null,
-                modifier = Modifier.fillMaxWidth().testTag("v2-manual-review"),
-            ) { Text("Ver fechas y detalles") }
-        }
-    }
-    TextButton(
-        onClick = onModifyCalendarSelection,
-        enabled = !state.isLoading && !state.isSaving && state.creationRequest == null,
-        modifier = Modifier.fillMaxWidth().testTag("v2-manual-modify-dates"),
-    ) {
-        Text("Cambiar días")
-    }
-}
 
 @Composable
-private fun V2TemplateOptionCard(
+internal fun V2TemplateOptionCard(
     option: V2ManualShiftTemplateOption,
     selected: Boolean,
     enabled: Boolean,
     onClick: () -> Unit,
 ) {
-    val colorHex = (option.template.colorArgb and 0x00FFFFFF)
-        .toString(16)
-        .padStart(6, '0')
-        .uppercase(Locale.ROOT)
     val description = buildString {
         append(option.objective.abbreviation)
         append(", ")
@@ -364,8 +321,6 @@ private fun V2TemplateOptionCard(
         append(option.template.startTime.format(TIME_FORMATTER))
         append(" a ")
         append(option.template.endTime.format(TIME_FORMATTER))
-        append(", color #")
-        append(colorHex)
         append(if (selected) ", seleccionado" else ", sin seleccionar")
     }
     Surface(
@@ -383,20 +338,29 @@ private fun V2TemplateOptionCard(
             }
             .testTag("v2-template-${option.template.id}"),
         color = if (selected) {
-            MaterialTheme.vigiliaColors.active.copy(alpha = 0.16f)
+            MaterialTheme.vigiliaColors.selection
         } else {
             MaterialTheme.colorScheme.surfaceContainer
+        },
+        contentColor = when {
+            !enabled -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+            selected -> MaterialTheme.vigiliaColors.onSelection
+            else -> MaterialTheme.colorScheme.onSurface
         },
         shape = MaterialTheme.shapes.medium,
         border = BorderStroke(
             if (selected) 2.dp else 1.dp,
-            if (selected) MaterialTheme.vigiliaColors.active else MaterialTheme.colorScheme.outlineVariant,
+            when {
+                !enabled -> MaterialTheme.colorScheme.outline.copy(alpha = 0.38f)
+                selected -> MaterialTheme.vigiliaColors.active
+                else -> MaterialTheme.colorScheme.outline
+            },
         ),
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            modifier = Modifier.padding(horizontal = MiGuardiaSpacing.medium, vertical = MiGuardiaSpacing.small),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.medium),
         ) {
             Box(
                 Modifier
@@ -404,22 +368,18 @@ private fun V2TemplateOptionCard(
                     .heightIn(min = 48.dp)
                     .background(Color(option.template.colorArgb), MaterialTheme.shapes.extraSmall),
             )
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(option.objective.abbreviation, fontWeight = FontWeight.Bold)
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.extraSmall)) {
+                Text(option.objective.abbreviation, fontWeight = FontWeight.SemiBold)
                 Text(option.workType.name, fontWeight = FontWeight.SemiBold)
                 Text(
                     "${option.template.startTime.format(TIME_FORMATTER)}–" +
                         option.template.endTime.format(TIME_FORMATTER),
                 )
-                Text(
-                    "Color #$colorHex",
-                    style = MaterialTheme.typography.bodySmall,
-                )
                 if (selected) {
                     Text(
                         "Seleccionado",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.vigiliaColors.active,
+                        color = if (enabled) MaterialTheme.vigiliaColors.active else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
                     )
                 }
             }
@@ -434,19 +394,11 @@ private fun ReviewStep(
     onModifyCalendarSelection: () -> Unit,
 ) {
     val option = state.selectedOption ?: return
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .testTag("v2-manual-preview"),
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-        shape = MaterialTheme.shapes.medium,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+    SectionCard(
+        title = "Revisá antes de guardar",
+        modifier = Modifier.testTag("v2-manual-preview"),
     ) {
-        Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            Text("Revisá antes de guardar", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Column(verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small)) {
             Text(if (state.plannedDates.size == 1) "1 jornada nueva" else "${state.plannedDates.size} jornadas nuevas")
             Text("Fechas: ${exactDateList(state.plannedDates)}", modifier = Modifier.testTag("v2-manual-preview-dates"))
             Text("Lugar: ${option.objective.abbreviation}")
@@ -460,7 +412,7 @@ private fun ReviewStep(
             }
             state.position.trim().takeIf(String::isNotEmpty)?.let { Text("Puesto o función: $it") }
             when (state.occupiedPolicy) {
-                OccupiedDatePolicy.REPLACE -> Text("Las jornadas existentes de esas fechas se reemplazarán.")
+                OccupiedDatePolicy.REPLACE -> Text("Se reemplazarán sólo jornadas superpuestas y francos incompatibles. Se conservan las demás jornadas.")
                 OccupiedDatePolicy.KEEP_OCCUPIED -> Text("Las fechas ocupadas se conservarán sin cambios.")
                 OccupiedDatePolicy.ADD_SECOND_SHIFT -> if (state.occupiedDates.isNotEmpty()) {
                     Text("Las fechas ocupadas conservarán su jornada y sumarán una segunda.")
@@ -472,28 +424,24 @@ private fun ReviewStep(
             }
         }
     }
-    Button(
+    PrimaryAction(
+        label = when {
+            state.isSaving -> "Guardando jornadas…"
+            state.plannedDates.size == 1 -> "Guardar jornada"
+            else -> "Guardar ${state.plannedDates.size} jornadas"
+        },
         onClick = actions.save,
-        enabled = state.plannedDates.isNotEmpty() && !state.isSaving && !state.isLoading,
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 56.dp)
-            .testTag("v2-manual-save"),
-    ) {
-        if (state.isSaving) {
-            CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.dp)
-            Text("Guardando jornadas…", modifier = Modifier.padding(start = 8.dp))
-        } else {
-            Text(if (state.plannedDates.size == 1) "Guardar jornada" else "Guardar ${state.plannedDates.size} jornadas")
-        }
-    }
-    OutlinedButton(
+        // Disabled while saving through `working`, which also shows the progress indicator.
+        enabled = state.plannedDates.isNotEmpty() && !state.isLoading,
+        working = state.isSaving,
+        modifier = Modifier.testTag("v2-manual-save"),
+    )
+    SecondaryAction(
+        label = "Cambiar días",
         onClick = onModifyCalendarSelection,
         enabled = !state.isSaving && !state.isLoading,
         modifier = Modifier.fillMaxWidth(),
-    ) {
-        Text("Cambiar días")
-    }
+    )
 }
 
 @Composable
@@ -516,7 +464,7 @@ private fun BackfillDialog(state: V2ManualShiftLoadUiState, actions: V2ManualShi
                 if (state.isSaving) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
-                        Text("Extendiendo configuración…", modifier = Modifier.padding(start = 10.dp))
+                        Text("Extendiendo configuración…", modifier = Modifier.padding(start = MiGuardiaSpacing.small))
                     }
                 }
             }
@@ -536,7 +484,7 @@ private fun OccupiedDatesDialog(state: V2ManualShiftLoadUiState, actions: V2Manu
     AlertDialog(
         onDismissRequest = { actions.chooseOccupiedPolicy(OccupiedDatePolicy.CANCEL) },
         modifier = Modifier.testTag("v2-occupied-dialog"),
-        title = { Text(if (single) "Ya hay una jornada" else "Hay fechas ocupadas") },
+        title = { Text("Revisá los conflictos") },
         text = {
             Column(
                 modifier = Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState()),
@@ -544,31 +492,38 @@ private fun OccupiedDatesDialog(state: V2ManualShiftLoadUiState, actions: V2Manu
             ) {
                 Text(
                     if (single) {
-                        "La fecha elegida ya tiene una jornada. ¿Qué querés hacer?"
+                        "La fecha elegida ya tiene contenido. ¿Qué querés hacer?"
                     } else {
-                        "Ya tienen jornadas: ${state.occupiedDates.sorted().joinToString { it.format(DATE_FORMATTER) }}."
+                        "Fechas con contenido: ${state.occupiedDates.sorted().joinToString { it.format(DATE_FORMATTER) }}."
                     },
                 )
-                Button(
+                FilledTonalButton(
                     enabled = !state.isSaving,
                     onClick = { actions.chooseOccupiedPolicy(OccupiedDatePolicy.REPLACE) },
+                    shape = MiGuardiaButtonShape,
+                    colors = destructiveButtonColors(),
                     modifier = Modifier.fillMaxWidth(),
-                ) { Text(if (single) "Reemplazar" else "Reemplazar en las fechas elegidas") }
+                ) { Text("Sobrescribir") }
+                state.conflictDetails.forEach { Text(it) }
+                Text("Sobrescribir reemplaza sólo los intervalos incompatibles y el franco. Superponer conserva los registros existentes.")
                 if (!single) {
                     OutlinedButton(
                         enabled = !state.isSaving,
                         onClick = { actions.chooseOccupiedPolicy(OccupiedDatePolicy.KEEP_OCCUPIED) },
+                        shape = MiGuardiaButtonShape,
                         modifier = Modifier.fillMaxWidth(),
                     ) { Text("Agregar sólo en días libres") }
                 }
                 OutlinedButton(
                     enabled = !state.isSaving,
                     onClick = { actions.chooseOccupiedPolicy(OccupiedDatePolicy.ADD_SECOND_SHIFT) },
+                    shape = MiGuardiaButtonShape,
                     modifier = Modifier.fillMaxWidth(),
-                ) { Text(if (single) "Agregar segunda jornada" else "Agregar segunda jornada en las ocupadas") }
+                ) { Text("Superponer") }
                 OutlinedButton(
                     enabled = !state.isSaving,
                     onClick = { actions.chooseOccupiedPolicy(OccupiedDatePolicy.CANCEL) },
+                    shape = MiGuardiaButtonShape,
                     modifier = Modifier.fillMaxWidth(),
                 ) { Text("Cancelar") }
             }

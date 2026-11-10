@@ -17,7 +17,9 @@ import com.blackatsystems.miguardia.core.database.dao.SchedulePhotoDao
 import com.blackatsystems.miguardia.core.database.dao.ShiftActualDao
 import com.blackatsystems.miguardia.core.database.dao.ShiftDao
 import com.blackatsystems.miguardia.core.database.dao.ShiftNoteDao
+import com.blackatsystems.miguardia.core.database.dao.ShiftNoteAttachmentDao
 import com.blackatsystems.miguardia.core.database.dao.ShiftNotificationConfigDao
+import com.blackatsystems.miguardia.core.database.dao.ShiftSituationDao
 import com.blackatsystems.miguardia.core.database.dao.V2ShiftDao
 import com.blackatsystems.miguardia.core.database.dao.VacationDao
 import com.blackatsystems.miguardia.core.database.dao.WorkCatalogDao
@@ -39,8 +41,10 @@ import com.blackatsystems.miguardia.core.database.entity.ShiftEntity
 import com.blackatsystems.miguardia.core.database.entity.ShiftActualRecordEntity
 import com.blackatsystems.miguardia.core.database.entity.ShiftExtraIntervalEntity
 import com.blackatsystems.miguardia.core.database.entity.ShiftNoteEntity
+import com.blackatsystems.miguardia.core.database.entity.ShiftNoteAttachmentEntity
 import com.blackatsystems.miguardia.core.database.entity.ShiftNotificationConfigEntity
 import com.blackatsystems.miguardia.core.database.entity.ShiftNotificationReminderEntity
+import com.blackatsystems.miguardia.core.database.entity.ShiftSituationEntity
 import com.blackatsystems.miguardia.core.database.entity.ShiftWorkSnapshotEntity
 import com.blackatsystems.miguardia.core.database.entity.VacationEntity
 import com.blackatsystems.miguardia.core.database.entity.WorkConfigurationRevisionEntity
@@ -59,6 +63,7 @@ import com.blackatsystems.miguardia.core.database.entity.WorkplaceRuleRevisionEn
         MedicalLeaveEntity::class,
         HolidayEntity::class,
         ShiftNoteEntity::class,
+        ShiftNoteAttachmentEntity::class,
         VacationEntity::class,
         SchedulePhotoEntity::class,
         ShiftNotificationConfigEntity::class,
@@ -79,8 +84,9 @@ import com.blackatsystems.miguardia.core.database.entity.WorkplaceRuleRevisionEn
         ShiftExtraIntervalEntity::class,
         IndependentExtraWorkRecordEntity::class,
         AvailabilityWindowEntity::class,
+        ShiftSituationEntity::class,
     ],
-    version = 6,
+    version = 8,
     exportSchema = true,
 )
 internal abstract class MiGuardiaV2Database : RoomDatabase() {
@@ -90,6 +96,7 @@ internal abstract class MiGuardiaV2Database : RoomDatabase() {
     internal abstract fun medicalLeaveDao(): MedicalLeaveDao
     internal abstract fun holidayDao(): HolidayDao
     internal abstract fun shiftNoteDao(): ShiftNoteDao
+    internal abstract fun shiftNoteAttachmentDao(): ShiftNoteAttachmentDao
     internal abstract fun vacationDao(): VacationDao
     internal abstract fun schedulePhotoDao(): SchedulePhotoDao
     internal abstract fun shiftNotificationConfigDao(): ShiftNotificationConfigDao
@@ -100,6 +107,7 @@ internal abstract class MiGuardiaV2Database : RoomDatabase() {
     internal abstract fun shiftActualDao(): ShiftActualDao
     internal abstract fun independentExtraWorkDao(): IndependentExtraWorkDao
     internal abstract fun availabilityWindowDao(): AvailabilityWindowDao
+    internal abstract fun shiftSituationDao(): ShiftSituationDao
 
     companion object {
         const val DATABASE_NAME: String = "miguardia-v2.db"
@@ -111,7 +119,15 @@ internal abstract class MiGuardiaV2Database : RoomDatabase() {
             context.applicationContext,
             MiGuardiaV2Database::class.java,
             databaseName,
-        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6).build()
+        ).addMigrations(
+            MIGRATION_1_2,
+            MIGRATION_2_3,
+            MIGRATION_3_4,
+            MIGRATION_4_5,
+            MIGRATION_5_6,
+            MIGRATION_6_7,
+            MIGRATION_7_8,
+        ).build()
 
         internal val MIGRATION_1_2: Migration = object : Migration(1, 2) {
             override fun migrate(db: SupportSQLiteDatabase) {
@@ -457,6 +473,74 @@ internal abstract class MiGuardiaV2Database : RoomDatabase() {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE `objectives` ADD COLUMN `weatherLatitude` REAL")
                 db.execSQL("ALTER TABLE `objectives` ADD COLUMN `weatherLongitude` REAL")
+            }
+        }
+
+        internal val MIGRATION_6_7: Migration = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """CREATE TABLE IF NOT EXISTS `shift_note_attachments` (
+                        `id` TEXT NOT NULL,
+                        `noteId` TEXT NOT NULL,
+                        `storageKey` TEXT NOT NULL,
+                        `mimeType` TEXT NOT NULL,
+                        `byteSize` INTEGER NOT NULL,
+                        `pixelWidth` INTEGER NOT NULL,
+                        `pixelHeight` INTEGER NOT NULL,
+                        `position` INTEGER NOT NULL,
+                        `createdAtEpochMillis` INTEGER NOT NULL,
+                        `updatedAtEpochMillis` INTEGER NOT NULL,
+                        PRIMARY KEY(`id`),
+                        FOREIGN KEY(`noteId`) REFERENCES `shift_notes`(`id`)
+                            ON UPDATE NO ACTION ON DELETE CASCADE
+                    )""".trimIndent(),
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_shift_note_attachments_noteId` " +
+                        "ON `shift_note_attachments` (`noteId`)",
+                )
+                db.execSQL(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS `index_shift_note_attachments_noteId_position` " +
+                        "ON `shift_note_attachments` (`noteId`, `position`)",
+                )
+                db.execSQL(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS `index_shift_note_attachments_storageKey` " +
+                        "ON `shift_note_attachments` (`storageKey`)",
+                )
+            }
+        }
+
+        internal val MIGRATION_7_8: Migration = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """CREATE TABLE IF NOT EXISTS `shift_situations` (
+                        `shiftId` TEXT NOT NULL,
+                        `status` TEXT NOT NULL,
+                        `reason` TEXT,
+                        `privateNote` TEXT,
+                        `cancellationActor` TEXT,
+                        `notifiedAtEpochMillis` INTEGER,
+                        `evidenceStorageKey` TEXT,
+                        `evidenceMimeType` TEXT,
+                        `evidenceByteSize` INTEGER,
+                        `evidencePixelWidth` INTEGER,
+                        `evidencePixelHeight` INTEGER,
+                        `evidenceSha256` TEXT,
+                        `createdAtEpochMillis` INTEGER NOT NULL,
+                        `updatedAtEpochMillis` INTEGER NOT NULL,
+                        PRIMARY KEY(`shiftId`),
+                        FOREIGN KEY(`shiftId`) REFERENCES `shifts`(`id`)
+                            ON UPDATE NO ACTION ON DELETE CASCADE
+                    )""".trimIndent(),
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_shift_situations_status` " +
+                        "ON `shift_situations` (`status`)",
+                )
+                db.execSQL(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS `index_shift_situations_evidenceStorageKey` " +
+                        "ON `shift_situations` (`evidenceStorageKey`)",
+                )
             }
         }
 

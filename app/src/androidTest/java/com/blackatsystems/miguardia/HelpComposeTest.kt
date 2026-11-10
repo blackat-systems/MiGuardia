@@ -1,23 +1,32 @@
 package com.blackatsystems.miguardia
 
+import android.content.pm.ActivityInfo
+import android.content.res.Configuration
+import androidx.activity.ComponentActivity
+import androidx.test.platform.app.InstrumentationRegistry
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
-import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
+import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.Modifier
 import com.blackatsystems.miguardia.core.domain.calendar.projectCalendarMonth
 import com.blackatsystems.miguardia.core.domain.work.MissingWorkSetupRequirement
 import com.blackatsystems.miguardia.core.domain.work.WorkSetupState
@@ -25,6 +34,12 @@ import com.blackatsystems.miguardia.ui.MiGuardiaApp
 import com.blackatsystems.miguardia.ui.calendar.CalendarLoadState
 import com.blackatsystems.miguardia.ui.calendar.CalendarUiState
 import com.blackatsystems.miguardia.ui.help.HelpActions
+import com.blackatsystems.miguardia.ui.help.HelpNavigationEvent
+import com.blackatsystems.miguardia.ui.help.HelpNavigationTarget
+import com.blackatsystems.miguardia.ui.help.HelpAnchor
+import com.blackatsystems.miguardia.ui.help.HelpAnchorRegistry
+import com.blackatsystems.miguardia.ui.help.HelpTourOverlay
+import com.blackatsystems.miguardia.ui.help.helpAnchor
 import com.blackatsystems.miguardia.ui.help.HelpDecisionScreen
 import com.blackatsystems.miguardia.ui.help.HelpReadState
 import com.blackatsystems.miguardia.ui.help.HelpScreen
@@ -33,7 +48,8 @@ import com.blackatsystems.miguardia.ui.help.HelpSessionMode
 import com.blackatsystems.miguardia.ui.help.HelpSessionStage
 import com.blackatsystems.miguardia.ui.help.HelpTourStep
 import com.blackatsystems.miguardia.ui.help.HelpUiState
-import com.blackatsystems.miguardia.ui.theme.MiGuardiaTheme
+import com.blackatsystems.miguardia.testsupport.AndroidFontScaleTheme
+import com.blackatsystems.miguardia.testsupport.TestFontScale
 import com.blackatsystems.miguardia.ui.worksetup.WorkSetupSurface
 import com.blackatsystems.miguardia.ui.worksetup.previewV2WorkSetupUiState
 import java.time.Instant
@@ -41,12 +57,14 @@ import java.time.YearMonth
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertNotNull
 import org.junit.Rule
 import org.junit.Test
 
 class HelpComposeTest {
     @get:Rule
-    val compose = createComposeRule()
+    val compose = createAndroidComposeRule<ComponentActivity>()
 
     @Test
     fun automaticIntroductionHasProgressBackNextAndSkip() {
@@ -54,7 +72,7 @@ class HelpComposeTest {
         var next = 0
         var skip = 0
         compose.setContent {
-            MiGuardiaTheme {
+            AndroidFontScaleTheme {
                 HelpDecisionScreen(
                     state = introduction(HelpSessionMode.AUTOMATIC),
                     actions = HelpActions(
@@ -82,7 +100,7 @@ class HelpComposeTest {
     fun replayIntroductionNeverOffersSkipAndClosesToHelp() {
         var closed = false
         compose.setContent {
-            MiGuardiaTheme {
+            AndroidFontScaleTheme {
                 HelpDecisionScreen(
                     state = introduction(HelpSessionMode.REPLAY),
                     actions = HelpActions(requestExit = { closed = true }),
@@ -100,7 +118,7 @@ class HelpComposeTest {
         val pending = introduction(HelpSessionMode.AUTOMATIC)
         var workSetup by androidx.compose.runtime.mutableStateOf(previewV2WorkSetupUiState())
         compose.setContent {
-            MiGuardiaTheme {
+            AndroidFontScaleTheme {
                 MiGuardiaApp(
                     calendarState = calendarState(),
                     onPreviousMonth = {},
@@ -129,7 +147,7 @@ class HelpComposeTest {
     fun HelpLivesOnceInApplicationAndAllTopicsAreReachable() {
         var repeated = false
         compose.setContent {
-            MiGuardiaTheme {
+            AndroidFontScaleTheme {
                 MiGuardiaApp(
                     calendarState = calendarState(),
                     onPreviousMonth = {},
@@ -167,7 +185,7 @@ class HelpComposeTest {
             ),
         )
         compose.setContent {
-            MiGuardiaTheme {
+            AndroidFontScaleTheme {
                 MiGuardiaApp(
                     calendarState = calendarState(),
                     onPreviousMonth = {},
@@ -192,7 +210,7 @@ class HelpComposeTest {
     fun HelpScreenDoesNotInvokeReplayWhenDisabled() {
         var replayed = false
         compose.setContent {
-            MiGuardiaTheme {
+            AndroidFontScaleTheme {
                 HelpScreen(
                     contentPadding = PaddingValues(0.dp),
                     canRepeat = false,
@@ -217,7 +235,7 @@ class HelpComposeTest {
             finish = { finished = true },
         )
         compose.setContent {
-            MiGuardiaTheme {
+            AndroidFontScaleTheme {
                 MiGuardiaApp(
                     calendarState = calendarState(),
                     onPreviousMonth = { mutationCallbacks++ },
@@ -234,7 +252,11 @@ class HelpComposeTest {
 
         HelpTourStep.entries.forEachIndexed { index, step ->
             compose.onNodeWithTag("help-tour-${step.name.lowercase()}").assertIsDisplayed()
-            compose.onNodeWithTag("help-tour-anchor").assertIsDisplayed()
+            try {
+                compose.onNodeWithTag("help-tour-anchor").assertIsDisplayed()
+            } catch (error: AssertionError) {
+                throw AssertionError("Tour step ${step.name}: ${error.message}", error)
+            }
             compose.onNodeWithTag("main-menu-button").assertDoesNotExist()
             compose.onNodeWithTag("help-tour-next").performScrollTo().performClick()
             if (index < HelpTourStep.entries.lastIndex) compose.waitForIdle()
@@ -243,6 +265,162 @@ class HelpComposeTest {
             assertTrue(finished)
             assertEquals(0, mutationCallbacks)
         }
+    }
+
+    @Test
+    fun drawerTourTargetsRemainVisibleInPortraitAtEveryFontScaleAndTheme() =
+        drawerTourTargetsRemainVisible(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT, Configuration.ORIENTATION_PORTRAIT)
+
+    @Test
+    fun drawerTourTargetsRemainVisibleInLandscapeAtEveryFontScaleAndTheme() =
+        drawerTourTargetsRemainVisible(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE, Configuration.ORIENTATION_LANDSCAPE)
+
+    private fun drawerTourTargetsRemainVisible(requestedOrientation: Int, expectedOrientation: Int) {
+        val originalOrientation = compose.activity.requestedOrientation
+        InstrumentationRegistry.getInstrumentation().runOnMainSync {
+            compose.activity.requestedOrientation = requestedOrientation
+        }
+        compose.waitUntil(30_000) { compose.activity.resources.configuration.orientation == expectedOrientation }
+        var fontScale by androidx.compose.runtime.mutableStateOf(TestFontScale.STANDARD)
+        var dark by androidx.compose.runtime.mutableStateOf(false)
+        fun replay(step: HelpTourStep) = tourState(step.ordinal).let {
+            it.copy(readState = HelpReadState.Ready(1), session = it.session!!.copy(mode = HelpSessionMode.REPLAY))
+        }
+        var state by androidx.compose.runtime.mutableStateOf(replay(HelpTourStep.HELP))
+        var mutations = 0
+        var closed = 0
+        val restoration = StateRestorationTester(compose)
+        try {
+            restoration.setContent {
+                    AndroidFontScaleTheme(darkTheme = dark, fontScale = fontScale) {
+                        MiGuardiaApp(
+                            calendarState = calendarState(),
+                            onPreviousMonth = { mutations++ }, onNextMonth = { mutations++ },
+                            onToday = { mutations++ }, onSelectDate = { mutations++ },
+                            onDismissDate = {}, onRetry = {},
+                            workSetupState = previewV2WorkSetupUiState(),
+                            helpState = state,
+                            helpActions = HelpActions(
+                                back = {
+                                    val session = requireNotNull(state.session)
+                                    state = state.copy(session = session.copy(stepIndex = session.stepIndex - 1))
+                                },
+                                requestExit = {
+                                    closed++
+                                    state = HelpUiState.completedForPreview().copy(
+                                        navigationEvent = HelpNavigationEvent(closed.toLong(), HelpNavigationTarget.HELP),
+                                    )
+                                },
+                                consumeNavigation = { state = state.copy(navigationEvent = null) },
+                            ),
+                        )
+                    }
+            }
+            listOf(false, true).forEach { theme -> TestFontScale.entries.forEach { size ->
+                compose.runOnIdle { state = replay(HelpTourStep.HELP) }
+                assertTourAnchor(HelpTourStep.HELP)
+                compose.runOnIdle { dark = theme; fontScale = size }
+                compose.waitForIdle()
+                assertTourAnchor(HelpTourStep.HELP)
+                // Compose save/restore is explicit here; this is not process-death QA.
+                restoration.emulateSavedInstanceStateRestore()
+                assertTourAnchor(HelpTourStep.HELP)
+                compose.onNodeWithTag("help-replay-close").performScrollTo().performClick()
+                compose.onNodeWithTag("help-tour-help").assertDoesNotExist()
+                compose.onNodeWithTag("help-screen").assertIsDisplayed()
+                compose.runOnIdle { state = replay(HelpTourStep.HELP) }
+                assertTourAnchor(HelpTourStep.HELP)
+                // Back must reveal earlier menu items after HELP scrolled to the bottom.
+                listOf(HelpTourStep.SUMMARY, HelpTourStep.LOAD_AND_REPEAT, HelpTourStep.PHOTOS).forEach { step ->
+                    compose.onNodeWithTag("help-tour-back").performScrollTo().performClick()
+                    assertTourAnchor(step)
+                }
+                compose.runOnIdle { state = replay(HelpTourStep.MENU) }
+                assertTourAnchor(HelpTourStep.MENU)
+            } }
+            compose.runOnIdle { assertEquals(0, mutations); assertEquals(6, closed) }
+        } finally {
+            InstrumentationRegistry.getInstrumentation().runOnMainSync {
+                compose.activity.requestedOrientation = originalOrientation
+            }
+        }
+    }
+
+    private fun assertTourAnchor(step: HelpTourStep) {
+        compose.waitForIdle()
+        compose.onNodeWithTag("help-tour-${step.name.lowercase()}").assertIsDisplayed()
+        compose.onNodeWithTag("help-tour-anchor").assertIsDisplayed()
+        compose.onNodeWithText("Este control no está disponible", substring = true).assertDoesNotExist()
+        if (step in listOf(HelpTourStep.HELP, HelpTourStep.LOAD_AND_REPEAT, HelpTourStep.PHOTOS)) {
+            val tag = when (step) {
+                HelpTourStep.HELP -> "main-destination-help"
+                HelpTourStep.LOAD_AND_REPEAT -> "drawer-action-calendar-load"
+                else -> "drawer-action-calendar-photos"
+            }
+            val realControl = compose.onNodeWithTag(tag, useUnmergedTree = true).assertIsDisplayed().fetchSemanticsNode()
+            val viewport = compose.onNodeWithTag("main-navigation-drawer", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+            val bounds = realControl.boundsInRoot
+            assertTrue("$step control is clipped", bounds.width + 1 >= realControl.size.width && bounds.height + 1 >= realControl.size.height)
+            assertTrue("$step control lies outside its drawer", bounds.left >= viewport.left - 1 &&
+                bounds.top >= viewport.top - 1 && bounds.right <= viewport.right + 1 && bounds.bottom <= viewport.bottom + 1)
+            val anchor = compose.onNodeWithTag("help-tour-anchor").fetchSemanticsNode().boundsInRoot
+            val explanation = compose.onNodeWithTag("help-tour-explanation").fetchSemanticsNode().boundsInRoot
+            assertTrue("Explanation covers the actual $step control", !anchor.overlaps(explanation))
+        }
+        if (step == HelpTourStep.MENU) {
+            compose.onNodeWithTag("main-menu-button", useUnmergedTree = true).assertIsDisplayed()
+            compose.onNodeWithTag("main-navigation-drawer", useUnmergedTree = true).assertIsNotDisplayed()
+        }
+    }
+
+    @Test
+    fun helpTopicsDescribeCurrentMenuAndTheAdvancedSettingsEntry() {
+        compose.setContent {
+            AndroidFontScaleTheme {
+                HelpScreen(PaddingValues(0.dp), canRepeat = true, actions = HelpActions())
+            }
+        }
+        compose.onNodeWithTag("help-topic-1").performScrollTo().performClick()
+        compose.onNodeWithText("Acciones del Calendario", substring = true).performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("help-topic-2").performScrollTo().performClick()
+        compose.onNodeWithText("Tu trabajo > Mi forma de trabajar > Opciones avanzadas", substring = true)
+            .performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("help-topic-3").performScrollTo().performClick()
+        compose.onNodeWithText("Si falta altura, se reserva el espacio para el mes completo.", substring = true)
+            .performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("help-topic-4").performScrollTo().performClick()
+        compose.onNodeWithText("Menú > Avisos y contexto", substring = true).performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun removedAnchorCannotHighlightAnOldControl() {
+        val anchors = HelpAnchorRegistry()
+        var showAnchor by androidx.compose.runtime.mutableStateOf(true)
+        compose.setContent {
+            if (showAnchor) Box(Modifier.size(60.dp).helpAnchor(anchors, HelpAnchor.TODAY_CARD))
+        }
+        compose.runOnIdle {
+            assertNotNull(anchors.bounds(HelpAnchor.TODAY_CARD))
+            showAnchor = false
+        }
+        compose.runOnIdle { assertNull(anchors.bounds(HelpAnchor.TODAY_CARD)) }
+    }
+
+    @Test
+    fun nextEventTourExplainsTheUnavailableCardWithoutInventingAnAnchor() {
+        compose.setContent {
+            AndroidFontScaleTheme {
+                HelpTourOverlay(
+                    state = tourState(HelpTourStep.TODAY_CARD.ordinal),
+                    actions = HelpActions(),
+                    anchors = HelpAnchorRegistry(),
+                )
+            }
+        }
+        compose.onNodeWithTag("help-tour-anchor").assertDoesNotExist()
+        compose.onNodeWithText("Si falta altura, se reserva el espacio para el mes completo.", substring = true)
+            .assertIsDisplayed()
+        compose.onNodeWithText("Este control no está disponible", substring = true).performScrollTo().assertIsDisplayed()
     }
 
     private fun introduction(mode: HelpSessionMode): HelpUiState = HelpUiState(
@@ -281,12 +459,12 @@ class HelpComposeTest {
             "Primeros pasos y Mi forma de trabajar",
             "Calendario, jornadas, feriados, vacaciones, notas y Fotos",
             "Horario real, horas extra y disponibilidad",
-            "Horas, Resumen y tarjeta de hoy",
+            "Horas, Resumen y próximo evento",
             "Notificaciones, Clima y Widget",
             "Informes locales",
             "Copias y restauración",
             "Bloqueo de acceso y privacidad",
-            "Apariencia y zoom interno",
+            "Apariencia",
         )
     }
 }

@@ -16,9 +16,10 @@ class AndroidWidgetBoundaryScheduler(
     context: Context,
 ) : WidgetBoundaryScheduler {
     private val applicationContext = context.applicationContext
-    private val alarmManager = applicationContext.getSystemService(AlarmManager::class.java)
+    private val alarmManager by lazy { applicationContext.getSystemService(AlarmManager::class.java) }
 
     override fun schedule(triggerAt: Instant) {
+        com.blackatsystems.miguardia.QaInstrumentationScope.requireExternalAction(applicationContext, "widget.alarm-schedule")
         alarmManager.setAndAllowWhileIdle(
             AlarmManager.RTC_WAKEUP,
             triggerAt.toEpochMilli(),
@@ -27,6 +28,7 @@ class AndroidWidgetBoundaryScheduler(
     }
 
     override fun cancel() {
+        com.blackatsystems.miguardia.QaInstrumentationScope.requireExternalAction(applicationContext, "widget.alarm-cancel")
         boundaryIntent(PendingIntent.FLAG_NO_CREATE)?.let { pendingIntent ->
             alarmManager.cancel(pendingIntent)
             pendingIntent.cancel()
@@ -36,6 +38,7 @@ class AndroidWidgetBoundaryScheduler(
     internal fun existingPendingIntent(): PendingIntent? = boundaryIntent(PendingIntent.FLAG_NO_CREATE)
 
     private fun boundaryIntent(mode: Int): PendingIntent? {
+        com.blackatsystems.miguardia.QaInstrumentationScope.requireExternalAction(applicationContext, "widget.alarm-identity")
         val intent = Intent(applicationContext, NextEventAppWidgetProvider::class.java)
             .setAction(NextEventAppWidgetProvider.ACTION_REFRESH_BOUNDARY)
             .setData(

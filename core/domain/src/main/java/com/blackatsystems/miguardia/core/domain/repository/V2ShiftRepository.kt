@@ -1,6 +1,7 @@
 package com.blackatsystems.miguardia.core.domain.repository
 
 import com.blackatsystems.miguardia.core.domain.model.ShiftWorkSnapshot
+import com.blackatsystems.miguardia.core.domain.model.ShiftDeletionExpectation
 import com.blackatsystems.miguardia.core.domain.model.ShiftOccupancyExpectation
 import com.blackatsystems.miguardia.core.domain.model.ShiftActualExpectation
 import com.blackatsystems.miguardia.core.domain.model.V2ShiftBatchMutation
@@ -21,6 +22,11 @@ interface V2ShiftRepository {
     suspend fun getShift(shiftId: UUID): V2ShiftLookup
 
     suspend fun insert(write: V2ShiftWrite)
+
+    suspend fun captureDeletionExpectations(shiftIds: Set<UUID>): Map<UUID, ShiftDeletionExpectation> {
+        check(shiftIds.isEmpty()) { "Este repositorio no implementa la revisión de datos asociados" }
+        return emptyMap()
+    }
 
     suspend fun deleteShift(
         expected: V2ShiftWrite,

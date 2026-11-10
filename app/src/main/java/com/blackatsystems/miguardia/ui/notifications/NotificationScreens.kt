@@ -42,23 +42,22 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.core.net.toUri
 import com.blackatsystems.miguardia.core.domain.model.Shift
-import com.blackatsystems.miguardia.core.domain.nextevent.NextEventItem
 import com.blackatsystems.miguardia.notifications.NotificationAttentionMode
 import com.blackatsystems.miguardia.notifications.NotificationPrivacy
 import com.blackatsystems.miguardia.notifications.NotificationRhythm
+import com.blackatsystems.miguardia.ui.components.MiGuardiaSpacing
 import com.blackatsystems.miguardia.ui.components.PersistentMessage
 import com.blackatsystems.miguardia.ui.components.ScreenHeading
 import com.blackatsystems.miguardia.ui.components.SectionCard
 import com.blackatsystems.miguardia.ui.theme.vigiliaColors
-import java.time.format.DateTimeFormatter
 
 data class NotificationActions(
     val openGlobal: () -> Unit = {},
@@ -69,6 +68,9 @@ data class NotificationActions(
     val setPreciseTiming: (Boolean) -> Unit = {},
     val setPersistent: (Boolean) -> Unit = {},
     val setPrivacy: (NotificationPrivacy) -> Unit = {},
+    val setAlwaysShowNext: (Boolean) -> Unit = {},
+    val setShowOnLockScreen: (Boolean) -> Unit = {},
+    val setCountdownWhileActive: (Boolean) -> Unit = {},
     val setAttentionMode: (NotificationAttentionMode) -> Unit = {},
     val applyRhythm: (NotificationRhythm) -> Unit = {},
     val setSound: (Uri?) -> Unit = {},
@@ -92,6 +94,9 @@ data class NotificationActions(
             setPreciseTiming = viewModel::setPreciseTiming,
             setPersistent = viewModel::setPersistent,
             setPrivacy = viewModel::setPrivacy,
+            setAlwaysShowNext = viewModel::setAlwaysShowNext,
+            setShowOnLockScreen = viewModel::setShowOnLockScreen,
+            setCountdownWhileActive = viewModel::setCountdownWhileActive,
             setAttentionMode = viewModel::setAttentionMode,
             applyRhythm = viewModel::applyRhythm,
             setSound = viewModel::setSound,
@@ -129,73 +134,92 @@ fun NotificationSurfaceHost(state: NotificationUiState, actions: NotificationAct
         if (result.resultCode == android.app.Activity.RESULT_OK) actions.setSound(selected)
     }
     Dialog(onDismissRequest = actions.close) {
+        // Style v2: the three Stage 14 dialogs (Notificaciones, Clima, Widget) share one
+        // background, width limit and padding.
         Surface(
             shape = MaterialTheme.shapes.extraLarge,
             color = MaterialTheme.colorScheme.surfaceContainerLow,
-            tonalElevation = 6.dp,
+            contentColor = MaterialTheme.colorScheme.onSurface,
         ) {
             Column(
                 modifier = Modifier
                     .widthIn(max = 620.dp)
                     .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
-                    .padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                    .padding(MiGuardiaSpacing.large),
+                verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.medium),
             ) {
-            ScreenHeading(
-                if (state.surface == NotificationSurface.GLOBAL) "Notificaciones" else "Avisos de la jornada",
-                supportingText = if (state.surface == NotificationSurface.GLOBAL) {
-                    "MiGuardia funciona aunque no concedas permisos; podés corregirlos después."
-                } else {
-                    state.selectedShift?.let { "${it.objectiveAbbreviationSnapshot} · ${it.startTimeSnapshot}–${it.endTimeSnapshot}" }.orEmpty()
-                },
-            )
-            state.errorMessage?.let {
-                PersistentMessage(it, onDismiss = actions.clearMessage, onRetry = actions.retry)
-            }
-            state.infoMessage?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
-            if (state.isLoading) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center,
-                ) { CircularProgressIndicator() }
-            } else when (state.surface) {
-                NotificationSurface.GLOBAL -> GlobalSettings(
-                    state = state,
-                    actions = actions,
-                    requestPermission = {
-                        if (Build.VERSION.SDK_INT >= 33) permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                        else actions.refreshSystemAccess()
-                    },
-                    requestExactAccess = {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                            settingsLauncher.launch(
-                                Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
-                                    .setData("package:${context.packageName}".toUri()),
-                            )
+                Row(verticalAlignment = Alignment.Top) {
+                    ScreenHeading(
+                        if (state.surface == NotificationSurface.GLOBAL) "Notificaciones" else "Avisos de la jornada",
+                        modifier = Modifier.weight(1f),
+                    )
+                    TextButton(onClick = actions.close, modifier = Modifier.testTag("notification-close")) {
+                        Text("Cerrar")
+                    }
+                }
+                Column(
+                    modifier = Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.medium),
+                ) {
+                    Text(
+                        if (state.surface == NotificationSurface.GLOBAL) {
+                            "MiGuardia funciona aunque no concedas permisos; podés corregirlos después."
                         } else {
-                            actions.refreshSystemAccess()
-                        }
-                    },
-                    openAppSettings = {
-                        settingsLauncher.launch(
-                            Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
-                                .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName),
+                            state.selectedShift?.let { "${it.objectiveAbbreviationSnapshot} · ${it.startTimeSnapshot}–${it.endTimeSnapshot}" }.orEmpty()
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    state.errorMessage?.let {
+                        PersistentMessage(it, onDismiss = actions.clearMessage, onRetry = actions.retry)
+                    }
+                    state.infoMessage?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
+                    if (state.isLoading) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center,
+                        ) { CircularProgressIndicator() }
+                    } else when (state.surface) {
+                        NotificationSurface.GLOBAL -> GlobalSettings(
+                            state = state,
+                            actions = actions,
+                            requestPermission = {
+                                com.blackatsystems.miguardia.QaInstrumentationScope.requireExternalAction(context, "notification.permission")
+                                if (Build.VERSION.SDK_INT >= 33) permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                else actions.refreshSystemAccess()
+                            },
+                            requestExactAccess = {
+                                com.blackatsystems.miguardia.QaInstrumentationScope.requireExternalAction(context, "notification.exact-access")
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                                    settingsLauncher.launch(
+                                        Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
+                                            .setData("package:${context.packageName}".toUri()),
+                                    )
+                                } else {
+                                    actions.refreshSystemAccess()
+                                }
+                            },
+                            openAppSettings = {
+                                com.blackatsystems.miguardia.QaInstrumentationScope.requireExternalAction(context, "notification.settings")
+                                settingsLauncher.launch(
+                                    Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                                        .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName),
+                                )
+                            },
+                            chooseSound = {
+                                com.blackatsystems.miguardia.QaInstrumentationScope.requireExternalAction(context, "notification.sound-picker")
+                                ringtoneLauncher.launch(
+                                    Intent(RingtoneManager.ACTION_RINGTONE_PICKER)
+                                        .putExtra(RingtoneManager.EXTRA_RINGTONE_TYPE, RingtoneManager.TYPE_NOTIFICATION)
+                                        .putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, false)
+                                        .putExtra(RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, state.preferences.soundUri),
+                                )
+                            },
                         )
-                    },
-                    chooseSound = {
-                        ringtoneLauncher.launch(
-                            Intent(RingtoneManager.ACTION_RINGTONE_PICKER)
-                                .putExtra(RingtoneManager.EXTRA_RINGTONE_TYPE, RingtoneManager.TYPE_NOTIFICATION)
-                                .putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, false)
-                                .putExtra(RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, state.preferences.soundUri),
-                        )
-                    },
-                )
-                NotificationSurface.SHIFT -> ShiftSettings(state, actions)
-                NotificationSurface.NONE -> Unit
-            }
-                OutlinedButton(onClick = actions.close, modifier = Modifier.fillMaxWidth()) { Text("Volver") }
+                        NotificationSurface.SHIFT -> ShiftSettings(state, actions)
+                        NotificationSurface.NONE -> Unit
+                    }
+                }
             }
         }
     }
@@ -219,7 +243,12 @@ private fun GlobalSettings(
             "MiGuardia no mostrará avisos hasta que los actives."
         },
     ) {
-        ToggleRow("Usar notificaciones", state.preferences.enabled, actions.setEnabled)
+        ToggleRow(
+            label = "Usar notificaciones",
+            checked = state.preferences.enabled,
+            onChange = actions.setEnabled,
+            testTag = "notification-enabled",
+        )
         if (!state.preferences.enabled) {
             Button(onClick = { actions.setEnabled(true) }, modifier = Modifier.fillMaxWidth()) {
                 Text("Activar avisos")
@@ -286,6 +315,48 @@ private fun GlobalSettings(
         }
     }
     SectionCard(
+        title = "Aviso permanente",
+        supportingText = if (state.preferences.alwaysShowNext) {
+            "Tu próxima jornada queda siempre a la vista."
+        } else {
+            "El aviso aparece recién con el primer anticipo."
+        },
+    ) {
+        ToggleRow(
+            label = "Mostrar siempre la próxima jornada",
+            checked = state.preferences.alwaysShowNext,
+            onChange = actions.setAlwaysShowNext,
+            testTag = "notification-always-show-next",
+        )
+        ToggleRow(
+            label = "Mostrar en la pantalla bloqueada",
+            checked = state.preferences.showOnLockScreen,
+            onChange = actions.setShowOnLockScreen,
+            testTag = "notification-lock-screen",
+        )
+        ToggleRow(
+            label = "Contar hasta el final durante la jornada",
+            checked = state.preferences.countdownWhileActive,
+            onChange = actions.setCountdownWhileActive,
+            testTag = "notification-active-countdown",
+        )
+        Text(
+            if (state.preferences.alwaysShowNext) {
+                "Queda fijo entre tus notificaciones y los anticipos sólo deciden cuándo suena. " +
+                    "La cuenta regresiva aparece cuando faltan 24 horas o menos. " +
+                    "Si lo deslizás, vuelve con la jornada siguiente."
+            } else {
+                "Activalo para ver siempre cuánto falta, sin esperar al primer anticipo."
+            },
+        )
+        if (!state.preferences.showOnLockScreen) {
+            Text("Con el teléfono bloqueado no se muestra ningún aviso de jornada.")
+        }
+        if (!state.preferences.countdownWhileActive) {
+            Text("Mientras la jornada está en curso el aviso muestra sólo el horario, sin cuenta regresiva.")
+        }
+    }
+    SectionCard(
         title = "Permanencia",
         supportingText = if (state.preferences.persistentWhileActive) {
             "Queda visible mientras el evento está en curso."
@@ -342,7 +413,12 @@ private fun GlobalSettings(
             supportingText = "Es opcional. Sin este acceso, Android puede demorar algunos minutos el aviso.",
         ) {
             PermissionRow("Puntualidad exacta", state.systemAccess.exactAlarmAccessGranted, requestExactAccess)
-            ToggleRow("Intentar publicar exactamente a horario", state.preferences.preciseTiming, actions.setPreciseTiming)
+            ToggleRow(
+                label = "Intentar publicar exactamente a horario",
+                checked = state.preferences.preciseTiming,
+                onChange = actions.setPreciseTiming,
+                testTag = "notification-precise-timing",
+            )
             Text("Es una notificación común: nunca funciona como despertador.")
         }
         SectionCard("Privacidad") {
@@ -378,7 +454,7 @@ private fun PulsoVigiliaPreview(privacy: NotificationPrivacy) {
     val accent = if (privacy == NotificationPrivacy.HIDDEN) {
         MaterialTheme.colorScheme.outline
     } else {
-        Color(0xFF8B5CFF)
+        colors.active
     }
     val title = when (privacy) {
         NotificationPrivacy.COMPLETE -> "PRÓXIMA JORNADA · Hospital Norte"
@@ -507,16 +583,14 @@ private fun RestorableNotifications(state: NotificationUiState, actions: Notific
     }
 }
 
-private fun NextEventItem.restorableLabel(): String = when (this) {
-    is NextEventItem.Shift ->
-        "$placeAbbreviationSnapshot · ${ownerLocalDate.format(HiddenNotificationDateFormatter)} · " +
-            "${startTimeSnapshot.format(HiddenNotificationTimeFormatter)}–" +
-            endTimeSnapshot.format(HiddenNotificationTimeFormatter)
-    is NextEventItem.Availability ->
-        "$labelSnapshot · ${ownerLocalDate.format(HiddenNotificationDateFormatter)} · " +
-            "${start.atZone(zoneId).toLocalTime().format(HiddenNotificationTimeFormatter)}–" +
-            end.atZone(zoneId).toLocalTime().format(HiddenNotificationTimeFormatter)
-}
+/**
+ * Una jornada personalizada necesita al menos un anticipo: la lista vacía significa "desactivada".
+ * Si la configuración general no tiene anticipos, arranca con las 12 horas recomendadas.
+ */
+internal fun ownShiftStartingReminders(general: List<Long>): List<Long> =
+    general.ifEmpty { listOf(RECOMMENDED_REMINDER_LEAD_MINUTES) }
+
+private const val RECOMMENDED_REMINDER_LEAD_MINUTES = 12L * 60L
 
 @Composable
 private fun ShiftSettings(state: NotificationUiState, actions: NotificationActions) {
@@ -535,7 +609,7 @@ private fun ShiftSettings(state: NotificationUiState, actions: NotificationActio
             override == null -> {
                 Button(
                     onClick = {
-                        actions.setShiftReminders(state.preferences.globalReminderLeadMinutes)
+                        actions.setShiftReminders(ownShiftStartingReminders(state.preferences.globalReminderLeadMinutes))
                         showEditor = true
                     },
                     modifier = Modifier.fillMaxWidth(),
@@ -550,7 +624,7 @@ private fun ShiftSettings(state: NotificationUiState, actions: NotificationActio
                 }
                 OutlinedButton(
                     onClick = {
-                        actions.setShiftReminders(state.preferences.globalReminderLeadMinutes)
+                        actions.setShiftReminders(ownShiftStartingReminders(state.preferences.globalReminderLeadMinutes))
                         showEditor = true
                     },
                     modifier = Modifier.fillMaxWidth(),
@@ -613,10 +687,23 @@ private fun ReminderEditor(title: String, values: List<Long>, onChange: (Collect
 }
 
 @Composable
-private fun ToggleRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
-    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+private fun ToggleRow(
+    label: String,
+    checked: Boolean,
+    onChange: (Boolean) -> Unit,
+    testTag: String? = null,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
         Text(label, modifier = Modifier.weight(1f))
-        Switch(checked = checked, onCheckedChange = onChange)
+        Switch(
+            checked = checked,
+            onCheckedChange = onChange,
+            modifier = if (testTag != null) Modifier.testTag(testTag) else Modifier,
+        )
     }
 }
 
@@ -684,6 +771,3 @@ private fun reminderSummary(values: List<Long>): String = when (values.size) {
     }
     else -> "${values.size} avisos configurados."
 }
-
-private val HiddenNotificationDateFormatter = DateTimeFormatter.ofPattern("dd/MM")
-private val HiddenNotificationTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")

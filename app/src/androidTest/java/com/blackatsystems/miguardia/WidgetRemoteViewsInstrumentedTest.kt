@@ -3,6 +3,7 @@ package com.blackatsystems.miguardia
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.drawable.ColorDrawable
 import android.os.Build
 import android.view.View
 import android.view.ViewGroup
@@ -67,6 +68,49 @@ class WidgetRemoteViewsInstrumentedTest {
         val preview = RemoteViews(context.packageName, R.layout.widget_next_event_preview).apply(context, null)
 
         assertNotNull(preview)
+    }
+
+    @Test
+    fun vigiliaPaletteMatchesTheAppliedDrawableAndPreservesInstitutionColor() {
+        AppThemeMode.entries.forEach { theme ->
+            listOf(false, true).forEach { systemDark ->
+                val palette = resolveWidgetPalette(theme, systemDark)
+                WidgetSize.entries.forEach { size ->
+                    val event = event()
+                    val complete = renderer.createViews(
+                        projection(size, listOf(event), total = 1),
+                        appWidgetId = 76,
+                        weatherText = null,
+                        palette = palette,
+                    ).apply(context, null)
+                    val background = complete.findViewById<View>(R.id.widget_root).background
+                    val bitmap = Bitmap.createBitmap(100, 100, Bitmap.Config.ARGB_8888)
+                    try {
+                        background.setBounds(0, 0, bitmap.width, bitmap.height)
+                        background.draw(Canvas(bitmap))
+                        assertEquals("$theme/$systemDark/$size", palette.background, bitmap.getPixel(50, 50))
+                    } finally {
+                        bitmap.recycle()
+                    }
+                    assertEquals(palette.primaryText, complete.findViewById<TextView>(R.id.widget_primary).currentTextColor)
+                    assertEquals(palette.secondaryText, complete.findViewById<TextView>(R.id.widget_title).currentTextColor)
+                    assertEquals(
+                        event.details!!.colorArgb,
+                        (complete.findViewById<View>(R.id.widget_accent).background as ColorDrawable).color,
+                    )
+                    val reduced = renderer.createViews(
+                        projection(size, listOf(event.copy(details = null)), total = 1, privacy = WidgetPrivacy.REDUCED),
+                        appWidgetId = 76,
+                        weatherText = null,
+                        palette = palette,
+                    ).apply(context, null)
+                    assertEquals(
+                        palette.defaultAccent,
+                        (reduced.findViewById<View>(R.id.widget_accent).background as ColorDrawable).color,
+                    )
+                }
+            }
+        }
     }
 
     @Test

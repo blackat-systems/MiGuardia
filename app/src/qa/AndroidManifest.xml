@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <application>
+        <!-- QA excludes automatic replacement dispatch. Other receiver surfaces stay intact. -->
+        <receiver android:name="com.blackatsystems.miguardia.widget.NextEventAppWidgetProvider"
+            android:exported="false" tools:node="replace">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="com.blackatsystems.miguardia.action.WIDGET_REFRESH_BOUNDARY" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider"
+                android:resource="@xml/widget_next_event_info" />
+        </receiver>
+        <receiver android:name="com.blackatsystems.miguardia.notifications.NotificationRebuildReceiver"
+            android:exported="false" tools:node="replace">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED" />
+            </intent-filter>
+        </receiver>
+        <meta-data android:name="com.blackatsystems.miguardia.STAGE12_HARNESS"
+            android:value="${stage12HarnessEnabled}" />
+        <!-- Dedicated opt-in harness only; ordinary QA retains the merged provider defaults. -->
+        <provider android:name="androidx.core.content.FileProvider"
+            android:enabled="${stage12BootstrapProvidersEnabled}" tools:replace="android:enabled" />
+        <!-- Do not declare absent providers. Any provider added by a future dependency
+             must pass the runner's all-providers-disabled gate before admission. -->
+        <activity android:name="com.blackatsystems.miguardia.stage12.Stage12CaptureActivity"
+            android:exported="false" android:excludeFromRecents="true"
+            android:theme="@android:style/Theme.Material.Light.NoActionBar" />
+        <activity android:name="com.blackatsystems.miguardia.stage12.Stage12HumanSessionActivity"
+            android:exported="false" android:excludeFromRecents="true" />
+    </application>
+</manifest>

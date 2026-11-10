@@ -2,6 +2,8 @@ package com.blackatsystems.miguardia
 
 import android.app.KeyguardManager
 import android.content.Intent
+import android.content.pm.ActivityInfo
+import android.content.res.Configuration
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -20,18 +22,19 @@ import androidx.test.uiautomator.Until
 import com.blackatsystems.miguardia.core.domain.AppDefaults
 import com.blackatsystems.miguardia.core.domain.model.Shift
 import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
-import com.blackatsystems.miguardia.ui.theme.AppZoom
 import com.blackatsystems.miguardia.ui.help.HelpTourStep
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.YearMonth
 import java.time.format.TextStyle
+import java.io.File
 import java.util.Locale
 import java.util.UUID
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -53,16 +56,6 @@ class V2ReadyCalendarRecreationActivityTest {
             "La recreación V2Ready sólo puede probarse contra el paquete QA."
         }
         preparePublicRootAndMarkOnboardingCompletedForTest()
-        check(
-            context.getSharedPreferences(
-                MainActivity.DISPLAY_PREFERENCES,
-                android.content.Context.MODE_PRIVATE,
-            ).edit()
-                .putInt(MainActivity.APP_ZOOM_PERCENT, AppZoom.STANDARD.percent)
-                .commit(),
-        ) {
-            "La recreación debe comenzar con el zoom interno estándar."
-        }
         val device = UiDevice.getInstance(instrumentation)
         device.wakeUp()
         instrumentation.uiAutomation.executeShellCommand("wm dismiss-keyguard").close()
@@ -104,7 +97,7 @@ class V2ReadyCalendarRecreationActivityTest {
         }
 
         scenario = ActivityScenario.launch(MainActivity::class.java)
-        waitForTag("calendar-v2-load-shifts")
+        waitForTag("month-grid")
     }
 
     @After
@@ -138,10 +131,10 @@ class V2ReadyCalendarRecreationActivityTest {
         waitForText("Ocultar jornadas de hoy")
         compose.onNodeWithTag("today-card-shift-$TODAY_HISTORY_SHIFT_ID").assertIsDisplayed()
 
-        compose.onNodeWithContentDescription("Mes siguiente").performScrollTo().performClick()
+        compose.onNodeWithContentDescription("Mes siguiente").performClick()
         waitForText(selectedMonth.displayName())
         waitForTag("day-$selectedDate")
-        compose.onNodeWithTag("day-$selectedDate").performScrollTo().performClick()
+        compose.onNodeWithTag("day-$selectedDate").performClick()
         waitForText(SHIFT_IDENTITY)
 
         requireNotNull(scenario).recreate()
@@ -154,9 +147,60 @@ class V2ReadyCalendarRecreationActivityTest {
         }
         waitForText(selectedMonth.displayName())
         compose.onNodeWithText(selectedMonth.displayName()).assertIsDisplayed()
-        compose.onNodeWithTag("day-$selectedDate").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("Ocultar jornadas de hoy").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("day-$selectedDate").assertIsDisplayed()
+        compose.onNodeWithText("Ocultar jornadas de hoy").assertIsDisplayed()
         compose.onNodeWithTag("today-card-shift-$TODAY_HISTORY_SHIFT_ID").assertIsDisplayed()
+    }
+
+    @Test
+    fun landscapeKeepsTheWholeCurrentMonthVisibleWithoutPermanentActions() {
+        val month = YearMonth.now(AppDefaults.zoneId())
+        val device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
+        try {
+            requireNotNull(scenario).onActivity {
+                it.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+            }
+            compose.waitUntil(WAIT_MILLIS) {
+                var landscape = false
+                requireNotNull(scenario).onActivity {
+                    landscape = it.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+                }
+                landscape
+            }
+            waitForTag("day-${month.atDay(1)}")
+            waitForTag("day-${month.atEndOfMonth()}")
+            compose.onNodeWithTag("day-${month.atDay(1)}").assertIsDisplayed()
+            compose.onNodeWithTag("day-${month.atEndOfMonth()}").assertIsDisplayed()
+            compose.onNodeWithTag("calendar-primary-actions").assertDoesNotExist()
+            compose.onNodeWithTag("today-card-toggle").assertDoesNotExist()
+            var density = 1f
+            requireNotNull(scenario).onActivity { density = it.resources.displayMetrics.density }
+            val firstDayHeightDp = compose.onNodeWithTag("day-${month.atDay(1)}")
+                .fetchSemanticsNode()
+                .boundsInRoot
+                .height / density
+            assertTrue(
+                "La celda horizontal quedó reducida a $firstDayHeightDp dp",
+                firstDayHeightDp >= 44f,
+            )
+
+            val context = InstrumentationRegistry.getInstrumentation().targetContext
+            val evidence = File(context.getExternalFilesDir(null), "stage31-evidence").apply { mkdirs() }
+            check(device.takeScreenshot(File(evidence, "calendar-landscape.png"))) {
+                "No se pudo conservar la captura QA horizontal"
+            }
+        } finally {
+            requireNotNull(scenario).onActivity {
+                it.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+            }
+            compose.waitUntil(WAIT_MILLIS) {
+                var portrait = false
+                requireNotNull(scenario).onActivity {
+                    portrait = it.resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT
+                }
+                portrait
+            }
+        }
     }
 
     @Test
@@ -191,7 +235,7 @@ class V2ReadyCalendarRecreationActivityTest {
         }
         try {
             for (id in listOf("invalid", UUID.randomUUID().toString())) {
-                open(id); waitForTag("calendar-v2-load-shifts")
+                open(id); waitForTag("month-grid")
                 compose.onNodeWithText("Abrir dirección en otra aplicación").assertDoesNotExist()
                 org.junit.Assert.assertEquals(0, monitor.hits)
             }
@@ -242,12 +286,12 @@ class V2ReadyCalendarRecreationActivityTest {
             if (index < HelpTourStep.entries.lastIndex) compose.waitForIdle()
         }
 
-        waitForTag("calendar-v2-load-shifts")
+        waitForTag("month-grid")
         compose.onNodeWithTag("help-introduction-1").assertDoesNotExist()
 
         requireNotNull(scenario).recreate()
 
-        waitForTag("calendar-v2-load-shifts")
+        waitForTag("month-grid")
         compose.onNodeWithTag("help-introduction-1").assertDoesNotExist()
     }
 

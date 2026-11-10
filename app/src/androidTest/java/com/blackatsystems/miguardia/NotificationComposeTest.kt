@@ -5,10 +5,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import com.blackatsystems.miguardia.core.domain.model.Shift
@@ -26,8 +28,8 @@ import com.blackatsystems.miguardia.ui.notifications.NotificationActions
 import com.blackatsystems.miguardia.ui.notifications.NotificationSurface
 import com.blackatsystems.miguardia.ui.notifications.NotificationSurfaceHost
 import com.blackatsystems.miguardia.ui.notifications.NotificationUiState
-import com.blackatsystems.miguardia.ui.theme.AppZoom
-import com.blackatsystems.miguardia.ui.theme.MiGuardiaTheme
+import com.blackatsystems.miguardia.testsupport.TestFontScale
+import com.blackatsystems.miguardia.testsupport.AndroidFontScaleTheme
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
@@ -141,11 +143,13 @@ class NotificationComposeTest {
     }
 
     @Test
-    fun notificationSurfaceRemainsReachableInLightDarkAndEveryInternalZoom() {
+    fun notificationSurfaceRemainsReachableInLightDarkAndEveryAndroidFontScale() {
         var dark by mutableStateOf(false)
-        var zoom by mutableStateOf(AppZoom.STANDARD)
+        var fontScale by mutableStateOf(TestFontScale.STANDARD)
+        var closes = 0
+        var mutations = 0
         compose.setContent {
-            MiGuardiaTheme(darkTheme = dark, appZoom = zoom) {
+            AndroidFontScaleTheme(darkTheme = dark, fontScale = fontScale) {
                 NotificationSurfaceHost(
                     NotificationUiState(
                         surface = NotificationSurface.GLOBAL,
@@ -153,18 +157,30 @@ class NotificationComposeTest {
                         systemAccess = NotificationSystemAccessState(true, false),
                         isLoading = false,
                     ),
-                    NotificationActions(),
+                    NotificationActions(
+                        close = { closes++ },
+                        setEnabled = { mutations++ },
+                        sendTestNotification = { mutations++ },
+                    ),
                 )
             }
         }
 
-        AppZoom.entries.forEach { option ->
-            compose.runOnIdle { zoom = option }
+        for (theme in listOf(false, true)) for (option in TestFontScale.entries) {
+            compose.runOnIdle { dark = theme; fontScale = option }
             compose.onNodeWithText("Notificaciones").assertExists()
+            val closeBefore = compose.onNodeWithTag("notification-close").assertIsDisplayed()
+                .fetchSemanticsNode().boundsInRoot
             compose.onNodeWithText("Vista previa").performScrollTo().assertExists()
+            val closeAfter = compose.onNodeWithTag("notification-close").assertIsDisplayed()
+                .fetchSemanticsNode().boundsInRoot
+            assertEquals(closeBefore.top, closeAfter.top, 1f)
+            compose.onNodeWithTag("notification-close").performClick()
         }
-        compose.runOnIdle { dark = true }
-        compose.onNodeWithText("Volver").performScrollTo().assertExists()
+        compose.runOnIdle {
+            assertEquals(6, closes)
+            assertEquals(0, mutations)
+        }
     }
 
     @Test

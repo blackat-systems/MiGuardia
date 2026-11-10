@@ -42,7 +42,9 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.joinAll
@@ -56,7 +58,7 @@ class WidgetRuntime(
     val preferences: WidgetPreferencesStore,
     private val weatherRuntime: WeatherRuntime,
     private val clock: Clock = Clock.systemUTC(),
-    private val renderer: WidgetRemoteViewsRenderer = WidgetRemoteViewsRenderer(context.applicationContext),
+    private val renderer: WidgetSurface = WidgetRemoteViewsRenderer(context.applicationContext),
     private val scheduler: WidgetBoundaryScheduler = AndroidWidgetBoundaryScheduler(context.applicationContext),
 ) {
     internal val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -99,6 +101,7 @@ class WidgetRuntime(
     val isPausedForRestore: Boolean get() = pausedForRestore
 
     private fun publicationReady(): Boolean {
+        if (com.blackatsystems.miguardia.QaInstrumentationScope.suppress(context, "widget.publication")) return false
         val allowed = com.blackatsystems.miguardia.localAllowsPublication(context)
         if (!allowed) renderer.renderRecovery()
         return allowed
@@ -140,6 +143,7 @@ class WidgetRuntime(
     }
 
     internal fun showLoading(appWidgetIds: IntArray) {
+        if (com.blackatsystems.miguardia.QaInstrumentationScope.suppress(context, "widget.loading")) return
         renderer.renderLoading(appWidgetIds.validIds())
     }
 
@@ -196,6 +200,7 @@ class WidgetRuntime(
     }
 
     suspend fun deleteNow(appWidgetIds: IntArray) {
+        com.blackatsystems.miguardia.QaInstrumentationScope.requireExternalAction(context, "widget.delete")
         preferences.delete(appWidgetIds.toList())
         val remaining = renderer.installedIds().validIds().filterNot { it in appWidgetIds.toSet() }.toIntArray()
         if (remaining.isEmpty()) {
@@ -206,21 +211,25 @@ class WidgetRuntime(
     }
 
     fun disabled() {
+        if (com.blackatsystems.miguardia.QaInstrumentationScope.suppress(context, "widget.disabled")) return
         stopBackgroundWork()
     }
 
     internal fun receiverFailed(appWidgetIds: IntArray) {
+        if (com.blackatsystems.miguardia.QaInstrumentationScope.suppress(context, "widget.receiver-failure")) return
         val valid = appWidgetIds.validIds()
         renderer.renderRecoverableError(valid)
         if (valid.isNotEmpty()) scheduler.schedule(recoveryBoundary())
     }
 
     fun registerRestoration(newIds: IntArray) {
+        com.blackatsystems.miguardia.QaInstrumentationScope.requireExternalAction(context, "widget.register-restore")
         newIds.validIds().forEach { id -> restoreBarriers.putIfAbsent(id, CompletableDeferred()) }
         renderer.renderLoading(newIds.validIds())
     }
 
     suspend fun restoreNow(oldIds: IntArray, newIds: IntArray) {
+        com.blackatsystems.miguardia.QaInstrumentationScope.requireExternalAction(context, "widget.restore")
         try {
             preferences.remap(oldIds, newIds)
         } finally {
@@ -257,7 +266,12 @@ class WidgetRuntime(
                 combine(
                     sources.observe(today),
                     preferences.instances,
-                    weatherRuntime.preferences.preferences,
+                    // Sólo lo que cambia el dibujo. La hora del último intento y la espera pedida por el
+                    // proveedor también viven en esas preferencias: observarlas enteras hacía que cada
+                    // descarga fallida disparara otra de inmediato.
+                    weatherRuntime.preferences.preferences
+                        .map { Triple(it.enabled, it.providerExplanationAccepted, it.unitSystem) }
+                        .distinctUntilChanged(),
                     weatherRuntime.cacheInvalidations.onStart { emit(null) },
                 ) { source, configs, _, _ -> source to configs }
                     .collect { (source, configs) ->
@@ -393,6 +407,7 @@ class WidgetRuntime(
     }
 
     private fun stopBackgroundWork() {
+        if (com.blackatsystems.miguardia.QaInstrumentationScope.suppress(context, "widget.background-stop")) return
         observationJob?.cancel()
         observationJob = null
         observationDate = null

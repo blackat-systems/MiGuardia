@@ -9,6 +9,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 
 class NotificationRebuildReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
+        if (com.blackatsystems.miguardia.QaInstrumentationScope.suppress(context, "notifications.rebuild-receiver")) return
         if (intent.action !in AllowedActions) return
         val application = context.applicationContext as? MiGuardiaApplication ?: return
         if (runCatching { application.notificationDeferredActions.enqueueRebuild() }.isFailure) return

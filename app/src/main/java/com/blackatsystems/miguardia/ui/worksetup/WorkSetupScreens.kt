@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
@@ -19,7 +20,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
@@ -28,6 +29,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -40,6 +42,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -56,12 +59,18 @@ import com.blackatsystems.miguardia.ui.components.EmptyState
 import com.blackatsystems.miguardia.ui.components.AdvancedOptionsSection
 import com.blackatsystems.miguardia.ui.components.AutomaticTimeField
 import com.blackatsystems.miguardia.ui.components.ContextHelp
+import com.blackatsystems.miguardia.ui.components.Eyebrow
+import com.blackatsystems.miguardia.ui.components.MiGuardiaButtonShape
+import com.blackatsystems.miguardia.ui.components.MiGuardiaSpacing
 import com.blackatsystems.miguardia.ui.components.ObjectiveLocationCapture
+import com.blackatsystems.miguardia.ui.components.PICKER_BUTTON_SUFFIX
 import com.blackatsystems.miguardia.ui.components.PersistentMessage
 import com.blackatsystems.miguardia.ui.components.PrimaryAction
 import com.blackatsystems.miguardia.ui.components.ScreenHeading
 import com.blackatsystems.miguardia.ui.components.SectionCard
 import com.blackatsystems.miguardia.ui.components.SurfaceHeader
+import com.blackatsystems.miguardia.ui.components.vigiliaCardSurface
+import com.blackatsystems.miguardia.ui.components.vigiliaScreenBackground
 import com.blackatsystems.miguardia.ui.management.RgbColorPickerDialog
 import com.blackatsystems.miguardia.ui.theme.vigiliaColors
 import java.util.UUID
@@ -184,7 +193,8 @@ fun WorkSetupSurfaceHost(
                 } else "Todavía hay datos sin guardar. ¿Querés descartarlos y volver al Calendario?")
             },
             confirmButton = {
-                TextButton(onClick = actions.confirmDiscard) { Text("Descartar") }
+                TextButton(onClick = actions.confirmDiscard,
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) { Text("Descartar") }
             },
             dismissButton = {
                 TextButton(onClick = actions.dismissDiscard) { Text("Seguir editando") }
@@ -210,12 +220,12 @@ fun V2FirstWorkSetGuide(
 @Composable
 private fun WorkSetupLoading() {
     Column(
-        modifier = Modifier.fillMaxSize().safeDrawingPadding().padding(32.dp),
+        modifier = Modifier.fillMaxSize().vigiliaScreenBackground().safeDrawingPadding().padding(MiGuardiaSpacing.huge),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
         CircularProgressIndicator(Modifier.testTag("work-setup-loading"))
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(MiGuardiaSpacing.large))
         Text("Preparando MiGuardia…", textAlign = TextAlign.Center)
     }
 }
@@ -223,7 +233,7 @@ private fun WorkSetupLoading() {
 @Composable
 private fun WorkSetupLoadError(state: WorkSetupUiState, actions: WorkSetupActions) {
     Column(
-        modifier = Modifier.fillMaxSize().safeDrawingPadding().padding(24.dp),
+        modifier = Modifier.fillMaxSize().vigiliaScreenBackground().safeDrawingPadding().padding(MiGuardiaSpacing.large),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
@@ -246,11 +256,12 @@ private fun WorkSectorSelection(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .vigiliaScreenBackground()
             .safeDrawingPadding()
             .verticalScroll(rememberScrollState())
-            .padding(24.dp)
+            .padding(MiGuardiaSpacing.large)
             .testTag("work-sector-selection"),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.large),
     ) {
         ScreenHeading(
             title = "¿En qué rubro trabajás?",
@@ -278,6 +289,7 @@ private fun WorkSectorSelection(
             onClick = onRestoreBackup,
             enabled = !state.isSavingSector,
             modifier = Modifier.fillMaxWidth().testTag("work-setup-restore-backup"),
+            shape = MiGuardiaButtonShape,
         ) {
             Text("Restaurar una copia existente")
         }
@@ -299,6 +311,9 @@ private fun SectorCard(
     onClick: () -> Unit,
 ) {
     val selectionDescription = if (selected) "seleccionado" else "sin seleccionar"
+    // Style v2: same asymmetric shape and surface as SectionCard; the selected card keeps the
+    // selection color as its base and the violet hairline.
+    val shape = MaterialTheme.shapes.large
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -309,25 +324,27 @@ private fun SectorCard(
                 contentDescription = "${sector.displayName}, $selectionDescription"
                 if (!enabled) disabled()
             }
+            .vigiliaCardSurface(
+                shape,
+                if (selected) MaterialTheme.vigiliaColors.selection else MaterialTheme.colorScheme.surfaceContainer,
+            )
             .clickable(enabled = enabled, onClick = onClick),
+        shape = shape,
         colors = CardDefaults.cardColors(
-            containerColor = if (selected) {
-                MaterialTheme.vigiliaColors.active.copy(alpha = 0.18f)
-            } else {
-                MaterialTheme.colorScheme.surfaceContainer
-            },
+            containerColor = Color.Transparent,
+            contentColor = if (selected) MaterialTheme.vigiliaColors.onSelection else MaterialTheme.colorScheme.onSurface,
         ),
         border = androidx.compose.foundation.BorderStroke(
             1.dp,
             if (selected) MaterialTheme.vigiliaColors.active else MaterialTheme.colorScheme.outlineVariant,
         ),
     ) {
-        Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(sector.displayName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Column(Modifier.padding(MiGuardiaSpacing.large), verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.extraSmall)) {
+            Text(sector.displayName, style = MaterialTheme.typography.titleMedium)
             Text(
                 "Usaremos “${sector.suggestedVocabulary.placeLabel}” y “${sector.suggestedVocabulary.shiftLabel}” como ayuda visible.",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = if (selected) MaterialTheme.vigiliaColors.onSelection else MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
@@ -344,14 +361,15 @@ private fun WorkSetupOverview(state: WorkSetupUiState, actions: WorkSetupActions
     Column(
         Modifier
             .fillMaxSize()
+            .vigiliaScreenBackground()
             .safeDrawingPadding()
             .testTag("work-setup-overview"),
     ) {
         SurfaceHeader("Mi forma de trabajar", "Cerrar", actions.requestBack)
         HorizontalDivider()
         Column(
-            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(MiGuardiaSpacing.large),
+            verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.large),
         ) {
             state.errorMessage?.let {
                 PersistentMessage(it, onDismiss = actions.clearMessage)
@@ -384,10 +402,12 @@ private fun WorkSetupOverview(state: WorkSetupUiState, actions: WorkSetupActions
                     OutlinedButton(
                         onClick = actions.openAdditionalTemplate,
                         modifier = Modifier.fillMaxWidth(),
+                        shape = MiGuardiaButtonShape,
                     ) { Text("Agregar otro horario") }
                     OutlinedButton(
                         onClick = actions.startAnotherPlace,
                         modifier = Modifier.fillMaxWidth(),
+                        shape = MiGuardiaButtonShape,
                     ) { Text("Agregar otro lugar") }
                 }
                 AdvancedOptionsSection(
@@ -402,18 +422,22 @@ private fun WorkSetupOverview(state: WorkSetupUiState, actions: WorkSetupActions
                         OutlinedButton(
                             onClick = actions.openRecurringPlans,
                             modifier = Modifier.fillMaxWidth().testTag("work-setup-recurring-plans"),
+                            shape = MiGuardiaButtonShape,
                         ) { Text("Repeticiones guardadas") }
                         OutlinedButton(
                             onClick = actions.openExtraClasses,
                             modifier = Modifier.fillMaxWidth().testTag("work-setup-extra-classes"),
+                            shape = MiGuardiaButtonShape,
                         ) { Text("Tipos de horas extra") }
                         OutlinedButton(
                             onClick = actions.openHoursProgress,
                             modifier = Modifier.fillMaxWidth().testTag("work-setup-hours-progress"),
+                            shape = MiGuardiaButtonShape,
                         ) { Text("Tus horas y tu meta") }
                         OutlinedButton(
                             onClick = actions.openAvailability,
                             modifier = Modifier.fillMaxWidth().testTag("work-setup-availability"),
+                            shape = MiGuardiaButtonShape,
                         ) { Text("Disponibilidad") }
                     }
                     state.activePlaceOptions.forEach { option ->
@@ -452,7 +476,7 @@ private fun WorkSetupOverview(state: WorkSetupUiState, actions: WorkSetupActions
 @Composable
 private fun FirstWorkSetScreen(state: WorkSetupUiState, actions: WorkSetupActions) {
     val placeLabel = state.selectedSector?.suggestedVocabulary?.placeLabel ?: "Lugar de trabajo"
-    Column(Modifier.fillMaxSize().safeDrawingPadding()) {
+    Column(Modifier.fillMaxSize().vigiliaScreenBackground().safeDrawingPadding()) {
         SurfaceHeader(
             title = if (state.step == WorkSetupStep.PLACE_AND_RULES) placeLabel else "Horario y color",
             navigationLabel = if (state.step == WorkSetupStep.PLACE_AND_RULES) "Cerrar" else "Atrás",
@@ -463,15 +487,11 @@ private fun FirstWorkSetScreen(state: WorkSetupUiState, actions: WorkSetupAction
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp)
+                .padding(MiGuardiaSpacing.large)
                 .testTag("first-work-set-form"),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.large),
         ) {
-            Text(
-                if (state.step == WorkSetupStep.PLACE_AND_RULES) "Paso 1 de 2" else "Paso 2 de 2",
-                color = MaterialTheme.vigiliaColors.active,
-                fontWeight = FontWeight.Bold,
-            )
+            Eyebrow(if (state.step == WorkSetupStep.PLACE_AND_RULES) "Paso 1 de 2" else "Paso 2 de 2")
             state.errorMessage?.let {
                 PersistentMessage(it, onDismiss = actions.clearMessage)
             }
@@ -656,12 +676,12 @@ private fun PlaceAndRulesForm(
 
 @Composable
 private fun AdditionalPlaceScreen(state: WorkSetupUiState, actions: WorkSetupActions) {
-    Column(Modifier.fillMaxSize().safeDrawingPadding()) {
+    Column(Modifier.fillMaxSize().vigiliaScreenBackground().safeDrawingPadding()) {
         SurfaceHeader("Agregar otro lugar", "Cerrar", actions.requestBack)
         HorizontalDivider()
         Column(
-            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(MiGuardiaSpacing.large),
+            verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.large),
         ) {
             ContextualCreationNotice(state, actions)
             state.errorMessage?.let { PersistentMessage(it, onDismiss = actions.clearMessage) }
@@ -690,7 +710,7 @@ private fun TypeAndTemplateForm(
     var choosingColor by remember { mutableStateOf(false) }
     SectionCard(
         title = "Tu primer horario",
-        supportingText = "Escribí cuatro números en cada hora. Los dos puntos aparecen solos.",
+        supportingText = "Escribí cuatro números en cada hora o tocá el reloj. Los dos puntos aparecen solos.",
     ) {
         TimeFields(
             start = draft.startTime,
@@ -773,12 +793,13 @@ private fun TemplateColorAction(colorArgb: Int?, enabled: Boolean, onClick: () -
                 onClick = onClick,
                 enabled = enabled,
                 modifier = buttonModifier.testTag("work-template-color"),
+                shape = MiGuardiaButtonShape,
             ) {
                 Text(if (colorArgb == null) "Elegir color" else "Cambiar color", textAlign = TextAlign.Center)
             }
         }
         if (maxWidth < 200.dp) {
-            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.medium)) {
                 swatch()
                 button(Modifier.fillMaxWidth())
             }
@@ -786,7 +807,7 @@ private fun TemplateColorAction(colorArgb: Int?, enabled: Boolean, onClick: () -
             Row(
                 Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.medium),
             ) {
                 swatch()
                 button(Modifier.weight(1f))
@@ -798,12 +819,12 @@ private fun TemplateColorAction(colorArgb: Int?, enabled: Boolean, onClick: () -
 @Composable
 private fun AdditionalTemplateScreen(state: WorkSetupUiState, actions: WorkSetupActions) {
     var choosingColor by remember { mutableStateOf(false) }
-    Column(Modifier.fillMaxSize().safeDrawingPadding()) {
+    Column(Modifier.fillMaxSize().vigiliaScreenBackground().safeDrawingPadding()) {
         SurfaceHeader("Agregar otro horario", "Cerrar", actions.requestBack)
         HorizontalDivider()
         Column(
-            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(MiGuardiaSpacing.large),
+            verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.large),
         ) {
             ContextualCreationNotice(state, actions)
             state.errorMessage?.let { PersistentMessage(it, onDismiss = actions.clearMessage) }
@@ -881,30 +902,34 @@ private fun WorkSetupCompletion(state: WorkSetupUiState, actions: WorkSetupActio
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .vigiliaScreenBackground()
             .safeDrawingPadding()
             .verticalScroll(rememberScrollState())
-            .padding(24.dp)
+            .padding(MiGuardiaSpacing.large)
             .testTag("work-setup-completion"),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text("Listo", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.height(8.dp))
-        Text(
-            state.infoMessage ?: "Tu configuración laboral quedó guardada.",
-            textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        ScreenHeading(
+            title = "Listo",
+            supportingText = state.infoMessage ?: "Tu configuración laboral quedó guardada.",
         )
-        Spacer(Modifier.height(24.dp))
-        Button(onClick = actions.returnToCalendar, modifier = Modifier.fillMaxWidth()) {
-            Text("Volver al Calendario")
-        }
-        Spacer(Modifier.height(8.dp))
-        OutlinedButton(onClick = actions.openAdditionalTemplate, modifier = Modifier.fillMaxWidth()) {
+        Spacer(Modifier.height(MiGuardiaSpacing.extraLarge))
+        PrimaryAction(label = "Volver al Calendario", onClick = actions.returnToCalendar)
+        Spacer(Modifier.height(MiGuardiaSpacing.small))
+        OutlinedButton(
+            onClick = actions.openAdditionalTemplate,
+            modifier = Modifier.fillMaxWidth(),
+            shape = MiGuardiaButtonShape,
+        ) {
             Text("Agregar otro horario")
         }
-        Spacer(Modifier.height(8.dp))
-        OutlinedButton(onClick = actions.startAnotherPlace, modifier = Modifier.fillMaxWidth()) {
+        Spacer(Modifier.height(MiGuardiaSpacing.small))
+        OutlinedButton(
+            onClick = actions.startAnotherPlace,
+            modifier = Modifier.fillMaxWidth(),
+            shape = MiGuardiaButtonShape,
+        ) {
             Text("Agregar otro lugar")
         }
     }
@@ -920,14 +945,17 @@ private fun TimeFields(
     onEndChange: (String) -> Unit,
     enabled: Boolean = true,
 ) {
+    // Side by side only when both fields, now with the clock button, fit at the current
+    // Android text size; otherwise stacked (ADR 0043).
+    val fontScale = LocalDensity.current.fontScale
     BoxWithConstraints(Modifier.fillMaxWidth()) {
-        if (maxWidth < 360.dp) {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        if (maxWidth < 360.dp * maxOf(1f, fontScale)) {
+            Column(verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.medium)) {
                 WorkTimeField(start, startLabel, onStartChange, enabled, "work-time-start", Modifier.fillMaxWidth())
                 WorkTimeField(end, endLabel, onEndChange, enabled, "work-time-end", Modifier.fillMaxWidth())
             }
         } else {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.medium)) {
                 WorkTimeField(start, startLabel, onStartChange, enabled, "work-time-start", Modifier.weight(1f))
                 WorkTimeField(end, endLabel, onEndChange, enabled, "work-time-end", Modifier.weight(1f))
             }
@@ -950,6 +978,9 @@ private fun WorkTimeField(
         modifier = modifier.testTag(testTag),
         label = label,
         enabled = enabled,
+        // The clock only writes the same "HH:mm" text into the draft; saving stays explicit.
+        withPicker = true,
+        pickerTestTag = "$testTag$PICKER_BUTTON_SUFFIX",
     )
 }
 
@@ -968,9 +999,9 @@ private fun CheckRow(
                 if (!enabled) disabled()
             }
             .clickable(enabled = enabled) { onCheckedChange(!checked) }
-            .padding(vertical = 4.dp),
+            .padding(vertical = MiGuardiaSpacing.extraSmall),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small),
     ) {
         Checkbox(checked = checked, onCheckedChange = onCheckedChange, enabled = enabled)
         Text(label, modifier = Modifier.weight(1f))
@@ -987,25 +1018,19 @@ private fun SelectionRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .heightIn(min = 48.dp)
             .semantics {
                 this.selected = selected
                 role = Role.RadioButton
                 if (!enabled) disabled()
             }
             .clickable(enabled = enabled, onClick = onClick)
-            .padding(vertical = 8.dp),
+            .padding(vertical = MiGuardiaSpacing.small),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small),
     ) {
-        Box(
-            modifier = Modifier
-                .size(18.dp)
-                .background(
-                    if (selected) MaterialTheme.vigiliaColors.active else MaterialTheme.colorScheme.outlineVariant,
-                    CircleShape,
-                ),
-        )
-        Text(title, modifier = Modifier.weight(1f), fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal)
+        RadioButton(selected = selected, onClick = null, enabled = enabled)
+        Text(title, modifier = Modifier.weight(1f), fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal)
     }
 }
 
@@ -1032,6 +1057,7 @@ private fun ContextualCreationNotice(state: WorkSetupUiState, actions: WorkSetup
             onClick = actions.retryCreationRecovery,
             enabled = !state.isCheckingCreation,
             modifier = Modifier.fillMaxWidth().testTag("work-creation-recover"),
+            shape = MiGuardiaButtonShape,
         ) { Text(if (state.isCheckingCreation) "Comprobando guardado…" else "Comprobar guardado") }
     }
 }

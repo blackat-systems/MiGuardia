@@ -27,4 +27,7 @@ internal interface ShiftNoteDao {
 
     @Query("DELETE FROM shift_notes WHERE id = :id")
     suspend fun delete(id: String): Int
+
+    @Query("SELECT * FROM shift_notes WHERE shiftId = :shiftId ORDER BY createdAtEpochMillis, id")
+    suspend fun getForShift(shiftId: String): List<ShiftNoteEntity>
 }

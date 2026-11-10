@@ -11,6 +11,12 @@
 > dependencia. Las situaciones especiales ampliadas y la consolidación
 > adicional de horas quedan diferidas y no bloquean ese avance.
 
+> Actualización 3.0 del 2026-09-14: Joaquín confirmó que la acción contextual
+> `Marcar este día como retén` crea una ventana cuya fotografía histórica es
+> `Retén`, sin cambiar el nombre versionado de la disponibilidad laboral. La
+> configuración continúa siendo el valor predeterminado para las cargas
+> ordinarias; la etiqueta explícita pertenece sólo a esa ventana contextual.
+
 ## Contexto
 
 MiGuardia V2 ya registra jornadas planificadas, horario real, extras de una
@@ -39,8 +45,9 @@ La primera dependencia adopta estas reglas:
 
 - existe un solo concepto interno con tres nombres visibles exactos: Guardia
   pasiva, Disponible para llamado y Retén;
-- el nombre es parte de la configuración laboral versionada y puede estar
-  ausente;
+- el nombre predeterminado es parte de la configuración laboral versionada y
+  puede estar ausente; una entrada contextual explícita de Retén puede fijar la
+  fotografía de esa ventana sin mutar la configuración presente ni futura;
 - una ventana pasiva tiene identidad, intervalo exacto, fecha dueña, zona,
   revisión laboral y fotografía histórica propias;
 - no se guarda como jornada, horario real, extra ni situación especial;

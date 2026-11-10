@@ -79,7 +79,7 @@ class UpdatesActivityTest {
             val tables = database.rawQuery("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT IN ('android_metadata','room_master_table') ORDER BY name", null).use { cursor ->
                 buildList { while (cursor.moveToNext()) add(cursor.getString(0)) }
             }
-            assertEquals(27, tables.size)
+            assertEquals(29, tables.size)
             val rows = tables.flatMap { table ->
                 database.rawQuery("SELECT * FROM \"${table.replace("\"", "\"\"")}\"", null).use { cursor ->
                     buildList {

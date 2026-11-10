@@ -51,7 +51,7 @@ class BackupDocumentPublicationInstrumentedTest {
             assertArrayEquals(artifact.file.readBytes(), destination.readBytes())
             assertTrue(!BackupContainer.readHeader(destination).encrypted)
             BackupContainer.extract(destination, File(application.cacheDir, "passwordless-read"), null).use {
-                assertEquals(27, it.payload.database.tables.size)
+                assertEquals(29, it.payload.database.tables.size)
             }
         } finally {
             artifact.close()

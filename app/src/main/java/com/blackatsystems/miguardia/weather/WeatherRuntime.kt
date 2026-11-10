@@ -11,6 +11,7 @@ import com.blackatsystems.miguardia.core.domain.weather.WeatherLocation
 import com.blackatsystems.miguardia.core.domain.weather.WeatherRefreshResult
 import com.blackatsystems.miguardia.core.domain.weather.WeatherUnitSystem
 import com.blackatsystems.miguardia.core.domain.weather.roundedTemperature
+import com.blackatsystems.miguardia.core.domain.weather.roundedTemperatureRange
 import com.blackatsystems.miguardia.core.domain.weather.spanishLabel
 import com.blackatsystems.miguardia.core.domain.weather.summarizeShiftWeather
 import com.blackatsystems.miguardia.core.domain.weather.weatherFreshness
@@ -24,14 +25,21 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 
-class WeatherRuntime(
-    context: Context,
+class WeatherRuntime internal constructor(
+    private val context: Context,
     val preferences: WeatherPreferencesStore,
     private val objectives: ObjectiveRepository,
-    clock: Clock = Clock.systemUTC(),
+    clock: Clock,
+    private val client: WeatherForecastClient,
 ) {
+    constructor(
+        context: Context,
+        preferences: WeatherPreferencesStore,
+        objectives: ObjectiveRepository,
+        clock: Clock = Clock.systemUTC(),
+    ) : this(context, preferences, objectives, clock, OpenMeteoForecastClient(clock))
+
     private val filesDir = context.applicationContext.filesDir
-    private val client = OpenMeteoForecastClient(clock)
     private val repositories = ConcurrentHashMap<String, DefaultWeatherRepository>()
     private val cacheLifecycleMutex = Mutex()
     private val mutableCacheInvalidations = MutableSharedFlow<UUID?>(extraBufferCapacity = 1)
@@ -41,13 +49,18 @@ class WeatherRuntime(
     suspend fun refreshIfEnabled(shift: Shift, force: Boolean = false): WeatherRefreshResult? {
         if (!preferences.current().enabled) return null
         return cacheLifecycleMutex.withLock {
-            repositoryFor(shift)?.refreshIfStale(force)
+            val repository = repositoryFor(shift) ?: return@withLock null
+            com.blackatsystems.miguardia.QaInstrumentationScope.requireExternalAction(context, "weather.network")
+            repository.refreshIfStale(force)
         }
     }
 
-    suspend fun latestForShift(shift: Shift): WeatherForecast? = cacheLifecycleMutex.withLock {
-        repositoryFor(shift)?.latest()
-    }
+    /**
+     * Lee el último pronóstico guardado sin esperar a una descarga en curso: quien dibuja (Widget,
+     * avisos, pantalla) muestra lo que hay y vuelve a leer cuando la descarga termina. El archivo se
+     * reemplaza de forma atómica y los borrados avisan por [cacheInvalidations].
+     */
+    suspend fun latestForShift(shift: Shift): WeatherForecast? = repositoryFor(shift)?.latest()
 
     suspend fun hasLocationFor(shift: Shift): Boolean = objectiveLocationFor(shift) != null
 
@@ -144,7 +157,7 @@ internal fun formatWeatherForNotification(
     val maximum = summary.maximumTemperatureCelsius
     if (minimum != null && maximum != null) {
         val suffix = if (unit == WeatherUnitSystem.CELSIUS) "°C" else "°F"
-        pieces += "${roundedTemperature(minimum, unit)}–${roundedTemperature(maximum, unit)} $suffix"
+        pieces += "${roundedTemperatureRange(minimum, maximum, unit)} $suffix"
     }
     summary.maximumPrecipitationProbabilityPercent?.let { pieces += "lluvia $it %" }
     return pieces.takeIf { it.isNotEmpty() }?.joinToString(prefix = "Clima: ", separator = " · ")

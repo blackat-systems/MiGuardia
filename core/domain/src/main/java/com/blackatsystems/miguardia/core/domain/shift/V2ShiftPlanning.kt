@@ -148,6 +148,21 @@ fun isExactV2PositionOnlyEdit(
     )
 }
 
+/**
+ * Stamps a reviewed edit with the moment it is actually saved. A review may stay open for a while; the
+ * stored modification time must still be the save, never the review preparation. Only `updatedAt` changes.
+ */
+fun stampV2ShiftEditAtSave(
+    original: V2ShiftWrite,
+    reviewed: V2ShiftWrite,
+    savedAt: Instant,
+): V2ShiftWrite {
+    require(reviewed.shift.id == original.shift.id) { "La edicion debe conservar la misma jornada" }
+    return reviewed.copy(
+        shift = reviewed.shift.copy(updatedAt = nextPersistedV2ShiftUpdate(original.shift.updatedAt, savedAt)),
+    )
+}
+
 private fun nextPersistedV2ShiftUpdate(
     original: Instant,
     candidate: Instant,
@@ -173,9 +188,11 @@ fun planV2ShiftBatch(
         throw InvalidLocalDataException("Las jornadas preparadas no coinciden con las fechas seleccionadas.")
     }
     val relevantExisting = existingShifts.filterNot { it.id == editingShiftId }
-    val occupiedDates = relevantExisting
-        .filter { it.localStartDate in selectedDates }
-        .mapTo(linkedSetOf()) { it.localStartDate }
+    val occupiedDates = candidates.filter { candidate ->
+        relevantExisting.any { existing ->
+            existing.startAt < candidate.shift.endAt && candidate.shift.startAt < existing.endAt
+        }
+    }.mapTo(linkedSetOf()) { it.shift.localStartDate }
     if (policy == OccupiedDatePolicy.CANCEL) {
         return V2ShiftBatchPlan(
             mutation = V2ShiftBatchMutation(),
@@ -189,7 +206,9 @@ fun planV2ShiftBatch(
     val deletions = buildSet {
         if (policy == OccupiedDatePolicy.REPLACE) {
             relevantExisting
-                .filter { it.localStartDate in occupiedDates }
+                .filter { existing -> plannedWrites.any { candidate ->
+                    existing.startAt < candidate.shift.endAt && candidate.shift.startAt < existing.endAt
+                } }
                 .mapTo(this) { it.id }
         }
     }

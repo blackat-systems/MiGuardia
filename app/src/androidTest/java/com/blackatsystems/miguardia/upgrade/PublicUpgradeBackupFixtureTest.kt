@@ -23,12 +23,9 @@ import com.blackatsystems.miguardia.backup.RestoreChoice
 import com.blackatsystems.miguardia.backup.StagedBackupSource
 import com.blackatsystems.miguardia.core.database.LocalDataStore
 import com.blackatsystems.miguardia.core.domain.backup.BackupContainer
-import com.blackatsystems.miguardia.core.domain.backup.BackupDatabaseSnapshot
-import com.blackatsystems.miguardia.core.domain.backup.BackupRecord
-import com.blackatsystems.miguardia.core.domain.backup.BackupTable
-import com.blackatsystems.miguardia.core.domain.backup.BackupValue
 import com.blackatsystems.miguardia.core.domain.backup.MiGuardiaBackupSchemaV6
-import com.blackatsystems.miguardia.core.domain.backup.backupKey
+import com.blackatsystems.miguardia.core.domain.backup.MiGuardiaBackupSchemaV8
+import com.blackatsystems.miguardia.core.domain.backup.upgradeSupportedBackupSchema
 import com.blackatsystems.miguardia.notifications.NotificationPreferencesStore
 import com.blackatsystems.miguardia.profile.GuardProfileStore
 import com.blackatsystems.miguardia.ui.summary.SummaryPreferencesStore
@@ -37,7 +34,6 @@ import java.io.File
 import java.security.MessageDigest
 import java.time.Clock
 import java.time.LocalDate
-import java.time.YearMonth
 import java.time.ZoneId
 import java.util.UUID
 import kotlinx.coroutines.CoroutineScope
@@ -57,7 +53,10 @@ import org.junit.runner.RunWith
 /**
  * Opt-in DATA PREPARATION ONLY for MAIN's disposable emulator upgrade rehearsal.
  *
- * Reuses the logical fullSnapshot fixture from BackupDatabaseGatewayInstrumentedTest.
+ * Stage 9 uses the same pure versioned constructor as the JVM regression.
+ * Produces a synthetic legacy V6 container and a distinct current V8 roundtrip.
+ * Historical method name and all opt-in API33/AVD/consent guards are preserved.
+ * This does not execute a Room migration or an installed application upgrade.
  * Writes only independent Room databases, stores and synthetic PNG under a new private
  * fixture root. The ordinary backup coordinator exports and restores it in isolation.
  * MAIN then imports the exported backup through the signed origin application's UI,
@@ -112,10 +111,16 @@ class PublicUpgradeBackupFixtureTest {
         var completedEvidence: JSONObject? = null
         try {
             val photo = createSyntheticPhoto(sourceContext)
-            val expected = fullSnapshot(day, photo.length())
-            MiGuardiaBackupSchemaV6.requireValid(expected)
-            assertEquals(27, expected.tables.size)
-            assertTrue(expected.tables.all { it.records.isNotEmpty() })
+            val origin = UpgradeFixtureSnapshots.sourceV6(day, photo.length())
+            val expected = UpgradeFixtureSnapshots.targetV8(day, photo.length())
+            MiGuardiaBackupSchemaV6.requireValid(origin)
+            MiGuardiaBackupSchemaV8.requireValid(expected)
+            assertEquals(27, origin.tables.size)
+            assertEquals(29, expected.tables.size)
+            assertTrue(origin.tables.all { it.records.isNotEmpty() })
+            assertTrue(expected.table("shift_note_attachments").records.isEmpty())
+            assertTrue(expected.table("shift_situations").records.isEmpty())
+            assertEquals(expected, upgradeSupportedBackupSchema(origin))
             val sourceStore = LocalDataStore.create(sourceContext, "fixture.db")
             source = sourceStore
             sourceStore.backups.validateCandidate(expected)
@@ -134,14 +139,37 @@ class PublicUpgradeBackupFixtureTest {
                     else -> item
                 }
             }
-            check(preferences.size == 17)
-            check(preferences.none { it.key.contains("beta") || it.key.contains("lock") || it.key.contains("onboarding") })
+            // The public origin writes seventeen preferences. The three permanent notification
+            // choices exist only in the current app, so the origin copy must not carry them and
+            // restoring it has to leave them at the factory value this source still has.
+            val addedAfterOrigin = setOf(
+                "notifications.always_show_next",
+                "notifications.countdown_while_active",
+                "notifications.show_on_lock_screen",
+            )
+            val originPreferences = preferences.filterNot { it.key in addedAfterOrigin }
+            check(preferences.size == 20 && originPreferences.size == 17)
+            check(originPreferences.none { it.key.contains("beta") || it.key.contains("lock") || it.key.contains("onboarding") })
             sourcePreferences.replace(preferences, expected)
             check(preferences == sourcePreferences.capture(expected)) { "Portable preferences did not round-trip" }
             BackupPhotoFiles(sourceContext).verify(expected, mapOf(PHOTO_STORAGE_KEY to sha256(photo)))
             val fixedClock = Clock.fixed(day.atTime(12, 0).atZone(ZONE).toInstant(), ZONE)
             val coordinator = LocalBackupCoordinator(sourceContext, sourceStore, sourcePreferences, clock = fixedClock, zoneId = ZONE)
-            val output = File(outputRoot, "MiGuardia_ensayo_upgrade.miguardia-backup")
+            val originOutput = File(outputRoot, "MiGuardia_origen_RoomV6_sintetico.miguardia-backup")
+            LegacyUpgradeFixtureContainer.write(
+                originOutput, LegacyUpgradeFixtureContainer.entries(origin, originPreferences, photo, fixedClock.millis()),
+                fixedClock.millis(),
+            )
+            val originHash = sha256(originOutput)
+            BackupContainer.extract(originOutput, File(root, "verify-origin-v6"), null).use { extracted ->
+                assertEquals(6, extracted.manifest.roomVersion)
+                assertEquals(origin.tables.associate { it.name to it.records.size }, extracted.manifest.tableCounts)
+                assertEquals(expected, extracted.payload.database)
+                assertEquals(originPreferences, extracted.payload.preferences)
+                assertEquals(sha256(photo), sha256(extracted.photoFile(PHOTO_STORAGE_KEY)))
+            }
+            check(originHash == sha256(originOutput))
+            val output = File(outputRoot, "MiGuardia_destino_RoomV8_roundtrip.miguardia-backup")
             coordinator.prepareBackup(BackupCreateOptions(includePhotos = true, password = null)).use { prepared ->
                 check(!output.exists())
                 prepared.file.inputStream().use { input ->
@@ -152,6 +180,7 @@ class PublicUpgradeBackupFixtureTest {
             }
 
             BackupContainer.extract(output, File(root, "verify-container"), null).use { extracted ->
+                assertEquals(8, extracted.manifest.roomVersion)
                 check(expected == extracted.payload.database) { "Extracted logical database differs" }
                 check(preferences == extracted.payload.preferences) { "Extracted portable preferences differ" }
                 check(extracted.payload.photos.size == 1)
@@ -164,10 +193,15 @@ class PublicUpgradeBackupFixtureTest {
             val targetPreferences = preferencesGateway(targetContext, scope)
             val restore = LocalBackupCoordinator(targetContext, targetStore, targetPreferences, clock = fixedClock, zoneId = ZONE)
             val importFile = File(root, "roundtrip-input.miguardia-backup")
-            output.copyTo(importFile)
+            originOutput.copyTo(importFile)
             val staged = StagedBackupSource(importFile, BackupContainer.readHeader(importFile))
+            val beforePreview = targetStore.backups.capture()
+            val preferencesBeforePreview = targetPreferences.capture(beforePreview)
             restore.openSource(staged, null).use { session ->
                 check(session.preview.destinationEmpty)
+                assertEquals(beforePreview, targetStore.backups.capture())
+                assertEquals(preferencesBeforePreview, targetPreferences.capture(beforePreview))
+                check(!File(targetContext.filesDir, "schedule_photos/$PHOTO_STORAGE_KEY").exists())
                 restore.apply(session, RestoreChoice.REPLACE_ALL, emptyList(), LocalBackupCoordinator.REPLACE_CONFIRMATION)
             }
             check(expected == targetStore.backups.capture()) { "Restored logical database differs" }
@@ -180,16 +214,26 @@ class PublicUpgradeBackupFixtureTest {
                 check(bitmap.width == PHOTO_WIDTH && bitmap.height == PHOTO_HEIGHT)
                 bitmap.recycle()
             }
+            check(originHash == sha256(originOutput)) { "The explicit V6 source changed during restore" }
             val counts = JSONObject()
             expected.tables.forEach { table -> counts.put(table.name, table.records.size) }
+            val originCounts = JSONObject()
+            origin.tables.forEach { table -> originCounts.put(table.name, table.records.size) }
             completedEvidence = JSONObject()
-                .put("format", 1).put("fictitious", true)
-                .put("verdict", "ISOLATED_BACKUP_EXPORT_AND_RESTORE_VALIDATED")
+                .put("format", 2).put("fictitious", true)
+                .put("verdict", "SYNTHETIC_V6_BACKUP_ADAPTED_AND_RESTORED_AS_V8_IN_ISOLATION")
+                .put("room_migration_executed", false)
+                .put("origin_container_encoding", "LEGACY_UNSEALED_V1_TEST_ONLY")
+                .put("origin_room_version", origin.roomVersion).put("origin_room_identity", origin.roomIdentityHash)
+                .put("destination_room_version", expected.roomVersion).put("destination_room_identity", expected.roomIdentityHash)
+                .put("origin_tables", origin.tables.size).put("destination_tables", expected.tables.size)
+                .put("origin_table_counts", originCounts).put("preview_without_logical_mutation", true)
+                .put("origin_backup_sha256", originHash).put("origin_backup_bytes", originOutput.length())
                 .put("installed_upgrade_executed", false)
                 .put("adb_serial_operator_attestation", "emulator-5582")
                 .put("avd_runtime_verified", AVD_NAME).put("api", Build.VERSION.SDK_INT)
-                .put("date", day.toString()).put("room_version", 6)
-                .put("tables", counts).put("portable_preferences", preferences.size)
+                .put("date", day.toString()).put("room_version", expected.roomVersion)
+                .put("tables", counts).put("portable_preferences", originPreferences.size)
                 .put("backup_sha256", sha256(output)).put("backup_bytes", output.length())
                 .put("photo_sha256", sha256(photo)).put("photo_width", PHOTO_WIDTH).put("photo_height", PHOTO_HEIGHT)
                 .put("notifications_enabled", false).put("weather_enabled", false)
@@ -243,7 +287,7 @@ class PublicUpgradeBackupFixtureTest {
             canvas.drawText("Conservar esta imagen tras actualizar", 35f, 140f, paint)
             paint.textSize = 28f
             canvas.drawText("Datos de prueba. No contiene personas.", 35f, 230f, paint)
-            canvas.drawText("Origen codigo 2 -> destino codigo 3", 35f, 290f, paint)
+            canvas.drawText("Conservación lógica Room V6 a V8", 35f, 290f, paint)
             paint.color = Color.rgb(30, 120, 90)
             canvas.drawRect(35f, 350f, 765f, 430f, paint)
             photo.outputStream().use { check(bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)) }
@@ -339,210 +383,14 @@ class PublicUpgradeBackupFixtureTest {
         }
     }
 
-    private fun fullSnapshot(day: LocalDate, photoBytes: Long): BackupDatabaseSnapshot {
-        val pastDay = day.minusDays(3)
-        val automaticDay = day.plusDays(1)
-        val independentDay = day.minusDays(2)
-        val firstRevision = day.minusDays(90)
-        val currentRevision = day.minusDays(30)
-        val month = YearMonth.from(day)
-        val createdAt = day.minusDays(100).atStartOfDay(ZONE).toInstant().toEpochMilli()
-        fun epoch(date: LocalDate, hour: Int) = date.atTime(hour, 0).atZone(ZONE).toInstant().toEpochMilli()
-        val plannedStart = epoch(pastDay, 8)
-        val plannedEnd = epoch(pastDay, 16)
-        val independentStart = epoch(independentDay, 18)
-        val independentEnd = epoch(independentDay, 20)
-        val availabilityStart = epoch(day, 18)
-        val availabilityEnd = epoch(day, 20)
-        val rows = mapOf(
-            "objectives" to row(
-                text(OBJECTIVE_ID), text("Objetivo ficticio"), text("FIC"), text("Dirección ficticia"),
-                nullValue(), integer(1), integer(createdAt), integer(createdAt),
-                nullValue(), nullValue(),
-            ),
-            "shifts" to row(
-                text(SHIFT_ID), integer(plannedStart), integer(plannedEnd), text(ZONE_ID), text(pastDay.toString()),
-                text("Objetivo ficticio"), text("FIC"), text("Dirección ficticia"), text("08:00"),
-                text("16:00"), integer(COLOR), text("Puesto ficticio"), text("PLANNED"),
-                text(OBJECTIVE_ID), integer(createdAt), integer(createdAt),
-            ),
-            "explicit_day_statuses" to row(text(day.plusDays(2).toString()), text("DAY_OFF")),
-            "medical_leaves" to row(
-                text(MEDICAL_ID), text(day.plusDays(3).toString()), text(day.plusDays(3).toString()), text("Nota médica ficticia"),
-                integer(createdAt), integer(createdAt),
-            ),
-            "holidays" to row(
-                text(HOLIDAY_ID), text(day.plusDays(5).toString()), text("Feriado ficticio"),
-                integer(createdAt), integer(createdAt),
-            ),
-            "vacations" to row(
-                text(VACATION_ID), text(day.plusDays(4).toString()), text(day.plusDays(4).toString()),
-                integer(createdAt), integer(createdAt),
-            ),
-            "schedule_photos" to row(
-                text(PHOTO_ID), text(month.toString()), text(OBJECTIVE_ID), text("Objetivo ficticio"), text("FIC"),
-                text(PHOTO_STORAGE_KEY), text("image/png"), integer(photoBytes), integer(PHOTO_WIDTH), integer(PHOTO_HEIGHT),
-                integer(createdAt), integer(createdAt),
-            ),
-            "work_configuration_roots" to row(text(TIMELINE_ID), integer(1)),
-            "per_period_hours_definitions" to row(
-                text(DEFINITION_ID), text(TIMELINE_ID), text("MONTHLY"), nullValue(), nullValue(), nullValue(),
-            ),
-            "work_configuration_revisions" to row(
-                text(CONFIGURATION_ID), text(TIMELINE_ID), text(currentRevision.toString()), text("PRIVATE_SECURITY"),
-                text("PASSIVE_GUARD"), text("PER_PERIOD"), nullValue(), nullValue(), nullValue(), nullValue(),
-                nullValue(), text(DEFINITION_ID), text(firstRevision.toString()),
-            ),
-            "per_period_hours_values" to row(
-                text(PERIOD_VALUE_ID), text(DEFINITION_ID), text(month.atDay(1).toString()), text(month.plusMonths(1).atDay(1).toString()),
-                integer(12_000),
-            ),
-            "work_places" to row(
-                text(PLACE_ID), text(TIMELINE_ID), text("PRIVATE_SECURITY"), text(OBJECTIVE_ID),
-                integer(1), integer(createdAt), integer(createdAt),
-            ),
-            "work_types" to row(
-                text(TYPE_ID), text(TIMELINE_ID), text("PRIVATE_SECURITY"), text("Turno ficticio"),
-                text("TURNO FICTICIO"), text("ACTIVE_WORK"), integer(1), integer(createdAt), integer(createdAt),
-            ),
-            "work_templates" to row(
-                text(TEMPLATE_ID), text(TIMELINE_ID), text("PRIVATE_SECURITY"), text(PLACE_ID), text(OBJECTIVE_ID),
-                text(TYPE_ID), text("08:00"), text("16:00"), integer(COLOR), integer(1),
-                integer(createdAt), integer(createdAt),
-            ),
-            "workplace_rule_revisions" to row(
-                text(RULE_ID), text(TIMELINE_ID), text("PRIVATE_SECURITY"), text(PLACE_ID), text(OBJECTIVE_ID),
-                text(firstRevision.toString()), text("DISABLED"), nullValue(), nullValue(), nullValue(), nullValue(),
-                text("NONE"), nullValue(), nullValue(), integer(0), integer(0), integer(createdAt),
-            ),
-            "recurring_plans" to row(
-                text(PLAN_ID), text(TIMELINE_ID), text("PRIVATE_SECURITY"), integer(createdAt),
-            ),
-            "extra_work_classes" to row(
-                text(EXTRA_CLASS_ID), text(TIMELINE_ID), text("PRIVATE_SECURITY"), text("Extensión ficticia"),
-                text("EXTENSIÓN FICTICIA"), integer(1), integer(1), integer(1),
-                integer(createdAt), integer(createdAt),
-            ),
-            "shift_work_snapshots" to row(
-                text(SHIFT_ID), text(TIMELINE_ID), text("PRIVATE_SECURITY"), text(CONFIGURATION_ID),
-                text(PLACE_ID), text(OBJECTIVE_ID), text(TEMPLATE_ID), text(TYPE_ID),
-                text("Turno ficticio"), text("ACTIVE_WORK"),
-            ),
-            "shift_notes" to row(
-                text(NOTE_ID), text(SHIFT_ID), text("Nota ficticia"), integer(createdAt), integer(createdAt),
-            ),
-            "shift_notification_configs" to row(text(SHIFT_ID)),
-            "shift_notification_reminders" to row(text(SHIFT_ID), integer(60)),
-            "recurring_plan_revisions" to row(
-                text(PLAN_REVISION_ID), text(PLAN_ID), integer(1), text(automaticDay.toString()), text("ACTIVE"),
-                text(automaticDay.toString()), text("EVERY_N_DAYS"), nullValue(), integer(1), nullValue(), nullValue(),
-                text(TEMPLATE_ID), text(PLACE_ID), text(OBJECTIVE_ID), text(TYPE_ID), text("Objetivo ficticio"),
-                text("FIC"), text("Dirección ficticia"), text("Turno ficticio"), text("ACTIVE_WORK"),
-                text("08:00"), text("16:00"), integer(COLOR), nullValue(), text(ZONE_ID), integer(createdAt),
-            ),
-            "recurring_occurrences" to row(
-                text(PLAN_ID), text(automaticDay.toString()), text(PLAN_REVISION_ID), text(AUTOMATIC_SHIFT_ID), text("AUTOMATIC"),
-                integer(createdAt), integer(createdAt),
-            ),
-            "shift_actual_records" to row(
-                text(SHIFT_ID), text(TIMELINE_ID), text("PRIVATE_SECURITY"), integer(plannedStart),
-                integer(plannedEnd + HOUR_MILLIS), text("Salida posterior ficticia"), nullValue(),
-                integer(createdAt), integer(createdAt),
-            ),
-            "shift_extra_intervals" to row(
-                text(EXTRA_INTERVAL_ID), text(SHIFT_ID), text(TIMELINE_ID), text("PRIVATE_SECURITY"),
-                text(EXTRA_CLASS_ID), integer(plannedEnd), integer(plannedEnd + HOUR_MILLIS),
-                text("Extensión ficticia"), integer(1), integer(1), integer(createdAt), integer(createdAt),
-            ),
-            "independent_extra_work_records" to row(
-                text(INDEPENDENT_ID), text(TIMELINE_ID), text("PRIVATE_SECURITY"), text(CONFIGURATION_ID),
-                text(PLACE_ID), text(OBJECTIVE_ID), text(TYPE_ID), text(TEMPLATE_ID), text(EXTRA_CLASS_ID),
-                text(independentDay.toString()), text(ZONE_ID), integer(independentStart), integer(independentEnd),
-                text("Objetivo ficticio"), text("FIC"), text("Dirección ficticia"), text("Turno ficticio"),
-                text("ACTIVE_WORK"), integer(COLOR), nullValue(), text("Extensión ficticia"), integer(1), integer(1),
-                integer(createdAt), integer(createdAt),
-            ),
-            "availability_windows" to row(
-                text(AVAILABILITY_ID), text(TIMELINE_ID), text("PRIVATE_SECURITY"), text(CONFIGURATION_ID),
-                text(day.toString()), text(ZONE_ID), integer(availabilityStart), integer(availabilityEnd),
-                text("Guardia pasiva"), integer(createdAt), integer(createdAt),
-            ),
-        )
-        fun replacing(record: BackupRecord, vararg replacements: Pair<Int, BackupValue>) =
-            record.copy(values = record.values.toMutableList().also { values ->
-                replacements.forEach { (index, value) -> values[index] = value }
-            })
-        val automaticShift = replacing(
-            rows.getValue("shifts"),
-            0 to text(AUTOMATIC_SHIFT_ID), 1 to integer(epoch(automaticDay, 8)),
-            2 to integer(epoch(automaticDay, 16)), 4 to text(automaticDay.toString()), 11 to nullValue(),
-        )
-        val automaticSnapshot = replacing(rows.getValue("shift_work_snapshots"), 0 to text(AUTOMATIC_SHIFT_ID))
-        val historicalConfiguration = replacing(
-            rows.getValue("work_configuration_revisions"),
-            0 to text(HISTORICAL_CONFIGURATION_ID), 2 to text(firstRevision.toString()),
-        )
-        return BackupDatabaseSnapshot(
-            timelineId = TIMELINE_ID,
-            tables = MiGuardiaBackupSchemaV6.tables.map { spec ->
-                val first = requireNotNull(rows[spec.name])
-                val records = when (spec.name) {
-                    "shifts" -> listOf(first, automaticShift)
-                    "shift_work_snapshots" -> listOf(first, automaticSnapshot)
-                    "work_configuration_revisions" -> listOf(first, historicalConfiguration)
-                    "shift_notification_configs", "shift_notification_reminders" ->
-                        listOf(first, replacing(first, 0 to text(AUTOMATIC_SHIFT_ID)))
-                    else -> listOf(first)
-                }
-                // Every multi-row fixture table differs first by a fixed-length UUID.
-                // The public stable key orders these exact records; the production
-                // schema/coordinator still validate their canonical representation.
-                val sorted = records.sortedBy { it.backupKey(spec).stableText() }
-                BackupTable(spec.name, spec.columns, spec.primaryKey, sorted)
-            },
-        )
-    }
-
-    private fun row(vararg values: BackupValue): BackupRecord = BackupRecord(values.toList())
-    private fun text(value: String): BackupValue = BackupValue.Text(value)
-    private fun integer(value: Int): BackupValue = BackupValue.Integer(value.toLong())
-    private fun integer(value: Long): BackupValue = BackupValue.Integer(value)
-    private fun nullValue(): BackupValue = BackupValue.Null
-
     private companion object {
         const val CONSENT = "CREATE_FICTITIOUS_BACKUP_FOR_UPGRADE_API33"
         const val AVD_NAME = "MiGuardia_Public_Upgrade_API33_20260910"
         const val QA_PACKAGE = "com.blackatsystems.miguardia.qa"
-        const val OUTPUT_DIRECTORY = "public-upgrade-fixture-export-v1"
+        const val OUTPUT_DIRECTORY = "public-upgrade-fixture-export-v2"
         const val PHOTO_WIDTH = 800
         const val PHOTO_HEIGHT = 480
-        const val AUTOMATIC_SHIFT_ID = "30000000-0000-4000-8000-000000000021"
-        const val HISTORICAL_CONFIGURATION_ID = "30000000-0000-4000-8000-000000000022"
-        val ZONE: ZoneId = ZoneId.of(ZONE_ID)
-        const val HOUR_MILLIS = 3_600_000L
-        const val COLOR = -13_408_615L
-        const val OBJECTIVE_ID = "11111111-1111-4111-8111-111111111111"
-        const val TIMELINE_ID = "30000000-0000-4000-8000-000000000001"
-        const val CONFIGURATION_ID = "30000000-0000-4000-8000-000000000002"
-        const val DEFINITION_ID = "30000000-0000-4000-8000-000000000003"
-        const val PERIOD_VALUE_ID = "30000000-0000-4000-8000-000000000004"
-        const val PLACE_ID = "30000000-0000-4000-8000-000000000005"
-        const val TYPE_ID = "30000000-0000-4000-8000-000000000006"
-        const val TEMPLATE_ID = "30000000-0000-4000-8000-000000000007"
-        const val RULE_ID = "30000000-0000-4000-8000-000000000008"
-        const val SHIFT_ID = "30000000-0000-4000-8000-000000000009"
-        const val NOTE_ID = "30000000-0000-4000-8000-000000000010"
-        const val MEDICAL_ID = "30000000-0000-4000-8000-000000000011"
-        const val HOLIDAY_ID = "30000000-0000-4000-8000-000000000012"
-        const val VACATION_ID = "30000000-0000-4000-8000-000000000013"
-        const val PHOTO_ID = "30000000-0000-4000-8000-000000000014"
-        const val PHOTO_STORAGE_KEY = "30000000-0000-4000-8000-000000000014.png"
-        const val PLAN_ID = "30000000-0000-4000-8000-000000000015"
-        const val PLAN_REVISION_ID = "30000000-0000-4000-8000-000000000016"
-        const val EXTRA_CLASS_ID = "30000000-0000-4000-8000-000000000017"
-        const val EXTRA_INTERVAL_ID = "30000000-0000-4000-8000-000000000018"
-        const val INDEPENDENT_ID = "30000000-0000-4000-8000-000000000019"
-        const val AVAILABILITY_ID = "30000000-0000-4000-8000-000000000020"
-        const val ZONE_ID = "America/Argentina/Buenos_Aires"
+        val ZONE: ZoneId = ZoneId.of(UpgradeFixtureSnapshots.ZONE_ID)
+        const val PHOTO_STORAGE_KEY = UpgradeFixtureSnapshots.PHOTO_STORAGE_KEY
     }
 }

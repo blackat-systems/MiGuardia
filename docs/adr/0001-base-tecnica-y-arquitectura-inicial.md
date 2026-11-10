@@ -4,7 +4,7 @@
 - Sucesores: `docs/adr/0026-base-room-exclusiva-v2-y-retiro-del-modo-v1.md`; `docs/adr/0039-distribucion-beta-mediante-apk-firmada-y-web-limitada.md`
 - Alcance vigente: Se conserva la arquitectura modular. La base V2 y la distribución tienen contratos propios; versiones efectivas en Gradle.
 - Fecha: 2026-08-13
-- Autoridad: MAIN, de acuerdo con `AGENTS.md` y `docs/PROMPT_MAESTRO_MAIN.md`
+- Autoridad: MAIN, de acuerdo con `AGENTS.md` y `PROMPT_MAESTRO_MAIN.md` (antecedente en el archivo)
 
 ## Contexto
 

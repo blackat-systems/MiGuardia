@@ -5,28 +5,31 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -38,12 +41,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.blackatsystems.miguardia.core.domain.model.IndependentExtraWorkRecord
@@ -58,12 +65,22 @@ import com.blackatsystems.miguardia.ui.components.AutomaticTimeField
 import com.blackatsystems.miguardia.ui.components.AdvancedOptionsSection
 import com.blackatsystems.miguardia.ui.components.ContextHelp
 import com.blackatsystems.miguardia.ui.components.ContextHelpButton
+import com.blackatsystems.miguardia.ui.components.DateFieldFormat
+import com.blackatsystems.miguardia.ui.components.DestructiveAction
+import com.blackatsystems.miguardia.ui.components.MiGuardiaButtonShape
+import com.blackatsystems.miguardia.ui.components.MiGuardiaSpacing
+import com.blackatsystems.miguardia.ui.components.PICKER_BUTTON_SUFFIX
 import com.blackatsystems.miguardia.ui.components.PersistentMessage
+import com.blackatsystems.miguardia.ui.components.PickableDateField
 import com.blackatsystems.miguardia.ui.components.PrimaryAction
+import com.blackatsystems.miguardia.ui.components.SecondaryAction
 import com.blackatsystems.miguardia.ui.components.SectionCard
 import com.blackatsystems.miguardia.ui.components.SurfaceHeader
+import com.blackatsystems.miguardia.ui.components.destructiveButtonColors
+import com.blackatsystems.miguardia.ui.components.vigiliaScreenBackground
 import com.blackatsystems.miguardia.ui.availability.AvailabilityHoursSection
 import com.blackatsystems.miguardia.ui.availability.AvailabilityUiState
+import com.blackatsystems.miguardia.ui.availability.daysAfterOwnerBadge
 import com.blackatsystems.miguardia.ui.management.RgbColorPickerDialog
 import com.blackatsystems.miguardia.ui.theme.vigiliaColors
 import java.time.DayOfWeek
@@ -169,13 +186,13 @@ private fun HoursProgressScreen(
     availabilityState: AvailabilityUiState,
 ) {
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-        Column(Modifier.fillMaxSize().safeDrawingPadding()) {
+        Column(Modifier.fillMaxSize().vigiliaScreenBackground().safeDrawingPadding()) {
             SurfaceHeader("Tus horas", "Cerrar", actions.close)
             HorizontalDivider()
             when (state.loadState) {
                 HoursAndExtrasLoadState.LOADING -> NeutralLoading("Calculando tu avance…")
                 HoursAndExtrasLoadState.ERROR -> Column(
-                    Modifier.fillMaxSize().padding(24.dp),
+                    Modifier.fillMaxSize().padding(MiGuardiaSpacing.extraLarge),
                     verticalArrangement = Arrangement.Center,
                 ) {
                     EmptyState(
@@ -204,9 +221,9 @@ private fun HoursProgressContent(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(16.dp)
+            .padding(MiGuardiaSpacing.large)
             .testTag("hours-progress-content"),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.large),
     ) {
         state.message?.let { PersistentMessage(it, onDismiss = actions.clearMessage) }
         SectionCard(
@@ -219,13 +236,13 @@ private fun HoursProgressContent(
                 Math.subtractExact(progress.totalWorkedMinutes, progress.regularWorkedMinutes),
             )
             ProgressLine("Total trabajado", progress.totalWorkedMinutes, emphasized = true)
-            Text("Meta de horas: ${targetLabel(progress.segment.target)}", fontWeight = FontWeight.SemiBold)
+            Text("Meta de horas: ${targetLabel(progress.segment.target)}", style = MaterialTheme.typography.titleSmall)
             progress.missingMinutes?.takeIf { it > 0L }?.let { ProgressLine("Te faltan", it, emphasized = true) }
             progress.excessMinutes?.takeIf { it > 0L }?.let {
                 ProgressLine("Horas por encima de la meta", it, emphasized = true)
             }
             progress.completionPercentage?.let { value ->
-                Text("Avance: ${"%.1f".format(SpanishArgentina, value)} %", fontWeight = FontWeight.Bold)
+                Text("Avance: ${"%.1f".format(SpanishArgentina, value)} %", style = MaterialTheme.typography.titleSmall)
             }
             ContextHelpButton(
                 ContextHelp(
@@ -247,9 +264,9 @@ private fun HoursProgressContent(
             SectionCard(
                 title = referenceLabel(progress.segment.ownerRevision.value.hoursReference),
                 supportingText = if (progress.segment.endExclusive == java.time.LocalDate.MAX) {
-                    "Vigente desde ${progress.segment.startInclusive}."
+                    "Vigente desde ${progress.segment.startInclusive.visibleDate()}."
                 } else {
-                    "Desde ${progress.segment.startInclusive} hasta ${progress.segment.endExclusive.minusDays(1)}."
+                    "Desde ${progress.segment.startInclusive.visibleDate()} hasta ${progress.segment.endExclusive.minusDays(1).visibleDate()}."
                 },
             ) {
                 progress.segment.ownerRevision.value.hoursReference.periodOrNull()?.let { period ->
@@ -257,7 +274,11 @@ private fun HoursProgressContent(
                 }
                 ProgressLine("Horas que cuentan para tu meta", progress.helpsMeetReferenceMinutes)
                 ProgressLine("Extras que no cuentan para la meta", progress.doesNotHelpReferenceMinutes)
-                ProgressLine("Horas de jornadas que todavía faltan trabajar", progress.pendingScheduledMinutes)
+                ProgressLine(
+                    "Horas de jornadas que todavía faltan trabajar",
+                    progress.pendingScheduledMinutes,
+                    tag = "hours-pending-scheduled",
+                )
                 if (progress.segment.isShortNaturalSegment) {
                     Text("La meta completa se mantiene aunque esta configuración haya empezado dentro del período.")
                 }
@@ -274,23 +295,21 @@ private fun HoursProgressContent(
                 }
             }
             AvailabilityHoursSection(availabilityState)
-            Button(
+            PrimaryAction(
+                label = "Configurar meta de horas",
                 onClick = actions.openReferenceEditor,
-                modifier = Modifier.fillMaxWidth().testTag("hours-reference-configure"),
-            ) { Text("Configurar meta de horas") }
+                modifier = Modifier.testTag("hours-reference-configure"),
+            )
             if (progress.segment.ownerRevision.value.hoursReference is HoursReference.PerPeriod) {
-                OutlinedButton(
+                SecondaryAction(
+                    label = if (progress.segment.target == HoursTargetState.MissingPerPeriodValue) {
+                        "Informar meta de este período"
+                    } else {
+                        "Corregir meta de este período"
+                    },
                     onClick = actions.openPerPeriodValueEditor,
                     modifier = Modifier.fillMaxWidth().testTag("hours-period-value-edit"),
-                ) {
-                    Text(
-                        if (progress.segment.target == HoursTargetState.MissingPerPeriodValue) {
-                            "Informar meta de este período"
-                        } else {
-                            "Corregir meta de este período"
-                        },
-                    )
-                }
+                )
             }
         }
     }
@@ -314,8 +333,8 @@ private fun PerPeriodValueEditorScreen(
         null
     }
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-        Column(Modifier.fillMaxSize().safeDrawingPadding()) {
-            SurfaceHeader("Meta del período", "Atrás", actions.backPerPeriodValue)
+        Column(Modifier.fillMaxSize().vigiliaScreenBackground().safeDrawingPadding()) {
+            SurfaceHeader("Meta del período", "Volver", actions.backPerPeriodValue)
             HorizontalDivider()
             if (state.loadState == HoursAndExtrasLoadState.ERROR) {
                 EditorLoadError(state.message, actions.retry)
@@ -323,13 +342,13 @@ private fun PerPeriodValueEditorScreen(
                 NeutralLoading("Preparando el período…")
             } else {
                 Column(
-                    Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(MiGuardiaSpacing.large),
+                    verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.large),
                 ) {
                     state.message?.let { PersistentMessage(it, onDismiss = actions.clearMessage) }
                     SectionCard(
                         title = if (existing == null) "Informar meta" else "Corregir meta",
-                        supportingText = "Período ${window.startInclusive} a ${window.endExclusive.minusDays(1)}.",
+                        supportingText = "Período del ${window.startInclusive.visibleDate()} al ${window.endExclusive.minusDays(1).visibleDate()}.",
                     ) {
                         existing?.let { Text("Valor actual: ${minutesLabel(it.requiredMinutes.value)}") }
                         OutlinedTextField(
@@ -370,10 +389,10 @@ private fun PerPeriodValueEditorScreen(
 private fun ReferenceEditorScreen(state: HoursAndExtrasUiState, actions: HoursAndExtrasActions) {
     val draft = state.referenceDraft
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-        Column(Modifier.fillMaxSize().safeDrawingPadding()) {
+        Column(Modifier.fillMaxSize().vigiliaScreenBackground().safeDrawingPadding()) {
             SurfaceHeader(
                 if (draft?.stage == EditorStage.REVIEW) "Revisar meta" else "Configurar meta",
-                "Atrás",
+                "Volver",
                 actions.backReference,
             )
             HorizontalDivider()
@@ -395,8 +414,8 @@ private fun ReferenceDraftContent(state: HoursAndExtrasUiState, actions: HoursAn
     val draft = requireNotNull(state.referenceDraft)
     val source = requireNotNull(state.source)
     Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(MiGuardiaSpacing.large),
+        verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.large),
     ) {
         state.message?.let { PersistentMessage(it, onDismiss = actions.clearMessage) }
         SectionCard("¿Tenés una meta de horas?") {
@@ -452,12 +471,16 @@ private fun ReferenceDraftContent(state: HoursAndExtrasUiState, actions: HoursAn
                         modifier = Modifier.fillMaxWidth().testTag("hours-cycle-length"),
                         singleLine = true,
                     )
-                    OutlinedTextField(
+                    PickableDateField(
                         value = draft.cycleAnchorDate,
                         onValueChange = { value -> actions.updateReferenceDraft { it.copy(cycleAnchorDate = value) } },
-                        label = { Text("Fecha de anclaje (AAAA-MM-DD)") },
+                        label = "Fecha de anclaje (AAAA-MM-DD)",
+                        format = DateFieldFormat.ISO,
+                        // The label already shows the format; no second hint line.
+                        supportingText = null,
+                        pickerFallback = { source.today },
+                        pickerTestTag = "hours-cycle-anchor$PICKER_BUTTON_SUFFIX",
                         modifier = Modifier.fillMaxWidth().testTag("hours-cycle-anchor"),
-                        singleLine = true,
                     )
                 }
             }
@@ -505,15 +528,15 @@ private fun ReferenceDraftContent(state: HoursAndExtrasUiState, actions: HoursAn
                 actions.updateReferenceDraft { it.copy(startChoice = ReferenceStartChoice.CUSTOM) }
             }
             if (draft.startChoice == ReferenceStartChoice.CUSTOM) {
-                OutlinedTextField(
+                PickableDateField(
                     value = draft.customStartDate,
                     onValueChange = { value -> actions.updateReferenceDraft { it.copy(customStartDate = value) } },
-                    label = { Text("Fecha (AAAA-MM-DD)") },
-                    supportingText = {
-                        Text("No puede ser anterior a ${source.history.timeline.revisions.first().effectiveFrom}.")
-                    },
+                    label = "Fecha (AAAA-MM-DD)",
+                    format = DateFieldFormat.ISO,
+                    supportingText = "No puede ser anterior a ${source.history.timeline.revisions.first().effectiveFrom}.",
+                    pickerFallback = { source.today },
+                    pickerTestTag = "hours-custom-start$PICKER_BUTTON_SUFFIX",
                     modifier = Modifier.fillMaxWidth().testTag("hours-custom-start"),
-                    singleLine = true,
                 )
             }
         }
@@ -532,27 +555,27 @@ private fun ReferenceReviewContent(state: HoursAndExtrasUiState, actions: HoursA
     val review = state.referenceReview
     val draft = requireNotNull(state.referenceDraft)
     Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(MiGuardiaSpacing.large),
+        verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.large),
     ) {
         state.message?.let { PersistentMessage(it, onDismiss = actions.clearMessage) }
         SectionCard("Revisión exacta") {
             if (review == null) {
                 Text("El borrador fue restaurado. Al guardar se revalidarán todas las fuentes.")
             } else {
-                Text(referenceLabel(review.reference), fontWeight = FontWeight.Bold)
+                Text(referenceLabel(review.reference), style = MaterialTheme.typography.titleSmall)
                 review.reference.periodOrNull()?.let { period ->
                     Text("Período: ${period.visibleLabel()}")
                 }
                 Text(
                     "Cantidad: ${review.reference.reviewTargetLabel(state.source?.history, review)}",
-                    fontWeight = FontWeight.SemiBold,
+                    style = MaterialTheme.typography.titleSmall,
                 )
                 review.previousSegmentEndInclusive?.let { previousEnd ->
-                    Text("El tramo anterior termina: $previousEnd")
+                    Text("El tramo anterior termina: ${previousEnd.visibleDate()}")
                 }
-                Text("El tramo nuevo comienza: ${review.startedOn}")
-                review.naturalWindowEndExclusive?.let { Text("Primer límite natural: $it") }
+                Text("El tramo nuevo comienza: ${review.startedOn.visibleDate()}")
+                review.naturalWindowEndExclusive?.let { Text("Primer límite natural: ${it.visibleDate()}") }
                 Text(
                     if (review.isShortFirstSegment) {
                         "El primer tramo es corto y conserva la meta completa."
@@ -563,10 +586,10 @@ private fun ReferenceReviewContent(state: HoursAndExtrasUiState, actions: HoursA
                 if (review.isPast) {
                     Text(
                         if (review.recalculationEndExclusive == java.time.LocalDate.MAX) {
-                            "Se recalcularán los tramos y resultados desde ${review.startedOn} en adelante."
+                            "Se recalcularán los tramos y resultados desde ${review.startedOn.visibleDate()} en adelante."
                         } else {
-                            "Se recalcularán los tramos y resultados desde ${review.startedOn} " +
-                                "hasta ${review.recalculationEndExclusive.minusDays(1)}."
+                            "Se recalcularán los tramos y resultados desde ${review.startedOn.visibleDate()} " +
+                                "hasta ${review.recalculationEndExclusive.minusDays(1).visibleDate()}."
                         },
                         color = MaterialTheme.vigiliaColors.info,
                     )
@@ -592,9 +615,12 @@ private fun ReferenceReviewContent(state: HoursAndExtrasUiState, actions: HoursA
             working = state.isSaving,
             modifier = Modifier.testTag("hours-reference-save"),
         )
-        OutlinedButton(onClick = actions.backReference, enabled = !state.isSaving, modifier = Modifier.fillMaxWidth()) {
-            Text("Volver a editar")
-        }
+        SecondaryAction(
+            label = "Volver a editar",
+            onClick = actions.backReference,
+            enabled = !state.isSaving,
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }
 
@@ -606,10 +632,10 @@ private fun IndependentExtraEditorScreen(
 ) {
     val draft = state.extraDraft
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-        Column(Modifier.fillMaxSize().safeDrawingPadding()) {
+        Column(Modifier.fillMaxSize().vigiliaScreenBackground().safeDrawingPadding()) {
             SurfaceHeader(
                 if (draft?.stage == EditorStage.REVIEW) "Revisar trabajo extra" else "Registrar trabajo extra",
-                "Atrás",
+                "Volver",
                 actions.backExtra,
             )
             HorizontalDivider()
@@ -636,15 +662,15 @@ private fun IndependentExtraDraftContent(
     val source = requireNotNull(state.source)
     var choosingColor by remember { mutableStateOf(false) }
     Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(MiGuardiaSpacing.large),
+        verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.large),
     ) {
         state.message?.let { PersistentMessage(it, onDismiss = actions.clearMessage) }
         SectionCard(
             title = "Fecha elegida",
             supportingText = "Para cambiar de día, volvé a la única grilla mensual.",
         ) {
-            Text(draft.ownerDate?.toString() ?: "Sin fecha", fontWeight = FontWeight.Bold)
+            Text(draft.ownerDate?.visibleDate() ?: "Sin fecha", style = MaterialTheme.typography.titleMedium)
         }
         SectionCard("Lugar") {
             source.catalog.workPlaces.forEach { place ->
@@ -701,35 +727,28 @@ private fun IndependentExtraDraftContent(
                 }
         }
         SectionCard("Horario exacto realizado") {
-            AutomaticTimeField(
-                value = draft.startTime,
-                onValueChange = { value -> actions.updateExtraDraft { it.copy(startTime = value) } },
-                label = "Inicio",
-                modifier = Modifier.fillMaxWidth().testTag("extra-start-time"),
-            )
-            OutlinedTextField(
+            ExtraTimes(draft, actions)
+            PickableDateField(
                 value = draft.endDate,
                 onValueChange = { value -> actions.updateExtraDraft { it.copy(endDate = value.take(10)) } },
-                label = { Text("Fecha final (AAAA-MM-DD)") },
-                supportingText = { Text("Admite medianoche y trabajos de más de 24 horas.") },
+                label = "Fecha final (AAAA-MM-DD)",
+                format = DateFieldFormat.ISO,
+                supportingText = "Admite medianoche y trabajos de más de 24 horas.",
+                pickerFallback = { draft.ownerDate ?: source.today },
+                pickerTestTag = "extra-end-date$PICKER_BUTTON_SUFFIX",
+                badge = daysAfterOwnerBadge(draft.ownerDate, draft.endDate),
                 modifier = Modifier.fillMaxWidth().testTag("extra-end-date"),
-                singleLine = true,
-            )
-            AutomaticTimeField(
-                value = draft.endTime,
-                onValueChange = { value -> actions.updateExtraDraft { it.copy(endTime = value) } },
-                label = "Final",
-                modifier = Modifier.fillMaxWidth().testTag("extra-end-time"),
             )
         }
         SectionCard("Tipo de horas extra") {
             val available = source.extraClasses.filter { it.isActive || it.id == draft.extraClassId }
             if (source.extraClasses.none { it.isActive }) {
                 Text("No hay un tipo de horas extra utilizable. El borrador se conservará si abrís el catálogo.")
-                OutlinedButton(
+                SecondaryAction(
+                    label = "Crear clase de horas extra",
                     onClick = onOpenExtraClassCatalog,
                     modifier = Modifier.fillMaxWidth().testTag("extra-open-class-catalog"),
-                ) { Text("Crear clase de horas extra") }
+                )
             }
             available.forEach { extraClass ->
                 SimpleChoice(
@@ -745,7 +764,7 @@ private fun IndependentExtraDraftContent(
             Row(
                 Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.medium),
             ) {
                 Box(
                     Modifier.size(32.dp).background(
@@ -753,19 +772,16 @@ private fun IndependentExtraDraftContent(
                         CircleShape,
                     ),
                 )
-                OutlinedButton(
+                SecondaryAction(
+                    label = when {
+                        draft.templateId != null -> "Color de la plantilla"
+                        draft.colorArgb == null -> "Elegir color"
+                        else -> "Cambiar color"
+                    },
                     onClick = { choosingColor = true },
                     enabled = draft.templateId == null,
                     modifier = Modifier.weight(1f).testTag("extra-color"),
-                ) {
-                    Text(
-                        when {
-                            draft.templateId != null -> "Color de la plantilla"
-                            draft.colorArgb == null -> "Elegir color"
-                            else -> "Cambiar color"
-                        },
-                    )
-                }
+                )
             }
             OutlinedTextField(
                 value = draft.position,
@@ -794,13 +810,75 @@ private fun IndependentExtraDraftContent(
     }
 }
 
+/**
+ * Start and end times of an independent extra. Side by side with large numerals when there is
+ * room (style v2, like Availability); stacked when the width or Android's font size would
+ * squeeze them, so nothing gets cut.
+ */
+@Composable
+private fun ExtraTimes(draft: IndependentExtraDraftState, actions: HoursAndExtrasActions) {
+    val bigTime = MaterialTheme.typography.headlineSmall
+    val fontScale = LocalDensity.current.fontScale
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val sideBySide = maxWidth >= 280.dp * fontScale
+        val start = @Composable { modifier: Modifier ->
+            AutomaticTimeField(
+                value = draft.startTime,
+                onValueChange = { value -> actions.updateExtraDraft { it.copy(startTime = value) } },
+                label = "Inicio",
+                withPicker = true,
+                pickerTestTag = "extra-start-time$PICKER_BUTTON_SUFFIX",
+                textStyle = bigTime,
+                showHint = false,
+                modifier = modifier.testTag("extra-start-time"),
+            )
+        }
+        val end = @Composable { modifier: Modifier ->
+            AutomaticTimeField(
+                value = draft.endTime,
+                onValueChange = { value -> actions.updateExtraDraft { it.copy(endTime = value) } },
+                label = "Final",
+                withPicker = true,
+                pickerTestTag = "extra-end-time$PICKER_BUTTON_SUFFIX",
+                textStyle = bigTime,
+                showHint = false,
+                modifier = modifier.testTag("extra-end-time"),
+            )
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.extraSmall)) {
+            if (sideBySide) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    start(Modifier.weight(1f))
+                    Text(
+                        "→",
+                        modifier = Modifier.clearAndSetSemantics {},
+                        color = MaterialTheme.vigiliaColors.onSurfaceMuted,
+                    )
+                    end(Modifier.weight(1f))
+                }
+            } else {
+                start(Modifier.fillMaxWidth())
+                end(Modifier.fillMaxWidth())
+            }
+            Text(
+                "Escribí 4 números o tocá el reloj. MiGuardia agrega los dos puntos.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.vigiliaColors.onSurfaceMuted,
+            )
+        }
+    }
+}
+
 @Composable
 private fun IndependentExtraReviewContent(state: HoursAndExtrasUiState, actions: HoursAndExtrasActions) {
     val draft = requireNotNull(state.extraDraft)
     val review = state.extraReview
     Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(MiGuardiaSpacing.large),
+        verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.large),
     ) {
         state.message?.let { PersistentMessage(it, onDismiss = actions.clearMessage) }
         SectionCard("Trabajo extra independiente") {
@@ -808,7 +886,10 @@ private fun IndependentExtraReviewContent(state: HoursAndExtrasUiState, actions:
                 Text("El borrador fue restaurado. Al guardar se revalidarán fuentes, ocupación y protecciones.")
             } else {
                 val record = review.record
-                Text("${record.snapshot.workPlaceName} (${record.snapshot.workPlaceAbbreviation})", fontWeight = FontWeight.Bold)
+                Text(
+                    "${record.snapshot.workPlaceName} (${record.snapshot.workPlaceAbbreviation})",
+                    style = MaterialTheme.typography.titleSmall,
+                )
                 Text("${record.start.visibleAt(record.zoneId)} – ${record.end.visibleAt(record.zoneId)}")
                 Text("Duración: ${minutesLabel(record.durationMinutes)}")
                 Text("Tipo: ${record.snapshot.workTypeName}")
@@ -817,7 +898,7 @@ private fun IndependentExtraReviewContent(state: HoursAndExtrasUiState, actions:
                 record.snapshot.position?.let { Text("Puesto: $it") }
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small),
                 ) {
                     Box(Modifier.size(18.dp).background(Color(record.snapshot.colorArgb), CircleShape))
                     Text("Color: ${record.snapshot.colorArgb.toArgbLabel()}")
@@ -872,9 +953,12 @@ private fun IndependentExtraReviewContent(state: HoursAndExtrasUiState, actions:
             working = state.isSaving,
             modifier = Modifier.testTag("extra-save"),
         )
-        OutlinedButton(onClick = actions.backExtra, enabled = !state.isSaving, modifier = Modifier.fillMaxWidth()) {
-            Text("Volver a editar")
-        }
+        SecondaryAction(
+            label = "Volver a editar",
+            onClick = actions.backExtra,
+            enabled = !state.isSaving,
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }
 
@@ -885,16 +969,18 @@ private fun DeleteConfirmation(state: HoursAndExtrasUiState, actions: HoursAndEx
         onDismissRequest = actions.dismissDelete,
         title = { Text("¿Eliminar trabajo extra?") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small)) {
                 Text("Se eliminará sólo este extra independiente. Las jornadas y el estado F/? no cambian.")
                 record?.let { Text("${it.snapshot.className} · ${minutesLabel(it.durationMinutes)}") }
                 state.message?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             }
         },
         confirmButton = {
-            TextButton(
+            FilledTonalButton(
                 onClick = actions.confirmDelete,
                 enabled = record != null && !state.isSaving,
+                shape = MiGuardiaButtonShape,
+                colors = destructiveButtonColors(),
                 modifier = Modifier.testTag("extra-delete-confirm"),
             ) { Text(if (state.isSaving) "Eliminando…" else "Eliminar") }
         },
@@ -909,15 +995,16 @@ fun IndependentExtraDetailCard(
     record: IndependentExtraWorkRecord,
     onCorrect: () -> Unit,
     onDelete: () -> Unit,
+    showActions: Boolean = true,
 ) {
     Card(
         modifier = Modifier.fillMaxWidth().testTag("independent-extra-${record.id}"),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
     ) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(Modifier.padding(MiGuardiaSpacing.large), verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small)) {
                 Box(Modifier.size(18.dp).background(Color(record.snapshot.colorArgb), CircleShape))
-                Text("Trabajo extra independiente", fontWeight = FontWeight.Bold)
+                Text("Trabajo extra independiente", style = MaterialTheme.typography.titleSmall)
             }
             Text("${record.snapshot.workPlaceName} (${record.snapshot.workPlaceAbbreviation})")
             Text("${record.start.visibleAt(record.zoneId)} – ${record.end.visibleAt(record.zoneId)}")
@@ -925,18 +1012,22 @@ fun IndependentExtraDetailCard(
             Text("Clase: ${record.snapshot.className}")
             Text(if (record.snapshot.helpsMeetHoursReference) "Cuenta para tu meta" else "No cuenta para tu meta")
             record.snapshot.position?.let { Text("Puesto: $it") }
-            OutlinedButton(
-                onClick = onCorrect,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("correct-independent-extra-${record.id}"),
-            ) { Text("Corregir trabajo extra") }
-            TextButton(
-                onClick = onDelete,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("delete-independent-extra-${record.id}"),
-            ) { Text("Eliminar trabajo extra") }
+            if (showActions) {
+                SecondaryAction(
+                    label = "Corregir trabajo extra",
+                    onClick = onCorrect,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("correct-independent-extra-${record.id}"),
+                )
+                DestructiveAction(
+                    label = "Eliminar trabajo extra",
+                    onClick = onDelete,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("delete-independent-extra-${record.id}"),
+                )
+            }
         }
     }
 }
@@ -944,12 +1035,12 @@ fun IndependentExtraDetailCard(
 @Composable
 private fun NeutralLoading(message: String) {
     Column(
-        Modifier.fillMaxSize().padding(24.dp),
+        Modifier.fillMaxSize().padding(MiGuardiaSpacing.extraLarge),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
         CircularProgressIndicator()
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(MiGuardiaSpacing.medium))
         Text(message, textAlign = TextAlign.Center)
     }
 }
@@ -957,7 +1048,7 @@ private fun NeutralLoading(message: String) {
 @Composable
 private fun EditorLoadError(message: String?, retry: () -> Unit) {
     Column(
-        Modifier.fillMaxSize().padding(24.dp),
+        Modifier.fillMaxSize().padding(MiGuardiaSpacing.extraLarge),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
@@ -1004,45 +1095,118 @@ private fun SimpleChoice(
     tag: String? = null,
     onClick: () -> Unit,
 ) {
-    Row(
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxWidth()
+            .heightIn(min = 48.dp)
             .then(tag?.let { Modifier.testTag(it) } ?: Modifier)
             .semantics {
                 selected = isSelected
                 role = Role.RadioButton
             }
             .clickable(onClick = onClick)
-            .padding(vertical = 9.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+            .padding(vertical = MiGuardiaSpacing.small),
     ) {
-        Box(
-            Modifier.size(18.dp).background(
-                if (isSelected) MaterialTheme.vigiliaColors.active else MaterialTheme.colorScheme.outlineVariant,
-                CircleShape,
-            ),
-        )
-        Text(label, modifier = Modifier.weight(1f), fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
+        val labelContent: @Composable (Modifier) -> Unit = { labelModifier ->
+            Text(label, modifier = labelModifier, style = MaterialTheme.typography.bodyMedium,
+                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal)
+        }
+        if (maxWidth < 240.dp) {
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.medium)) {
+                labelContent(Modifier.fillMaxWidth())
+                RadioButton(selected = isSelected, onClick = null, modifier = Modifier.align(Alignment.End))
+            }
+        } else {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.medium)) {
+                RadioButton(selected = isSelected, onClick = null)
+                labelContent(Modifier.weight(1f))
+            }
+        }
     }
 }
 
 @Composable
 private fun ConfirmRow(label: String, checked: Boolean, onChecked: (Boolean) -> Unit) {
-    Row(
-        Modifier.fillMaxWidth().clickable { onChecked(!checked) }.padding(vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
+    BoxWithConstraints(
+        Modifier.fillMaxWidth().heightIn(min = 48.dp)
+            .toggleable(value = checked, role = Role.Checkbox, onValueChange = onChecked)
+            .padding(vertical = MiGuardiaSpacing.small),
     ) {
-        Checkbox(checked = checked, onCheckedChange = onChecked)
-        Text(label, modifier = Modifier.weight(1f))
+        if (maxWidth < 240.dp) {
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.medium)) {
+                Text(label, style = MaterialTheme.typography.bodyMedium)
+                Checkbox(checked = checked, onCheckedChange = null, modifier = Modifier.align(Alignment.End))
+            }
+        } else {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.medium)) {
+                Checkbox(checked = checked, onCheckedChange = null)
+                Text(label, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+            }
+        }
     }
 }
 
 @Composable
-private fun ProgressLine(label: String, minutes: Long, emphasized: Boolean = false) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(label, fontWeight = if (emphasized) FontWeight.Bold else FontWeight.Normal)
-        Text(minutesLabel(minutes), fontWeight = if (emphasized) FontWeight.Bold else FontWeight.Normal)
+private fun ProgressLine(
+    label: String,
+    minutes: Long,
+    emphasized: Boolean = false,
+    tag: String? = null,
+) {
+    val measurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    val labelStyle = MaterialTheme.typography.bodyMedium.copy(
+        fontWeight = if (emphasized) FontWeight.Medium else FontWeight.Normal,
+    )
+    val valueStyle = (if (emphasized) MaterialTheme.typography.titleMedium else MaterialTheme.typography.bodyMedium)
+        .copy(fontWeight = FontWeight.SemiBold)
+    val value = minutesLabel(minutes)
+    BoxWithConstraints(
+        Modifier.fillMaxWidth().then(tag?.let { Modifier.testTag(it) } ?: Modifier),
+    ) {
+        val valueWidth = measurer.measure(value, style = valueStyle, softWrap = false).size.width
+        val longestLabelWord = label.split(Regex("\\s+")).maxOfOrNull {
+            measurer.measure(it, style = labelStyle, softWrap = false).size.width
+        } ?: 0
+        val useInline = longestLabelWord + with(density) { MiGuardiaSpacing.medium.roundToPx() } + valueWidth <= constraints.maxWidth
+        val wrapValue = valueWidth > constraints.maxWidth
+        val displayedValue = if (wrapValue) value.replace(" h", "\u00a0h").replace(" min", "\u00a0min") else value
+        val labelContent: @Composable (Modifier) -> Unit = { modifier ->
+            Text(
+                label,
+                modifier = modifier.then(tag?.let { Modifier.testTag("$it-label") } ?: Modifier),
+                style = labelStyle,
+            )
+        }
+        val valueContent: @Composable (Modifier) -> Unit = { modifier ->
+            Text(
+                // Avoid the optimized String path's reconstructed, wider semantics paragraph.
+                AnnotatedString(displayedValue),
+                modifier = modifier.then(tag?.let { Modifier.testTag("$it-value") } ?: Modifier),
+                style = valueStyle,
+                textAlign = TextAlign.End,
+                maxLines = if (wrapValue) Int.MAX_VALUE else 1,
+                softWrap = wrapValue,
+            )
+        }
+        // Keep each quantity and its unit together when the full amount needs more than one line.
+        if (!useInline) {
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.medium)) {
+                labelContent(Modifier.fillMaxWidth())
+                valueContent(Modifier.fillMaxWidth())
+            }
+        } else {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.medium),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                labelContent(Modifier.weight(1f))
+                valueContent(Modifier)
+            }
+        }
     }
 }
 

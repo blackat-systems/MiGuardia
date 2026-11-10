@@ -55,6 +55,14 @@ class VerificationError(Exception):
     pass
 
 
+def long_path(path: Path) -> Path:
+    # Evidence copies can exceed Windows MAX_PATH (260) when LongPathsEnabled is off; use the extended-length form.
+    if os.name != "nt":
+        return path
+    text = str(path.resolve())
+    return path if text.startswith("\\\\?\\") else Path("\\\\?\\" + text)
+
+
 def sha256(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as stream:
@@ -224,7 +232,7 @@ def collect_reports(root: Path, task: str, outcome: str, before: dict, destinati
         changed = before.get(path.name) != fingerprint
         freshness = "executed" if outcome in {"EXECUTED", "FAILED"} and changed else "reused" if outcome in {"UP-TO-DATE", "FROM-CACHE"} else "stale_unattributed"
         counts = xml_counts(path)
-        shutil.copy2(path, destination / path.name)
+        shutil.copy2(path, long_path(destination / path.name))
         evidence["reports"].append({"file": path.name, "sha256": fingerprint[1], "freshness": freshness, **counts})
         if freshness == "stale_unattributed":
             continue
@@ -292,7 +300,7 @@ def collect_build_artifacts(root: Path, outcomes: dict, before: dict, destinatio
         else:
             entry["freshness"] = "stale_unattributed"
         if kind == "lint":
-            shutil.copy2(path, destination / path.name)
+            shutil.copy2(path, long_path(destination / path.name))
             entry["evidence_file"] = path.name
             try:
                 document = ET.parse(path).getroot()

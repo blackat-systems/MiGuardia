@@ -22,11 +22,11 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -36,14 +36,28 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import com.blackatsystems.miguardia.core.domain.report.ReportFormat
 import com.blackatsystems.miguardia.core.domain.report.ReportPrivacySelection
+import com.blackatsystems.miguardia.ui.components.MiGuardiaButtonShape
+import com.blackatsystems.miguardia.ui.components.MiGuardiaSpacing
 import com.blackatsystems.miguardia.ui.components.PersistentMessage
+import com.blackatsystems.miguardia.ui.components.PrimaryAction
+import com.blackatsystems.miguardia.ui.components.SecondaryAction
 import com.blackatsystems.miguardia.ui.components.SectionCard
+import com.blackatsystems.miguardia.ui.components.vigiliaScreenBackground
+import java.time.format.DateTimeFormatter
+import java.util.Locale
+
+private val ReportMonthFormatter = DateTimeFormatter.ofPattern("MMMM 'de' yyyy", Locale.forLanguageTag("es-AR"))
 
 @Composable
 fun ReportsSurfaceHost(
@@ -64,7 +78,7 @@ fun ReportsSurfaceHost(
         modifier = Modifier.fillMaxSize().testTag("reports-surface"),
         color = MaterialTheme.colorScheme.background,
     ) {
-        Column(Modifier.fillMaxSize().safeDrawingPadding()) {
+        Column(Modifier.fillMaxSize().vigiliaScreenBackground().safeDrawingPadding()) {
             ReportsHeader(
                 onNavigation = actions.close,
                 modifier = Modifier.testTag("reports-header"),
@@ -74,12 +88,12 @@ fun ReportsSurfaceHost(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
-                    .padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
+                    .padding(MiGuardiaSpacing.large),
+                verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.large),
             ) {
                 Text(
-                    "Generá una fotografía privada y de sólo lectura del mes ${state.month}.",
-                    style = MaterialTheme.typography.bodyLarge,
+                    "Generá una fotografía privada y de sólo lectura de ${state.month.format(ReportMonthFormatter)}.",
+                    style = MaterialTheme.typography.bodyMedium,
                 )
                 state.errorMessage?.let { message ->
                     PersistentMessage(
@@ -137,7 +151,7 @@ fun ReportsSurfaceHost(
                         },
                     )
                 }
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(MiGuardiaSpacing.medium))
             }
         }
     }
@@ -148,10 +162,15 @@ fun ReportsSurfaceHost(
             text = {
                 Text(
                     "La marca de carpeta médica ya puede aparecer sin esta opción. Si continuás, el texto privado de la nota quedará dentro del archivo que guardes o compartas.",
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
                 )
             },
             confirmButton = {
-                Button(onClick = actions.confirmMedicalNotes, modifier = Modifier.testTag("reports-confirm-medical-note")) {
+                Button(
+                    onClick = actions.confirmMedicalNotes,
+                    modifier = Modifier.testTag("reports-confirm-medical-note"),
+                    shape = MiGuardiaButtonShape,
+                ) {
                     Text("Sí, incluirla")
                 }
             },
@@ -162,44 +181,73 @@ fun ReportsSurfaceHost(
     }
 }
 
+/**
+ * Style v2: kept local instead of the shared SurfaceHeader on purpose. When the title and the
+ * action do not fit in one row, this header puts the action *below* the title with an explicit
+ * 48 dp target, and ReportsComposeTest's native geometry diagnostic (320/360/384 dp, every font
+ * scale) requires exactly that order and gap. SurfaceHeader puts the action above the title.
+ * Only its styles are aligned with SurfaceHeader (theme title without a forced weight, heading).
+ */
 @Composable
 private fun ReportsHeader(
     onNavigation: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val measurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    val layoutDirection = LocalLayoutDirection.current
+    val titleStyle = MaterialTheme.typography.titleLarge
+    val navigationStyle = MaterialTheme.typography.labelLarge
+    val navigationPadding = ButtonDefaults.TextButtonContentPadding
     BoxWithConstraints(modifier.fillMaxWidth()) {
-        val contentModifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
-        if (maxWidth < 360.dp) {
+        val contentModifier = Modifier.fillMaxWidth().padding(
+            horizontal = MiGuardiaSpacing.large,
+            vertical = MiGuardiaSpacing.small,
+        )
+        val titleWidth = measurer.measure("Informes locales", style = titleStyle, softWrap = false).size.width
+        val navigationTextWidth = measurer.measure("Volver al Resumen", style = navigationStyle, softWrap = false).size.width
+        val navigationWidth = with(density) {
+            maxOf(ButtonDefaults.MinWidth.roundToPx(), navigationTextWidth +
+                navigationPadding.calculateLeftPadding(layoutDirection).roundToPx() +
+                navigationPadding.calculateRightPadding(layoutDirection).roundToPx())
+        }
+        // Measure the native SP styles and the same button padding used below; do not shrink text to fit a row.
+        val fitsInline = titleWidth + navigationWidth + with(density) { MiGuardiaSpacing.small.roundToPx() } <=
+            constraints.maxWidth - with(density) { 2 * MiGuardiaSpacing.large.roundToPx() }
+        if (!fitsInline) {
             Column(
                 modifier = contentModifier,
-                verticalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.extraSmall),
             ) {
                 Text(
                     text = "Informes locales",
-                    modifier = Modifier.fillMaxWidth(),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.fillMaxWidth().semantics { heading() },
+                    style = titleStyle,
                 )
                 TextButton(
                     onClick = onNavigation,
-                    modifier = Modifier.align(Alignment.End),
+                    modifier = Modifier.align(Alignment.End).heightIn(min = 48.dp),
+                    contentPadding = navigationPadding,
                 ) {
-                    Text("Volver al Resumen")
+                    Text("Volver al Resumen", style = navigationStyle)
                 }
             }
         } else {
             Row(
                 modifier = contentModifier,
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small),
             ) {
                 Text(
                     text = "Informes locales",
-                    modifier = Modifier.weight(1f),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f).semantics { heading() },
+                    style = titleStyle,
                 )
-                TextButton(onClick = onNavigation) { Text("Volver al Resumen") }
+                TextButton(
+                    onClick = onNavigation,
+                    modifier = Modifier.heightIn(min = 48.dp),
+                    contentPadding = navigationPadding,
+                ) { Text("Volver al Resumen", style = navigationStyle) }
             }
         }
     }
@@ -218,43 +266,41 @@ private fun ReportContent(
     ReviewSection(state)
     if (state.stage == ReportsStage.READY && artifact != null) {
         SectionCard("Archivo listo", modifier = Modifier.testTag("reports-ready")) {
-            Text(artifact.suggestedFileName, fontWeight = FontWeight.Bold)
-            Text("${artifact.byteSize} bytes · ${artifact.format.mimeType}")
-            Button(
+            Text(artifact.suggestedFileName, style = MaterialTheme.typography.titleSmall)
+            Text(
+                "${artifact.byteSize} bytes · ${artifact.format.mimeType}",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            PrimaryAction(
+                label = "Guardar informe",
                 onClick = onSaveRequested,
-                modifier = Modifier.fillMaxWidth().testTag("reports-save"),
-            ) {
-                Text("Guardar informe")
-            }
-            Button(
+                modifier = Modifier.testTag("reports-save"),
+            )
+            SecondaryAction(
+                label = "Compartir",
                 onClick = onShareRequested,
                 modifier = Modifier.fillMaxWidth().testTag("reports-share"),
-            ) {
-                Text("Compartir")
-            }
-            OutlinedButton(
+            )
+            SecondaryAction(
+                label = "Regenerar desde los datos actuales",
                 onClick = actions.regenerate,
                 modifier = Modifier.fillMaxWidth().testTag("reports-regenerate"),
-            ) {
-                Text("Regenerar desde los datos actuales")
-            }
+            )
         }
     } else if (state.stage != ReportsStage.ERROR || state.projection != null) {
-        Button(
+        PrimaryAction(
+            label = "Generar archivo",
             onClick = actions.generate,
             enabled = state.projection != null && !state.isBusy,
-            modifier = Modifier.fillMaxWidth().testTag("reports-generate"),
-        ) {
-            Text("Generar archivo")
-        }
+            modifier = Modifier.testTag("reports-generate"),
+        )
     }
-    OutlinedButton(
+    SecondaryAction(
+        label = "Volver al Resumen",
         onClick = actions.close,
         enabled = !state.isBusy,
         modifier = Modifier.fillMaxWidth().testTag("reports-back-summary"),
-    ) {
-        Text("Volver al Resumen")
-    }
+    )
 }
 
 @Composable
@@ -268,7 +314,7 @@ private fun FormatSection(state: ReportsUiState, actions: ReportsActions) {
             Text(
                 "Las fotos sólo pueden incluirse en PDF.",
                 color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.testTag("reports-xlsx-photo-explanation"),
             )
         }
@@ -301,7 +347,7 @@ private fun FormatChoice(
             enabled = !state.isBusy,
             modifier = Modifier.testTag("reports-format-${format.name.lowercase()}-radio"),
         )
-        Text(label, fontWeight = FontWeight.Bold)
+        Text(label, style = MaterialTheme.typography.titleSmall)
     }
 }
 
@@ -357,7 +403,7 @@ private fun PrivacySection(state: ReportsUiState, actions: ReportsActions) {
                 )
                 Text(
                     "Seleccionadas: ${state.privacy.selectedPhotoIds.size} de ${ReportPrivacySelection.MAX_REPORT_PHOTOS}",
-                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleSmall,
                 )
                 state.availablePhotos.forEachIndexed { index, photo ->
                     val enabled = !state.isBusy && (photo.available || photo.selected)
@@ -404,7 +450,7 @@ private fun PrivacySwitch(
     tag: String,
     unavailableText: String? = null,
 ) {
-    Row(
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = 48.dp)
@@ -415,18 +461,37 @@ private fun PrivacySwitch(
                 onValueChange = onChecked,
             )
             .testTag(tag),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(label, modifier = Modifier.weight(1f))
-        Switch(
-            checked = checked,
-            onCheckedChange = null,
-            enabled = enabled,
-            modifier = Modifier.testTag("$tag-switch"),
-        )
+        val labelContent: @Composable (Modifier) -> Unit = { modifier ->
+            Text(label, modifier = modifier.testTag("$tag-label"), style = MaterialTheme.typography.bodyMedium)
+        }
+        val switchContent: @Composable (Modifier) -> Unit = { modifier ->
+            Switch(
+                checked = checked,
+                onCheckedChange = null,
+                enabled = enabled,
+                modifier = modifier.testTag("$tag-switch"),
+            )
+        }
+        if (maxWidth < 240.dp) {
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.medium)) {
+                labelContent(Modifier.fillMaxWidth())
+                switchContent(Modifier.align(Alignment.End))
+            }
+        } else {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.medium),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                labelContent(Modifier.weight(1f))
+                switchContent(Modifier)
+            }
+        }
     }
-    unavailableText?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+    unavailableText?.let {
+        Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
 }
 
 @Composable
@@ -440,7 +505,7 @@ private fun ReviewSection(state: ReportsUiState) {
             Text("La vista previa todavía no está disponible.")
             return@SectionCard
         }
-        Text(projection.statusText, fontWeight = FontWeight.Bold)
+        Text(projection.statusText, style = MaterialTheme.typography.titleSmall)
         Text(if (projection.hasActivity) "Actividad registrada" else "Sin actividad registrada")
         Text("Rubros: ${projection.sectors.joinToString { it.displayName }.ifBlank { "sin actividad laboral" }}")
         val total = projection.summary.essentials.totalWorked?.value ?: 0L
@@ -454,19 +519,29 @@ private fun ReviewSection(state: ReportsUiState) {
             "Siempre quedan afuera direcciones, IDs, rutas, EXIF, explicaciones internas y montos. " +
                 "Las notas privadas y las fotos sólo se incluyen si las elegiste.",
             style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
 
 @Composable
 private fun BusyState(message: String, tag: String) {
-    Row(
+    BoxWithConstraints(
         modifier = Modifier.fillMaxWidth().testTag(tag),
-        horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
-        verticalAlignment = Alignment.CenterVertically,
     ) {
-        CircularProgressIndicator()
-        Text(message)
+        if (maxWidth < 240.dp) {
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.medium),
+                horizontalAlignment = Alignment.CenterHorizontally) {
+                CircularProgressIndicator()
+                Text(message, style = MaterialTheme.typography.bodyMedium)
+            }
+        } else {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.medium),
+                verticalAlignment = Alignment.CenterVertically) {
+                CircularProgressIndicator()
+                Text(message, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+            }
+        }
     }
 }
 

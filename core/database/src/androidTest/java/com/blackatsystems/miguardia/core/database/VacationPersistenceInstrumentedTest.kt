@@ -221,6 +221,26 @@ class VacationPersistenceInstrumentedTest {
         assertEquals(original, store.vacations.getById(original.id))
     }
 
+    @Test fun medicalLeaveExpectedUpdateAndDeleteRejectStaleDialogs() = runBlocking {
+        val original = leave(60, LocalDate.of(2026, 9, 20), LocalDate.of(2026, 9, 22))
+        store.medicalLeaves.create(original)
+        val winner = original.copy(endDateInclusive = LocalDate.of(2026, 9, 23), updatedAt = NOW.plusMillis(1))
+        store.medicalLeaves.updateExpected(original, winner)
+
+        assertSuspendThrows<ConflictingLocalWriteException> {
+            store.medicalLeaves.updateExpected(original, original.copy(updatedAt = NOW.plusMillis(2)))
+        }
+        assertSuspendThrows<ConflictingLocalWriteException> {
+            store.medicalLeaves.deleteExpected(original)
+        }
+        assertEquals(
+            winner,
+            store.medicalLeaves.observeIntersecting(winner.startDate, winner.endDateInclusive).first().single(),
+        )
+        store.medicalLeaves.deleteExpected(winner)
+        assertTrue(store.medicalLeaves.observeIntersecting(winner.startDate, winner.endDateInclusive).first().isEmpty())
+    }
+
     private fun openStore() {
         val database = Room.databaseBuilder(context, MiGuardiaV2Database::class.java, DB).build()
         store = LocalDataStore(database)

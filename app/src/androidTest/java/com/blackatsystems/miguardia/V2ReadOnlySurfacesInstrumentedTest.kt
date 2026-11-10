@@ -62,7 +62,7 @@ class V2ReadOnlySurfacesInstrumentedTest {
                 SQLiteDatabase.OPEN_READONLY,
             )
             val baseline = logicalSnapshot(sqlite)
-            assertEquals(27, baseline.tables.size)
+            assertEquals(29, baseline.tables.size)
             assertEquals(EXPECTED_APPLICATION_TABLES, baseline.tables.toSet())
 
             val calendar = withTimeout(5_000) {
@@ -351,8 +351,10 @@ class V2ReadOnlySurfacesInstrumentedTest {
             "shift_actual_records",
             "shift_extra_intervals",
             "shift_notes",
+            "shift_note_attachments",
             "shift_notification_configs",
             "shift_notification_reminders",
+            "shift_situations",
             "shift_work_snapshots",
             "shifts",
             "vacations",

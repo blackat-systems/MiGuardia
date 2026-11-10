@@ -11,6 +11,15 @@
 > ADR describen el estado existente cuando se aprobó. Las copias lógicas V5
 > continúan admitidas y se elevan a V6 con coordenadas nulas al leerlas.
 
+> Actualización 2026-11-10 (pedido de Joaquin, etapa 15): la lista blanca de
+> preferencias suma las tres opciones del aviso permanente («Mostrar siempre la
+> próxima jornada», «Mostrar en la pantalla bloqueada» y «Contar hasta el final
+> durante la jornada»). Son claves **opcionales**: la copia nueva lleva 20
+> preferencias y una copia anterior, con las 17 de siempre, se sigue leyendo; al
+> restaurarla esas tres opciones quedan en su valor de fábrica (apagado,
+> encendido, encendido). No cambia el formato del contenedor, Room ni el cifrado.
+> Una clave desconocida, repetida o faltante se sigue rechazando.
+
 ## Contexto
 
 MiGuardia V2 guarda toda la historia laboral localmente. La fuente principal es
@@ -84,7 +93,9 @@ La copia incluye:
 - tema y zoom interno de MiGuardia;
 - orden, visibilidad e introducción del Resumen;
 - preferencias durables de Notificaciones: habilitación, precisión solicitada,
-  anticipación, persistencia, privacidad y modo de atención;
+  anticipación, persistencia, privacidad y modo de atención; desde el 10/11/2026
+  también las tres opciones del aviso permanente, como claves opcionales que una
+  copia anterior no trae y que entonces se restauran con su valor de fábrica;
 - avisos que la persona ocultó conscientemente, sólo como identidades
   normalizadas que sigan correspondiendo a eventos restaurados;
 - preferencias durables de Clima: habilitación, unidad, inclusión en avisos y
@@ -191,7 +202,10 @@ identidad modificada ni una relación semánticamente exclusiva.
 
 En `Combinar`, los avisos ocultados válidos se unen con los locales. Todas las
 demás preferencias en conflicto usan la resolución elegida; jamás se copian
-claves DataStore desconocidas.
+claves DataStore desconocidas. Una copia anterior a las tres opciones del aviso
+permanente se compara con sus valores de fábrica: si en el teléfono están
+cambiadas, cada una aparece como un conflicto más y `Conservar lo actual` las
+deja como están.
 
 Una copia de otra `timelineId` no puede combinarse automáticamente con una
 instalación no vacía: MiGuardia admite una sola configuración laboral. En ese

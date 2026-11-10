@@ -7,6 +7,11 @@ import androidx.compose.ui.test.assertHasNoClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertTextEquals
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
@@ -49,8 +54,8 @@ import com.blackatsystems.miguardia.ui.management.V2ShiftEditStage
 import com.blackatsystems.miguardia.ui.management.V2ShiftEditSurfaceHost
 import com.blackatsystems.miguardia.ui.management.V2ShiftEditTemplateOption
 import com.blackatsystems.miguardia.ui.management.V2ShiftEditUiState
-import com.blackatsystems.miguardia.ui.theme.AppZoom
-import com.blackatsystems.miguardia.ui.theme.MiGuardiaTheme
+import com.blackatsystems.miguardia.testsupport.TestFontScale
+import com.blackatsystems.miguardia.testsupport.AndroidFontScaleTheme
 import com.blackatsystems.miguardia.ui.worksetup.WorkSetupUiState
 import java.time.Instant
 import java.time.LocalDate
@@ -59,6 +64,7 @@ import java.time.YearMonth
 import java.time.ZoneId
 import java.util.UUID
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -78,7 +84,7 @@ class V2ShiftEditComposeTest {
         var retries = 0
         var starts = 0
         compose.setContent {
-            MiGuardiaTheme {
+            AndroidFontScaleTheme {
                 V2DayEditEntry(
                     state = state,
                     date = DATE,
@@ -113,8 +119,9 @@ class V2ShiftEditComposeTest {
     fun calendarDetailUsesEditarEsteDiaWithoutEnteringBulkEditMode() {
         val original = write(uuid(11))
         var starts = 0
+        var bulkEditEntries = 0
         compose.setContent {
-            MiGuardiaTheme {
+            AndroidFontScaleTheme {
                 MiGuardiaApp(
                     calendarState = calendarState(original.shift),
                     onPreviousMonth = {},
@@ -123,6 +130,7 @@ class V2ShiftEditComposeTest {
                     onSelectDate = {},
                     onDismissDate = {},
                     onRetry = {},
+                    onEnterCalendarEditMode = { bulkEditEntries++ },
                     v2ShiftEditState = V2ShiftEditUiState(
                         timelineId = TIMELINE_ID,
                         date = DATE,
@@ -135,13 +143,18 @@ class V2ShiftEditComposeTest {
             }
         }
 
-        compose.onNodeWithText("Editar este día").performScrollTo().assertIsDisplayed().performClick()
-        compose.runOnIdle { assertEquals(1, starts) }
+        compose.onNodeWithTag("day-other-options").performScrollTo().assertIsDisplayed().assertIsEnabled().performClick()
+        compose.onNodeWithTag("v2-edit-day-action").performScrollTo().assertIsDisplayed().assertIsEnabled()
+            .assertTextEquals("Agregar jornada o franco").performClick()
+        compose.runOnIdle {
+            assertEquals(1, starts)
+            assertEquals(0, bulkEditEntries)
+        }
         compose.onNodeWithText("Editando calendario").assertDoesNotExist()
     }
 
     @Test
-    fun needsFirstWorkSetNeverMountsOrOffersTheV2Editor() {
+    fun needsFirstWorkSetNeverMountsTheV2EditorButKeepsTheUnifiedDayMenu() {
         val original = write(uuid(12))
         val ready = readyWorkSetupState()
         val revision = (ready.rootState as WorkSetupState.V2Ready).configurationRevision
@@ -149,7 +162,7 @@ class V2ShiftEditComposeTest {
             rootState = WorkSetupState.V2NeedsFirstSet(TIMELINE_ID, revision, emptySet()),
         )
         compose.setContent {
-            MiGuardiaTheme {
+            AndroidFontScaleTheme {
                 MiGuardiaApp(
                     calendarState = calendarState(original.shift),
                     onPreviousMonth = {},
@@ -167,7 +180,7 @@ class V2ShiftEditComposeTest {
         compose.onNodeWithTag("v2-shift-edit-surface").assertDoesNotExist()
         compose.onNodeWithTag("v2-shift-identification-loading").assertDoesNotExist()
         compose.onNodeWithText("Editar este día").assertDoesNotExist()
-        compose.onNodeWithText("Editar día").assertDoesNotExist()
+        compose.onNodeWithText("Editar día").assertIsDisplayed()
     }
 
     @Test
@@ -184,7 +197,7 @@ class V2ShiftEditComposeTest {
                 row(second, 2, 2),
             ),
         )
-        compose.setContent { MiGuardiaTheme { V2ShiftEditSurfaceHost(state, V2ShiftEditActions()) } }
+        compose.setContent { AndroidFontScaleTheme { V2ShiftEditSurfaceHost(state, V2ShiftEditActions()) } }
 
         compose.onNodeWithContentDescription("Jornada 1 de 2", substring = true).assertIsDisplayed()
         compose.onNodeWithContentDescription("Jornada 2 de 2", substring = true).assertIsDisplayed()
@@ -197,7 +210,7 @@ class V2ShiftEditComposeTest {
         val original = write(uuid(30), position = "Puesto A")
         var state by mutableStateOf(editorState(original))
         compose.setContent {
-            MiGuardiaTheme {
+            AndroidFontScaleTheme {
                 V2ShiftEditSurfaceHost(
                     state = state,
                     actions = V2ShiftEditActions(updatePosition = { state = state.copy(position = it) }),
@@ -222,7 +235,7 @@ class V2ShiftEditComposeTest {
         var correctCalls = 0
         var returnCalls = 0
         compose.setContent {
-            MiGuardiaTheme {
+            AndroidFontScaleTheme {
                 V2ShiftEditSurfaceHost(
                     state = editorState(original).copy(actualExpectation = expectation),
                     actions = V2ShiftEditActions(
@@ -253,7 +266,7 @@ class V2ShiftEditComposeTest {
         var handoffs = 0
         var unavailable = 0
         compose.setContent {
-            MiGuardiaTheme {
+            AndroidFontScaleTheme {
                 MiGuardiaApp(
                     calendarState = calendarState(original.shift),
                     onPreviousMonth = {},
@@ -311,7 +324,7 @@ class V2ShiftEditComposeTest {
         var handoffs = 0
         var unavailable = 0
         compose.setContent {
-            MiGuardiaTheme {
+            AndroidFontScaleTheme {
                 MiGuardiaApp(
                     calendarState = calendarState(original.shift),
                     onPreviousMonth = {},
@@ -366,7 +379,7 @@ class V2ShiftEditComposeTest {
         var historicalSelections = 0
         var activeSelection: UUID? = null
         compose.setContent {
-            MiGuardiaTheme {
+            AndroidFontScaleTheme {
                 V2ShiftEditSurfaceHost(
                     state = editorState(original).copy(templateOptions = listOf(current)),
                     actions = V2ShiftEditActions(
@@ -404,7 +417,7 @@ class V2ShiftEditComposeTest {
         )
         var confirmations = 0
         compose.setContent {
-            MiGuardiaTheme {
+            AndroidFontScaleTheme {
                 V2ShiftEditSurfaceHost(
                     state,
                     V2ShiftEditActions(
@@ -438,7 +451,7 @@ class V2ShiftEditComposeTest {
         compose.onNodeWithTag("v2-shift-delete-dialog").assertIsDisplayed()
         compose.onNodeWithText("También se quitarán el horario real", substring = true).assertIsDisplayed()
         compose.onNodeWithText("Hospital ficticio", substring = true).assertIsDisplayed()
-        compose.onNodeWithText("08:00–16:00", substring = true).performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("10/08/2026 08:00 – 10/08/2026 16:00", substring = true).performScrollTo().assertIsDisplayed()
         compose.onNodeWithTag("v2-shift-confirm-delete").performClick()
         compose.runOnIdle {
             assertEquals(2, confirmations)
@@ -473,7 +486,7 @@ class V2ShiftEditComposeTest {
         var changedFrom: Pair<UUID, LocalDate>? = null
         var finalizedFrom: Pair<UUID, LocalDate>? = null
         compose.setContent {
-            MiGuardiaTheme {
+            AndroidFontScaleTheme {
                 V2ShiftEditSurfaceHost(
                     state,
                     V2ShiftEditActions(
@@ -507,12 +520,12 @@ class V2ShiftEditComposeTest {
     }
 
     @Test
-    fun primaryActionStaysReachableInBothThemesAndAllInternalZooms() {
+    fun primaryActionStaysReachableInBothThemesAndAllAndroidFontScales() {
         val original = write(uuid(50), position = "Puesto A")
         var dark by mutableStateOf(false)
-        var zoom by mutableStateOf(AppZoom.STANDARD)
+        var fontScale by mutableStateOf(TestFontScale.STANDARD)
         compose.setContent {
-            MiGuardiaTheme(darkTheme = dark, appZoom = zoom) {
+            AndroidFontScaleTheme(darkTheme = dark, fontScale = fontScale) {
                 V2ShiftEditSurfaceHost(
                     editorState(original).copy(position = "Cambio alcanzable"),
                     V2ShiftEditActions(),
@@ -521,10 +534,10 @@ class V2ShiftEditComposeTest {
         }
 
         listOf(false, true).forEach { darkTheme ->
-            AppZoom.entries.forEach { appZoom ->
+            TestFontScale.entries.forEach { selectedScale ->
                 compose.runOnIdle {
                     dark = darkTheme
-                    zoom = appZoom
+                    fontScale = selectedScale
                 }
                 compose.onNodeWithTag("v2-shift-request-review")
                     .performScrollTo()
@@ -532,6 +545,31 @@ class V2ShiftEditComposeTest {
                     .assertIsEnabled()
             }
         }
+    }
+
+    @Test
+    fun commonHeaderPutsNavigationOnTheRightAndIgnoresTouchesWhileSaving() {
+        val original = write(uuid(55), position = "Puesto A")
+        var state by mutableStateOf(editorState(original))
+        var backs = 0
+        compose.setContent {
+            AndroidFontScaleTheme {
+                V2ShiftEditSurfaceHost(state, V2ShiftEditActions(back = { backs++ }))
+            }
+        }
+        val inHeader = hasAnyAncestor(hasTestTag("v2-shift-edit-header"))
+        val title = compose.onNode(hasText("Editar jornada") and inHeader).fetchSemanticsNode().boundsInRoot
+        val navigation = compose.onNode(hasText("Volver") and hasClickAction() and inHeader)
+        assertTrue(navigation.fetchSemanticsNode().boundsInRoot.left > title.left)
+        navigation.performClick()
+        compose.runOnIdle {
+            assertEquals(1, backs)
+            state = state.copy(isSaving = true)
+        }
+        // As before stage 13.5: the button keeps its tag and is disabled while saving.
+        compose.onNodeWithTag("v2-shift-edit-back").assertIsNotEnabled()
+        navigation.performClick()
+        compose.runOnIdle { assertEquals(1, backs) }
     }
 
     private fun editorState(original: V2ShiftWrite): V2ShiftEditUiState = V2ShiftEditUiState(

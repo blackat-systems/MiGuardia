@@ -6,7 +6,7 @@ Este catálogo define qué ejecutar y cómo registrar evidencia. El alcance auto
 
 Python 3.11+ y biblioteca estándar; Java/JBR compatible con el wrapper y SDK Android 37. No se instalan herramientas ni se cambian versiones automáticamente. `local.properties` y firmas permanecen privados.
 
-| Cambio | Comprobación necesaria |
+| Cambio | Comprobación necesaria para el cierre |
 |---|---|
 | Sólo documentos/índices | `python tools/docs_check.py` y diff del alcance; no compilar Android por ritual |
 | Herramientas Python | `python -m unittest discover -s tools/tests -v`, planes y casos de rechazo pertinentes |
@@ -16,15 +16,17 @@ Python 3.11+ y biblioteca estándar; Java/JBR compatible con el wrapper y SDK An
 | Room/migración | Lo anterior más esquema e instrumentación de base autorizada; no aceptar sólo compilación |
 | Candidato transversal/Release | `full` y matriz de superficie; verificaciones específicas del contrato Release |
 
+Durante la iteración, usar pruebas dirigidas y compilaciones de lo afectado, registrando insumos, resultado, alcance y pendientes. Estos controles no cierran la capacidad ni sustituyen obligaciones. Al cerrar la capacidad o candidata, completar el perfil exigido por impacto o justificar qué evidencia vigente se reutiliza; una entrega parcial conserva sus pendientes y siguiente dueño. Una prueba mínima no modifica admisiones, permisos ni protocolos QA vigentes.
+
 `local` ejecuta las pruebas Debug de dominio, database y app. La categoría JUnit `WebCryptoInterop` se ejecuta sólo en `interop`; se mantiene fuera de las pruebas locales para que éstas sean autosuficientes. No presentar `local` como interoperabilidad completa.
 
 `build` ejecuta lint Debug, Debug/QA/Release y los dos APK de instrumentación. `full` ejecuta local + interoperabilidad + build en secuencia. Release aquí es la variante de compilación, no una firma o distribución oficial.
 
 ```powershell
 python tools/verify.py --profile local --fresh-tests
-python tools/verify.py --profile interop --website ../website --node 'C:\Program Files\nodejs\node.exe' --fresh-tests
+python tools/verify.py --profile interop --website ../../website --node 'C:\Program Files\nodejs\node.exe' --fresh-tests
 python tools/verify.py --profile build
-python tools/verify.py --profile full --website ../website --fresh-tests
+python tools/verify.py --profile full --website ../../website --fresh-tests
 ```
 
 `--website` es obligatorio para interop/full. `--node` puede indicar un ejecutable nativo o resolverse en PATH. Se comprueban transformación TypeScript y firma ECDSA/WebCrypto, y se registran HEAD, cambios e insumos relevantes de Android/web. Se usa el código web sin escribirlo ni aprovisionar un servidor. Un requisito faltante produce un fallo claro; nunca un test omitido presentado como verde.

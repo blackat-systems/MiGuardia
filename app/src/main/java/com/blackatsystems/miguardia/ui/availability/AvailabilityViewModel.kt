@@ -77,6 +77,19 @@ data class AvailabilityWindowDraftState(
     val startTime: String = "",
     val endDate: String = "",
     val endTime: String = "",
+    val labelOverride: AvailabilityLabel? = null,
+)
+
+internal fun retainerWindowDraft(
+    recordId: UUID,
+    ownerDate: LocalDate,
+): AvailabilityWindowDraftState = AvailabilityWindowDraftState(
+    recordId = recordId,
+    ownerDate = ownerDate,
+    startTime = "08:00",
+    endDate = ownerDate.toString(),
+    endTime = "12:00",
+    labelOverride = AvailabilityLabel.ON_CALL_RETAINER,
 )
 
 data class AvailabilityWindowReview(
@@ -305,6 +318,14 @@ class AvailabilityViewModel(
         setSurface(AvailabilitySurface.WINDOW_EDITOR)
     }
 
+    fun openRetainer(ownerDate: LocalDate) {
+        if (_uiState.value.isSaving) return
+        if (_uiState.value.loadState != AvailabilityLoadState.CONTENT) return
+        savedStateHandle[KEY_WINDOW_ORIGINAL] = NEW_WINDOW
+        updateWindowDraft(retainerWindowDraft(uuidProvider(), ownerDate))
+        setSurface(AvailabilitySurface.WINDOW_EDITOR)
+    }
+
     fun openCorrect(record: AvailabilityWindowRecord) {
         if (_uiState.value.isSaving) return
         savedStateHandle[KEY_WINDOW_ORIGINAL] = record.editFingerprint()
@@ -328,6 +349,7 @@ class AvailabilityViewModel(
         savedStateHandle[KEY_WINDOW_START] = draft.startTime
         savedStateHandle[KEY_WINDOW_END_DATE] = draft.endDate
         savedStateHandle[KEY_WINDOW_END] = draft.endTime
+        savedStateHandle[KEY_WINDOW_LABEL_OVERRIDE] = draft.labelOverride?.name ?: NONE_LABEL
         savedStateHandle.remove<String>(KEY_WINDOW_EXPECTATION)
     }
 
@@ -513,8 +535,18 @@ class AvailabilityViewModel(
             windowStart = observedStart,
             windowEnd = observedEnd,
         )
+        require(expectation.previous == previous) {
+            "La disponibilidad cambió desde que abriste el editor. Volvé a abrirla antes de corregir."
+        }
         val record = buildAvailabilityWindowRecord(
-            draft = AvailabilityWindowDraft(draft.recordId, ownerDate, zoneId, start, end),
+            draft = AvailabilityWindowDraft(
+                id = draft.recordId,
+                ownerLocalDate = ownerDate,
+                zoneId = zoneId,
+                start = start,
+                end = end,
+                labelOverride = draft.labelOverride,
+            ),
             configuration = configuration,
             timestamp = nextVersionTimestamp(previous),
             previous = previous,
@@ -522,26 +554,18 @@ class AvailabilityViewModel(
         if (expectation.overlaps(record)) {
             error("La disponibilidad se superpone con otra ventana. Los tramos contiguos sí están permitidos.")
         }
-        val isProtected = expectation.protectionFingerprint.isNotEmpty()
-        val breakdown = source.breakdowns[record.id] ?: calculateForDraft(record, source, isProtected)
+        val calculation = requireNotNull(expectation.calculation) {
+            "No pudimos obtener una revisión consistente de la disponibilidad. Volvé a revisar."
+        }
+        val isProtected = calculation.ownerProtected
+        val breakdown = calculateAvailabilityBreakdown(record, calculation.activeWork, isProtected, clock)
         return AvailabilityWindowReview(
             record = record,
             expectation = expectation,
             breakdown = breakdown,
-            isProtected = record.id in source.protectedWindowIds || isProtected,
+            isProtected = isProtected,
         )
     }
-
-    private fun calculateForDraft(
-        record: AvailabilityWindowRecord,
-        source: AvailabilitySource,
-        isProtected: Boolean,
-    ): AvailabilityBreakdown = calculateAvailabilityBreakdown(
-        record,
-        requireNotNull(source.activeWork),
-        isProtected || requireNotNull(source.protectedRanges).any { record.ownerLocalDate in it },
-        clock,
-    )
 
     private fun nextVersionTimestamp(previous: AvailabilityWindowRecord?): Instant {
         val now = clock.instant().truncatedTo(ChronoUnit.MILLIS)
@@ -858,6 +882,9 @@ class AvailabilityViewModel(
             startTime = savedStateHandle.get<String>(KEY_WINDOW_START).orEmpty(),
             endDate = savedStateHandle.get<String>(KEY_WINDOW_END_DATE).orEmpty(),
             endTime = savedStateHandle.get<String>(KEY_WINDOW_END).orEmpty(),
+            labelOverride = savedStateHandle.get<String>(KEY_WINDOW_LABEL_OVERRIDE)
+                ?.takeUnless { it == NONE_LABEL }
+                ?.let { runCatching { AvailabilityLabel.valueOf(it) }.getOrNull() },
         )
     }
 
@@ -874,6 +901,7 @@ class AvailabilityViewModel(
         savedStateHandle.remove<String>(KEY_WINDOW_START)
         savedStateHandle.remove<String>(KEY_WINDOW_END_DATE)
         savedStateHandle.remove<String>(KEY_WINDOW_END)
+        savedStateHandle.remove<String>(KEY_WINDOW_LABEL_OVERRIDE)
         savedStateHandle.remove<String>(KEY_WINDOW_EXPECTATION)
         savedStateHandle.remove<String>(KEY_WINDOW_ORIGINAL)
     }
@@ -910,6 +938,7 @@ class AvailabilityViewModel(
         observedWindows.sortedBy { it.id }.forEach { append('|').append(it) }
         observedActiveSources.sortedBy { it.key }.forEach { append('|').append(it) }
         append('|').append(protectionFingerprint)
+        append('|').append(calculation)
     }
 
     private fun AvailabilityWindowRecord.editFingerprint(): String = listOf(
@@ -979,6 +1008,7 @@ class AvailabilityViewModel(
         const val KEY_WINDOW_START = "availability.window.start"
         const val KEY_WINDOW_END_DATE = "availability.window.endDate"
         const val KEY_WINDOW_END = "availability.window.end"
+        const val KEY_WINDOW_LABEL_OVERRIDE = "availability.window.labelOverride"
         const val KEY_WINDOW_EXPECTATION = "availability.window.expectation"
         const val KEY_WINDOW_ORIGINAL = "availability.window.original"
         const val KEY_DELETING_ID = "availability.deleting"

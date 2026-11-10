@@ -8,8 +8,8 @@ import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.material3.Text
 import androidx.test.espresso.Espresso
 import androidx.test.core.app.ApplicationProvider
-import com.blackatsystems.miguardia.ui.theme.AppZoom
-import com.blackatsystems.miguardia.ui.theme.MiGuardiaTheme
+import com.blackatsystems.miguardia.testsupport.TestFontScale
+import com.blackatsystems.miguardia.testsupport.AndroidFontScaleTheme
 import java.io.File
 import java.security.KeyStore
 import java.time.Instant
@@ -27,7 +27,7 @@ class BetaComposeTest {
         val restoration = StateRestorationTester(compose)
         restoration.setContent {
             var safe by rememberBetaSafePoint()
-            MiGuardiaTheme {
+            AndroidFontScaleTheme {
                 if (beta.allowsContentAt(safe)) {
                     SideEffect { safe = !pending }
                     Text(if (pending) "Operación pendiente" else "Punto seguro")
@@ -69,7 +69,7 @@ class BetaComposeTest {
                 }) }, scope)
             coordinator.initialize()
             compose.setContent {
-                MiGuardiaTheme {
+                AndroidFontScaleTheme {
                     BetaExitBackHandler(true, coordinator) { closed = true }
                     Text("Acceso de prueba")
                 }
@@ -89,7 +89,7 @@ class BetaComposeTest {
             KeyStore.getInstance("AndroidKeyStore").apply { load(null); deleteEntry(alias) }
         }
     }
-    @Test fun activationOpinionConsentQueueAndReceiptHaveDistinctAccessibleStatesAcrossInternalZooms() = runBlocking {
+    @Test fun activationOpinionConsentQueueAndReceiptHaveDistinctAccessibleStatesAcrossAndroidFontScales() = runBlocking {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         val file = File(context.noBackupFilesDir, "beta-compose-${UUID.randomUUID()}.preferences_pb")
@@ -101,11 +101,11 @@ class BetaComposeTest {
                 { BetaEnvironment(issuer.keys, issuer.transport) }, scope, clock)
             coordinator.initialize()
             val draft = BetaDraftViewModel()
-            var zoom by mutableStateOf(AppZoom.STANDARD)
+            var fontScale by mutableStateOf(TestFontScale.STANDARD)
             var dark by mutableStateOf(false)
             compose.setContent {
                 val state by coordinator.state.collectAsState()
-                MiGuardiaTheme(darkTheme = dark, appZoom = zoom) { BetaScreen(state, draft, coordinator) {} }
+                AndroidFontScaleTheme(darkTheme = dark, fontScale = fontScale) { BetaScreen(state, draft, coordinator) {} }
             }
             compose.onNodeWithTag("beta-activate").assertIsNotEnabled()
             compose.onNodeWithTag("beta-code").performTextInput("MG" + "2345".repeat(6))
@@ -118,8 +118,8 @@ class BetaComposeTest {
             compose.onNodeWithTag("beta-message").performScrollTo().performTextInput("Una mejora ficticia")
             compose.onNodeWithTag("beta-confirm").performScrollTo().assertIsNotEnabled()
             compose.onNodeWithText("Acepto enviar esta opinión a Blackat Systems para mejorar MiGuardia.").performScrollTo().performClick()
-            for (newZoom in AppZoom.entries) for (newDark in listOf(false, true)) {
-                compose.runOnIdle { zoom = newZoom; dark = newDark }
+            for (newFontScale in TestFontScale.entries) for (newDark in listOf(false, true)) {
+                compose.runOnIdle { fontScale = newFontScale; dark = newDark }
                 compose.onNodeWithTag("beta-message").performScrollTo().assertIsDisplayed()
                 compose.onNodeWithTag("beta-confirm").performScrollTo().assertIsDisplayed().assertIsEnabled()
             }

@@ -22,7 +22,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -35,6 +34,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -43,17 +43,32 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.blackatsystems.miguardia.ui.components.MiGuardiaButtonShape
+import com.blackatsystems.miguardia.ui.components.MiGuardiaSpacing
+import com.blackatsystems.miguardia.ui.components.PrimaryAction
+import com.blackatsystems.miguardia.ui.components.ScreenHeading
+import com.blackatsystems.miguardia.ui.components.SecondaryAction
+import com.blackatsystems.miguardia.ui.components.cardBorder
+import com.blackatsystems.miguardia.ui.components.vigiliaCardSurface
+import com.blackatsystems.miguardia.ui.components.vigiliaScreenBackground
 import kotlin.math.roundToInt
 
 enum class HelpAnchor {
@@ -75,11 +90,20 @@ class HelpAnchorRegistry {
     }
 
     fun bounds(anchor: HelpAnchor): Rect? = positions[anchor]?.takeUnless { it.isEmpty }
+
+    fun remove(anchor: HelpAnchor) {
+        positions.remove(anchor)
+    }
 }
 
 fun Modifier.helpAnchor(registry: HelpAnchorRegistry?, anchor: HelpAnchor): Modifier =
-    if (registry == null) this else onGloballyPositioned { coordinates ->
-        registry.update(anchor, coordinates.boundsInRoot())
+    if (registry == null) this else composed {
+        DisposableEffect(registry, anchor) {
+            onDispose { registry.remove(anchor) }
+        }
+        onGloballyPositioned { coordinates ->
+            registry.update(anchor, coordinates.boundsInRoot())
+        }
     }
 
 @Composable
@@ -103,13 +127,14 @@ private fun HelpLoadingScreen(modifier: Modifier) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .vigiliaScreenBackground()
                 .testTag("help-state-loading")
                 .semantics { contentDescription = "Preparando la guía inicial" },
             contentAlignment = Alignment.Center,
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 CircularProgressIndicator()
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(MiGuardiaSpacing.large))
                 Text("Preparando tu primera guía…")
             }
         }
@@ -122,22 +147,30 @@ private fun HelpReadErrorScreen(onRetry: () -> Unit, modifier: Modifier) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .vigiliaScreenBackground()
                 .verticalScroll(rememberScrollState())
-                .padding(24.dp)
+                .padding(MiGuardiaSpacing.large)
                 .testTag("help-state-read-error"),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text("No pudimos preparar la guía", style = MaterialTheme.typography.headlineSmall)
-            Spacer(Modifier.height(12.dp))
+            Text(
+                "No pudimos preparar la guía",
+                modifier = Modifier.semantics { heading() },
+                style = MaterialTheme.typography.headlineSmall,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(Modifier.height(MiGuardiaSpacing.medium))
             Text(
                 "Tus jornadas y tu configuración no cambiaron. Reintentá para decidir de forma segura si corresponde mostrarla.",
                 textAlign = TextAlign.Center,
             )
-            Spacer(Modifier.height(20.dp))
-            Button(onClick = onRetry, modifier = Modifier.testTag("help-read-retry")) {
-                Text("Reintentar")
-            }
+            Spacer(Modifier.height(MiGuardiaSpacing.extraLarge))
+            PrimaryAction(
+                label = "Reintentar",
+                onClick = onRetry,
+                modifier = Modifier.testTag("help-read-retry"),
+            )
         }
     }
 }
@@ -151,7 +184,7 @@ private val IntroductionCopies = listOf(
     ),
     IntroductionCopy(
         "Entendé lo que viene y lo que hiciste",
-        "La tarjeta de hoy, Horas, Resumen, próximo evento, avisos, Widget e Informes reutilizan la información que ya guardaste.",
+        "El próximo evento, Horas, Resumen, avisos, Widget e Informes usan la información que ya guardaste.",
     ),
     IntroductionCopy(
         "Tus datos quedan bajo tu control",
@@ -168,9 +201,10 @@ private fun HelpIntroductionScreen(state: HelpUiState, actions: HelpActions, mod
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .vigiliaScreenBackground()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(24.dp)
+                .padding(MiGuardiaSpacing.large)
                 .testTag("help-introduction-${session.stepIndex + 1}"),
             verticalArrangement = Arrangement.Center,
         ) {
@@ -179,42 +213,47 @@ private fun HelpIntroductionScreen(state: HelpUiState, actions: HelpActions, mod
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary,
             )
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(MiGuardiaSpacing.small))
             LinearProgressIndicator(
                 progress = { (session.stepIndex + 1f) / INTRODUCTION_STEP_COUNT },
                 modifier = Modifier.fillMaxWidth(),
             )
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(MiGuardiaSpacing.extraLarge))
             Text(
                 copy.title,
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.headlineSmall,
                 modifier = Modifier.semantics { heading() },
             )
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(MiGuardiaSpacing.medium))
             Text(copy.body, style = MaterialTheme.typography.bodyLarge)
             state.errorMessage?.let { message ->
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(MiGuardiaSpacing.large))
                 ErrorCard(message, actions.retryCompletion)
             }
-            Spacer(Modifier.height(28.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                OutlinedButton(
-                    onClick = actions.back,
-                    enabled = !state.isSaving,
-                    modifier = Modifier.weight(1f).testTag("help-introduction-back"),
-                ) { Text("Atrás") }
-                Button(
-                    onClick = actions.next,
-                    enabled = !state.isSaving,
-                    modifier = Modifier.weight(1f).testTag("help-introduction-next"),
-                ) {
-                    Text(if (session.stepIndex == INTRODUCTION_STEP_COUNT - 1) "Ver recorrido" else "Siguiente")
-                }
-            }
+            Spacer(Modifier.height(MiGuardiaSpacing.extraLarge))
+            val introductionNextLabel =
+                if (session.stepIndex == INTRODUCTION_STEP_COUNT - 1) "Ver recorrido" else "Siguiente"
+            HelpStepActions(
+                startLabel = "Atrás",
+                endLabel = introductionNextLabel,
+                spacing = MiGuardiaSpacing.medium,
+                start = { slot ->
+                    SecondaryAction(
+                        label = "Atrás",
+                        onClick = actions.back,
+                        enabled = !state.isSaving,
+                        modifier = slot.testTag("help-introduction-back"),
+                    )
+                },
+                end = { slot ->
+                    PrimaryAction(
+                        label = introductionNextLabel,
+                        onClick = actions.next,
+                        enabled = !state.isSaving,
+                        modifier = slot.testTag("help-introduction-next"),
+                    )
+                },
+            )
             if (session.mode == HelpSessionMode.AUTOMATIC) {
                 TextButton(
                     onClick = actions.requestExit,
@@ -238,27 +277,27 @@ private data class TourCopy(val title: String, val body: String)
 private val TourCopies = mapOf(
     HelpTourStep.MENU to TourCopy(
         "Tu menú principal",
-        "Abrir menú reúne tres grupos: Trabajo, Contexto y Aplicación. Desde ahí volvés al Calendario, Resumen, configuración, Copias, Bloqueo, Apariencia y Ayuda.",
+        "El menú abre Calendario y Resumen. Después reúne Acciones del Calendario, Tu trabajo, Avisos y contexto y Aplicación. Ahí encontrás también Copias, Bloqueo, Apariencia y Ayuda.",
     ),
     HelpTourStep.TODAY_CARD to TourCopy(
-        "La tarjeta de hoy",
-        "Arriba del Calendario encontrás lo próximo o lo que está ocurriendo. Si todavía no hay jornadas, la tarjeta lo explica sin inventar contenido.",
+        "Tu próximo evento",
+        "Cuando hay espacio, la tarjeta superior anticipa lo próximo o lo que está ocurriendo. Si falta altura, se reserva el espacio para el mes completo. El detalle de cada día sigue disponible.",
     ),
     HelpTourStep.MONTH_AND_GRID to TourCopy(
         "Un mes, una sola grilla",
-        "Cambiá de mes o volvé a hoy desde estos controles. La grilla reúne jornadas, estados y contexto diario.",
+        "Las flechas cambian de mes. Para volver al mes actual, abrí el menú y tocá Ir a hoy en Acciones del Calendario. Tocá un día para ver sus jornadas y contexto.",
     ),
     HelpTourStep.DAY_DETAIL to TourCopy(
         "Detalle de cada día",
-        "Tocá un día real para abrir su detalle. Cuando corresponda, ahí aparecen jornadas y accesos a notas. Si el mes está vacío, este paso sólo señala dónde se hará.",
+        "Un toque abre el detalle. Mantené presionado para seleccionar varios días, o usá Menú > Acciones del Calendario > Seleccionar días. Consultar o seleccionar no guarda cambios.",
     ),
     HelpTourStep.PHOTOS to TourCopy(
         "Fotos del cronograma",
-        "Fotos del mes abre una superficie separada. Elegir o capturar archivos y sus permisos ocurre recién allí, nunca desde esta guía.",
+        "Menú > Acciones del Calendario > Fotos del mes abre las imágenes del mes visible. Elegir o capturar archivos ocurre recién allí, nunca desde esta guía.",
     ),
     HelpTourStep.LOAD_AND_REPEAT to TourCopy(
         "Cargá jornadas o francos",
-        "Cargar jornadas o francos permite elegir fechas y marcar o quitar Franco sin horario. Las jornadas se guardan con confirmación; la revisión detallada es opcional. Repetir jornadas muestra cuántas se crearán antes de guardar.",
+        "En Acciones del Calendario, Cargar jornadas o francos empieza por las fechas. Después elegís institución y horario, o Franco. Podés volver a las fechas sin perder el borrador. Repetir jornadas permite revisar la cantidad antes de guardar.",
     ),
     HelpTourStep.SUMMARY to TourCopy(
         "Resumen mensual",
@@ -290,6 +329,17 @@ fun HelpTourOverlay(
             bounds.right > 0f && bounds.left < rootWidthPx &&
                 bounds.bottom > 0f && bounds.top < rootHeightPx
         }
+        val spaceAbove = visibleAnchor?.top?.coerceIn(0f, rootHeightPx) ?: 0f
+        val spaceBelow = visibleAnchor?.bottom?.let { (rootHeightPx - it).coerceIn(0f, rootHeightPx) }
+            ?: rootHeightPx
+        val placeAbove = spaceAbove > spaceBelow
+        // Keep the actual drawer control visible even in a short window with large text.
+        // The explanation scrolls locally; it must not cover its own reference.
+        val drawerTarget = step == HelpTourStep.PHOTOS || step == HelpTourStep.LOAD_AND_REPEAT ||
+            step == HelpTourStep.HELP
+        val panelHeight = if (drawerTarget && visibleAnchor != null) {
+            with(density) { maxOf(spaceAbove, spaceBelow).toDp() }.coerceAtMost(420.dp)
+        } else 420.dp
         Box(
             Modifier
                 .fillMaxSize()
@@ -311,30 +361,31 @@ fun HelpTourOverlay(
         Surface(
             modifier = Modifier
                 .align(
-                    if ((visibleAnchor?.center?.y ?: 0f) > rootHeightPx / 2f) {
+                    if (placeAbove) {
                         Alignment.TopCenter
                     } else {
                         Alignment.BottomCenter
                     },
                 )
+                .heightIn(max = panelHeight)
                 .safeDrawingPadding()
-                .padding(16.dp)
+                .padding(MiGuardiaSpacing.large)
                 .fillMaxWidth()
-                .heightIn(max = 420.dp),
+                .testTag("help-tour-explanation"),
             shape = MaterialTheme.shapes.large,
             tonalElevation = 8.dp,
             shadowElevation = 12.dp,
         ) {
             Column(
-                modifier = Modifier.verticalScroll(rememberScrollState()).padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.verticalScroll(rememberScrollState()).padding(MiGuardiaSpacing.large),
+                verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.medium),
             ) {
                 Text(
                     "Recorrido · ${session.stepIndex + 1} de ${HelpTourStep.entries.size}",
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.primary,
                 )
-                Text(copy.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Text(copy.title, modifier = Modifier.semantics { heading() }, style = MaterialTheme.typography.titleLarge)
                 Text(copy.body)
                 if (visibleAnchor == null) {
                     Text(
@@ -344,18 +395,28 @@ fun HelpTourOverlay(
                     )
                 }
                 state.errorMessage?.let { ErrorCard(it, actions.retryCompletion) }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(
-                        onClick = actions.back,
-                        enabled = !state.isSaving,
-                        modifier = Modifier.weight(1f).testTag("help-tour-back"),
-                    ) { Text("Atrás") }
-                    Button(
-                        onClick = if (step == HelpTourStep.HELP) actions.finish else actions.next,
-                        enabled = !state.isSaving,
-                        modifier = Modifier.weight(1f).testTag("help-tour-next"),
-                    ) { Text(if (step == HelpTourStep.HELP) "Finalizar" else "Siguiente") }
-                }
+                val tourNextLabel = if (step == HelpTourStep.HELP) "Finalizar" else "Siguiente"
+                HelpStepActions(
+                    startLabel = "Atrás",
+                    endLabel = tourNextLabel,
+                    spacing = MiGuardiaSpacing.small,
+                    start = { slot ->
+                        SecondaryAction(
+                            label = "Atrás",
+                            onClick = actions.back,
+                            enabled = !state.isSaving,
+                            modifier = slot.testTag("help-tour-back"),
+                        )
+                    },
+                    end = { slot ->
+                        PrimaryAction(
+                            label = tourNextLabel,
+                            onClick = if (step == HelpTourStep.HELP) actions.finish else actions.next,
+                            enabled = !state.isSaving,
+                            modifier = slot.testTag("help-tour-next"),
+                        )
+                    },
+                )
                 if (session.mode == HelpSessionMode.AUTOMATIC) {
                     TextButton(
                         onClick = actions.requestExit,
@@ -409,10 +470,24 @@ private fun ExitConfirmation(state: HelpUiState, actions: HelpActions) {
 
 @Composable
 private fun ErrorCard(message: String, onRetry: () -> Unit) {
-    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)) {
-        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(message, color = MaterialTheme.colorScheme.onErrorContainer)
-            OutlinedButton(onClick = onRetry, modifier = Modifier.testTag("help-completion-retry")) {
+    // Not PersistentMessage: that one labels its retry «Reintentar» and has no tag, while this
+    // card keeps «Reintentar guardado» and `help-completion-retry`. Same surface and spacing.
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.errorContainer,
+        contentColor = MaterialTheme.colorScheme.onErrorContainer,
+        shape = MaterialTheme.shapes.medium,
+    ) {
+        Column(
+            Modifier.padding(MiGuardiaSpacing.large),
+            verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small),
+        ) {
+            Text(message, style = MaterialTheme.typography.bodyMedium)
+            OutlinedButton(
+                onClick = onRetry,
+                shape = MiGuardiaButtonShape,
+                modifier = Modifier.testTag("help-completion-retry"),
+            ) {
                 Text("Reintentar guardado")
             }
         }
@@ -422,15 +497,15 @@ private fun ErrorCard(message: String, onRetry: () -> Unit) {
 private data class HelpTopic(val title: String, val body: String)
 
 private val HelpTopics = listOf(
-    HelpTopic("Primeros pasos y Mi forma de trabajar", "Definí un único rubro y luego tus lugares, tipos y horarios desde Trabajo > Mi forma de trabajar. Revisá bien antes de guardar: editar una plantilla no cambia jornadas pasadas."),
-    HelpTopic("Calendario, jornadas, feriados, vacaciones, notas y Fotos", "El Calendario es la historia principal. Cargá o corregí jornadas allí; feriados y vacaciones viven en Trabajo, y notas en el detalle del día. Fotos del mes abre una superficie separada y sólo accede a archivos cuando vos lo decidís."),
-    HelpTopic("Horario real, horas extra y disponibilidad", "Abrí el detalle de una jornada para registrar lo ocurrido. En Trabajo > Mi forma de trabajar están Tipos de horas extra, Tus horas y tu meta, y Disponibilidad. Revisá la fecha efectiva: el horario real refleja hechos y no cambia la planificación original."),
-    HelpTopic("Horas, Resumen y tarjeta de hoy", "La tarjeta superior vive al comienzo del Calendario y anticipa lo inmediato. Abrí Menú > Resumen para reunir el mes y entrar al detalle de cada cifra disponible; las horas son organizativas y no calculan salario."),
-    HelpTopic("Notificaciones, Clima y Widget", "Se abren desde Contexto. Cada función explica sus permisos dentro de su propia pantalla; activarlas es opcional y la guía nunca los solicita."),
-    HelpTopic("Informes locales", "Desde Resumen podés preparar informes PDF o XLSX con datos del mes. Revisá el contenido y el destino antes de crear o compartir un archivo."),
+    HelpTopic("Primeros pasos y Mi forma de trabajar", "Definí un único rubro y luego tus lugares, tipos y horarios desde Menú > Tu trabajo > Mi forma de trabajar. Editar un horario guardado no cambia jornadas pasadas. También podés crear instituciones y horarios al cargar jornadas."),
+    HelpTopic("Calendario, jornadas, feriados, vacaciones, notas y Fotos", "Un toque abre el día; una pulsación larga inicia la selección. El menú ofrece Seleccionar días, Ir a hoy, Cargar jornadas o francos, Repetir jornadas y Fotos del mes en Acciones del Calendario. Feriados y vacaciones están en Tu trabajo. Las notas e imágenes de una jornada se consultan desde su detalle."),
+    HelpTopic("Horario real, horas extra y disponibilidad", "Abrí el detalle de una jornada para registrar lo ocurrido. En Menú > Tu trabajo > Mi forma de trabajar > Opciones avanzadas encontrás Tipos de horas extra, Tus horas y tu meta, Disponibilidad y Repeticiones guardadas. Revisá desde qué fecha se aplica cada cambio: registrar el horario real no modifica la planificación original."),
+    HelpTopic("Horas, Resumen y próximo evento", "La tarjeta superior anticipa lo inmediato cuando hay espacio. Si falta altura, se reserva el espacio para el mes completo. Abrí Menú > Resumen para ver las horas del mes y tocar cada cifra para saber qué incluye. Las horas no calculan salario."),
+    HelpTopic("Notificaciones, Clima y Widget", "Se abren desde Menú > Avisos y contexto. Cada función explica sus permisos dentro de su pantalla; activarlas es opcional y esta guía nunca los solicita."),
+    HelpTopic("Informes locales", "En Resumen, abrí Más opciones > Generar informe para preparar un PDF o XLSX del mes. También encontrás Generar informe al final del resumen. Revisá el contenido y el destino antes de crear o compartir un archivo."),
     HelpTopic("Copias y restauración", "Aplicación > Copias permite crear o recuperar una copia local. La restauración reemplaza o combina datos sólo después de revisión y confirmación; guardá la contraseña fuera de la copia."),
     HelpTopic("Bloqueo de acceso y privacidad", "Aplicación > Bloqueo protege la entrada usando la seguridad del dispositivo. MiGuardia guarda datos localmente, pero las notificaciones, Widgets e informes pueden mostrarlos fuera de la pantalla principal según lo que habilites."),
-    HelpTopic("Apariencia y zoom interno", "Aplicación > Apariencia ofrece tema claro, oscuro o del sistema y zoom interno 100 %, 150 % o 200 %. Es un ajuste propio de MiGuardia y no modifica Android."),
+    HelpTopic("Apariencia", "Aplicación > Apariencia ofrece tema claro, oscuro o del sistema. MiGuardia respeta el tamaño de letra que elegiste en Android y funciona con TalkBack, sin controles adicionales dentro de la aplicación."),
 )
 
 @Composable
@@ -445,47 +520,123 @@ fun HelpScreen(
             .fillMaxSize()
             .padding(contentPadding)
             .verticalScroll(rememberScrollState())
-            .padding(24.dp)
+            .padding(MiGuardiaSpacing.large)
             .testTag("help-screen"),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.large),
     ) {
-        Text("Ayuda", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-        Text("Consultá una función sin mostrar ni cambiar tus datos.")
+        ScreenHeading(
+            title = "Ayuda",
+            supportingText = "Consultá una función sin mostrar ni cambiar tus datos.",
+        )
         if (!canRepeat) {
-            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.large,
+                border = cardBorder(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                ),
+            ) {
                 Text(
                     "Primero terminá tu primer lugar y horario desde el Calendario. Después vas a poder recorrer toda la aplicación.",
-                    modifier = Modifier.padding(16.dp),
+                    modifier = Modifier.padding(MiGuardiaSpacing.large),
                 )
             }
         }
         HelpTopics.forEachIndexed { index, topic ->
+            val topicShape = MaterialTheme.shapes.large
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { expandedTopic = if (expandedTopic == index) null else index }
+                    .vigiliaCardSurface(topicShape, MaterialTheme.colorScheme.surfaceContainer)
+                    .clickable(
+                        role = Role.Button,
+                        onClickLabel = if (expandedTopic == index) "Contraer tema" else "Leer tema",
+                    ) { expandedTopic = if (expandedTopic == index) null else index }
+                    .semantics { stateDescription = if (expandedTopic == index) "Expandido" else "Contraído" }
                     .testTag("help-topic-$index"),
+                shape = topicShape,
+                border = cardBorder(),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color.Transparent,
+                    contentColor = MaterialTheme.colorScheme.onSurface,
+                ),
             ) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(topic.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Column(
+                    Modifier.padding(MiGuardiaSpacing.large),
+                    verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small),
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(topic.title, modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            if (expandedTopic == index) "−" else "+",
+                            modifier = Modifier.padding(start = MiGuardiaSpacing.medium).clearAndSetSemantics {},
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
                     if (expandedTopic == index) {
                         HorizontalDivider()
                         Text(topic.body)
-                    } else {
-                        Text("Tocá para consultar", style = MaterialTheme.typography.bodySmall)
                     }
                 }
             }
         }
-        Button(
+        PrimaryAction(
+            label = "Repetir recorrido inicial",
             onClick = actions.startReplay,
             enabled = canRepeat,
-            modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp).testTag("help-repeat-tour"),
-        ) { Text("Repetir recorrido inicial") }
+            modifier = Modifier.testTag("help-repeat-tour"),
+        )
         Text(
             if (canRepeat) "La repetición no borra ni modifica tu progreso." else "La repetición se habilita al completar la primera configuración.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+    }
+}
+
+/**
+ * Los dos botones de un paso («Atrás» y el que avanza). Van lado a lado, repartiendo el ancho, mientras
+ * cada rótulo entre entero en su mitad. Con la letra de Android muy grande la palabra más larga ya no
+ * entra (visto: «Siguient/e» al 200 %): entonces se apilan a todo el ancho, en el mismo orden.
+ */
+@Composable
+private fun HelpStepActions(
+    startLabel: String,
+    endLabel: String,
+    spacing: Dp,
+    start: @Composable (Modifier) -> Unit,
+    end: @Composable (Modifier) -> Unit,
+) {
+    val measurer = rememberTextMeasurer()
+    val labelStyle = MaterialTheme.typography.labelLarge
+    val density = LocalDensity.current
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        // Relleno horizontal de un botón de Material (24 dp por lado) más un margen de redondeo.
+        val chrome = with(density) { 52.dp.roundToPx() }
+        val half = (constraints.maxWidth - with(density) { spacing.roundToPx() }) / 2
+        fun fits(label: String): Boolean = label.split(' ').all { word ->
+            measurer.measure(word, labelStyle, softWrap = false).size.width + chrome <= half
+        }
+        if (fits(startLabel) && fits(endLabel)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(spacing),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                start(Modifier.weight(1f))
+                end(Modifier.weight(1f))
+            }
+        } else {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(spacing),
+            ) {
+                start(Modifier.fillMaxWidth())
+                end(Modifier.fillMaxWidth())
+            }
+        }
     }
 }

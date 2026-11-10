@@ -1,18 +1,19 @@
 package com.blackatsystems.miguardia.ui.summary
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -34,10 +35,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.blackatsystems.miguardia.core.domain.summary.MonthlySummaryProjection
 import com.blackatsystems.miguardia.core.domain.summary.SummaryCompliancePeriod
@@ -47,9 +55,15 @@ import com.blackatsystems.miguardia.core.domain.summary.SummaryOptionalFamily
 import com.blackatsystems.miguardia.core.domain.summary.SummaryOptionalSection
 import com.blackatsystems.miguardia.core.domain.summary.SummaryValueUnit
 import com.blackatsystems.miguardia.core.domain.work.HoursTargetState
+import com.blackatsystems.miguardia.ui.components.EmptyState
+import com.blackatsystems.miguardia.ui.components.MiGuardiaButtonShape
+import com.blackatsystems.miguardia.ui.components.MiGuardiaSpacing
 import com.blackatsystems.miguardia.ui.components.PersistentMessage
 import com.blackatsystems.miguardia.ui.components.ScreenHeading
+import com.blackatsystems.miguardia.ui.components.SecondaryAction
 import com.blackatsystems.miguardia.ui.components.SectionCard
+import com.blackatsystems.miguardia.ui.components.cardBorder
+import com.blackatsystems.miguardia.ui.components.vigiliaCardSurface
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
@@ -98,14 +112,14 @@ private fun SummaryOverview(
             .fillMaxSize()
             .padding(contentPadding)
             .verticalScroll(scrollState)
-            .padding(20.dp)
+            .padding(MiGuardiaSpacing.large)
             .testTag("summary-overview"),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.large),
     ) {
         Row(verticalAlignment = Alignment.Top) {
             ScreenHeading(
                 title = "Resumen",
-                supportingText = "Una proyección mensual de sólo lectura, calculada desde tus fuentes locales.",
+                supportingText = "Tus horas del mes. Tocá una cifra para ver qué incluye.",
                 modifier = Modifier.weight(1f),
             )
             SummaryMenu(
@@ -117,23 +131,6 @@ private fun SummaryOverview(
             )
         }
         SummaryMonthControls(state.visibleMonth, actions)
-        Button(
-            onClick = actions.openReports,
-            modifier = Modifier.fillMaxWidth().testTag("summary-generate-report"),
-        ) {
-            Text("Generar informe")
-        }
-        if (state.introVisible) {
-            SectionCard(
-                title = "Tu resumen, a tu manera",
-                modifier = Modifier.testTag("summary-intro"),
-                supportingText = "Podés mostrar, ocultar y ordenar los detalles sin cambiar ninguna cifra.",
-            ) {
-                Button(onClick = actions.dismissIntro, modifier = Modifier.testTag("summary-intro-understood")) {
-                    Text("Entendido")
-                }
-            }
-        }
         if (state.projection != null) {
             state.errorMessage?.let { message ->
                 PersistentMessage(
@@ -154,24 +151,45 @@ private fun SummaryOverview(
                 }
             }
             SummaryLoadState.ERROR -> {
-                SectionCard("No pudimos cargar el Resumen", modifier = Modifier.testTag("summary-error")) {
-                    Text("No mostramos ceros ni datos de otro mes cuando falta una fuente.")
-                    Button(onClick = actions.retry) { Text("Reintentar") }
-                }
+                PersistentMessage(
+                    message = "No pudimos cargar el Resumen. " +
+                        "No pudimos leer todos los datos de este mes. Reintentá para ver sus cifras.",
+                    modifier = Modifier.testTag("summary-error"),
+                    onRetry = actions.retry,
+                )
             }
             SummaryLoadState.EMPTY -> {
-                SectionCard(
+                EmptyState(
                     title = "Todavía no hay datos para este mes",
+                    message = "Cuando haya jornadas, extras, disponibilidad o situaciones existentes, van a aparecer acá.",
                     modifier = Modifier.testTag("summary-empty"),
-                ) {
-                    Text("Cuando haya jornadas, extras, disponibilidad o situaciones existentes, van a aparecer acá.")
-                }
+                )
             }
             SummaryLoadState.CONTENT -> state.projection?.let { projection ->
-                SummaryContent(projection, state, openMetric)
+                SummaryContent(projection, state, openMetric) { SummaryIntro(state, actions) }
             }
         }
+        if (state.loadState != SummaryLoadState.CONTENT) SummaryIntro(state, actions)
+        SecondaryAction(
+            label = "Generar informe",
+            onClick = actions.openReports,
+            modifier = Modifier.fillMaxWidth().testTag("summary-generate-report"),
+        )
         Spacer(Modifier.testTag("summary-overview-end"))
+    }
+}
+
+@Composable
+private fun SummaryIntro(state: SummaryUiState, actions: SummaryActions) {
+    if (!state.introVisible) return
+    SectionCard(
+        title = "Tu resumen, a tu manera",
+        modifier = Modifier.testTag("summary-intro"),
+        supportingText = "En Más opciones podés elegir Personalizar resumen para mostrar, ocultar y ordenar los detalles. Las cifras no cambian.",
+    ) {
+        TextButton(onClick = actions.dismissIntro, modifier = Modifier.testTag("summary-intro-understood")) {
+            Text("Entendido")
+        }
     }
 }
 
@@ -188,7 +206,7 @@ private fun SummaryMenu(
                 .testTag("summary-menu")
                 .semantics { contentDescription = "Más opciones del Resumen" },
         ) {
-            Text("⋮", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Text("⋮", style = MaterialTheme.typography.headlineSmall)
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             DropdownMenuItem(
@@ -219,33 +237,52 @@ private fun SummaryMenu(
     }
 }
 
+/**
+ * Style v2: drawn like the shared MonthNavigator (same card, arrows and month style). It stays
+ * local because the shared component cannot carry the button test tags that existing tests and
+ * device runs use ("summary-previous-month", "summary-next-month").
+ */
 @Composable
 private fun SummaryMonthControls(month: YearMonth, actions: SummaryActions) {
+    val shape = MaterialTheme.shapes.large
     Column(
         modifier = Modifier.fillMaxWidth().testTag("summary-month-controls"),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small),
     ) {
-        Text(month.displayName(), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .vigiliaCardSurface(shape, MaterialTheme.colorScheme.surfaceContainer)
+                .then(cardBorder()?.let { Modifier.border(it, shape) } ?: Modifier)
+                .padding(horizontal = MiGuardiaSpacing.small, vertical = MiGuardiaSpacing.extraSmall),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            IconButton(
                 onClick = actions.previousMonth,
-                modifier = Modifier.fillMaxWidth().testTag("summary-previous-month"),
+                modifier = Modifier.testTag("summary-previous-month")
+                    .semantics { contentDescription = "Mes anterior" },
             ) {
-                Text("Anterior")
+                Text("‹", modifier = Modifier.clearAndSetSemantics {}, style = MaterialTheme.typography.headlineSmall)
             }
-            OutlinedButton(
-                onClick = actions.currentMonth,
-                modifier = Modifier.fillMaxWidth().testTag("summary-current-month"),
-            ) {
-                Text("Hoy")
-            }
-            OutlinedButton(
+            Text(
+                month.displayName(),
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center,
+            )
+            IconButton(
                 onClick = actions.nextMonth,
-                modifier = Modifier.fillMaxWidth().testTag("summary-next-month"),
+                modifier = Modifier.testTag("summary-next-month")
+                    .semantics { contentDescription = "Mes siguiente" },
             ) {
-                Text("Siguiente")
+                Text("›", modifier = Modifier.clearAndSetSemantics {}, style = MaterialTheme.typography.headlineSmall)
             }
         }
+        TextButton(
+            onClick = actions.currentMonth,
+            modifier = Modifier.align(Alignment.CenterHorizontally).testTag("summary-current-month"),
+        ) { Text("Mes actual") }
     }
 }
 
@@ -254,6 +291,7 @@ private fun SummaryContent(
     projection: MonthlySummaryProjection,
     state: SummaryUiState,
     onOpenMetric: (String) -> Unit,
+    afterEssentials: @Composable () -> Unit,
 ) {
     val essentialMetrics = listOfNotNull(
         projection.essentials.totalWorked,
@@ -262,10 +300,11 @@ private fun SummaryContent(
         projection.essentials.pendingScheduled,
     )
     if (essentialMetrics.isNotEmpty()) {
-        SectionCard("Lo esencial", supportingText = "Cada cifra se puede tocar para revisar su origen exacto.") {
+        SectionCard("Lo esencial") {
             essentialMetrics.forEach { MetricRow(it, onOpenMetric) }
         }
     }
+    afterEssentials()
     if (projection.compliance.isNotEmpty()) {
         ComplianceSection(projection.compliance, onOpenMetric)
     }
@@ -310,7 +349,7 @@ private fun ComplianceSection(
     ) {
         periods.forEachIndexed { index, period ->
             if (index > 0) HorizontalDivider()
-            Text(period.displayRange(), fontWeight = FontWeight.Bold)
+            Text(period.displayRange(), style = MaterialTheme.typography.titleSmall)
             when (period.segment.target) {
                 is HoursTargetState.Defined -> {
                     listOfNotNull(
@@ -335,21 +374,75 @@ private fun ComplianceSection(
 
 @Composable
 private fun MetricRow(metric: SummaryMetric, onOpen: (String) -> Unit) {
-    Row(
+    SummaryAmountLine(
+        label = metric.label,
+        value = metric.formattedValue(),
+        tag = "summary-metric-${metric.id.toTestKey()}",
+        showNavigation = true,
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onOpen(metric.id) }
-            .padding(vertical = 8.dp)
-            .testTag("summary-metric-${metric.id.toTestKey()}")
+            .heightIn(min = 48.dp)
+            .clickable(role = Role.Button, onClickLabel = "Ver qué incluye") { onOpen(metric.id) }
+            .padding(vertical = MiGuardiaSpacing.small)
             .semantics {
                 contentDescription = "${metric.label}: ${metric.formattedValue()}. Qué incluye este valor"
             },
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Text(metric.label, modifier = Modifier.weight(1f), fontWeight = FontWeight.Medium)
-        Text(metric.formattedValue(), fontWeight = FontWeight.Bold)
-        Text("›", fontWeight = FontWeight.Bold)
+    )
+}
+
+@Composable
+private fun SummaryAmountLine(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier,
+    tag: String,
+    showNavigation: Boolean = false,
+) {
+    val measurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    val labelStyle = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium)
+    val amountStyle = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold)
+    val navigationStyle = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold)
+    BoxWithConstraints(modifier.fillMaxWidth().testTag(tag)) {
+        val gap = with(density) { MiGuardiaSpacing.medium.roundToPx() }
+        val amountWidth = measurer.measure(value, style = amountStyle, softWrap = false).size.width
+        val navigationWidth = measurer.measure("›", style = navigationStyle, softWrap = false).size.width
+        val showChevron = showNavigation && amountWidth + gap + navigationWidth <= constraints.maxWidth
+        val navigationBudget = if (showChevron) gap + navigationWidth else 0
+        val longestLabelWord = label.split(Regex("\\s+")).maxOfOrNull {
+            measurer.measure(it, style = labelStyle, softWrap = false).size.width
+        } ?: 0
+        val useInline = longestLabelWord + gap + amountWidth + navigationBudget <= constraints.maxWidth
+        val wrapAmount = amountWidth > constraints.maxWidth
+        // Only the space between complete quantities can wrap: "12345 h" stays together.
+        val displayedValue = if (wrapAmount) value.replace(" h", "\u00a0h").replace(" min", "\u00a0min") else value
+        val labelContent: @Composable (Modifier) -> Unit = { textModifier ->
+            Text(label, modifier = textModifier.testTag("$tag-label"),
+                style = labelStyle)
+        }
+        val amountContent: @Composable (Modifier) -> Unit = { textModifier ->
+            // Keep the actual paragraph and its accessibility layout result on the same path.
+            Text(AnnotatedString(displayedValue), modifier = textModifier.testTag("$tag-value"),
+                style = amountStyle, textAlign = TextAlign.End,
+                maxLines = if (wrapAmount) Int.MAX_VALUE else 1, softWrap = wrapAmount)
+            if (showChevron) {
+                Text("›", modifier = Modifier.testTag("$tag-navigation").clearAndSetSemantics {},
+                    color = MaterialTheme.colorScheme.primary, style = navigationStyle)
+            }
+        }
+        if (!useInline) {
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.medium)) {
+                labelContent(Modifier.fillMaxWidth())
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.medium),
+                    verticalAlignment = Alignment.CenterVertically) { amountContent(Modifier.weight(1f)) }
+            }
+        } else {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.medium),
+                verticalAlignment = Alignment.CenterVertically) {
+                labelContent(Modifier.weight(1f))
+                amountContent(Modifier)
+            }
+        }
     }
 }
 
@@ -365,13 +458,13 @@ private fun PersonalizationScreen(
             .fillMaxSize()
             .padding(contentPadding)
             .verticalScroll(rememberScrollState())
-            .padding(20.dp)
+            .padding(MiGuardiaSpacing.large)
             .testTag("summary-personalization"),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.large),
     ) {
         ScreenHeading(
             "Personalizar resumen",
-            supportingText = "El orden y la visibilidad cambian sólo la presentación; las fórmulas y fuentes permanecen iguales.",
+            supportingText = "Elegí qué detalles ver y en qué orden. Esto no cambia tus horas ni tus jornadas.",
         )
         TextButton(onClick = actions.back, modifier = Modifier.testTag("summary-personalization-back")) {
             Text("Volver al resumen")
@@ -396,13 +489,12 @@ private fun PersonalizationScreen(
                 }
             }
             state.loadState == SummaryLoadState.ERROR && state.projection == null -> {
-                SectionCard(
-                    title = "No pudimos cargar el Resumen",
+                PersistentMessage(
+                    message = "No pudimos cargar el Resumen. " +
+                        "Reintentá para recuperar tus preferencias antes de cambiarlas.",
                     modifier = Modifier.testTag("summary-personalization-error"),
-                ) {
-                    Text("No habilitamos controles con valores predeterminados mientras faltan sus fuentes.")
-                    Button(onClick = actions.retry) { Text("Reintentar") }
-                }
+                    onRetry = actions.retry,
+                )
             }
             else -> PersonalizationControls(state, actions)
         }
@@ -415,35 +507,58 @@ private fun PersonalizationControls(
     actions: SummaryActions,
 ) {
     state.preferences.orderedFamilies.forEachIndexed { index, family ->
+            val cardShape = MaterialTheme.shapes.large
             Card(
-                modifier = Modifier.fillMaxWidth().testTag("summary-preference-${family.name.lowercase()}"),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("summary-preference-${family.name.lowercase()}")
+                    .vigiliaCardSurface(cardShape, MaterialTheme.colorScheme.surfaceContainer),
+                shape = cardShape,
+                border = cardBorder(),
+                colors = CardDefaults.cardColors(containerColor = Color.Transparent),
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(MiGuardiaSpacing.large),
+                    verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small),
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(family.displayLabel(), fontWeight = FontWeight.Bold)
-                            Text(
-                                family.supportingText(),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    BoxWithConstraints(Modifier.fillMaxWidth()) {
+                        val labelContent: @Composable (Modifier) -> Unit = { labelModifier ->
+                            Column(modifier = labelModifier.testTag("summary-toggle-${family.name.lowercase()}-label")) {
+                                Text(family.displayLabel(), style = MaterialTheme.typography.titleSmall)
+                                Text(
+                                    family.supportingText(),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                        val switchContent: @Composable (Modifier) -> Unit = { switchModifier ->
+                            Switch(
+                                checked = state.preferences.isVisible(family),
+                                onCheckedChange = { actions.setFamilyVisible(family, it) },
+                                modifier = switchModifier
+                                    .testTag("summary-toggle-${family.name.lowercase()}")
+                                    .semantics { contentDescription = "Mostrar ${family.displayLabel()}" },
                             )
                         }
-                        Switch(
-                            checked = state.preferences.isVisible(family),
-                            onCheckedChange = { actions.setFamilyVisible(family, it) },
-                            modifier = Modifier
-                                .testTag("summary-toggle-${family.name.lowercase()}")
-                                .semantics { contentDescription = "Mostrar ${family.displayLabel()}" },
-                        )
+                        if (maxWidth < 240.dp) {
+                            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.medium)) {
+                                labelContent(Modifier.fillMaxWidth())
+                                switchContent(Modifier.align(Alignment.End))
+                            }
+                        } else {
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.medium)) {
+                                labelContent(Modifier.weight(1f))
+                                switchContent(Modifier)
+                            }
+                        }
                     }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small)) {
                         OutlinedButton(
                             onClick = { actions.moveFamilyUp(family) },
                             enabled = index > 0,
+                            shape = MiGuardiaButtonShape,
                             modifier = Modifier
                                 .testTag("summary-move-up-${family.name.lowercase()}")
                                 .semantics { contentDescription = "Subir ${family.displayLabel()}" },
@@ -453,6 +568,7 @@ private fun PersonalizationControls(
                         OutlinedButton(
                             onClick = { actions.moveFamilyDown(family) },
                             enabled = index < state.preferences.orderedFamilies.lastIndex,
+                            shape = MiGuardiaButtonShape,
                             modifier = Modifier
                                 .testTag("summary-move-down-${family.name.lowercase()}")
                                 .semantics { contentDescription = "Bajar ${family.displayLabel()}" },
@@ -477,13 +593,13 @@ private fun MetricDetailScreen(
             .fillMaxSize()
             .padding(contentPadding)
             .verticalScroll(rememberScrollState())
-            .padding(20.dp)
+            .padding(MiGuardiaSpacing.large)
             .testTag("summary-detail"),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.large),
     ) {
         ScreenHeading(
             "Qué incluye este valor",
-            supportingText = "Las filas son la misma proyección inmutable que produjo la cifra.",
+            supportingText = "Estos registros forman la cifra del resumen. Consultarlos no cambia tus jornadas.",
         )
         TextButton(onClick = actions.back, modifier = Modifier.testTag("summary-detail-back")) {
             Text("Volver al resumen")
@@ -508,13 +624,12 @@ private fun MetricDetailScreen(
             return@Column
         }
         if (state.loadState == SummaryLoadState.ERROR && state.projection == null) {
-            SectionCard(
-                title = "No pudimos cargar esta cifra",
+            PersistentMessage(
+                message = "No pudimos cargar esta cifra. " +
+                    "Faltan datos para mostrar el detalle. Reintentá para volver a cargarlos.",
                 modifier = Modifier.testTag("summary-detail-error"),
-            ) {
-                Text("No afirmamos que desapareció hasta terminar de restaurar sus fuentes.")
-                Button(onClick = actions.retry) { Text("Reintentar") }
-            }
+                onRetry = actions.retry,
+            )
             return@Column
         }
         val metric = state.selectedMetric
@@ -524,7 +639,7 @@ private fun MetricDetailScreen(
         }
         SectionCard(metric.label, supportingText = "Suma exacta: ${metric.formattedValue()}") {
             if (metric.contributions.isEmpty()) {
-                Text("No hay minutos transcurridos que integrar en esta cifra.")
+                Text("Todavía no hay tiempo transcurrido para esta cifra.")
             } else {
                 metric.contributions.forEachIndexed { index, row ->
                     if (index > 0) HorizontalDivider()
@@ -560,16 +675,13 @@ private fun ContributionRow(row: SummaryContribution, unit: SummaryValueUnit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp)
+            .padding(vertical = MiGuardiaSpacing.small)
             .testTag("summary-contribution-${row.id.toTestKey()}"),
-        verticalArrangement = Arrangement.spacedBy(3.dp),
+        verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.extraSmall),
     ) {
-        Row {
-            Text(row.sourceLabel, modifier = Modifier.weight(1f), fontWeight = FontWeight.Bold)
-            Spacer(Modifier.width(8.dp))
-            Text(formatValue(row.value, unit), fontWeight = FontWeight.Bold)
-        }
-        Text("Fecha dueña: ${row.ownerLocalDate.displayName()}")
+        SummaryAmountLine(row.sourceLabel, formatValue(row.value, unit),
+            tag = "summary-contribution-${row.id.toTestKey()}-amount")
+        Text("Fecha a la que se cuenta: ${row.ownerLocalDate.displayName()}")
         val intervalStart = row.start
         val intervalEnd = row.end
         val intervalZone = row.zoneId
@@ -625,9 +737,9 @@ private fun SummaryOptionalFamily.supportingText(): String = when (this) {
     SummaryOptionalFamily.HOLIDAYS -> "Sólo fechas cargadas y habilitadas por la regla histórica."
     SummaryOptionalFamily.WEEKENDS -> "Sábado, domingo o ambos según cada lugar."
     SummaryOptionalFamily.PLANNED_VS_ACTUAL -> "Compara únicamente jornadas con horario real confirmado."
-    SummaryOptionalFamily.WORK_PLACES -> "Usa el nombre histórico guardado con cada fuente."
-    SummaryOptionalFamily.WORK_TYPES -> "Usa el tipo histórico guardado con cada fuente."
-    SummaryOptionalFamily.EXTRA_CLASSES -> "Conserva nombre y efecto históricos de cada clase."
+    SummaryOptionalFamily.WORK_PLACES -> "Conserva el nombre del lugar al guardar cada jornada."
+    SummaryOptionalFamily.WORK_TYPES -> "Conserva el tipo de trabajo al guardar cada jornada."
+    SummaryOptionalFamily.EXTRA_CLASSES -> "Conserva el nombre y la regla de cada extra al guardarla."
     SummaryOptionalFamily.SITUATIONS -> "Ausencias, cancelaciones, carpeta médica, vacaciones y francos F ya existentes."
 }
 

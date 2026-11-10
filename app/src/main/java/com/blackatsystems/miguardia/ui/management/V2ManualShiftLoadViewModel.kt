@@ -1,6 +1,14 @@
 package com.blackatsystems.miguardia.ui.management
 
+import com.blackatsystems.miguardia.ui.EventTimeRangeStyle
+import com.blackatsystems.miguardia.ui.formatEventTimeRange
 import androidx.lifecycle.SavedStateHandle
+import android.net.Uri
+import com.blackatsystems.miguardia.core.domain.model.ShiftNoteAttachment
+import com.blackatsystems.miguardia.core.domain.model.ExplicitDayStatusType
+import com.blackatsystems.miguardia.core.domain.repository.CalendarBatchRepository
+import com.blackatsystems.miguardia.core.domain.repository.CalendarBatchAction
+import com.blackatsystems.miguardia.core.domain.repository.CalendarBatchPreview
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.createSavedStateHandle
@@ -24,6 +32,7 @@ import com.blackatsystems.miguardia.core.domain.shift.OccupiedDatePolicy
 import com.blackatsystems.miguardia.core.domain.shift.ShiftPlanningWarning
 import com.blackatsystems.miguardia.core.domain.shift.buildV2ShiftWrite
 import com.blackatsystems.miguardia.core.domain.shift.planV2ShiftBatch
+import com.blackatsystems.miguardia.core.domain.shift.V2ShiftBatchPlan
 import com.blackatsystems.miguardia.core.domain.shift.validateSingleMonth
 import com.blackatsystems.miguardia.core.domain.work.EffectiveRevision
 import com.blackatsystems.miguardia.core.domain.work.NewV2Backfill
@@ -54,6 +63,7 @@ import java.time.format.DateTimeFormatter
 import java.security.MessageDigest
 import java.util.UUID
 import kotlinx.coroutines.CancellationException
+import com.blackatsystems.miguardia.ui.photos.NoteImageSelection
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -79,6 +89,8 @@ data class V2ManualShiftTemplateOption(
     val template: WorkTemplate,
 )
 
+data class ManualWorkPlaceOption(val objective: Objective, val place: WorkPlace)
+
 private class IncompatibleLoadDatesException(message: String) : IllegalStateException(message)
 
 private class SelectedTemplateUnavailableException : IllegalStateException(
@@ -86,12 +98,21 @@ private class SelectedTemplateUnavailableException : IllegalStateException(
 )
 
 data class V2ManualShiftLoadUiState(
+    val operationId: UUID? = null,
+    val operationTimestamp: java.time.Instant? = null,
+    val attemptedDates: Set<LocalDate> = emptySet(),
+    val noteBody: String = "",
+    val noteAttachments: List<ShiftNoteAttachment> = emptyList(),
+    val places: List<ManualWorkPlaceOption> = emptyList(),
+    val batchPreview: CalendarBatchPreview? = null,
+    val conflictDetails: List<String> = emptyList(),
     val stage: V2ManualShiftLoadStage = V2ManualShiftLoadStage.IDLE,
     val timelineId: UUID? = null,
     val sector: WorkSector? = null,
     val selectedDates: Set<LocalDate> = emptySet(),
     val templateOptions: List<V2ManualShiftTemplateOption> = emptyList(),
     val selectedTemplateId: UUID? = null,
+    val selectedTemplateFingerprint: String? = null,
     val position: String = "",
     val creationRequest: WorkCreationRequest? = null,
     val creationResult: WorkCreationResult? = null,
@@ -113,7 +134,7 @@ data class V2ManualShiftLoadUiState(
     val pendingDayOff: Boolean? = null,
 ) {
     val canCreate: Boolean
-        get() = stage == V2ManualShiftLoadStage.CHOOSE_TEMPLATE && !isLoading && !isSaving && creationRequest == null && pendingDayOff == null
+        get() = stage == V2ManualShiftLoadStage.CHOOSE_TEMPLATE && !isLoading && !isSaving && creationRequest == null && pendingDayOff == null && batchPreview == null
 
     val isActive: Boolean
         get() = stage != V2ManualShiftLoadStage.IDLE
@@ -123,11 +144,17 @@ data class V2ManualShiftLoadUiState(
 }
 
 internal data class V2ManualShiftLoadPersistedState(
+    val operationId: UUID? = null,
+    val operationTimestamp: java.time.Instant? = null,
+    val attemptedDates: Set<LocalDate> = emptySet(),
+    val noteBody: String = "",
+    val noteAttachments: List<ShiftNoteAttachment> = emptyList(),
     val stage: V2ManualShiftLoadStage = V2ManualShiftLoadStage.IDLE,
     val timelineId: UUID? = null,
     val sector: WorkSector? = null,
     val selectedDates: Set<LocalDate> = emptySet(),
     val selectedTemplateId: UUID? = null,
+    val selectedTemplateFingerprint: String? = null,
     val position: String = "",
     val creationRequest: WorkCreationRequest? = null,
     val creationResult: WorkCreationResult? = null,
@@ -152,6 +179,8 @@ class V2ManualShiftLoadViewModel(
     zoneId: ZoneId,
     uuidProvider: UuidProvider,
     private val savedStateHandle: SavedStateHandle,
+    calendarBatchRepository: CalendarBatchRepository? = null,
+    noteFiles: ManualLoadNotes? = null,
 ) : ViewModel() {
     private val coordinator = V2ManualShiftLoadCoordinator(
         configurationRepository = configurationRepository,
@@ -168,14 +197,24 @@ class V2ManualShiftLoadViewModel(
         scope = viewModelScope,
         initialPersistedState = savedStateHandle.readV2ManualShiftLoadState(),
         persist = savedStateHandle::writeV2ManualShiftLoadState,
+        calendarBatchRepository = calendarBatchRepository,
+        noteFiles = noteFiles,
     )
 
     val uiState: StateFlow<V2ManualShiftLoadUiState> = coordinator.uiState
 
     fun beginCreation(kind: WorkCreationKind) = coordinator.beginCreation(kind)
+    fun beginTemplateForPlace(id: UUID) = coordinator.beginCreation(WorkCreationKind.TEMPLATE, id)
+    fun updateNote(value: String) = coordinator.updateNote(value)
+    fun importNoteImages(uris: List<Uri>) = coordinator.importNoteImages(uris)
+    fun removeNoteImage(id: UUID) = coordinator.removeNoteImage(id)
+    fun requestClear() = coordinator.requestBatch(CalendarBatchAction.CLEAR)
+    fun confirmBatch() = coordinator.confirmBatch()
+    fun cancelBatch() = coordinator.cancelBatch()
     fun receiveCreationResult(result: WorkCreationResult) = coordinator.receiveCreationResult(result)
     fun start(rootState: WorkSetupState) = coordinator.start(rootState)
     fun confirmDates(dates: Set<LocalDate>) = coordinator.confirmDates(dates)
+    fun updateSelectedDates(dates: Set<LocalDate>) = coordinator.updateSelectedDates(dates)
     fun requestDayOff(dates: Set<LocalDate>, mark: Boolean) = coordinator.requestDayOff(dates, mark)
     fun confirmDayOff() = coordinator.confirmDayOff()
     fun cancelDayOff() = coordinator.cancelDayOff()
@@ -208,6 +247,8 @@ class V2ManualShiftLoadViewModel(
         private val clock: Clock = Clock.system(AppDefaults.zoneId()),
         private val zoneId: ZoneId = AppDefaults.zoneId(),
         private val uuidProvider: UuidProvider = UuidProvider(UUID::randomUUID),
+        private val calendarBatchRepository: CalendarBatchRepository? = null,
+        private val noteFiles: ManualLoadNotes? = null,
     ) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
             require(modelClass.isAssignableFrom(V2ManualShiftLoadViewModel::class.java))
@@ -225,6 +266,8 @@ class V2ManualShiftLoadViewModel(
                 zoneId = zoneId,
                 uuidProvider = uuidProvider,
                 savedStateHandle = extras.createSavedStateHandle(),
+                calendarBatchRepository = calendarBatchRepository,
+                noteFiles = noteFiles,
             ) as T
         }
     }
@@ -245,12 +288,18 @@ internal class V2ManualShiftLoadCoordinator(
     private val scope: CoroutineScope,
     initialPersistedState: V2ManualShiftLoadPersistedState = V2ManualShiftLoadPersistedState(),
     private val persist: (V2ManualShiftLoadPersistedState) -> Unit = {},
+    private val calendarBatchRepository: CalendarBatchRepository? = null,
+    private val noteFiles: ManualLoadNotes? = null,
 ) {
     private val writeMutex = Mutex()
-    private val _uiState = MutableStateFlow(initialPersistedState.toUiState())
+    private val _uiState = MutableStateFlow(initialPersistedState.toUiState().let {
+        if (it.isActive) it.copy(operationId = it.operationId ?: uuidProvider.newUuid(),
+            operationTimestamp = it.operationTimestamp ?: clock.instant().truncatedTo(java.time.temporal.ChronoUnit.MILLIS)) else it
+    })
     val uiState: StateFlow<V2ManualShiftLoadUiState> = _uiState
 
     init {
+        scope.launch { noteFiles?.recoverDraft(_uiState.value.noteAttachments) }
         if (
             _uiState.value.isActive &&
             _uiState.value.pendingDayOff == null &&
@@ -273,6 +322,8 @@ internal class V2ManualShiftLoadCoordinator(
         }
         updateAndPersist {
             V2ManualShiftLoadUiState(
+                operationId = uuidProvider.newUuid(),
+                operationTimestamp = clock.instant().truncatedTo(java.time.temporal.ChronoUnit.MILLIS),
                 stage = V2ManualShiftLoadStage.SELECT_DATES,
                 timelineId = timelineId,
                 sector = null,
@@ -293,6 +344,9 @@ internal class V2ManualShiftLoadCoordinator(
         updateAndPersist {
             it.copy(
                 selectedDates = normalized,
+                plannedDates = emptySet(), omittedDates = emptySet(),
+                batchPreview = null, conflictDetails = emptyList(),
+                backfillFrom = null, configuredFrom = null,
                 occupiedPolicy = null,
                 occupiedDates = emptySet(),
                 warnings = emptyList(),
@@ -306,8 +360,28 @@ internal class V2ManualShiftLoadCoordinator(
         scope.launch { loadTemplateOptions(V2ManualShiftLoadStage.CHOOSE_TEMPLATE) }
     }
 
+    /** Calendar owns presentation; this session owns the draft, including an empty selection. */
+    fun updateSelectedDates(dates: Set<LocalDate>) {
+        val state = _uiState.value
+        if (state.stage != V2ManualShiftLoadStage.SELECT_DATES || state.isLoading || state.isSaving ||
+            state.creationRequest != null || state.pendingDayOff != null || dates == state.selectedDates) return
+        if (dates.isNotEmpty()) {
+            try { validateSingleMonth(dates) } catch (error: Exception) {
+                showError(error.message ?: "Elegí días de un único mes.")
+                return
+            }
+        }
+        updateAndPersist { it.withoutPreparedDecision().copy(selectedDates = dates.toSortedSet()) }
+    }
+
     // Independent of catalog loading/backfill: a day off has no workplace or template.
     fun requestDayOff(dates: Set<LocalDate>, mark: Boolean) {
+        if (_uiState.value.isLoading || _uiState.value.isSaving || _uiState.value.batchPreview != null || !_uiState.value.isActive) return
+        if (mark && calendarBatchRepository != null) {
+            updateAndPersist { it.copy(selectedDates = dates.toSortedSet()) }
+            requestBatch(CalendarBatchAction.DAY_OFF)
+            return
+        }
         val state = _uiState.value
         if (state.stage !in setOf(V2ManualShiftLoadStage.SELECT_DATES, V2ManualShiftLoadStage.CHOOSE_TEMPLATE) || state.isLoading || state.isSaving ||
             state.creationRequest != null || state.pendingDayOff != null) return
@@ -372,6 +446,7 @@ internal class V2ManualShiftLoadCoordinator(
         updateAndPersist {
             it.copy(
                 selectedTemplateId = id,
+                selectedTemplateFingerprint = state.templateOptions.first { option -> option.template.id == id }.selectionFingerprint(),
                 plannedDates = emptySet(), omittedDates = emptySet(),
                 backfillFrom = null, configuredFrom = null,
                 occupiedPolicy = null,
@@ -390,8 +465,83 @@ internal class V2ManualShiftLoadCoordinator(
         updateAndPersist { it.copy(position = value.take(MAX_POSITION_LENGTH), errorMessage = null) }
     }
 
+    fun updateNote(value: String) {
+        if (_uiState.value.isSaving || _uiState.value.isLoading) return
+        updateAndPersist { it.copy(noteBody = value, reviewFingerprint = null, errorMessage = null) }
+    }
+
+    fun importNoteImages(uris: List<Uri>) {
+        if (uris.isEmpty()) return
+        val state = _uiState.value
+        val operation = state.operationId ?: return
+        if (state.isLoading || state.isSaving || state.selectedOption == null) return
+        NoteImageSelection.rejectionMessage(state.noteAttachments.size, uris.size)?.let { showError(it); return }
+        val files = noteFiles ?: return showError("No pudimos preparar el almacenamiento de imágenes.")
+        _uiState.update { it.copy(isLoading = true, errorMessage = null, infoMessage = null) }
+        scope.launch {
+            try {
+                val imported = NoteImageSelection.importBatch(uris, state.noteAttachments.size,
+                    importImage = { uri, position -> files.import(uri, operation, position, clock.instant()) },
+                    discard = files::discard)
+                updateAndPersist { it.copy(noteAttachments = state.noteAttachments + imported, reviewFingerprint = null) }
+            } catch (error: Exception) {
+                if (error is CancellationException) throw error
+                showError(error.message ?: "No se pudieron importar las imágenes.")
+            } finally { _uiState.update { it.copy(isLoading = false) } }
+        }
+    }
+
+    fun removeNoteImage(id: UUID) {
+        val state = _uiState.value
+        if (state.isLoading || state.isSaving) return
+        val removed = state.noteAttachments.firstOrNull { it.id == id } ?: return
+        updateAndPersist { it.copy(noteAttachments = it.noteAttachments.filterNot { a -> a.id == id }
+            .mapIndexed { index, a -> a.copy(position = index) }, reviewFingerprint = null) }
+        scope.launch { noteFiles?.discard(listOf(removed)) }
+    }
+
+    fun requestBatch(action: CalendarBatchAction) {
+        val state = _uiState.value
+        val repository = calendarBatchRepository ?: return
+        if (state.isLoading || state.isSaving || state.selectedDates.isEmpty() || !state.isActive || state.batchPreview != null) return
+        _uiState.update { it.copy(isLoading = true, saveAfterPreparation = false) }
+        scope.launch {
+            try {
+                val preview = repository.preview(action, state.selectedDates)
+                _uiState.update { it.copy(batchPreview = preview, errorMessage = null) }
+            }
+            catch (error: Exception) { showError(error.message ?: "No se pudo preparar la revisión.") }
+            finally { _uiState.update { it.copy(isLoading = false) } }
+        }
+    }
+
+    fun cancelBatch() { if (!_uiState.value.isSaving) _uiState.update { it.copy(batchPreview = null) } }
+
+    fun confirmBatch() {
+        val state = _uiState.value
+        val preview = state.batchPreview ?: return
+        val repository = calendarBatchRepository ?: return
+        if (state.isLoading || state.isSaving || preview.conflicts.isNotEmpty()) return
+        _uiState.update { it.copy(isSaving = true) }
+        scope.launch {
+            try {
+                val files = noteFiles
+                if (files != null) files.applyCalendarBatch(preview) { repository.apply(preview) }
+                else repository.apply(preview)
+                noteFiles?.discard(state.noteAttachments)
+                _uiState.value = V2ManualShiftLoadUiState(successSequence = state.successSequence + 1,
+                    infoMessage = if (preview.action == CalendarBatchAction.CLEAR) "Días limpiados." else "Francos guardados.")
+                persistCurrentState()
+            } catch (error: Exception) {
+                _uiState.update { it.copy(batchPreview = null) }
+                showError(error.message ?: "Los datos cambiaron. Revisá nuevamente; no se aplicó parcialmente.")
+            } finally { _uiState.update { it.copy(isSaving = false) } }
+        }
+    }
+
     fun requestReview() {
         val state = _uiState.value
+        if (state.stage == V2ManualShiftLoadStage.SELECT_DATES || !state.isActive || state.batchPreview != null) return
         if (state.isLoading || state.isSaving || state.creationRequest != null || state.pendingDayOff != null) return
         if (state.selectedTemplateId == null) {
             showError("Elegí un lugar, tipo y horario.")
@@ -403,6 +553,7 @@ internal class V2ManualShiftLoadCoordinator(
 
     fun requestSave() {
         val state = _uiState.value
+        if (state.stage == V2ManualShiftLoadStage.SELECT_DATES || !state.isActive || state.batchPreview != null) return
         if (state.isLoading || state.isSaving || state.creationRequest != null || state.pendingDayOff != null) return
         if (state.selectedTemplateId == null) {
             showError("Elegí un lugar, tipo y horario.")
@@ -599,10 +750,16 @@ internal class V2ManualShiftLoadCoordinator(
                     showError("No hay días disponibles para guardar con la opción elegida.")
                     return@launch
                 }
-                v2ShiftRepository.applyV2Batch(
-                    mutation = prepared.mutation,
-                    expectedOccupancy = prepared.expectedOccupancy,
-                )
+                val files = noteFiles
+                updateAndPersist { it.copy(attemptedDates = prepared.mutation.shiftsToInsert.mapTo(linkedSetOf()) { pair -> pair.shift.localStartDate }) }
+                if (files != null) files.commit(prepared.mutation, state.noteBody, state.noteAttachments,
+                    requireNotNull(state.operationId)) { mutation ->
+                    v2ShiftRepository.applyV2Batch(mutation, prepared.expectedOccupancy)
+                } else {
+                    require(state.noteBody.isBlank() && state.noteAttachments.isEmpty()) { "El guardado de notas no está disponible." }
+                    v2ShiftRepository.applyV2Batch(prepared.mutation, prepared.expectedOccupancy)
+                }
+                noteFiles?.discard(state.noteAttachments)
                 val savedCount = prepared.mutation.shiftsToInsert.size
                 val omittedCount = prepared.omittedDates.size
                 val nextSequence = _uiState.value.successSequence + 1
@@ -635,7 +792,7 @@ internal class V2ManualShiftLoadCoordinator(
     fun backToDateSelection() {
         if (!_uiState.value.isActive || _uiState.value.isLoading || _uiState.value.isSaving || _uiState.value.creationRequest != null || _uiState.value.pendingDayOff != null) return
         updateAndPersist {
-            it.copy(
+            it.withoutPreparedDecision().copy(
                 stage = V2ManualShiftLoadStage.SELECT_DATES,
                 occupiedPolicy = null,
                 occupiedDates = emptySet(),
@@ -649,6 +806,13 @@ internal class V2ManualShiftLoadCoordinator(
             )
         }
     }
+
+    private fun V2ManualShiftLoadUiState.withoutPreparedDecision() = copy(
+        occupiedPolicy = null, occupiedDates = emptySet(), plannedDates = emptySet(), omittedDates = emptySet(),
+        warnings = emptyList(), acknowledgedWarnings = emptyList(), reviewFingerprint = null,
+        batchPreview = null, conflictDetails = emptyList(), saveAfterPreparation = false,
+        backfillFrom = null, configuredFrom = null, errorMessage = null,
+    )
 
     fun retry() {
         val state = _uiState.value
@@ -673,6 +837,8 @@ internal class V2ManualShiftLoadCoordinator(
 
     fun cancel() {
         if (_uiState.value.isLoading || _uiState.value.isSaving || (_uiState.value.creationRequest != null && _uiState.value.creationResult == null)) return
+        val attachments = _uiState.value.noteAttachments
+        scope.launch { noteFiles?.discard(attachments) }
         val nextSequence = _uiState.value.successSequence
         _uiState.value = V2ManualShiftLoadUiState(successSequence = nextSequence)
         persistCurrentState()
@@ -680,6 +846,8 @@ internal class V2ManualShiftLoadCoordinator(
 
     fun discardIncompatible() {
         if (_uiState.value.isLoading || _uiState.value.isSaving) return
+        val abandoned = _uiState.value.noteAttachments
+        scope.launch { noteFiles?.discard(abandoned) }
         _uiState.value = V2ManualShiftLoadUiState(
             infoMessage = "La carga anterior ya no coincide con tu forma de trabajar actual. " +
                 "Se descartó el borrador y no se guardó ninguna jornada.",
@@ -696,14 +864,14 @@ internal class V2ManualShiftLoadCoordinator(
         }
     }
 
-    fun beginCreation(kind: WorkCreationKind) {
+    fun beginCreation(kind: WorkCreationKind, placeId: UUID? = null) {
         val state = _uiState.value
         if (!state.canCreate) return
         val timelineId = state.timelineId ?: return
         val option = state.selectedOption
         updateAndPersist {
             it.copy(creationRequest = WorkCreationRequest(uuidProvider.newUuid(), timelineId, kind,
-                option?.workPlace?.id, option?.workType?.id), creationResult = null,
+                placeId ?: option?.workPlace?.id, option?.workType?.id), creationResult = null,
                 saveAfterPreparation = false, errorMessage = null, infoMessage = null)
         }
     }
@@ -730,11 +898,16 @@ internal class V2ManualShiftLoadCoordinator(
             val previousId = _uiState.value.selectedTemplateId
             val candidateId = if (result.outcome == WorkCreationOutcome.CREATED) result.templateId else previousId
             val selectedId = candidateId?.takeIf { id -> context.options.any { option ->
-                option.template.id == id && (result.outcome != WorkCreationOutcome.CREATED || option.workPlace.id == result.placeId)
+                option.template.id == id && if (result.outcome == WorkCreationOutcome.CREATED) {
+                    option.workPlace.id == result.placeId
+                } else {
+                    _uiState.value.selectedTemplateFingerprint?.let { it == option.selectionFingerprint() } ?: true
+                }
             } }
             updateAndPersist {
                 it.copy(stage = V2ManualShiftLoadStage.CHOOSE_TEMPLATE, sector = context.sector,
-                    templateOptions = context.options, selectedTemplateId = selectedId,
+                    templateOptions = context.options, places = context.places, selectedTemplateId = selectedId,
+                    selectedTemplateFingerprint = context.options.firstOrNull { option -> option.template.id == selectedId }?.selectionFingerprint(),
                     creationRequest = null, creationResult = null, isLoading = false,
                     occupiedPolicy = null, occupiedDates = emptySet(), plannedDates = emptySet(),
                     omittedDates = emptySet(), warnings = emptyList(), acknowledgedWarnings = emptyList(),
@@ -817,7 +990,8 @@ internal class V2ManualShiftLoadCoordinator(
             val context = loadSelectionContext()
             val previousSelection = _uiState.value.selectedTemplateId
             val selectedTemplateId = previousSelection?.takeIf { id ->
-                context.options.any { it.template.id == id }
+                context.options.any { option -> option.template.id == id &&
+                    (_uiState.value.selectedTemplateFingerprint?.let { it == option.selectionFingerprint() } ?: true) }
             }
             val selectionBecameUnavailable = previousSelection != null && selectedTemplateId == null
             _uiState.update { state ->
@@ -825,7 +999,9 @@ internal class V2ManualShiftLoadCoordinator(
                     stage = targetStage,
                     sector = context.sector,
                     templateOptions = context.options,
+                    places = context.places,
                     selectedTemplateId = selectedTemplateId,
+                    selectedTemplateFingerprint = context.options.firstOrNull { it.template.id == selectedTemplateId }?.selectionFingerprint(),
                     occupiedPolicy = if (selectionBecameUnavailable) null else state.occupiedPolicy,
                     occupiedDates = if (selectionBecameUnavailable) emptySet() else state.occupiedDates,
                     plannedDates = if (selectionBecameUnavailable) emptySet() else state.plannedDates,
@@ -833,10 +1009,15 @@ internal class V2ManualShiftLoadCoordinator(
                     warnings = if (selectionBecameUnavailable) emptyList() else state.warnings,
                     acknowledgedWarnings = if (selectionBecameUnavailable) emptyList() else state.acknowledgedWarnings,
                     reviewFingerprint = if (selectionBecameUnavailable) null else state.reviewFingerprint,
+                    batchPreview = if (selectionBecameUnavailable) null else state.batchPreview,
+                    conflictDetails = if (selectionBecameUnavailable) emptyList() else state.conflictDetails,
+                    backfillFrom = if (selectionBecameUnavailable) null else state.backfillFrom,
+                    configuredFrom = if (selectionBecameUnavailable) null else state.configuredFrom,
+                    saveAfterPreparation = if (selectionBecameUnavailable) false else state.saveAfterPreparation,
                     isLoading = false,
                     errorMessage = when {
                         selectionBecameUnavailable ->
-                            "El horario elegido ya no está disponible. Conservamos las fechas y el puesto; elegí otro."
+                            "La institución o el horario elegido cambió o ya no está disponible. Conservamos el borrador; elegí nuevamente una opción válida."
                         context.options.isEmpty() ->
                             "No hay lugares, tipos y horarios activos con reglas aplicables a todos los días elegidos."
                         else -> null
@@ -861,6 +1042,7 @@ internal class V2ManualShiftLoadCoordinator(
         try {
             val context = loadSelectionContext()
             val option = context.requireSelectedOption()
+            if (recoverConfirmedLoad(context, option)) return
             val selection = context.selection
             if (selection is WorkDateSelection.NeedsNewV2Backfill) {
                 val configuredFrom = context.history.timeline.revisions.first().effectiveFrom
@@ -1054,6 +1236,29 @@ internal class V2ManualShiftLoadCoordinator(
         return prepared
     }
 
+    /** A lost response/recreation never becomes a second intentional load with new identities. */
+    private suspend fun recoverConfirmedLoad(context: LoadedSelectionContext, option: V2ManualShiftTemplateOption): Boolean {
+        val state = _uiState.value
+        if (state.attemptedDates.isEmpty()) return false
+        val operation = state.operationId ?: return false
+        val timestamp = state.operationTimestamp ?: return false
+        val stored = state.attemptedDates.sorted().map { date ->
+            val id = UUID.nameUUIDFromBytes("$operation:shift:$date".toByteArray())
+            val expected = buildV2ShiftWrite(id, date, option.objective, option.workPlace, option.workType,
+                option.template, ResolvedWorkConfigurationRevision.resolve(context.history, date),
+                state.position, timestamp, zoneId)
+            val actual = v2ShiftRepository.getShift(id) as? com.blackatsystems.miguardia.core.domain.model.V2ShiftLookup.V2
+            actual?.write == expected && (noteFiles?.matchesCommitted(expected, state.noteBody, state.noteAttachments, operation)
+                ?: (state.noteBody.isBlank() && state.noteAttachments.isEmpty()))
+        }
+        if (!stored.all { it }) return false
+        noteFiles?.discard(state.noteAttachments)
+        _uiState.value = V2ManualShiftLoadUiState(successSequence = state.successSequence + 1,
+            infoMessage = "La carga ya estaba guardada. No se duplicó ninguna jornada.")
+        persistCurrentState()
+        return true
+    }
+
     private suspend fun loadSelectionContext(): LoadedSelectionContext {
         val state = _uiState.value
         val timelineId = requireNotNull(state.timelineId) { "La configuración de esta carga ya no está disponible." }
@@ -1102,14 +1307,14 @@ internal class V2ManualShiftLoadCoordinator(
         val objectivesById = eligibleTemplates
             .map { template -> requireNotNull(placesById[template.workPlaceId]).objectiveId }
             .distinct()
-            .associateWith { objectiveId ->
-                objectiveRepository.getById(objectiveId)
-                    ?: throw IllegalStateException("Un lugar guardado perdió su información visible.")
-            }
-        val options = eligibleTemplates.map { template ->
+            .mapNotNull { objectiveId ->
+                objectiveRepository.getById(objectiveId)?.takeIf(Objective::isActive)?.let { objectiveId to it }
+            }.toMap()
+        val options = eligibleTemplates.mapNotNull { template ->
             val place = requireNotNull(placesById[template.workPlaceId])
+            val objective = objectivesById[place.objectiveId] ?: return@mapNotNull null
             V2ManualShiftTemplateOption(
-                objective = requireNotNull(objectivesById[place.objectiveId]),
+                objective = objective,
                 workPlace = place,
                 workType = requireNotNull(typesById[template.workTypeId]),
                 template = template,
@@ -1120,7 +1325,10 @@ internal class V2ManualShiftLoadCoordinator(
                 .thenBy { it.template.startTime }
                 .thenBy { it.template.endTime },
         )
-        return LoadedSelectionContext(history, selection, sector, catalog, options)
+        val places = catalog.workPlaces.filter { it.isActive }.mapNotNull { place ->
+            objectiveRepository.getById(place.objectiveId)?.takeIf(Objective::isActive)?.let { ManualWorkPlaceOption(it, place) }
+        }.sortedBy { it.objective.fullName }
+        return LoadedSelectionContext(history, selection, sector, catalog, options, places)
     }
 
     private suspend fun buildPreparedMutation(
@@ -1135,10 +1343,10 @@ internal class V2ManualShiftLoadCoordinator(
             .observeStartingBetween(first.minusDays(2), last.plusDays(2))
             .first()
         val medicalLeaves = medicalLeaveRepository.observeIntersecting(first, last).first()
-        val timestamp = clock.instant()
+        val timestamp = _uiState.value.operationTimestamp ?: clock.instant()
         val candidates = dates.map { date ->
             buildV2ShiftWrite(
-                id = uuidProvider.newUuid(),
+                id = UUID.nameUUIDFromBytes("${_uiState.value.operationId}:shift:$date".toByteArray()),
                 date = date,
                 objective = option.objective,
                 workPlace = option.workPlace,
@@ -1150,16 +1358,35 @@ internal class V2ManualShiftLoadCoordinator(
                 zoneId = zoneId,
             )
         }
-        val occupiedDates = existing
-            .filter { it.localStartDate in _uiState.value.selectedDates }
-            .mapTo(linkedSetOf(), Shift::localStartDate)
+        val explicitStatuses = explicitDayStatusRepository?.observeBetween(first, last)?.first().orEmpty()
+            .filter { it.date in _uiState.value.selectedDates }
+        val statusesByDate = explicitStatuses.associateBy { it.date }
+        val conflicting = existing.filter { old -> candidates.any { candidate ->
+            old.startAt < candidate.shift.endAt && candidate.shift.startAt < old.endAt
+        } }
+        val occupiedDates = candidates.filter { candidate -> conflicting.any { old ->
+            old.startAt < candidate.shift.endAt && candidate.shift.startAt < old.endAt
+        } }.mapTo(linkedSetOf()) { it.shift.localStartDate }
+        occupiedDates += explicitStatuses.filter { it.type == ExplicitDayStatusType.DAY_OFF }.map { it.date }
         val policy = requestedPolicy ?: OccupiedDatePolicy.ADD_SECOND_SHIFT
-        val plan = planV2ShiftBatch(
-            selectedDates = _uiState.value.selectedDates,
+        val retainedFrancoDates = if (policy == OccupiedDatePolicy.KEEP_OCCUPIED) {
+            explicitStatuses.filter { it.type == ExplicitDayStatusType.DAY_OFF }.mapTo(linkedSetOf()) { it.date }
+        } else emptySet()
+        val planningDates = _uiState.value.selectedDates - retainedFrancoDates
+        // Franco is an occupied day too. Exclude it before interval planning so neither
+        // a new journey nor warnings from an omitted candidate enter the batch.
+        val plan = if (planningDates.isEmpty()) V2ShiftBatchPlan(
+            mutation = V2ShiftBatchMutation(),
+            occupiedDates = retainedFrancoDates,
+            omittedDates = retainedFrancoDates,
+            warnings = emptyList(),
+        ) else planV2ShiftBatch(
+            selectedDates = planningDates,
             existingShifts = existing,
-            candidates = candidates,
+            candidates = candidates.filter { it.shift.localStartDate in planningDates },
             policy = policy,
-        )
+        ).let { it.copy(occupiedDates = it.occupiedDates + retainedFrancoDates,
+            omittedDates = it.omittedDates + retainedFrancoDates) }
         val savedDates = plan.mutation.shiftsToInsert
             .mapTo(linkedSetOf()) { it.shift.localStartDate }
         val actualExpectations = plan.mutation.shiftIdsToDelete
@@ -1168,8 +1395,12 @@ internal class V2ManualShiftLoadCoordinator(
             }
             .toMap(linkedMapOf())
         val mutation = plan.mutation.copy(
-            explicitDayStatusDatesToClear = savedDates,
+            explicitDayStatusDatesToClear = savedDates.filterTo(linkedSetOf()) {
+                policy == OccupiedDatePolicy.REPLACE || statusesByDate[it]?.type == ExplicitDayStatusType.UNDEFINED
+            },
             actualExpectations = actualExpectations,
+            deletionExpectations = v2ShiftRepository.captureDeletionExpectations(plan.mutation.shiftIdsToDelete),
+            explicitStatusExpectations = if (explicitDayStatusRepository != null) savedDates.associateWith { statusesByDate[it] } else emptyMap(),
         )
         val coexistenceWarnings = medicalLeaves
             .filter { leave -> savedDates.any { it in leave.startDate..leave.endDateInclusive } }
@@ -1182,7 +1413,21 @@ internal class V2ManualShiftLoadCoordinator(
             .map { expectation ->
                 "Reemplazar la jornada ${expectation.planned.shift.id} también eliminará su horario real y extras."
             }
-        val warningTexts = plan.warnings.map(::warningText) + coexistenceWarnings + actualWarnings
+        val losses = mutation.deletionExpectations.values.map { loss ->
+            val shift = existing.first { it.id == loss.shiftId }
+            "${shift.localStartDate.format(DATE_FORMATTER)} ${shift.timeRange()}: se quitará esta jornada" +
+                ", ${loss.noteCount} notas, ${loss.attachmentStorageKeys.size} imágenes y ${loss.notificationCount} avisos" +
+                (if (loss.hasActual) ", horario real y extras asociados" else "") +
+                (if (loss.hasSituation) ", situación y evidencia asociadas" else "") + "."
+        }
+        val warningTexts = plan.warnings.map(::warningText) + coexistenceWarnings + actualWarnings + losses
+        val conflictDetails = conflicting.map { old ->
+            "${old.localStartDate.format(DATE_FORMATTER)}: ${old.objectiveNameSnapshot} (${old.objectiveAbbreviationSnapshot}), ${old.timeRange()} existente. " +
+                "Nueva: ${option.objective.abbreviation} ${option.template.startTime}–${option.template.endTime}."
+        } + explicitStatuses.filter { it.type == ExplicitDayStatusType.DAY_OFF }.map {
+            "${it.date.format(DATE_FORMATTER)}: Franco existente. Nueva: ${option.template.startTime}–${option.template.endTime}."
+        }
+        _uiState.update { it.copy(conflictDetails = conflictDetails) }
         return PreparedV2Mutation(
             mutation = mutation,
             expectedOccupancy = ShiftOccupancyExpectation.capture(
@@ -1239,6 +1484,10 @@ internal class V2ManualShiftLoadCoordinator(
             )
             append(";position=")
             append(_uiState.value.position.trim())
+            append(";note="); append(_uiState.value.noteBody)
+            append(";attachments="); append(_uiState.value.noteAttachments.joinToString { it.encodeManualDraft() })
+            append(";deletionExpectations="); append(mutation.deletionExpectations.toSortedMap())
+            append(";statuses="); append(mutation.explicitStatusExpectations.toSortedMap())
             append(";revisions=")
             append(
                 _uiState.value.selectedDates.sorted().joinToString(",") { date ->
@@ -1297,7 +1546,13 @@ internal class V2ManualShiftLoadCoordinator(
     }
 
     private fun Shift.timeRange(): String =
-        "${startTimeSnapshot.format(TIME_FORMATTER)}–${endTimeSnapshot.format(TIME_FORMATTER)}"
+        formatEventTimeRange(startAt, endAt, zoneId, EventTimeRangeStyle.COMPACT)
+
+    // Only immutable catalog values: safe to persist across recreation, never object identity.
+    private fun V2ManualShiftTemplateOption.selectionFingerprint(): String =
+        MessageDigest.getInstance("SHA-256")
+            .digest(listOf(objective, workPlace, workType, template).joinToString("|").toByteArray(Charsets.UTF_8))
+            .joinToString("") { byte -> "%02x".format(byte) }
 
     private fun LoadedSelectionContext.requireSelectedOption(): V2ManualShiftTemplateOption {
         val selectedId = _uiState.value.selectedTemplateId
@@ -1349,6 +1604,7 @@ internal class V2ManualShiftLoadCoordinator(
         val sector: WorkSector,
         val catalog: WorkCatalog,
         val options: List<V2ManualShiftTemplateOption>,
+        val places: List<ManualWorkPlaceOption>,
     )
 
     private data class PreparedV2Mutation(
@@ -1364,16 +1620,21 @@ internal class V2ManualShiftLoadCoordinator(
     private companion object {
         const val MAX_POSITION_LENGTH = 120
         val DATE_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/uuuu")
-        val TIME_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
     }
 }
 
 private fun V2ManualShiftLoadPersistedState.toUiState() = V2ManualShiftLoadUiState(
+    operationId = operationId,
+    operationTimestamp = operationTimestamp,
+    attemptedDates = attemptedDates,
+    noteBody = noteBody,
+    noteAttachments = noteAttachments,
     stage = stage,
     timelineId = timelineId,
     sector = sector,
     selectedDates = selectedDates,
     selectedTemplateId = selectedTemplateId,
+    selectedTemplateFingerprint = selectedTemplateFingerprint,
     position = position,
     creationRequest = creationRequest,
     creationResult = creationResult,
@@ -1386,11 +1647,17 @@ private fun V2ManualShiftLoadPersistedState.toUiState() = V2ManualShiftLoadUiSta
 )
 
 private fun V2ManualShiftLoadUiState.toPersistedState() = V2ManualShiftLoadPersistedState(
+    operationId = operationId,
+    operationTimestamp = operationTimestamp,
+    attemptedDates = attemptedDates,
+    noteBody = noteBody,
+    noteAttachments = noteAttachments,
     stage = stage,
     timelineId = timelineId,
     sector = sector,
     selectedDates = selectedDates,
     selectedTemplateId = selectedTemplateId,
+    selectedTemplateFingerprint = selectedTemplateFingerprint,
     position = position,
     creationRequest = creationRequest,
     creationResult = creationResult,
@@ -1404,6 +1671,11 @@ private fun V2ManualShiftLoadUiState.toPersistedState() = V2ManualShiftLoadPersi
 
 internal fun SavedStateHandle.readV2ManualShiftLoadState(): V2ManualShiftLoadPersistedState =
     V2ManualShiftLoadPersistedState(
+        operationId = get<String>("v2_manual_shift.operation")?.toUuidOrNull(),
+        operationTimestamp = get<String>("v2_manual_shift.timestamp")?.let { runCatching { java.time.Instant.parse(it) }.getOrNull() },
+        attemptedDates = get<ArrayList<String>>("v2_manual_shift.attempted").orEmpty().mapNotNull { runCatching { LocalDate.parse(it) }.getOrNull() }.toSet(),
+        noteBody = get<String>("v2_manual_shift.note").orEmpty(),
+        noteAttachments = get<ArrayList<String>>("v2_manual_shift.images").orEmpty().mapNotNull(::decodeManualDraft),
         stage = get<String>(KEY_STAGE)?.let { stored ->
             V2ManualShiftLoadStage.entries.firstOrNull { it.name == stored }
         } ?: V2ManualShiftLoadStage.IDLE,
@@ -1416,6 +1688,7 @@ internal fun SavedStateHandle.readV2ManualShiftLoadState(): V2ManualShiftLoadPer
             .mapNotNull { stored -> runCatching { LocalDate.parse(stored) }.getOrNull() }
             .toSet(),
         selectedTemplateId = get<String>(KEY_TEMPLATE_ID)?.toUuidOrNull(),
+        selectedTemplateFingerprint = get<String>(KEY_TEMPLATE_FINGERPRINT),
         position = get<String>(KEY_POSITION).orEmpty(),
         creationRequest = readWorkCreationRequest(KEY_CREATION_REQUEST),
         creationResult = readWorkCreationResult(KEY_CREATION_RESULT),
@@ -1433,6 +1706,11 @@ internal fun SavedStateHandle.readV2ManualShiftLoadState(): V2ManualShiftLoadPer
     )
 
 internal fun SavedStateHandle.writeV2ManualShiftLoadState(state: V2ManualShiftLoadPersistedState) {
+    this["v2_manual_shift.operation"] = state.operationId?.toString()
+    this["v2_manual_shift.timestamp"] = state.operationTimestamp?.toString()
+    this["v2_manual_shift.attempted"] = ArrayList(state.attemptedDates.map(LocalDate::toString))
+    this["v2_manual_shift.note"] = state.noteBody
+    this["v2_manual_shift.images"] = ArrayList(state.noteAttachments.map { it.encodeManualDraft() })
     if (state.stage == V2ManualShiftLoadStage.IDLE) {
         listOf(
             KEY_STAGE,
@@ -1440,6 +1718,7 @@ internal fun SavedStateHandle.writeV2ManualShiftLoadState(state: V2ManualShiftLo
             KEY_SECTOR,
             KEY_SELECTED_DATES,
             KEY_TEMPLATE_ID,
+            KEY_TEMPLATE_FINGERPRINT,
             KEY_POSITION,
             KEY_CREATION_REQUEST,
             KEY_CREATION_RESULT,
@@ -1457,6 +1736,7 @@ internal fun SavedStateHandle.writeV2ManualShiftLoadState(state: V2ManualShiftLo
     this[KEY_SECTOR] = state.sector?.name
     this[KEY_SELECTED_DATES] = ArrayList(state.selectedDates.sorted().map(LocalDate::toString))
     this[KEY_TEMPLATE_ID] = state.selectedTemplateId?.toString()
+    this[KEY_TEMPLATE_FINGERPRINT] = state.selectedTemplateFingerprint
     this[KEY_POSITION] = state.position
     writeWorkCreationRequest(KEY_CREATION_REQUEST, state.creationRequest)
     writeWorkCreationResult(KEY_CREATION_RESULT, state.creationResult)
@@ -1475,6 +1755,7 @@ private const val KEY_TIMELINE_ID = "v2_manual_shift.timeline_id"
 private const val KEY_SECTOR = "v2_manual_shift.sector"
 private const val KEY_SELECTED_DATES = "v2_manual_shift.selected_dates"
 private const val KEY_TEMPLATE_ID = "v2_manual_shift.template_id"
+private const val KEY_TEMPLATE_FINGERPRINT = "v2_manual_shift.template_fingerprint"
 private const val KEY_POSITION = "v2_manual_shift.position"
 private const val KEY_OCCUPIED_POLICY = "v2_manual_shift.occupied_policy"
 private const val KEY_OCCUPIED_DATES = "v2_manual_shift.occupied_dates"

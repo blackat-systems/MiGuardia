@@ -1,22 +1,31 @@
 package com.blackatsystems.miguardia.ui.availability
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import com.blackatsystems.miguardia.ui.components.MiGuardiaButtonShape
+import com.blackatsystems.miguardia.ui.components.destructiveButtonColors
+import com.blackatsystems.miguardia.ui.components.vigiliaScreenBackground
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -24,6 +33,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.blackatsystems.miguardia.core.domain.model.AvailabilityBreakdown
@@ -31,12 +43,20 @@ import com.blackatsystems.miguardia.core.domain.model.AvailabilityTemporalState
 import com.blackatsystems.miguardia.core.domain.model.AvailabilityWindowRecord
 import com.blackatsystems.miguardia.core.domain.work.AvailabilityLabel
 import com.blackatsystems.miguardia.ui.components.EmptyState
+import com.blackatsystems.miguardia.ui.components.MiGuardiaSpacing
+import com.blackatsystems.miguardia.ui.components.PrimaryAction
 import com.blackatsystems.miguardia.ui.components.AutomaticTimeField
+import com.blackatsystems.miguardia.ui.components.DateFieldFormat
+import com.blackatsystems.miguardia.ui.components.PICKER_BUTTON_SUFFIX
+import com.blackatsystems.miguardia.ui.components.PickableDateField
 import com.blackatsystems.miguardia.ui.components.PersistentMessage
 import com.blackatsystems.miguardia.ui.components.SectionCard
 import com.blackatsystems.miguardia.ui.components.SurfaceHeader
+import com.blackatsystems.miguardia.ui.theme.vigiliaColors
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import com.blackatsystems.miguardia.ui.EventTimeRangeStyle
+import com.blackatsystems.miguardia.ui.formatEventTimeRange
 
 data class AvailabilityActions(
     val retry: () -> Unit = {},
@@ -51,6 +71,7 @@ data class AvailabilityActions(
     val backConfiguration: () -> Unit = {},
     val saveConfiguration: () -> Unit = {},
     val openCreate: (LocalDate) -> Unit = {},
+    val openRetainer: (LocalDate) -> Unit = {},
     val openCorrect: (AvailabilityWindowRecord) -> Unit = {},
     val updateWindow: (AvailabilityWindowDraftState) -> Unit = {},
     val reviewWindow: () -> Unit = {},
@@ -74,6 +95,7 @@ data class AvailabilityActions(
             backConfiguration = viewModel::backConfiguration,
             saveConfiguration = viewModel::saveConfiguration,
             openCreate = viewModel::openCreate,
+            openRetainer = viewModel::openRetainer,
             openCorrect = viewModel::openCorrect,
             updateWindow = viewModel::updateWindowDraft,
             reviewWindow = viewModel::reviewWindow,
@@ -134,7 +156,7 @@ private fun FullAvailabilitySurface(
     content: @Composable () -> Unit,
 ) {
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-        Column(Modifier.fillMaxSize().safeDrawingPadding()) {
+        Column(Modifier.fillMaxSize().vigiliaScreenBackground().safeDrawingPadding()) {
             SurfaceHeader(title, actionLabel, onBack)
             HorizontalDivider()
             content()
@@ -152,10 +174,11 @@ private fun AvailabilityOverview(state: AvailabilityUiState, actions: Availabili
         ) {
             Text("Ventanas registradas: ${source.windows.size}")
         }
-        Button(
+        PrimaryAction(
+            label = "Configurar o cambiar",
             onClick = actions.openConfiguration,
-            modifier = Modifier.fillMaxWidth().testTag("availability-configure"),
-        ) { Text("Configurar o cambiar") }
+            modifier = Modifier.testTag("availability-configure"),
+        )
     }
 }
 
@@ -163,38 +186,51 @@ private fun AvailabilityOverview(state: AvailabilityUiState, actions: Availabili
 private fun ConfigurationEditor(state: AvailabilityUiState, actions: AvailabilityActions) {
     AvailabilityBody(state, actions) {
         val draft = state.configurationDraft ?: return@AvailabilityBody
-        Text("Elegí el nombre que MiGuardia debe usar.", fontWeight = FontWeight.SemiBold)
+        Text(
+            "Elegí el nombre que MiGuardia debe usar.",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+        )
         (listOf<AvailabilityLabel?>(
             AvailabilityLabel.PASSIVE_GUARD,
             AvailabilityLabel.AVAILABLE_FOR_CALL,
             AvailabilityLabel.ON_CALL_RETAINER,
             null,
         )).forEach { option ->
+            val selected = draft.label == option
             OutlinedButton(
                 onClick = { actions.updateConfiguration(draft.copy(label = option)) },
-                modifier = Modifier.fillMaxWidth().testTag(
+                shape = MiGuardiaButtonShape,
+                border = BorderStroke(1.dp, if (selected) MaterialTheme.vigiliaColors.active else MaterialTheme.colorScheme.outline),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    containerColor = if (selected) MaterialTheme.vigiliaColors.selection else MaterialTheme.colorScheme.surface,
+                    contentColor = if (selected) MaterialTheme.vigiliaColors.onSelection else MaterialTheme.colorScheme.primary,
+                ),
+                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).semantics { this.selected = selected }.testTag(
                     "availability-label-${option?.name ?: "none"}",
                 ),
             ) {
                 Text(
-                    (if (draft.label == option) "✓ " else "") +
+                    (if (selected) "✓ " else "") +
                         (option?.displayName ?: "No uso disponibilidad"),
                 )
             }
         }
-        OutlinedTextField(
+        PickableDateField(
             value = draft.effectiveDate,
             onValueChange = { actions.updateConfiguration(draft.copy(effectiveDate = it)) },
-            label = { Text("Vigente desde") },
-            supportingText = { Text("AAAA-MM-DD") },
-            singleLine = true,
+            label = "Vigente desde",
+            format = DateFieldFormat.ISO,
+            pickerFallback = { state.source?.today ?: LocalDate.now() },
+            pickerTestTag = "availability-config-date$PICKER_BUTTON_SUFFIX",
             modifier = Modifier.fillMaxWidth().testTag("availability-config-date"),
         )
-        Button(
+        PrimaryAction(
+            label = "Revisar",
             onClick = actions.reviewConfiguration,
             enabled = !state.isSaving,
-            modifier = Modifier.fillMaxWidth().testTag("availability-config-review"),
-        ) { Text("Revisar") }
+            modifier = Modifier.testTag("availability-config-review"),
+        )
     }
 }
 
@@ -205,18 +241,19 @@ private fun ConfigurationReview(state: AvailabilityUiState, actions: Availabilit
         SectionCard("Confirmá el cambio") {
             Text("Nombre: ${draft.label?.displayName ?: "No uso disponibilidad"}")
             Text("Vigente desde: ${draft.effectiveDate}")
-            Text("El historial anterior se conserva. Desactivar sólo bloquea cargas nuevas desde esa fecha.")
+            HelperText("El historial anterior se conserva. Desactivar sólo bloquea cargas nuevas desde esa fecha.")
             runCatching { LocalDate.parse(draft.effectiveDate) }.getOrNull()?.let { effectiveDate ->
                 if (state.source?.today?.let(effectiveDate::isBefore) == true) {
-                    Text("Como la fecha es anterior a hoy, ese tramo histórico pasa a usar este nombre. No se crean ventanas ni se cambian sus fotografías guardadas.")
+                    HelperText("Como la fecha es anterior a hoy, ese tramo histórico pasa a usar este nombre. No se crean ventanas ni se cambian sus fotografías guardadas.")
                 }
             }
         }
-        Button(
+        PrimaryAction(
+            label = if (state.isSaving) "Guardando…" else "Guardar configuración",
             onClick = actions.saveConfiguration,
             enabled = !state.isSaving,
-            modifier = Modifier.fillMaxWidth().testTag("availability-config-save"),
-        ) { Text(if (state.isSaving) "Guardando…" else "Guardar configuración") }
+            modifier = Modifier.testTag("availability-config-save"),
+        )
     }
 }
 
@@ -224,38 +261,112 @@ private fun ConfigurationReview(state: AvailabilityUiState, actions: Availabilit
 private fun WindowEditor(state: AvailabilityUiState, actions: AvailabilityActions) {
     AvailabilityBody(state, actions) {
         val draft = state.windowDraft ?: return@AvailabilityBody
+        val ownerDate = draft.ownerDate
         SectionCard(
-            title = "Fecha ${draft.ownerDate ?: ""}",
+            eyebrow = draft.labelOverride?.displayName
+                ?: ownerDate?.let { state.source?.labelOn(it)?.displayName },
+            title = ownerDate?.let(::humanOwnerDate) ?: "Fecha sin elegir",
             supportingText = "La fecha dueña no cambia al corregir. Para moverla, eliminá y creá otra ventana.",
-        ) { }
-        AutomaticTimeField(
-            value = draft.startTime,
-            onValueChange = { actions.updateWindow(draft.copy(startTime = it)) },
-            label = "Inicio",
-            modifier = Modifier.fillMaxWidth().testTag("availability-start"),
-        )
-        OutlinedTextField(
-            value = draft.endDate,
-            onValueChange = { actions.updateWindow(draft.copy(endDate = it)) },
-            label = { Text("Fecha final") },
-            supportingText = { Text("AAAA-MM-DD; puede cruzar mes o año") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth().testTag("availability-end-date"),
-        )
-        AutomaticTimeField(
-            value = draft.endTime,
-            onValueChange = { actions.updateWindow(draft.copy(endTime = it)) },
-            label = "Final",
-            modifier = Modifier.fillMaxWidth().testTag("availability-end"),
-        )
-        Text("Una disponibilidad puede superar 24 horas. No se combina automáticamente con ventanas contiguas.")
-        Button(
+        ) {
+            WindowTimes(draft, actions)
+            PickableDateField(
+                value = draft.endDate,
+                onValueChange = { actions.updateWindow(draft.copy(endDate = it)) },
+                label = "Fecha final",
+                format = DateFieldFormat.ISO,
+                supportingText = "AAAA-MM-DD; puede cruzar mes o año",
+                pickerFallback = { ownerDate ?: state.source?.today ?: LocalDate.now() },
+                pickerTestTag = "availability-end-date$PICKER_BUTTON_SUFFIX",
+                badge = daysAfterOwnerBadge(ownerDate, draft.endDate),
+                modifier = Modifier.fillMaxWidth().testTag("availability-end-date"),
+            )
+            HelperText("Una disponibilidad puede superar 24 horas. No se combina automáticamente con ventanas contiguas.")
+        }
+        PrimaryAction(
+            label = if (state.isSaving) "Revisando…" else "Revisar",
             onClick = actions.reviewWindow,
             enabled = !state.isSaving,
-            modifier = Modifier.fillMaxWidth().testTag("availability-window-review"),
-        ) { Text(if (state.isSaving) "Revisando…" else "Revisar") }
+            modifier = Modifier.testTag("availability-window-review"),
+        )
     }
 }
+
+/**
+ * Start and end times. Side by side with large numerals when there is room (style v2); stacked
+ * when the width or Android's font size would squeeze them, so nothing gets cut.
+ */
+@Composable
+private fun WindowTimes(draft: AvailabilityWindowDraftState, actions: AvailabilityActions) {
+    val bigTime = MaterialTheme.typography.headlineSmall
+    val fontScale = LocalDensity.current.fontScale
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val sideBySide = maxWidth >= 280.dp * fontScale
+        val start = @Composable { modifier: Modifier ->
+            AutomaticTimeField(
+                value = draft.startTime,
+                onValueChange = { actions.updateWindow(draft.copy(startTime = it)) },
+                label = "Inicio",
+                withPicker = true,
+                pickerTestTag = "availability-start$PICKER_BUTTON_SUFFIX",
+                textStyle = bigTime,
+                showHint = false,
+                modifier = modifier.testTag("availability-start"),
+            )
+        }
+        val end = @Composable { modifier: Modifier ->
+            AutomaticTimeField(
+                value = draft.endTime,
+                onValueChange = { actions.updateWindow(draft.copy(endTime = it)) },
+                label = "Final",
+                withPicker = true,
+                pickerTestTag = "availability-end$PICKER_BUTTON_SUFFIX",
+                textStyle = bigTime,
+                showHint = false,
+                modifier = modifier.testTag("availability-end"),
+            )
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.extraSmall)) {
+            if (sideBySide) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    start(Modifier.weight(1f))
+                    Text(
+                        "→",
+                        modifier = Modifier.clearAndSetSemantics {},
+                        color = MaterialTheme.vigiliaColors.onSurfaceMuted,
+                    )
+                    end(Modifier.weight(1f))
+                }
+            } else {
+                start(Modifier.fillMaxWidth())
+                end(Modifier.fillMaxWidth())
+            }
+            HelperText("Escribí 4 números o tocá el reloj. MiGuardia agrega los dos puntos.")
+        }
+    }
+}
+
+/** "jueves 27 de agosto de 2026", capitalized: full human date for the card title (V010). */
+private fun humanOwnerDate(date: LocalDate): String =
+    date.format(HumanDateFormatter).replaceFirstChar { it.titlecase(SpanishArgentina) }
+
+/** "+1 día" when the typed end date is after the owner date; nothing while it is incomplete. */
+internal fun daysAfterOwnerBadge(ownerDate: LocalDate?, endDate: String): String? {
+    val owner = ownerDate ?: return null
+    val end = DateFieldFormat.ISO.parseOrNull(endDate) ?: return null
+    val days = java.time.temporal.ChronoUnit.DAYS.between(owner, end)
+    return when {
+        days <= 0L -> null
+        days == 1L -> "+1 día"
+        else -> "+$days días"
+    }
+}
+
+private val SpanishArgentina: java.util.Locale = java.util.Locale.forLanguageTag("es-AR")
+private val HumanDateFormatter: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("EEEE d 'de' MMMM 'de' uuuu", SpanishArgentina)
 
 @Composable
 private fun WindowReview(state: AvailabilityUiState, actions: AvailabilityActions) {
@@ -266,19 +377,20 @@ private fun WindowReview(state: AvailabilityUiState, actions: AvailabilityAction
             title = record.labelSnapshot,
             supportingText = "Confirmá fecha, inicio y final exactos.",
         ) {
-            Text("Inicio: ${record.start.atZone(record.zoneId).format(LocalDateTimeFormatter)}")
-            Text("Final: ${record.end.atZone(record.zoneId).format(LocalDateTimeFormatter)}")
-            Text("Duración programada: ${minutesLabel(record.durationMinutes)}")
+            Text(AnnotatedString("Inicio: ${record.start.atZone(record.zoneId).format(LocalDateTimeFormatter)}"))
+            Text(AnnotatedString("Final: ${record.end.atZone(record.zoneId).format(LocalDateTimeFormatter)}"))
+            Text(AnnotatedString("Duración programada: ${minutesLabel(record.durationMinutes)}"))
         }
         AvailabilityResultLines(review.breakdown)
         if (review.isProtected) {
-            Text("La fecha está protegida por vacaciones o licencia médica; la ventana se conserva sin aportar disponibilidad efectiva.")
+            HelperText("La fecha está protegida por vacaciones o licencia médica; la ventana se conserva sin aportar disponibilidad efectiva.")
         }
-        Button(
+        PrimaryAction(
+            label = if (state.isSaving) "Guardando…" else "Guardar",
             onClick = actions.saveWindow,
             enabled = !state.isSaving,
-            modifier = Modifier.fillMaxWidth().testTag("availability-window-save"),
-        ) { Text(if (state.isSaving) "Guardando…" else "Guardar") }
+            modifier = Modifier.testTag("availability-window-save"),
+        )
     }
 }
 
@@ -296,14 +408,14 @@ private fun AvailabilityBody(
         ) { CircularProgressIndicator() }
         AvailabilityLoadState.ERROR -> state.source?.let { source ->
             Column(
-                Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
+                Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(MiGuardiaSpacing.large),
+                verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.large),
             ) {
                 PersistentMessage(
                     message = state.message ?: "No pudimos actualizar los datos. Se conserva la última información válida.",
                     onDismiss = actions.clearMessage,
                 )
-                OutlinedButton(onClick = actions.retry, modifier = Modifier.fillMaxWidth()) {
+                OutlinedButton(onClick = actions.retry, shape = MiGuardiaButtonShape, modifier = Modifier.fillMaxWidth()) {
                     Text("Reintentar")
                 }
                 content(source)
@@ -313,11 +425,11 @@ private fun AvailabilityBody(
             message = state.message ?: "Los datos no están disponibles.",
             actionLabel = "Reintentar",
             onAction = actions.retry,
-            modifier = Modifier.fillMaxSize().padding(24.dp),
+            modifier = Modifier.fillMaxSize().padding(MiGuardiaSpacing.extraLarge),
         )
         AvailabilityLoadState.CONTENT -> Column(
-            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(MiGuardiaSpacing.large),
+            verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.large),
         ) {
             state.message?.let { PersistentMessage(message = it, onDismiss = actions.clearMessage) }
             content(requireNotNull(state.source))
@@ -330,6 +442,7 @@ fun AvailabilityDaySection(
     date: LocalDate,
     state: AvailabilityUiState,
     actions: AvailabilityActions,
+    showActions: Boolean = true,
 ) {
     val source = state.source ?: return
     val windows = state.windowsOn(date)
@@ -354,25 +467,27 @@ fun AvailabilityDaySection(
             val result = source.breakdowns[record.id]
             Text(record.labelSnapshot, fontWeight = FontWeight.SemiBold)
             Text(
-                "${record.start.atZone(record.zoneId).toLocalTime()}–" +
-                    "${record.end.atZone(record.zoneId).format(EndFormatter)}",
+                formatEventTimeRange(record.start, record.end, record.zoneId, EventTimeRangeStyle.DETAIL),
                 modifier = Modifier.testTag("availability-window-${record.id}"),
             )
             result?.let { Text(resultShortLabel(it)) }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextButton(
-                    onClick = { actions.openCorrect(record) },
-                    modifier = Modifier.testTag("availability-correct-${record.id}"),
-                ) { Text("Corregir") }
-                TextButton(
-                    onClick = { actions.requestDelete(record) },
-                    modifier = Modifier.testTag("availability-delete-${record.id}"),
-                ) { Text("Eliminar") }
+            if (showActions) {
+                Row(horizontalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small)) {
+                    TextButton(
+                        onClick = { actions.openCorrect(record) },
+                        modifier = Modifier.testTag("availability-correct-${record.id}"),
+                    ) { Text("Corregir") }
+                    TextButton(
+                        onClick = { actions.requestDelete(record) },
+                        modifier = Modifier.testTag("availability-delete-${record.id}"),
+                    ) { Text("Eliminar") }
+                }
             }
         }
-        if (label != null) {
+        if (label != null && showActions) {
             OutlinedButton(
                 onClick = { actions.openCreate(date) },
+                shape = MiGuardiaButtonShape,
                 modifier = Modifier.fillMaxWidth().testTag("availability-add-$date"),
             ) { Text("Registrar ${label.displayName.lowercase()}") }
         }
@@ -422,7 +537,7 @@ private fun AvailabilityResultLines(result: AvailabilityBreakdown) {
 
 @Composable
 private fun ResultLine(label: String, minutes: Long) {
-    Text("$label: ${minutesLabel(minutes)}")
+    Text(AnnotatedString("$label: ${minutesLabel(minutes)}"))
 }
 
 private fun resultShortLabel(result: AvailabilityBreakdown): String = when (result.state) {
@@ -441,6 +556,12 @@ private fun stateLabel(state: AvailabilityTemporalState): String = when (state) 
     AvailabilityTemporalState.PROTECTED -> "Protegida"
 }
 
+/** Secondary explanation: same text, quieter than data so the values read first. */
+@Composable
+private fun HelperText(text: String) {
+    Text(text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+}
+
 private fun minutesLabel(minutes: Long): String = "${minutes / 60} h ${minutes % 60} min"
 
 @Composable
@@ -452,7 +573,7 @@ private fun DeleteConfirmation(state: AvailabilityUiState, actions: Availability
         onDismissRequest = actions.dismissDelete,
         title = { Text("Eliminar ${record.labelSnapshot}") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small)) {
                 Text(
                     "Se eliminará exactamente esta ventana: $start–$end (${minutesLabel(record.durationMinutes)}). " +
                         "La acción no modifica jornadas ni horas trabajadas.",
@@ -461,8 +582,10 @@ private fun DeleteConfirmation(state: AvailabilityUiState, actions: Availability
             }
         },
         confirmButton = {
-            Button(
+            FilledTonalButton(
                 onClick = actions.confirmDelete,
+                shape = MiGuardiaButtonShape,
+                colors = destructiveButtonColors(),
                 enabled = !state.isSaving,
                 modifier = Modifier.testTag("availability-delete-confirm"),
             ) { Text(if (state.isSaving) "Eliminando…" else "Eliminar") }
@@ -480,7 +603,10 @@ private fun DiscardConfirmation(actions: AvailabilityActions) {
         title = { Text("Descartar cambios") },
         text = { Text("Los datos que todavía no guardaste se perderán.") },
         confirmButton = {
-            Button(onClick = actions.confirmDiscard, modifier = Modifier.testTag("availability-discard-confirm")) {
+            FilledTonalButton(onClick = actions.confirmDiscard,
+                shape = MiGuardiaButtonShape,
+                colors = destructiveButtonColors(),
+                modifier = Modifier.testTag("availability-discard-confirm")) {
                 Text("Descartar")
             }
         },
@@ -489,4 +615,3 @@ private fun DiscardConfirmation(actions: AvailabilityActions) {
 }
 
 private val LocalDateTimeFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")
-private val EndFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM HH:mm")

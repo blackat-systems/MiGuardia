@@ -11,11 +11,13 @@ import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
 import android.util.SizeF
+import android.util.TypedValue
 import android.view.View
 import android.widget.RemoteViews
 import com.blackatsystems.miguardia.MainActivity
 import com.blackatsystems.miguardia.R
 import com.blackatsystems.miguardia.core.domain.nextevent.NextEventResult
+import com.blackatsystems.miguardia.core.domain.widget.WidgetContentState
 import com.blackatsystems.miguardia.core.domain.widget.WidgetEventKind
 import com.blackatsystems.miguardia.core.domain.widget.WidgetNavigation
 import com.blackatsystems.miguardia.core.domain.widget.WidgetPrivacy
@@ -28,18 +30,50 @@ import com.blackatsystems.miguardia.ui.theme.AppThemeMode
 import com.blackatsystems.miguardia.weather.WeatherCredits
 
 private const val COMPACT_WIDTH_DP = 180f
-private const val COMPACT_HEIGHT_DP = 96f
+// One launcher row can be shorter than 96 dp (Samsung: 95 dp), and a layout is only chosen if it fits.
+private const val COMPACT_HEIGHT_DP = 80f
+/** Desde este alto la vista compacta tiene lugar para que el nombre y el horario usen dos renglones. */
+private const val COMPACT_TALL_HEIGHT_DP = 150f
+/**
+ * Desde este ancho, con ese mismo alto, la vista compacta usa letra más grande. Es el tamaño con que
+ * varios inicios (Samsung: todo el ancho por dos filas) colocan el Widget: con la letra chica quedaban
+ * dos renglones perdidos en una tarjeta grande.
+ */
+private const val COMPACT_ROOMY_WIDTH_DP = 300f
+private const val LARGE_FONT_SCALE = 1.3f
 private const val EXPANDED_WIDTH_DP = 250f
 private const val EXPANDED_HEIGHT_DP = 360f
+
+/**
+ * Lo que el motor del Widget necesita de quien dibuja: saber qué instancias hay y publicarles una vista.
+ * Producción usa [WidgetRemoteViewsRenderer]; las pruebas pueden observar el motor sin un Widget instalado.
+ */
+interface WidgetSurface {
+    fun installedIds(): IntArray
+    fun isExpandedLayout(appWidgetId: Int): Boolean
+    fun renderRecovery(appWidgetIds: IntArray? = null)
+    fun renderLoading(appWidgetIds: IntArray)
+    fun renderRecoverableError(appWidgetIds: IntArray)
+    fun render(
+        appWidgetId: Int,
+        result: NextEventResult,
+        preferences: WidgetInstancePreferences,
+        weatherText: String?,
+    )
+}
 
 class WidgetRemoteViewsRenderer(
     private val context: Context,
     private val manager: AppWidgetManager = AppWidgetManager.getInstance(context),
-) {
-    fun installedIds(): IntArray = manager.getAppWidgetIds(providerComponent())
+) : WidgetSurface {
+    override fun installedIds(): IntArray {
+        com.blackatsystems.miguardia.QaInstrumentationScope.requireExternalAction(context, "widget.installed-query")
+        return manager.getAppWidgetIds(providerComponent())
+    }
 
-    fun renderRecovery(appWidgetIds: IntArray = installedIds()) {
-        appWidgetIds.filterValidIds().forEach { id ->
+    override fun renderRecovery(appWidgetIds: IntArray?) {
+        if (com.blackatsystems.miguardia.QaInstrumentationScope.suppress(context, "widget.recovery")) return
+        (appWidgetIds ?: installedIds()).filterValidIds().forEach { id ->
             manager.updateAppWidget(id, recoveryViews(id))
         }
     }
@@ -47,13 +81,15 @@ class WidgetRemoteViewsRenderer(
     internal fun recoveryViews(id: Int): RemoteViews =
         statusViews(id, "MIGUARDIA", "Abrí MiGuardia para terminar la recuperación de tus datos.")
 
-    fun renderLoading(appWidgetIds: IntArray) {
+    override fun renderLoading(appWidgetIds: IntArray) {
+        if (com.blackatsystems.miguardia.QaInstrumentationScope.suppress(context, "widget.render-loading")) return
         appWidgetIds.filterValidIds().forEach { id ->
             manager.updateAppWidget(id, statusViews(id, "CARGANDO", "Actualizando el próximo evento…"))
         }
     }
 
-    fun renderRecoverableError(appWidgetIds: IntArray) {
+    override fun renderRecoverableError(appWidgetIds: IntArray) {
+        if (com.blackatsystems.miguardia.QaInstrumentationScope.suppress(context, "widget.render-error")) return
         appWidgetIds.filterValidIds().forEach { id ->
             manager.updateAppWidget(
                 id,
@@ -62,12 +98,13 @@ class WidgetRemoteViewsRenderer(
         }
     }
 
-    fun render(
+    override fun render(
         appWidgetId: Int,
         result: NextEventResult,
         preferences: WidgetInstancePreferences,
         weatherText: String?,
     ) {
+        com.blackatsystems.miguardia.QaInstrumentationScope.requireExternalAction(context, "widget.render")
         if (appWidgetId <= 0) return
         if (!com.blackatsystems.miguardia.localAllowsPublication(context)) {
             renderRecovery(intArrayOf(appWidgetId))
@@ -93,6 +130,10 @@ class WidgetRemoteViewsRenderer(
         )
         val palette = currentPalette()
         val compactViews = createViews(compact, appWidgetId, null, palette)
+        val compactTallViews = createViews(compact, appWidgetId, null, palette, compactTextLines = 2)
+        val compactRoomyViews = createViews(
+            compact, appWidgetId, null, palette, compactTextLines = 2, compactLargeText = true,
+        )
         val expandedWeather = weatherText.takeIf {
             preferences.includeWeather &&
                 preferences.privacy == WidgetPrivacy.COMPLETE &&
@@ -103,6 +144,8 @@ class WidgetRemoteViewsRenderer(
             RemoteViews(
                 mapOf(
                     SizeF(COMPACT_WIDTH_DP, COMPACT_HEIGHT_DP) to compactViews,
+                    SizeF(COMPACT_WIDTH_DP, COMPACT_TALL_HEIGHT_DP) to compactTallViews,
+                    SizeF(COMPACT_ROOMY_WIDTH_DP, COMPACT_TALL_HEIGHT_DP) to compactRoomyViews,
                     SizeF(EXPANDED_WIDTH_DP, EXPANDED_HEIGHT_DP) to expandedViews,
                 ),
             )
@@ -133,6 +176,8 @@ class WidgetRemoteViewsRenderer(
         weatherText: String?,
         palette: WidgetPalette = currentPalette(),
         elapsedRealtime: Long = SystemClock.elapsedRealtime(),
+        compactTextLines: Int = 1,
+        compactLargeText: Boolean = false,
     ): RemoteViews {
         val expanded = projection.size == WidgetSize.EXPANDED
         val layout = if (expanded) R.layout.widget_next_event_expanded else R.layout.widget_next_event_compact
@@ -151,6 +196,35 @@ class WidgetRemoteViewsRenderer(
             setInt(R.id.widget_accent, "setBackgroundColor", accent)
             setTextViewText(R.id.widget_title, text.title)
             setTextViewText(R.id.widget_primary, text.primary)
+            if (!expanded) {
+                val largeFont = context.resources.configuration.fontScale >= LARGE_FONT_SCALE
+                // Large Android text in a compact view: the date and time come first. The heading row is
+                // dropped (the countdown already says "Comienza en…/Finaliza en…" and TalkBack still reads
+                // it from the root description) and the name keeps to one line, so the schedule fits.
+                // Other states (empty, day off, hidden privacy) have no schedule to protect and keep theirs.
+                val scheduleFirst = largeFont &&
+                    projection.state == WidgetContentState.EVENTS &&
+                    text.schedule != null
+                setViewVisibility(R.id.widget_title, if (scheduleFirst) View.GONE else View.VISIBLE)
+                // One row high: one line each. With more height the name and the schedule may wrap.
+                setInt(R.id.widget_primary, "setMaxLines", if (scheduleFirst) 1 else compactTextLines)
+                setInt(R.id.widget_schedule, "setMaxLines", compactTextLines)
+                if (scheduleFirst && compactTextLines == 1) {
+                    // One launcher row at up to 200 %: name and schedule only fit together if the name
+                    // grows from 14 sp instead of 16 sp (still larger on screen than at the standard scale).
+                    setTextViewTextSize(R.id.widget_primary, TypedValue.COMPLEX_UNIT_SP, 14f)
+                }
+                // With Android's text already enlarged the regular sizes fill the space; making them
+                // bigger still would push the schedule out.
+                if (compactLargeText && !largeFont) {
+                    // Sizes in sp: Android's own font scale still applies on top.
+                    setTextViewTextSize(R.id.widget_title, TypedValue.COMPLEX_UNIT_SP, 14f)
+                    setTextViewTextSize(R.id.widget_primary, TypedValue.COMPLEX_UNIT_SP, 22f)
+                    setTextViewTextSize(R.id.widget_schedule, TypedValue.COMPLEX_UNIT_SP, 16f)
+                    setTextViewTextSize(R.id.widget_countdown, TypedValue.COMPLEX_UNIT_SP, 16f)
+                    setTextViewTextSize(R.id.widget_simultaneous, TypedValue.COMPLEX_UNIT_SP, 14f)
+                }
+            }
             setTextColor(R.id.widget_title, palette.secondaryText)
             setTextColor(R.id.widget_primary, palette.primaryText)
             setOptionalText(R.id.widget_schedule, text.schedule, palette.secondaryText)
@@ -173,6 +247,8 @@ class WidgetRemoteViewsRenderer(
                 val credit = WeatherCredits.forDisplayedWeather(renderedWeather)
                 setOptionalText(R.id.widget_weather_credit, credit, palette.action)
                 setViewVisibility(R.id.widget_weather_area, if (credit != null) View.VISIBLE else View.GONE)
+                setOnClickPendingIntent(R.id.widget_weather_area, null)
+                setContentDescription(R.id.widget_weather_area, null)
                 if (renderedWeather != null) {
                     setOnClickPendingIntent(R.id.widget_weather_area, weatherIntent(appWidgetId))
                     setContentDescription(R.id.widget_weather_area, "$renderedWeather. $credit. ${WeatherCredits.OPEN}.")
@@ -193,6 +269,8 @@ class WidgetRemoteViewsRenderer(
         RowIds.forEachIndexed { index, viewId ->
             val row = rows.drop(1).getOrNull(index)
             setOptionalText(viewId, row, palette.primaryText)
+            setOnClickPendingIntent(viewId, null)
+            setContentDescription(viewId, null)
             val event = projection.events.drop(1).getOrNull(index)
             if (row != null && event != null) {
                 setOnClickPendingIntent(viewId, navigationIntent(appWidgetId, event.navigation))
@@ -214,19 +292,23 @@ class WidgetRemoteViewsRenderer(
         }
         val visible = base != null && format != null
         setViewVisibility(R.id.widget_countdown, if (visible) View.VISIBLE else View.GONE)
+        setTextColor(R.id.widget_countdown, color)
+        setContentDescription(R.id.widget_countdown, null)
         if (visible) {
             setChronometer(R.id.widget_countdown, requireNotNull(base), format, true)
             setChronometerCountDown(R.id.widget_countdown, true)
-            setTextColor(R.id.widget_countdown, color)
+        } else {
+            setChronometer(R.id.widget_countdown, 0L, null, false)
+            setChronometerCountDown(R.id.widget_countdown, false)
+            setTextViewText(R.id.widget_countdown, "")
         }
     }
 
     private fun RemoteViews.setOptionalText(viewId: Int, value: String?, color: Int) {
         setViewVisibility(viewId, if (value == null) View.GONE else View.VISIBLE)
-        if (value != null) {
-            setTextViewText(viewId, value)
-            setTextColor(viewId, color)
-        }
+        setTextViewText(viewId, value ?: "")
+        setTextColor(viewId, color)
+        setContentDescription(viewId, null)
     }
 
     private fun statusViews(appWidgetId: Int, title: String, primary: String): RemoteViews {
@@ -243,9 +325,14 @@ class WidgetRemoteViewsRenderer(
             setTextViewText(R.id.widget_primary, primary)
             setTextColor(R.id.widget_title, palette.secondaryText)
             setTextColor(R.id.widget_primary, palette.primaryText)
-            setViewVisibility(R.id.widget_schedule, View.GONE)
+            setOptionalText(R.id.widget_schedule, null, palette.secondaryText)
+            setOptionalText(R.id.widget_simultaneous, null, palette.action)
             setViewVisibility(R.id.widget_countdown, View.GONE)
-            setViewVisibility(R.id.widget_simultaneous, View.GONE)
+            setChronometer(R.id.widget_countdown, 0L, null, false)
+            setChronometerCountDown(R.id.widget_countdown, false)
+            setTextViewText(R.id.widget_countdown, "")
+            setTextColor(R.id.widget_countdown, palette.action)
+            setContentDescription(R.id.widget_countdown, null)
             setOnClickPendingIntent(R.id.widget_root, calendarIntent(appWidgetId))
             setContentDescription(R.id.widget_root, "$title. $primary")
         }
@@ -291,6 +378,7 @@ class WidgetRemoteViewsRenderer(
         discriminator: String,
         extras: (Intent) -> Unit = {},
     ): PendingIntent {
+        com.blackatsystems.miguardia.QaInstrumentationScope.requireExternalAction(context, "widget.activity-identity")
         val intent = Intent(context, MainActivity::class.java)
             .setAction(action)
             .setData(widgetUri(appWidgetId, action, discriminator))
@@ -305,6 +393,7 @@ class WidgetRemoteViewsRenderer(
     }
 
     private fun configurationIntent(appWidgetId: Int): PendingIntent {
+        com.blackatsystems.miguardia.QaInstrumentationScope.requireExternalAction(context, "widget.configuration-identity")
         val intent = Intent(context, WidgetConfigurationActivity::class.java)
             .setAction(AppWidgetManager.ACTION_APPWIDGET_CONFIGURE)
             .setData(widgetUri(appWidgetId, "configure", appWidgetId.toString()))
@@ -325,7 +414,7 @@ class WidgetRemoteViewsRenderer(
         .appendQueryParameter("target", discriminator)
         .build()
 
-    internal fun isExpandedLayout(appWidgetId: Int): Boolean {
+    override fun isExpandedLayout(appWidgetId: Int): Boolean {
         val options = manager.getAppWidgetOptions(appWidgetId)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             val supportedSizes = options.widgetSizes(AppWidgetManager.OPTION_APPWIDGET_SIZES)
@@ -362,7 +451,7 @@ class WidgetRemoteViewsRenderer(
     private fun IntArray.filterValidIds() = filter { it > 0 }
 
     private companion object {
-        const val DARK_BACKGROUND = 0xFF151125.toInt()
+        const val DARK_BACKGROUND = 0xFF1E2030.toInt()
         val RowIds = intArrayOf(R.id.widget_row_1, R.id.widget_row_2, R.id.widget_row_3)
     }
 }

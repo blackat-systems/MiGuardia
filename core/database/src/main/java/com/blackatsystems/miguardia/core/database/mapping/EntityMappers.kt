@@ -7,6 +7,7 @@ import com.blackatsystems.miguardia.core.database.entity.ObjectiveEntity
 import com.blackatsystems.miguardia.core.database.entity.SchedulePhotoEntity
 import com.blackatsystems.miguardia.core.database.entity.ShiftEntity
 import com.blackatsystems.miguardia.core.database.entity.ShiftNoteEntity
+import com.blackatsystems.miguardia.core.database.entity.ShiftNoteAttachmentEntity
 import com.blackatsystems.miguardia.core.database.entity.VacationEntity
 import com.blackatsystems.miguardia.core.domain.model.Holiday
 import com.blackatsystems.miguardia.core.domain.model.ExplicitDayStatus
@@ -16,6 +17,7 @@ import com.blackatsystems.miguardia.core.domain.model.Objective
 import com.blackatsystems.miguardia.core.domain.model.SchedulePhoto
 import com.blackatsystems.miguardia.core.domain.model.Shift
 import com.blackatsystems.miguardia.core.domain.model.ShiftNote
+import com.blackatsystems.miguardia.core.domain.model.ShiftNoteAttachment
 import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
 import com.blackatsystems.miguardia.core.domain.model.Vacation
 import com.blackatsystems.miguardia.core.domain.repository.InvalidLocalDataException
@@ -197,6 +199,37 @@ internal fun ShiftNoteEntity.toDomain(): ShiftNote = decodeEntity("nota de guard
         id = UUID.fromString(id),
         shiftId = UUID.fromString(shiftId),
         body = body,
+        createdAt = Instant.ofEpochMilli(createdAtEpochMillis),
+        updatedAt = Instant.ofEpochMilli(updatedAtEpochMillis),
+    )
+}
+
+internal fun ShiftNoteAttachment.toEntity() = ShiftNoteAttachmentEntity(
+    id = id.toString(),
+    noteId = noteId.toString(),
+    storageKey = storageKey,
+    mimeType = mimeType,
+    byteSize = byteSize,
+    pixelWidth = pixelWidth,
+    pixelHeight = pixelHeight,
+    position = position,
+    createdAtEpochMillis = createdAt.toEpochMilli(),
+    updatedAtEpochMillis = updatedAt.toEpochMilli(),
+)
+
+internal fun ShiftNoteAttachmentEntity.toDomain(): ShiftNoteAttachment = decodeEntity(
+    "adjunto de nota",
+    id,
+) {
+    ShiftNoteAttachment(
+        id = UUID.fromString(id),
+        noteId = UUID.fromString(noteId),
+        storageKey = storageKey,
+        mimeType = mimeType,
+        byteSize = byteSize,
+        pixelWidth = pixelWidth,
+        pixelHeight = pixelHeight,
+        position = position,
         createdAt = Instant.ofEpochMilli(createdAtEpochMillis),
         updatedAt = Instant.ofEpochMilli(updatedAtEpochMillis),
     )

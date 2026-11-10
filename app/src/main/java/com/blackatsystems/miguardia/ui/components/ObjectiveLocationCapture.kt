@@ -186,6 +186,7 @@ fun ObjectiveLocationCapture(
                     capture()
                 } else {
                     pendingPermissionRequestToken = requestGuard.begin()
+                    com.blackatsystems.miguardia.QaInstrumentationScope.requireExternalAction(context, "location.permission")
                     permissionLauncher.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
                 }
             },
@@ -209,6 +210,7 @@ fun ObjectiveLocationCapture(
         if (permissionWasDenied) {
             TextButton(
                 onClick = {
+                    com.blackatsystems.miguardia.QaInstrumentationScope.requireExternalAction(context, "location.settings")
                     val settingsIntent = Intent(
                         Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
                         "package:${context.packageName}".toUri(),
@@ -341,6 +343,7 @@ internal suspend fun geocodeObjectiveAddress(
     context: Context,
     rawAddress: String,
 ): GeocodedObjectiveLocation? {
+    com.blackatsystems.miguardia.QaInstrumentationScope.requireExternalAction(context, "location.geocoder")
     val query = rawAddress.trim()
     require(query.isNotEmpty())
     if (!Geocoder.isPresent()) return null
@@ -435,6 +438,7 @@ private fun requestCurrentLocation(
     onResult: (Double, Double) -> Unit,
     onFailure: (String) -> Unit,
 ): CancellationSignal? {
+    com.blackatsystems.miguardia.QaInstrumentationScope.requireExternalAction(context, "location.capture")
     val manager = ContextCompat.getSystemService(context, LocationManager::class.java)
     if (manager == null) {
         onFailure("Este teléfono no ofrece un servicio de ubicación disponible.")
@@ -448,12 +452,15 @@ private fun requestCurrentLocation(
     }
     val cancellation = CancellationSignal()
     try {
+        val executor = ContextCompat.getMainExecutor(context)
+        com.blackatsystems.miguardia.QaInstrumentationScope.withExplicitHumanApproximateLocationRequest(context) { beforeResult ->
         LocationManagerCompat.getCurrentLocation(
             manager,
             provider,
             cancellation,
-            ContextCompat.getMainExecutor(context),
+            executor,
         ) { location ->
+            beforeResult()
             if (location == null) {
                 onFailure("No pudimos obtener la ubicación aproximada de tu ciudad. Intentá de nuevo más tarde.")
             } else {
@@ -468,6 +475,7 @@ private fun requestCurrentLocation(
                     onFailure("El teléfono devolvió una ubicación inválida. Intentá de nuevo.")
                 }
             }
+        }
         }
     } catch (_: SecurityException) {
         onFailure("Falta el permiso de ubicación. Podés continuar sin clima.")

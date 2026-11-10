@@ -21,10 +21,23 @@ import org.junit.Test
 class NextEventFormattingTest {
     @Test
     fun remainingUsesHumanDaysHoursAndMinutesWithoutSeconds() {
-        assertEquals("1 d 4 h 30 min", formatRemaining(Duration.ofMinutes(1_710)))
-        assertEquals("5 h 20 min", formatRemaining(Duration.ofMinutes(320)))
-        assertEquals("0 min", formatRemaining(Duration.ofSeconds(59)))
-        assertEquals("0 min", formatRemaining(Duration.ofMinutes(-1)))
+        assertEquals("1 día, 4 horas, 30 minutos", formatRemaining(Duration.ofMinutes(1_710)))
+        assertEquals("5 horas, 20 minutos", formatRemaining(Duration.ofMinutes(320)))
+        assertEquals("menos de un minuto", formatRemaining(Duration.ofSeconds(59)))
+        assertEquals("menos de un minuto", formatRemaining(Duration.ofMinutes(-1)))
+        assertEquals("1 minuto", formatRemaining(Duration.ofMinutes(1)))
+        assertEquals("1 hora", formatRemaining(Duration.ofHours(1)))
+        assertEquals("2 días", formatRemaining(Duration.ofDays(2)))
+        assertEquals("1 día, 1 hora, 1 minuto", formatRemaining(Duration.ofMinutes(1_501)))
+    }
+
+    @Test
+    fun journeyDateUsesTodayTomorrowAndAnExplicitDateAcrossYearBoundary() {
+        val today = LocalDate.of(2026, 12, 31)
+        assertEquals("Hoy", journeyDateLabel(today, today))
+        assertEquals("Mañana", journeyDateLabel(today, today.plusDays(1)))
+        assertEquals("02/01/2027", journeyDateLabel(today, today.plusDays(2)))
+        assertEquals("30/12/2026", journeyDateLabel(today, today.minusDays(1)))
     }
 
     @Test

@@ -2,17 +2,20 @@ package com.blackatsystems.miguardia.ui.weather
 
 import android.content.ActivityNotFoundException
 import android.content.Intent
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -20,21 +23,25 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -47,11 +54,17 @@ import com.blackatsystems.miguardia.core.domain.weather.WeatherFreshness
 import com.blackatsystems.miguardia.core.domain.weather.WeatherHour
 import com.blackatsystems.miguardia.core.domain.weather.WeatherUnitSystem
 import com.blackatsystems.miguardia.core.domain.weather.roundedTemperature
+import com.blackatsystems.miguardia.core.domain.weather.roundedTemperatureRange
 import com.blackatsystems.miguardia.core.domain.weather.spanishLabel
+import com.blackatsystems.miguardia.ui.components.MiGuardiaSpacing
 import com.blackatsystems.miguardia.ui.components.PersistentMessage
+import com.blackatsystems.miguardia.ui.components.cardBorder
+import com.blackatsystems.miguardia.ui.EventTimeRangeStyle
+import com.blackatsystems.miguardia.ui.formatEventTimeRange
 import com.blackatsystems.miguardia.ui.components.ScreenHeading
 import com.blackatsystems.miguardia.ui.components.SectionCard
 import com.blackatsystems.miguardia.ui.components.TransientConfirmation
+import com.blackatsystems.miguardia.ui.components.TransientConfirmationLayout
 import com.blackatsystems.miguardia.weather.WeatherCreditLink
 import com.blackatsystems.miguardia.weather.WeatherCredits
 import java.time.ZoneId
@@ -98,6 +111,7 @@ fun WeatherSurfaceHost(state: WeatherUiState, actions: WeatherActions) {
     if (state.surface == WeatherSurface.NONE) return
     val context = LocalContext.current
     val openUrl: (WeatherCreditLink) -> Unit = { link ->
+        com.blackatsystems.miguardia.QaInstrumentationScope.requireExternalAction(context, "weather.external-credit")
         try {
             context.startActivity(Intent(Intent.ACTION_VIEW, link.url.toUri()))
         } catch (_: ActivityNotFoundException) {
@@ -107,42 +121,80 @@ fun WeatherSurfaceHost(state: WeatherUiState, actions: WeatherActions) {
         }
     }
     Dialog(onDismissRequest = actions.close) {
+        // Style v2: same background, width limit and padding as Notificaciones and Widget.
         Surface(
+            modifier = Modifier.wrapContentHeight().testTag("weather-dialog-surface"),
             shape = MaterialTheme.shapes.extraLarge,
-            tonalElevation = 6.dp,
+            color = MaterialTheme.colorScheme.surfaceContainerLow,
+            contentColor = MaterialTheme.colorScheme.onSurface,
         ) {
-            TransientConfirmation(state.infoMessage, actions.clearMessage) {
-                Column(
-                    modifier = Modifier
-                        .widthIn(max = 680.dp)
-                        .fillMaxWidth()
-                        .verticalScroll(rememberScrollState())
-                        .padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+            // Dialog's decor already bounds the safe drawing area. Applying
+            // safeDrawingPadding again here would reserve those insets twice.
+            Column(
+                modifier = Modifier
+                    .widthIn(max = 620.dp)
+                    .fillMaxWidth()
+                    .padding(MiGuardiaSpacing.large),
+                verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.medium),
+            ) {
+                Row(
+                    modifier = Modifier.testTag("weather-heading"),
+                    verticalAlignment = Alignment.Top,
                 ) {
                     ScreenHeading(
                         title = if (state.surface == WeatherSurface.GLOBAL) "Clima" else "Clima de la jornada",
-                        supportingText = if (state.surface == WeatherSurface.GLOBAL) {
-                            "Pronóstico según la ubicación guardada en cada objetivo."
-                        } else {
-                            state.selectedShift?.let { "${it.objectiveNameSnapshot} · ${it.timeRange()}" }.orEmpty()
-                        },
+                        modifier = Modifier.weight(1f),
                     )
-                    state.errorMessage?.let {
-                        PersistentMessage(
-                            it,
-                            onDismiss = actions.clearMessage,
-                            onRetry = if (state.surface == WeatherSurface.SHIFT) actions.refresh else null,
+                    TextButton(onClick = actions.close, modifier = Modifier.testTag("weather-close")) { Text("Cerrar") }
+                }
+                val scrollState = rememberScrollState()
+                // The error is drawn at the top and «Actualizar» sits at the bottom of a long forecast:
+                // without this, a failed update looked like the button did nothing (seen on the phone
+                // in flight mode). Bring the message into view whenever a new one appears.
+                LaunchedEffect(state.errorMessage) {
+                    if (state.errorMessage != null) scrollState.animateScrollTo(0)
+                }
+                TransientConfirmation(
+                    state.infoMessage,
+                    actions.clearMessage,
+                    modifier = Modifier.weight(1f, fill = false),
+                    layout = TransientConfirmationLayout.WrapContent,
+                ) {
+                    Column(
+                        modifier = Modifier.testTag("weather-scroll-content")
+                            .verticalScroll(scrollState),
+                        verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.medium),
+                    ) {
+                        Text(
+                            if (state.surface == WeatherSurface.GLOBAL) {
+                                "Pronóstico según la ubicación guardada en cada objetivo."
+                            } else {
+                                state.selectedShift?.let {
+                                    "${it.objectiveNameSnapshot} · " + formatEventTimeRange(
+                                        it.startAt, it.endAt, it.zoneId, EventTimeRangeStyle.COMPACT_DATED,
+                                    )
+                                }.orEmpty()
+                            },
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
+                        state.errorMessage?.let {
+                            PersistentMessage(
+                                it,
+                                onDismiss = actions.clearMessage,
+                                onRetry = if (state.surface == WeatherSurface.SHIFT) actions.refresh else null,
+                            )
+                        }
+                        if (state.isLoading) {
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                                CircularProgressIndicator(Modifier.testTag("weather-loading"))
+                            }
+                        } else if (state.surface == WeatherSurface.GLOBAL) {
+                            GlobalWeatherSettings(state, actions, openUrl)
+                        } else {
+                            ShiftWeatherDetail(state, actions, openUrl)
+                        }
                     }
-                    if (state.isLoading) {
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) { CircularProgressIndicator() }
-                    } else if (state.surface == WeatherSurface.GLOBAL) {
-                        GlobalWeatherSettings(state, actions, openUrl)
-                    } else {
-                        ShiftWeatherDetail(state, actions, openUrl)
-                    }
-                    OutlinedButton(onClick = actions.close, modifier = Modifier.fillMaxWidth()) { Text("Volver") }
                 }
             }
         }
@@ -156,21 +208,8 @@ private fun GlobalWeatherSettings(
     openUrl: (WeatherCreditLink) -> Unit,
 ) {
     var confirmClear by remember { mutableStateOf(false) }
-    SectionCard(
-        title = "Proveedor y privacidad",
-        supportingText = "Pronóstico orientativo; no reemplaza alertas oficiales ni garantiza condiciones de trabajo.",
-    ) {
-        Text("Open-Meteo recibe sólo las coordenadas del objetivo consultado y la IP habitual de conexión. No se envían guardias, nombres, direcciones ni notas.")
-        Text("El servicio gratuito se usa únicamente durante desarrollo privado/no comercial. Una publicación comercial requiere un plan compatible u otro proveedor.")
-        AttributionLinks(openUrl)
-        if (!state.preferences.providerExplanationAccepted) {
-            Button(onClick = actions.enableAfterExplanation, modifier = Modifier.fillMaxWidth()) {
-                Text("Entiendo y habilitar Clima")
-            }
-        } else {
-            ToggleRow("Habilitar Clima", state.preferences.enabled, actions.setEnabled)
-        }
-    }
+    WeatherActivation(state, actions)
+    ProviderDetails(openUrl)
     SectionCard("Unidades") {
         UnitChoice("Celsius (°C)", WeatherUnitSystem.CELSIUS, state, actions)
         UnitChoice("Fahrenheit (°F)", WeatherUnitSystem.FAHRENHEIT, state, actions)
@@ -213,38 +252,21 @@ private fun ShiftWeatherDetail(
         Text(state.ineligibleReason ?: "No pudimos encontrar la jornada.")
         return
     }
+    if (!state.preferences.providerExplanationAccepted || !state.preferences.enabled) {
+        WeatherActivation(state, actions)
+        ProviderDetails(openUrl)
+        return
+    }
     ShiftIdentity(shift)
     Text(
         "Pronóstico para: ${state.weatherLocationName ?: "ubicación sin configurar"}",
         fontWeight = FontWeight.SemiBold,
     )
-    if (!state.preferences.providerExplanationAccepted) {
-        SectionCard(
-            title = "Proveedor y privacidad",
-            supportingText = "Pronóstico orientativo; no reemplaza alertas oficiales ni garantiza condiciones de trabajo.",
-        ) {
-            Text("Open-Meteo recibe sólo las coordenadas del objetivo consultado y la IP habitual de conexión. No se envían guardias, nombres, direcciones ni notas.")
-            Text("El servicio gratuito se usa únicamente durante desarrollo privado/no comercial. Una publicación comercial requiere un plan compatible u otro proveedor.")
-            AttributionLinks(openUrl)
-            Button(onClick = actions.enableAfterExplanation, modifier = Modifier.fillMaxWidth()) {
-                Text("Entiendo y habilitar Clima")
-            }
-        }
-        return
-    }
-    if (!state.preferences.enabled) {
-        SectionCard("Clima desactivado") {
-            Text("La explicación ya fue aceptada. Podés volver a habilitar el pronóstico por objetivo.")
-            Button(onClick = actions.enableAfterExplanation, modifier = Modifier.fillMaxWidth()) { Text("Habilitar Clima") }
-        }
-        AttributionLinks(openUrl)
-        return
-    }
     state.ineligibleReason?.let { reason ->
         SectionCard("Clima no disponible para esta jornada") {
             Text(reason)
         }
-        AttributionLinks(openUrl)
+        ProviderDetails(openUrl)
         return
     }
     state.shiftSummary?.let { summary -> SummaryCard(summary, state.preferences.unitSystem) }
@@ -274,7 +296,46 @@ private fun ShiftWeatherDetail(
     ) {
         Text(if (state.isRefreshing) "Actualizando…" else "Actualizar")
     }
-    AttributionLinks(openUrl)
+    ProviderDetails(openUrl)
+}
+
+@Composable
+private fun WeatherActivation(state: WeatherUiState, actions: WeatherActions) {
+    SectionCard(
+        title = if (state.preferences.enabled) "Clima activado" else "Clima desactivado",
+        modifier = Modifier.testTag("weather-activation"),
+    ) {
+        Text(
+            "Open-Meteo recibe las coordenadas del objetivo y la IP de conexión. No recibe jornadas, nombres, direcciones ni notas.",
+            modifier = Modifier.testTag("weather-essential-privacy"),
+        )
+        Text("El pronóstico es orientativo y no reemplaza alertas oficiales.", style = MaterialTheme.typography.bodySmall)
+        if (!state.preferences.providerExplanationAccepted) {
+            Button(onClick = actions.enableAfterExplanation, modifier = Modifier.fillMaxWidth().testTag("weather-enable")) {
+                Text("Entiendo y habilitar Clima")
+            }
+        } else {
+            ToggleRow("Habilitar Clima", state.preferences.enabled, actions.setEnabled)
+        }
+    }
+}
+
+@Composable
+private fun ProviderDetails(openUrl: (WeatherCreditLink) -> Unit) {
+    var expanded by rememberSaveable { mutableStateOf(false) }
+    Text(WeatherCredits.SUMMARY, style = MaterialTheme.typography.bodySmall)
+    TextButton(
+        onClick = { expanded = !expanded },
+        modifier = Modifier.testTag("weather-provider-details")
+            .semantics { stateDescription = if (expanded) "Expandido" else "Contraído" },
+    ) { Text(if (expanded) "Ocultar proveedor, privacidad y licencia" else "Proveedor, privacidad y licencia") }
+    if (expanded) {
+        SectionCard("Proveedor y privacidad", modifier = Modifier.testTag("weather-provider-expanded")) {
+            Text("Se consulta la ubicación guardada de cada objetivo, sin seguir tu posición. Configurar esa ubicación es una acción separada en Mi forma de trabajar > Opciones avanzadas.")
+            Text("El servicio gratuito se usa únicamente durante desarrollo privado/no comercial. Una publicación comercial requiere un plan compatible u otro proveedor.")
+            AttributionLinks(openUrl)
+        }
+    }
 }
 
 @Composable
@@ -282,7 +343,7 @@ private fun ShiftIdentity(shift: Shift) {
     SectionCard("Jornada") {
         Text("${shift.objectiveNameSnapshot} (${shift.objectiveAbbreviationSnapshot})", fontWeight = FontWeight.Bold)
         Text(shift.localStartDate.format(DateFormatter))
-        Text(shift.timeRange())
+        Text(formatEventTimeRange(shift.startAt, shift.endAt, shift.zoneId, EventTimeRangeStyle.DETAIL))
     }
 }
 
@@ -312,13 +373,15 @@ private fun SummaryCard(summary: ShiftWeatherSummary, unit: WeatherUnitSystem) {
 private fun HourCard(hour: WeatherHour, unit: WeatherUnitSystem, zoneId: ZoneId) {
     Card(
         modifier = Modifier.width(148.dp),
+        shape = MaterialTheme.shapes.large,
+        border = cardBorder(),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
         ),
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier.padding(MiGuardiaSpacing.large),
+            verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.extraSmall),
         ) {
             Text(
                 hour.validFrom.atZone(zoneId).format(HourFormatter),
@@ -331,7 +394,7 @@ private fun HourCard(hour: WeatherHour, unit: WeatherUnitSystem, zoneId: ZoneId)
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,
             )
-            Text(hour.condition.spanishLabel(), maxLines = 2)
+            Text(hour.condition.spanishLabel())
             hour.apparentTemperatureCelsius?.let {
                 Text("Sensación ${temperatureText(it, unit)}", style = MaterialTheme.typography.bodySmall)
             }
@@ -362,10 +425,14 @@ private fun AttributionLinks(openUrl: (WeatherCreditLink) -> Unit) {
 @Composable
 private fun UnitChoice(label: String, unit: WeatherUnitSystem, state: WeatherUiState, actions: WeatherActions) {
     Row(
-        modifier = Modifier.fillMaxWidth().clickable { actions.setUnitSystem(unit) },
+        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).selectable(
+            selected = state.preferences.unitSystem == unit,
+            role = Role.RadioButton,
+            onClick = { actions.setUnitSystem(unit) },
+        ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        RadioButton(selected = state.preferences.unitSystem == unit, onClick = { actions.setUnitSystem(unit) })
+        RadioButton(selected = state.preferences.unitSystem == unit, onClick = null)
         Text(label)
     }
 }
@@ -377,9 +444,18 @@ private fun ToggleRow(
     onChange: (Boolean) -> Unit,
     enabled: Boolean = true,
 ) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = 48.dp).toggleable(
+            value = checked,
+            enabled = enabled,
+            role = Role.Switch,
+            onValueChange = onChange,
+        ),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
         Text(label, modifier = Modifier.weight(1f))
-        Switch(checked = checked, enabled = enabled, onCheckedChange = onChange)
+        Switch(checked = checked, enabled = enabled, onCheckedChange = null)
     }
 }
 
@@ -398,17 +474,14 @@ private fun rangeText(label: String, minimum: Double?, maximum: Double?, unit: W
     if (minimum == null && maximum == null) return null
     if (minimum == null) return "$label: hasta ${temperatureText(maximum!!, unit)}"
     if (maximum == null) return "$label: desde ${temperatureText(minimum, unit)}"
-    return "$label: ${roundedTemperature(minimum, unit)}–${temperatureText(maximum, unit)}"
+    val suffix = if (unit == WeatherUnitSystem.CELSIUS) "°C" else "°F"
+    return "$label: ${roundedTemperatureRange(minimum, maximum, unit)} $suffix"
 }
 
 private fun temperatureText(value: Double, unit: WeatherUnitSystem): String =
     "${roundedTemperature(value, unit)} ${if (unit == WeatherUnitSystem.CELSIUS) "°C" else "°F"}"
 
-private fun Shift.timeRange(): String =
-    "${startTimeSnapshot.format(TimeFormatter)}–${endTimeSnapshot.format(TimeFormatter)}"
-
 private val SpanishArgentina = Locale.forLanguageTag("es-AR")
 private val DateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy", SpanishArgentina)
-private val TimeFormatter = DateTimeFormatter.ofPattern("HH:mm", SpanishArgentina)
 private val HourFormatter = DateTimeFormatter.ofPattern("dd/MM HH:mm", SpanishArgentina)
 private val TimestampFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm", SpanishArgentina)

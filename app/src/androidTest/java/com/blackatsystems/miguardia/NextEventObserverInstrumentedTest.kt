@@ -59,7 +59,7 @@ import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertSame
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -263,6 +263,38 @@ class NextEventObserverInstrumentedTest {
     }
 
     @Test
+    fun completedTodayStillRefreshesTheVisibleFutureJourneyEveryMinute() = runBlocking {
+        val future = V2AppTestFixture.writeFor(store, futureShift(), LocalDate.of(2026, 8, 1))
+        val id = UUID.fromString("80000000-0000-0000-0000-000000000002")
+        val completed = future.copy(
+            shift = future.shift.copy(
+                id = id,
+                startAt = NOW.minusSeconds(7_200),
+                endAt = NOW.minusSeconds(3_600),
+                localStartDate = NOW.atZone(ZONE).toLocalDate(),
+                startTimeSnapshot = NOW.minusSeconds(7_200).atZone(ZONE).toLocalTime(),
+                endTimeSnapshot = NOW.minusSeconds(3_600).atZone(ZONE).toLocalTime(),
+            ),
+            snapshot = future.snapshot.copy(shiftId = id),
+        )
+        val shifts = MutableV2ShiftRepository(store.v2Shifts).apply { replace(listOf(completed, future)) }
+        val clock = AdvancingClock(NOW, ZONE)
+        val results = observer(
+            clock = clock,
+            shifts = shifts,
+            temporalDelay = TemporalDelay { clock.advance(it) },
+        ).observe().take(2).toList()
+
+        assertEquals(TodayCardPrimary.COMPLETED_SUMMARY, results.first().primary)
+        assertEquals(NextEventPrimary.UPCOMING_SHIFT, results.first().futureEvent.primaryEvent)
+        assertEquals(NOW.plusSeconds(60), results.last().referenceInstant)
+        assertEquals(
+            results.first().futureEvent.remaining.minusMinutes(1),
+            results.last().futureEvent.remaining,
+        )
+    }
+
+    @Test
     fun viewModelExposesRecoverableErrorAndRetryStartsAFreshV2Observation() = runBlocking {
         V2AppTestFixture.writeFor(store, futureShift(), LocalDate.of(2026, 8, 1))
         val shifts = RecoveringV2ShiftRepository(store.v2Shifts)
@@ -283,7 +315,7 @@ class NextEventObserverInstrumentedTest {
     }
 
     @Test
-    fun viewModelKeepsTheExactLastValidSameDayProjectionWhenASourceFailsLater() = runBlocking {
+    fun sourceFailureCannotLeaveAFrozenUpcomingCountdownOnScreen() = runBlocking {
         val write = V2AppTestFixture.writeFor(store, futureShift(), LocalDate.of(2026, 8, 1))
         val shifts = ContentThenFailV2ShiftRepository(store.v2Shifts, listOf(write))
         val viewModel = viewModel(shifts)
@@ -297,8 +329,39 @@ class NextEventObserverInstrumentedTest {
         shifts.fail()
         val error = receiveStateUntil(states) { it.loadState == NextEventLoadState.ERROR }
 
-        assertSame(content.result, error.result)
+        assertNull(error.result)
         assertEquals("No pudimos actualizar los eventos laborales de hoy.", error.errorMessage)
+        collector.cancelAndJoin()
+    }
+
+    @Test
+    fun resumeReprojectsWithCurrentClockWithoutWaitingForTheOldTimer() = runBlocking {
+        val write = V2AppTestFixture.writeFor(store, futureShift(), LocalDate.of(2026, 8, 1))
+        val shifts = MutableV2ShiftRepository(store.v2Shifts).apply { replace(listOf(write)) }
+        val clock = AdvancingClock(write.shift.startAt.minusSeconds(30), ZONE)
+        val viewModel = viewModel(shifts, clock)
+        val states = Channel<NextEventUiState>(Channel.UNLIMITED)
+        val collector = launch(start = CoroutineStart.UNDISPATCHED) {
+            viewModel.uiState.collect { states.send(it) }
+        }
+        val upcoming = receiveStateUntil(states) { it.loadState == NextEventLoadState.CONTENT }
+        assertEquals(NextEventPrimary.UPCOMING_SHIFT, upcoming.result?.futureEvent?.primaryEvent)
+        assertEquals(Duration.ofSeconds(30), upcoming.result?.remaining)
+
+        clock.advance(Duration.ofSeconds(30))
+        viewModel.refreshOnResume()
+        val ongoing = receiveStateUntil(states) {
+            it.loadState == NextEventLoadState.CONTENT && it.result?.referenceInstant == clock.instant()
+        }
+        assertEquals(NextEventPrimary.ONGOING_SHIFT, ongoing.result?.futureEvent?.primaryEvent)
+
+        clock.advance(Duration.between(clock.instant(), write.shift.endAt))
+        viewModel.refreshOnResume()
+        val ended = receiveStateUntil(states) {
+            it.loadState == NextEventLoadState.CONTENT && it.result?.referenceInstant == clock.instant()
+        }
+        assertEquals(NextEventPrimary.NONE, ended.result?.futureEvent?.primaryEvent)
+        assertFalse(ended.result?.primary == TodayCardPrimary.UPCOMING_SHIFT)
         collector.cancelAndJoin()
     }
 
@@ -418,7 +481,7 @@ class NextEventObserverInstrumentedTest {
         temporalDelay = temporalDelay,
     )
 
-    private fun viewModel(shifts: V2ShiftRepository): NextEventViewModel = NextEventViewModel(
+    private fun viewModel(shifts: V2ShiftRepository, clock: Clock = CLOCK): NextEventViewModel = NextEventViewModel(
         shifts = shifts,
         availabilityWindows = store.availabilityWindows,
         shiftActuals = store.shiftActuals,
@@ -427,7 +490,7 @@ class NextEventObserverInstrumentedTest {
         vacations = store.vacations,
         medicalLeaves = store.medicalLeaves,
         workConfiguration = store.workConfiguration,
-        clock = CLOCK,
+        clock = clock,
         zoneId = ZONE,
         temporalDelay = TemporalDelay { awaitCancellation() },
     )

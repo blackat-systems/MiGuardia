@@ -125,7 +125,7 @@ class ShiftNotificationPresenterInstrumentedTest {
             "PRÓXIMA JORNADA · Jornada ficticia · Objetivo ficticio",
             posted.extras.getString(Notification.EXTRA_TITLE),
         )
-        assertEquals("QA · 19:00–07:00", posted.extras.getString(Notification.EXTRA_TEXT))
+        assertEquals("QA · 01/09/2026 · 19:00–07:00 (+1 día)", posted.extras.getString(Notification.EXTRA_TEXT))
         assertEquals(2, posted.actions.size)
         assertEquals(listOf("Ver detalles", "Cómo llegar"), posted.actions.map { it.title.toString() })
         assertEquals(2, posted.actions.map { it.actionIntent }.toSet().size)
@@ -143,7 +143,7 @@ class ShiftNotificationPresenterInstrumentedTest {
             compact.findViewById<TextView>(R.id.notification_title).text.toString(),
         )
         assertEquals(
-            "QA · 19:00–07:00",
+            "QA · 01/09/2026 · 19:00–07:00 (+1 día)",
             compact.findViewById<TextView>(R.id.notification_schedule).text.toString(),
         )
         assertEquals(
@@ -160,7 +160,7 @@ class ShiftNotificationPresenterInstrumentedTest {
             "Jornada ficticia · Objetivo ficticio",
             expanded.findViewById<TextView>(R.id.notification_objective).text.toString(),
         )
-        assertEquals("QA · Horario 19:00–07:00", expanded.findViewById<TextView>(R.id.notification_schedule).text.toString())
+        assertEquals("QA · Horario 01/09/2026 · 19:00–07:00 (+1 día)", expanded.findViewById<TextView>(R.id.notification_schedule).text.toString())
         assertEquals("Puesto: Acceso", expanded.findViewById<TextView>(R.id.notification_position).text.toString())
         assertEquals(View.GONE, expanded.findViewById<View>(R.id.notification_weather_credit).visibility)
         val dismissControl = expanded
@@ -183,7 +183,7 @@ class ShiftNotificationPresenterInstrumentedTest {
         var posted = notificationForTag(shift.shiftId)
         assertEquals("JORNADA EN CURSO", posted.extras.getString(Notification.EXTRA_TITLE))
         assertEquals("JORNADA EN CURSO", posted.publicVersion.extras.getString(Notification.EXTRA_TITLE))
-        assertEquals("Horario 19:00–07:00", posted.publicVersion.extras.getString(Notification.EXTRA_TEXT))
+        assertEquals("Horario 01/09/2026 · 16:59–18:00", posted.publicVersion.extras.getString(Notification.EXTRA_TEXT))
         assertTrue(posted.flags and Notification.FLAG_ONGOING_EVENT != 0)
         assertFalse(posted.extras.getBoolean(Notification.EXTRA_SHOW_CHRONOMETER))
         assertFalse(posted.extras.getBoolean(Notification.EXTRA_CHRONOMETER_COUNT_DOWN))
@@ -240,7 +240,7 @@ class ShiftNotificationPresenterInstrumentedTest {
             weatherText = "Clima: dato que debe omitirse",
         )
         posted = notificationForTag(shift.shiftId) {
-            it.publicVersion?.extras?.getString(Notification.EXTRA_TEXT) == "Horario 19:00–07:00"
+            it.publicVersion?.extras?.getString(Notification.EXTRA_TEXT) == "Horario 01/09/2026 · 19:00–07:00 (+1 día)"
         }
         expanded = posted.bigContentView.apply(context, null)
         assertEquals(View.GONE, expanded.findViewById<View>(R.id.notification_weather).visibility)
@@ -308,7 +308,7 @@ class ShiftNotificationPresenterInstrumentedTest {
             "PRÓXIMA DISPONIBILIDAD · Retén",
             posted.extras.getString(Notification.EXTRA_TITLE),
         )
-        assertEquals("19:00–07:00", posted.extras.getString(Notification.EXTRA_TEXT))
+        assertEquals("01/09/2026 · 19:00–07:00 (+1 día)", posted.extras.getString(Notification.EXTRA_TEXT))
         assertEquals(listOf("Ver detalles"), posted.actions.map { it.title.toString() })
         val expanded = posted.bigContentView.apply(context, null)
         assertEquals("Retén", expanded.findViewById<TextView>(R.id.notification_objective).text.toString())
@@ -317,6 +317,45 @@ class ShiftNotificationPresenterInstrumentedTest {
         assertEquals(View.GONE, expanded.findViewById<View>(R.id.notification_weather).visibility)
         assertFalse(posted.extras.toString().contains("Objetivo ficticio"))
         assertFalse(posted.extras.toString().contains("Acceso"))
+    }
+
+    @Test
+    fun resumedAvailabilityShowsItsSegmentDateAcrossPrivacyLevels() {
+        val zone = ZoneId.of("America/Argentina/Cordoba")
+        val ownerDate = LocalDate.of(2026, 10, 23)
+        val segmentDate = ownerDate.plusDays(1)
+        val resumed = availability(SHIFT_ONE).copy(
+            start = segmentDate.atTime(4, 15).atZone(zone).toInstant(),
+            end = segmentDate.plusDays(1).atTime(8, 30).atZone(zone).toInstant(),
+            ownerLocalDate = ownerDate,
+            isResumption = true,
+        )
+        val schedule = "24/10/2026 · 04:15–08:30 (+1 día)"
+        val now = segmentDate.atTime(5, 0).atZone(zone).toInstant()
+        NotificationPrivacy.entries.forEach { privacy ->
+            presenter.show(resumed, now, NotificationPreferences(enabled = true, privacy = privacy))
+            val expected = when (privacy) {
+                NotificationPrivacy.COMPLETE -> schedule
+                NotificationPrivacy.REDUCED -> "Horario $schedule"
+                NotificationPrivacy.HIDDEN -> "Tenés un aviso de MiGuardia."
+            }
+            val posted = notificationForTag(resumed.identity.trackingKey, ShiftNotificationPresenter.NOTIFICATION_ID) {
+                it.extras.getString(Notification.EXTRA_TEXT) == expected
+            }
+            assertEquals(expected, posted.extras.getString(Notification.EXTRA_TEXT))
+            if (privacy == NotificationPrivacy.REDUCED) {
+                assertEquals(expected, posted.publicVersion.extras.getString(Notification.EXTRA_TEXT))
+                assertFalse(posted.extras.getString(Notification.EXTRA_TITLE).orEmpty().contains("Retén"))
+            }
+            if (privacy == NotificationPrivacy.HIDDEN) {
+                assertEquals("MiGuardia", posted.extras.getString(Notification.EXTRA_TITLE))
+                assertEquals(expected, posted.publicVersion.extras.getString(Notification.EXTRA_TEXT))
+                val hidden = posted.bigContentView.apply(context, null)
+                assertEquals(expected, hidden.findViewById<TextView>(R.id.notification_schedule).text.toString())
+                assertEquals(View.GONE, hidden.findViewById<View>(R.id.notification_countdown).visibility)
+            }
+        }
+        assertEquals(ownerDate, resumed.ownerLocalDate)
     }
 
     @Test
@@ -463,8 +502,8 @@ class ShiftNotificationPresenterInstrumentedTest {
 
     private fun shift(
         id: UUID,
-        start: Instant = NOW.plusSeconds(3600),
-        end: Instant = NOW.plusSeconds(13 * 3600),
+        start: Instant = NOW.plusSeconds(2 * 3600),
+        end: Instant = NOW.plusSeconds(14 * 3600),
     ) = NextEventItem.Shift(
         shiftId = id,
         start = start,

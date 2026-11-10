@@ -47,6 +47,11 @@ PERMISSIONS = {
 }
 # Catalog entries may select these exact opt-ins, never arbitrary shell/runner args.
 INSTRUMENT_ARGS = {
+    "finalQaReadOnly": "true",
+    "stage5OemAuthorized": "true",
+    "stage5ColdAuthorized": "true",
+    "stage5ProcessDeathAuthorized": "true",
+    "captureContextualEvidence": "true",
     "updates28TemporarySession": "authorized",
     "updates28LocalDownload": "authorized",
     "updatesPublicSaf": "authorized",
@@ -165,6 +170,8 @@ def validate_catalog(catalog: dict, root: Path) -> None:
                 raise QaError("Upgrade data preparation requires supervised disposable QA and backup/restore authorization")
             if cls.endswith(".HoursExtraRestorationRaceInstrumentedTest") and (not {"qa-mutations", "disposable-data"} <= set(requirements) or args.get("hoursReviewRace") != "ALLOW_ISOLATED_REPOSITORIES"):
                 raise QaError("Hours restoration diagnosis requires disposable QA and explicit isolated repositories")
+            if cls.endswith(".FinalQaReadOnlyReviewTest") and (not {"qa-mutations", "existing-session"} <= set(requirements) or args.get("finalQaReadOnly") != "true"):
+                raise QaError("Final QA review requires accredited existing synthetic QA and explicit read-only opt-in")
             if cls.endswith(".BetaClosedRootTest") and args:
                 raise QaError("Closed-root group cannot enable instrumentation fixtures")
             memberships[cls].append(key)

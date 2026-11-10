@@ -9,19 +9,20 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -34,6 +35,7 @@ import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.NavigationDrawerItemDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -47,19 +49,33 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.IntSize
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
@@ -79,13 +95,20 @@ import com.blackatsystems.miguardia.core.domain.nextevent.isEligibleForWeather
 import com.blackatsystems.miguardia.ui.availability.AvailabilityActions
 import com.blackatsystems.miguardia.ui.availability.AvailabilitySurfaceHost
 import com.blackatsystems.miguardia.ui.availability.AvailabilityUiState
+import com.blackatsystems.miguardia.ui.availability.AvailabilityLoadState
 import com.blackatsystems.miguardia.ui.availability.AvailabilityViewModel
 import com.blackatsystems.miguardia.ui.calendar.CalendarInteractionMode
+import com.blackatsystems.miguardia.ui.calendar.CalendarLoadState
+import com.blackatsystems.miguardia.ui.calendar.CalendarSelectionPurpose
 import com.blackatsystems.miguardia.ui.calendar.CalendarUiState
 import com.blackatsystems.miguardia.ui.calendar.CalendarViewModel
+import com.blackatsystems.miguardia.ui.calendar.CalendarViewportInsets
+import com.blackatsystems.miguardia.ui.calendar.calendarViewportInsets
+import com.blackatsystems.miguardia.ui.calendar.calendarUsesSideRail
 import com.blackatsystems.miguardia.ui.hours.HoursAndExtrasActions
 import com.blackatsystems.miguardia.ui.hours.HoursAndExtrasSurfaceHost
 import com.blackatsystems.miguardia.ui.hours.HoursAndExtrasUiState
+import com.blackatsystems.miguardia.ui.hours.HoursAndExtrasLoadState
 import com.blackatsystems.miguardia.ui.hours.HoursAndExtrasViewModel
 import com.blackatsystems.miguardia.ui.help.HelpActions
 import com.blackatsystems.miguardia.ui.help.HelpAnchor
@@ -146,7 +169,7 @@ import com.blackatsystems.miguardia.ui.vacation.VacationSurface
 import com.blackatsystems.miguardia.ui.vacation.VacationSurfaceHost
 import com.blackatsystems.miguardia.ui.vacation.VacationUiState
 import com.blackatsystems.miguardia.ui.vacation.VacationViewModel
-import com.blackatsystems.miguardia.ui.theme.AppZoom
+import com.blackatsystems.miguardia.ui.components.vigiliaScreenBackground
 import com.blackatsystems.miguardia.ui.theme.AppThemeMode
 import com.blackatsystems.miguardia.ui.theme.vigiliaColors
 import com.blackatsystems.miguardia.ui.weather.WeatherActions
@@ -183,12 +206,47 @@ private enum class MainDestination(
     HELP(R.string.help, R.string.drawer_help_description, "?"),
 }
 
+internal enum class CalendarSelectionBackOwner {
+    NONE,
+    GENERAL,
+    MANUAL_LOAD,
+    HOLIDAY,
+}
+
+internal fun calendarSelectionBackOwner(
+    calendarVisible: Boolean,
+    interactionMode: CalendarInteractionMode,
+    selectionPurpose: CalendarSelectionPurpose?,
+    manualLoadActive: Boolean,
+    holidaySelectionActive: Boolean,
+    selectedDayOpen: Boolean,
+    generalBackBlocked: Boolean,
+): CalendarSelectionBackOwner = when {
+    !calendarVisible -> CalendarSelectionBackOwner.NONE
+    manualLoadActive && selectionPurpose == CalendarSelectionPurpose.MANUAL_LOAD ->
+        CalendarSelectionBackOwner.MANUAL_LOAD
+    holidaySelectionActive && selectionPurpose == CalendarSelectionPurpose.HOLIDAY ->
+        CalendarSelectionBackOwner.HOLIDAY
+    manualLoadActive -> CalendarSelectionBackOwner.MANUAL_LOAD
+    holidaySelectionActive -> CalendarSelectionBackOwner.HOLIDAY
+    interactionMode == CalendarInteractionMode.EDIT &&
+        selectionPurpose == CalendarSelectionPurpose.GENERAL &&
+        !selectedDayOpen &&
+        !generalBackBlocked -> CalendarSelectionBackOwner.GENERAL
+    else -> CalendarSelectionBackOwner.NONE
+}
+
 private enum class DrawerAction(
     @param:StringRes val labelRes: Int,
     @param:StringRes val descriptionRes: Int,
     val glyph: String,
     val testTag: String,
 ) {
+    CALENDAR_TODAY(R.string.drawer_calendar_today, R.string.drawer_calendar_today_description, "●", "drawer-action-calendar-today"),
+    CALENDAR_PHOTOS(R.string.drawer_calendar_photos, R.string.drawer_calendar_photos_description, "▧", "drawer-action-calendar-photos"),
+    CALENDAR_LOAD(R.string.drawer_calendar_load, R.string.drawer_calendar_load_description, "+", "drawer-action-calendar-load"),
+    CALENDAR_SELECT(R.string.drawer_calendar_select, R.string.drawer_calendar_select_description, "✓", "drawer-action-calendar-select"),
+    CALENDAR_REPEAT(R.string.drawer_calendar_repeat, R.string.drawer_calendar_repeat_description, "↻", "drawer-action-calendar-repeat"),
     WORK_SETUP(R.string.work_setup, R.string.drawer_work_setup_description, "◇", "drawer-action-work-setup"),
     HOLIDAYS(R.string.holidays, R.string.drawer_holidays_description, "✦", "drawer-action-holidays"),
     VACATIONS(R.string.vacations, R.string.drawer_vacations_description, "∿", "drawer-action-vacations"),
@@ -200,6 +258,13 @@ private enum class DrawerAction(
     UPDATES(R.string.updates_title, R.string.updates_description, "↓", "drawer-action-updates"),
 }
 
+private val CalendarDrawerActions = listOf(
+    DrawerAction.CALENDAR_TODAY,
+    DrawerAction.CALENDAR_PHOTOS,
+    DrawerAction.CALENDAR_LOAD,
+    DrawerAction.CALENDAR_SELECT,
+    DrawerAction.CALENDAR_REPEAT,
+)
 private val WorkDrawerActions = listOf(
     DrawerAction.WORK_SETUP,
     DrawerAction.HOLIDAYS,
@@ -225,14 +290,14 @@ private fun DrawerHeader() {
             modifier = Modifier
                 .size(48.dp)
                 .clip(CircleShape)
-                .background(MaterialTheme.vigiliaColors.active.copy(alpha = 0.18f)),
+                .background(MaterialTheme.vigiliaColors.selection),
             contentAlignment = Alignment.Center,
         ) {
             Text(
                 text = "M",
                 color = MaterialTheme.vigiliaColors.active,
                 style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
             )
         }
         Column(
@@ -242,7 +307,7 @@ private fun DrawerHeader() {
             Text(
                 text = stringResource(R.string.app_name),
                 style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
             )
             Text(
                 text = stringResource(R.string.drawer_tagline),
@@ -269,7 +334,7 @@ private fun DrawerSectionTitle(@StringRes labelRes: Int) {
             modifier = Modifier.padding(horizontal = 24.dp, vertical = 10.dp),
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.vigiliaColors.active,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.SemiBold,
         )
     }
 }
@@ -294,9 +359,9 @@ private fun DrawerDestinationItem(
         colors = NavigationDrawerItemDefaults.colors(
             selectedIconColor = MaterialTheme.vigiliaColors.active,
             selectedTextColor = MaterialTheme.vigiliaColors.active,
-            selectedContainerColor = MaterialTheme.vigiliaColors.active.copy(alpha = 0.18f),
+            selectedContainerColor = MaterialTheme.vigiliaColors.selection,
             unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            unselectedTextColor = MaterialTheme.colorScheme.onSurface,
             unselectedContainerColor = Color.Transparent,
         ),
     )
@@ -306,12 +371,16 @@ private fun DrawerDestinationItem(
 private fun DrawerActionItem(
     action: DrawerAction,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    @StringRes labelRes: Int = action.labelRes,
 ) {
     if (action == DrawerAction.SUPPORT) {
-        // This external action needs a complete explanation, including at internal zoom 200%.
+        // This external action needs a complete explanation, including with large Android text.
         Surface(
             onClick = onClick,
-            modifier = Modifier.padding(horizontal = 12.dp).testTag(action.testTag),
+            enabled = enabled,
+            modifier = modifier.padding(horizontal = 12.dp).testTag(action.testTag),
             shape = MaterialTheme.shapes.medium,
             color = Color.Transparent,
             contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -325,7 +394,7 @@ private fun DrawerActionItem(
                     DrawerGlyph(action.glyph)
                     Spacer(Modifier.width(12.dp))
                     Box(Modifier.weight(1f)) {
-                        DrawerItemLabel(action.labelRes, action.descriptionRes, selected = false)
+                        DrawerItemLabel(labelRes, action.descriptionRes, selected = false)
                     }
                 }
             }
@@ -333,17 +402,18 @@ private fun DrawerActionItem(
         return
     }
     NavigationDrawerItem(
-        label = { DrawerItemLabel(action.labelRes, action.descriptionRes, selected = false) },
+        label = { DrawerItemLabel(labelRes, action.descriptionRes, selected = false) },
         selected = false,
-        onClick = onClick,
+        onClick = { if (enabled) onClick() },
         icon = { DrawerGlyph(action.glyph) },
-        modifier = Modifier
+        modifier = modifier
             .padding(horizontal = 12.dp)
-            .testTag(action.testTag),
+            .testTag(action.testTag)
+            .semantics { if (!enabled) disabled() },
         shape = MaterialTheme.shapes.medium,
         colors = NavigationDrawerItemDefaults.colors(
             unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            unselectedTextColor = MaterialTheme.colorScheme.onSurface,
             unselectedContainerColor = Color.Transparent,
         ),
     )
@@ -358,7 +428,7 @@ private fun DrawerItemLabel(
     Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
         Text(
             text = stringResource(labelRes),
-            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
         )
         Text(
             text = stringResource(descriptionRes),
@@ -377,7 +447,7 @@ private fun DrawerGlyph(glyph: String) {
     Text(
         text = glyph,
         modifier = Modifier.clearAndSetSemantics {},
-        fontWeight = FontWeight.Bold,
+        fontWeight = FontWeight.SemiBold,
     )
 }
 
@@ -404,9 +474,7 @@ fun MiGuardiaApp(
     helpViewModel: HelpViewModel,
     modifier: Modifier = Modifier,
     calendarNavigationRequest: Long = 0,
-    appZoom: AppZoom = AppZoom.STANDARD,
-    onAppZoomChange: (AppZoom) -> Unit = {},
-    appThemeMode: AppThemeMode = AppThemeMode.SYSTEM,
+    appThemeMode: AppThemeMode = AppThemeMode.DEFAULT,
     onAppThemeModeChange: (AppThemeMode) -> Unit = {},
     onWidgetReconfigure: (Int) -> Unit = {},
     accessLockState: AccessLockState = AccessLockState(
@@ -426,7 +494,16 @@ fun MiGuardiaApp(
     onUpdates: () -> Unit = {},
 ) {
     val calendarState by calendarViewModel.uiState.collectAsStateWithLifecycle()
+    val calendarContext = androidx.compose.ui.platform.LocalContext.current
     val nextEventState by nextEventViewModel.uiState.collectAsStateWithLifecycle()
+    val eventLifecycle = LocalLifecycleOwner.current.lifecycle
+    DisposableEffect(eventLifecycle, nextEventViewModel) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) nextEventViewModel.refreshOnResume()
+        }
+        eventLifecycle.addObserver(observer)
+        onDispose { eventLifecycle.removeObserver(observer) }
+    }
     val v2ManualShiftLoadState by v2ManualShiftLoadViewModel.uiState.collectAsStateWithLifecycle()
     val v2ShiftEditState by v2ShiftEditViewModel.uiState.collectAsStateWithLifecycle()
     val v2ShiftActualState by v2ShiftActualViewModel.uiState.collectAsStateWithLifecycle()
@@ -451,14 +528,32 @@ fun MiGuardiaApp(
         onPreviousMonth = calendarViewModel::showPreviousMonth,
         onNextMonth = calendarViewModel::showNextMonth,
         onToday = calendarViewModel::showCurrentMonth,
-        onSelectDate = calendarViewModel::selectDate,
+        onSelectDate = { date ->
+            com.blackatsystems.miguardia.QaInstrumentationScope.calendarDateSelected(calendarContext, date)
+            calendarViewModel.selectDate(date)
+        },
         onDismissDate = calendarViewModel::clearSelectedDate,
         onEnterCalendarEditMode = calendarViewModel::enterEditMode,
+        onEnterManualCalendarSelection = calendarViewModel::enterManualLoadSelection,
+        onEnterHolidayCalendarSelection = calendarViewModel::enterHolidaySelection,
+        onSetCalendarSelectionPurpose = calendarViewModel::setSelectionPurpose,
+        onCalendarCollapsedChange = calendarViewModel::setCalendarCollapsed,
+        onPreviewCalendarBatch = calendarViewModel::previewCalendarBatch,
+        onDismissCalendarBatchPreview = calendarViewModel::dismissCalendarBatchPreview,
+        onApplyCalendarBatch = calendarViewModel::applyCalendarBatch,
+        onClearCalendarBatchMessage = calendarViewModel::clearCalendarBatchMessage,
         onEditSelectionChange = calendarViewModel::setEditSelectedDates,
         onConfirmEditSelection = calendarViewModel::confirmEditSelection,
         onResumeEditSelection = calendarViewModel::resumeEditSelection,
         onFinishCalendarEditMode = calendarViewModel::finishEditMode,
         onRetry = calendarViewModel::retry,
+        stage2Actions = Stage2DayActions(
+            clearMessage = calendarViewModel::clearStage2Message,
+            toggleUndefined = calendarViewModel::toggleUndefined,
+            saveMedicalLeave = calendarViewModel::saveMedicalLeave,
+            deleteMedicalLeave = calendarViewModel::deleteMedicalLeave,
+            changeSituation = calendarViewModel::changeShiftSituation,
+        ),
         v2ManualShiftLoadState = v2ManualShiftLoadState,
         v2ManualShiftLoadActions = V2ManualShiftLoadActions.from(v2ManualShiftLoadViewModel),
         v2ShiftEditState = v2ShiftEditState,
@@ -497,8 +592,6 @@ fun MiGuardiaApp(
         helpState = helpState,
         helpActions = HelpActions.from(helpViewModel),
         calendarNavigationRequest = calendarNavigationRequest,
-        appZoom = appZoom,
-        onAppZoomChange = onAppZoomChange,
         appThemeMode = appThemeMode,
         onAppThemeModeChange = onAppThemeModeChange,
         accessLockState = accessLockState,
@@ -525,8 +618,17 @@ fun MiGuardiaApp(
     onSelectDate: (LocalDate) -> Unit,
     onDismissDate: () -> Unit,
     onRetry: () -> Unit,
+    stage2Actions: Stage2DayActions = Stage2DayActions(),
     modifier: Modifier = Modifier,
     onEnterCalendarEditMode: (LocalDate?) -> Unit = {},
+    onEnterManualCalendarSelection: (LocalDate?) -> Unit = {},
+    onEnterHolidayCalendarSelection: (LocalDate?) -> Unit = {},
+    onSetCalendarSelectionPurpose: (CalendarSelectionPurpose) -> Unit = {},
+    onCalendarCollapsedChange: (Boolean) -> Unit = {},
+    onPreviewCalendarBatch: (com.blackatsystems.miguardia.core.domain.repository.CalendarBatchAction, com.blackatsystems.miguardia.core.domain.repository.CalendarBatchAvailability?) -> Unit = { _, _ -> },
+    onDismissCalendarBatchPreview: () -> Unit = {},
+    onApplyCalendarBatch: () -> Unit = {},
+    onClearCalendarBatchMessage: () -> Unit = {},
     onEditSelectionChange: (Set<LocalDate>) -> Unit = {},
     onConfirmEditSelection: () -> Unit = {},
     onResumeEditSelection: () -> Unit = {},
@@ -569,9 +671,7 @@ fun MiGuardiaApp(
     helpState: HelpUiState = HelpUiState.completedForPreview(),
     helpActions: HelpActions = HelpActions(),
     calendarNavigationRequest: Long = 0,
-    appZoom: AppZoom = AppZoom.STANDARD,
-    onAppZoomChange: (AppZoom) -> Unit = {},
-    appThemeMode: AppThemeMode = AppThemeMode.SYSTEM,
+    appThemeMode: AppThemeMode = AppThemeMode.DEFAULT,
     onAppThemeModeChange: (AppThemeMode) -> Unit = {},
     accessLockState: AccessLockState = AccessLockState(
         phase = com.blackatsystems.miguardia.security.AccessLockPhase.READY,
@@ -594,6 +694,7 @@ fun MiGuardiaApp(
     }
     // Keep destination and consumption alive even while setup/help return early below.
     var destination by rememberSaveable { androidx.compose.runtime.mutableStateOf(MainDestination.CALENDAR) }
+    val surfaceStateHolder = rememberSaveableStateHolder()
     var lastCalendarNavigationRequest by rememberSaveable { androidx.compose.runtime.mutableLongStateOf(0L) }
     val preserveV2WriteSurface =
         (v2ShiftEditState.isBlocking && v2ShiftEditState.isSaving) ||
@@ -698,20 +799,14 @@ fun MiGuardiaApp(
             if (summaryIsVisible) currentSetSummaryActive(false)
         }
     }
-    val displayedCalendarState = if (
-        !v2ManualLoadActive &&
-        !holidaySelectionActive &&
-        calendarState.interactionMode == CalendarInteractionMode.EDIT
-    ) {
-        calendarState.copy(
-            interactionMode = CalendarInteractionMode.VIEW,
-            editSelectedDates = emptySet(),
-            editSelectionConfirmed = false,
-        )
-    } else {
-        calendarState
-    }
+    val displayedCalendarState = calendarState
     val drawerState = remember { DrawerState(initialValue = DrawerValue.Closed) }
+    val tourDrawerTargets = remember {
+        listOf(HelpTourStep.PHOTOS, HelpTourStep.LOAD_AND_REPEAT, HelpTourStep.HELP)
+            .associateWith { BringIntoViewRequester() }
+    }
+    val drawerScrollState = rememberScrollState()
+    var drawerViewportSize by remember { mutableStateOf(IntSize.Zero) }
     val coroutineScope = rememberCoroutineScope()
     val selectedDay = if (displayedCalendarState.interactionMode == CalendarInteractionMode.VIEW) {
         displayedCalendarState.detailDate?.let { selectedDate ->
@@ -722,6 +817,15 @@ fun MiGuardiaApp(
     }
     val hasBlockingSurface = hasExternalBlockingSurface ||
         (destination == MainDestination.SUMMARY && summaryState.hasSubsurface)
+    val calendarBackOwner = calendarSelectionBackOwner(
+        calendarVisible = destination == MainDestination.CALENDAR,
+        interactionMode = displayedCalendarState.interactionMode,
+        selectionPurpose = displayedCalendarState.selectionPurpose,
+        manualLoadActive = v2ManualLoadActive,
+        holidaySelectionActive = holidaySelectionActive,
+        selectedDayOpen = selectedDay != null,
+        generalBackBlocked = hasBlockingSurface,
+    )
     val canOpenDrawer = !hasBlockingSurface && selectedDay == null
     val supportMenuAction = remember { com.blackatsystems.miguardia.support.SupportMenuAction() }
     val supportAllowed by rememberUpdatedState(
@@ -748,9 +852,10 @@ fun MiGuardiaApp(
     val activeTourStep = helpState.session
         ?.takeIf { it.stage == HelpSessionStage.TOUR }
         ?.tourStep
-    LaunchedEffect(helpState.session?.token, activeTourStep) {
+    val androidDensity = LocalDensity.current
+    LaunchedEffect(helpState.session?.token, activeTourStep, drawerViewportSize, androidDensity) {
         when (activeTourStep) {
-            HelpTourStep.MENU -> {
+            HelpTourStep.LOAD_AND_REPEAT, HelpTourStep.PHOTOS -> {
                 destination = MainDestination.CALENDAR
                 drawerState.open()
             }
@@ -759,7 +864,6 @@ fun MiGuardiaApp(
                 destination = MainDestination.SUMMARY
             }
             HelpTourStep.HELP -> {
-                destination = MainDestination.HELP
                 drawerState.open()
             }
             null -> Unit
@@ -767,6 +871,15 @@ fun MiGuardiaApp(
                 drawerState.close()
                 destination = MainDestination.CALENDAR
             }
+        }
+        // Wait for the opened drawer's layout, then reveal the actual item. This
+        // also runs when returning from HELP, recreating, or resizing the window.
+        // No drawer action is invoked to position the guide.
+        if (activeTourStep == HelpTourStep.MENU) {
+            drawerScrollState.scrollTo(0)
+        } else if (activeTourStep in tourDrawerTargets) {
+            withFrameNanos { }
+            tourDrawerTargets.getValue(requireNotNull(activeTourStep)).bringIntoView()
         }
     }
     LaunchedEffect(helpState.navigationEvent?.sequence) {
@@ -820,16 +933,25 @@ fun MiGuardiaApp(
         holidaySelectionActive,
         calendarState.visibleMonth,
         calendarState.interactionMode,
+        calendarState.selectionPurpose,
         calendarState.editSelectedDates,
     ) {
         when {
             v2ManualLoadActive && calendarState.interactionMode == CalendarInteractionMode.VIEW -> {
-                onEnterCalendarEditMode(null)
+                onEnterManualCalendarSelection(null)
             }
+            v2ManualLoadActive && calendarState.selectionPurpose != CalendarSelectionPurpose.MANUAL_LOAD ->
+                onSetCalendarSelectionPurpose(CalendarSelectionPurpose.MANUAL_LOAD)
             holidaySelectionActive && calendarState.interactionMode == CalendarInteractionMode.VIEW -> {
                 val restoredDates = exceptionsState.holidayDraft.selectedDates
                     .filterTo(linkedSetOf()) { YearMonth.from(it) == calendarState.visibleMonth }
-                onEnterCalendarEditMode(null)
+                onEnterHolidayCalendarSelection(null)
+                if (restoredDates.isNotEmpty()) onEditSelectionChange(restoredDates)
+            }
+            holidaySelectionActive && calendarState.selectionPurpose != CalendarSelectionPurpose.HOLIDAY -> {
+                onSetCalendarSelectionPurpose(CalendarSelectionPurpose.HOLIDAY)
+                val restoredDates = exceptionsState.holidayDraft.selectedDates
+                    .filterTo(linkedSetOf()) { YearMonth.from(it) == calendarState.visibleMonth }
                 if (restoredDates.isNotEmpty()) onEditSelectionChange(restoredDates)
             }
             holidaySelectionActive && calendarState.interactionMode == CalendarInteractionMode.EDIT -> {
@@ -840,7 +962,8 @@ fun MiGuardiaApp(
             }
             !v2ManualLoadActive &&
                 !holidaySelectionActive &&
-                calendarState.interactionMode == CalendarInteractionMode.EDIT -> {
+                calendarState.interactionMode == CalendarInteractionMode.EDIT &&
+                calendarState.selectionPurpose != CalendarSelectionPurpose.GENERAL -> {
                 onFinishCalendarEditMode()
             }
         }
@@ -850,6 +973,16 @@ fun MiGuardiaApp(
         if (successSequence > 0) {
             v2ManualShiftLoadActions.consumeSuccess(successSequence)
             destination = MainDestination.CALENDAR
+        }
+    }
+    LaunchedEffect(v2ManualLoadActive, v2ManualShiftLoadState.stage,
+        calendarState.interactionMode, calendarState.selectionPurpose, calendarState.editSelectedDates) {
+        if (v2ManualLoadActive && v2ManualShiftLoadState.stage == V2ManualShiftLoadStage.SELECT_DATES &&
+            calendarState.interactionMode == CalendarInteractionMode.EDIT &&
+            calendarState.selectionPurpose == CalendarSelectionPurpose.MANUAL_LOAD) {
+            // The calendar owns live date picking, including the intentionally empty set.
+            // Persist it in the same draft; never restore an abandoned/old selection over it.
+            v2ManualShiftLoadActions.updateSelectedDates(calendarState.editSelectedDates)
         }
     }
     LaunchedEffect(v2ShiftEditState.successSequence) {
@@ -941,6 +1074,27 @@ fun MiGuardiaApp(
             }
             drawerState.close()
             when (action) {
+                DrawerAction.CALENDAR_TODAY -> {
+                    destination = MainDestination.CALENDAR
+                    onToday()
+                }
+                DrawerAction.CALENDAR_PHOTOS -> {
+                    destination = MainDestination.CALENDAR
+                    photosActions.open(calendarState.visibleMonth)
+                }
+                DrawerAction.CALENDAR_LOAD -> {
+                    destination = MainDestination.CALENDAR
+                    v2ManualShiftLoadActions.start(workSetupState.rootState)
+                    onEnterManualCalendarSelection(null)
+                }
+                DrawerAction.CALENDAR_SELECT -> {
+                    destination = MainDestination.CALENDAR
+                    onEnterCalendarEditMode(null)
+                }
+                DrawerAction.CALENDAR_REPEAT -> {
+                    destination = MainDestination.CALENDAR
+                    v2RecurringActions.openCreate(workSetupState.rootState)
+                }
                 DrawerAction.WORK_SETUP -> {
                     destination = MainDestination.CALENDAR
                     workSetupActions.openOverview()
@@ -957,6 +1111,72 @@ fun MiGuardiaApp(
         }
     }
 
+    var calendarWindowHeightPx by remember { mutableStateOf<Int?>(null) }
+    var calendarWindowWidthPx by remember { mutableStateOf<Int?>(null) }
+    var calendarViewportBounds by remember { mutableStateOf<Rect?>(null) }
+    val calendarThemeDensity = LocalDensity.current
+    val stableCalendarDensity = calendarThemeDensity.density
+    val calendarWindowHeightBaseDp = calendarWindowHeightPx?.div(stableCalendarDensity) ?: Float.POSITIVE_INFINITY
+    val monthlyCalendarSurface = destination == MainDestination.CALENDAR &&
+        (!v2ManualLoadActive || v2ManualShiftLoadState.stage == V2ManualShiftLoadStage.SELECT_DATES)
+    // One message/owner priority for both the header and the loading wizard.
+    val calendarConfirmationMessage = calendarState.batchMessage
+        ?: calendarState.stage2Message
+        ?: v2ShiftEditState.infoMessage
+        ?: v2ShiftActualState.infoMessage
+        ?: v2ManualShiftLoadState.infoMessage
+        ?: v2RecurringState.infoMessage
+        ?: hoursAndExtrasState.message.takeUnless { hoursAndExtrasState.loadState == HoursAndExtrasLoadState.ERROR }
+        ?: availabilityState.message.takeUnless { availabilityState.loadState == AvailabilityLoadState.ERROR }
+    val dismissCalendarConfirmation = when {
+        calendarState.batchMessage != null -> onClearCalendarBatchMessage
+        calendarState.stage2Message != null -> stage2Actions.clearMessage
+        v2ShiftEditState.infoMessage != null -> v2ShiftEditActions.clearMessage
+        v2ShiftActualState.infoMessage != null -> v2ShiftActualActions.clearMessage
+        v2ManualShiftLoadState.infoMessage != null -> v2ManualShiftLoadActions.clearMessage
+        v2RecurringState.infoMessage != null -> v2RecurringActions.clearMessage
+        hoursAndExtrasState.message != null && hoursAndExtrasState.loadState != HoursAndExtrasLoadState.ERROR -> hoursAndExtrasActions.clearMessage
+        availabilityState.message != null && availabilityState.loadState != AvailabilityLoadState.ERROR -> availabilityActions.clearMessage
+        else -> v2ManualShiftLoadActions.clearMessage
+    }
+    var calendarNoticeDetails by rememberSaveable { mutableStateOf<String?>(null) }
+    val selectionNeedsSpace = monthlyCalendarSurface &&
+        displayedCalendarState.interactionMode == CalendarInteractionMode.EDIT &&
+        calendarWindowHeightBaseDp < 600f
+    // If short-window selection hides branding, retain the owner's message
+    // until the header returns; never spend a calendar row on a confirmation.
+    val windowSize = LocalWindowInfo.current.containerSize
+    val layoutDirection = LocalLayoutDirection.current
+    val defaultContentInsets = ScaffoldDefaults.contentWindowInsets
+    val viewport = calendarViewportBounds
+    val clippedCalendarInsets = if (
+        monthlyCalendarSurface && viewport != null && !viewport.isEmpty &&
+        windowSize.width > 0 && windowSize.height > 0
+    ) {
+        calendarViewportInsets(
+            windowSize,
+            viewport,
+            CalendarViewportInsets(
+                left = defaultContentInsets.getLeft(calendarThemeDensity, layoutDirection),
+                top = defaultContentInsets.getTop(calendarThemeDensity),
+                right = defaultContentInsets.getRight(calendarThemeDensity, layoutDirection),
+                bottom = defaultContentInsets.getBottom(calendarThemeDensity),
+            ),
+        )
+    } else null
+    val monthlyContentInsets = clippedCalendarInsets?.let {
+        WindowInsets(left = it.left, top = it.top, right = it.right, bottom = it.bottom)
+    } ?: defaultContentInsets
+    val calendarWidthPx = calendarWindowWidthPx ?: windowSize.width
+    val calendarHeightPx = calendarWindowHeightPx ?: windowSize.height
+    val sideRailCalendar = monthlyCalendarSurface && calendarUsesSideRail(
+        (calendarWidthPx - monthlyContentInsets.getLeft(calendarThemeDensity, layoutDirection) -
+            monthlyContentInsets.getRight(calendarThemeDensity, layoutDirection)) / stableCalendarDensity,
+        (calendarHeightPx - monthlyContentInsets.getTop(calendarThemeDensity) -
+            monthlyContentInsets.getBottom(calendarThemeDensity)) / stableCalendarDensity,
+    )
+    val headerNoticeVisible = monthlyCalendarSurface && (sideRailCalendar || !selectionNeedsSpace)
+
     ModalNavigationDrawer(
         modifier = if (activeTourStep != null) {
             Modifier.clearAndSetSemantics { }
@@ -967,13 +1187,14 @@ fun MiGuardiaApp(
         gesturesEnabled = false,
         drawerContent = {
             ModalDrawerSheet(
-                modifier = Modifier.testTag("main-navigation-drawer"),
+                modifier = Modifier.testTag("main-navigation-drawer")
+                    .onSizeChanged { drawerViewportSize = it },
                 drawerContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .verticalScroll(rememberScrollState())
+                        .verticalScroll(drawerScrollState)
                         .padding(vertical = 12.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
@@ -988,6 +1209,41 @@ fun MiGuardiaApp(
                         selected = destination == MainDestination.SUMMARY,
                         onClick = { selectDestination(MainDestination.SUMMARY) },
                     )
+                    if (
+                        (v2ReadyState != null || needsFirstWorkSet) &&
+                        calendarState.interactionMode == CalendarInteractionMode.VIEW
+                    ) {
+                        DrawerSectionTitle(R.string.drawer_section_calendar_actions)
+                        CalendarDrawerActions
+                            .filterNot { action -> needsFirstWorkSet && action == DrawerAction.CALENDAR_REPEAT }
+                            .forEach { action ->
+                            DrawerActionItem(
+                                action = action,
+                                onClick = { openDrawerAction(action) },
+                                enabled = action !in setOf(
+                                    DrawerAction.CALENDAR_LOAD,
+                                    DrawerAction.CALENDAR_SELECT,
+                                    DrawerAction.CALENDAR_REPEAT,
+                                ) || calendarState.loadState == CalendarLoadState.CONTENT,
+                                labelRes = if (
+                                    action == DrawerAction.CALENDAR_LOAD && needsFirstWorkSet
+                                ) {
+                                    R.string.drawer_calendar_load_francos
+                                } else {
+                                    action.labelRes
+                                },
+                                modifier = when (action) {
+                                    DrawerAction.CALENDAR_LOAD -> Modifier
+                                        .bringIntoViewRequester(tourDrawerTargets.getValue(HelpTourStep.LOAD_AND_REPEAT))
+                                        .helpAnchor(helpAnchors, HelpAnchor.LOAD_AND_REPEAT)
+                                    DrawerAction.CALENDAR_PHOTOS -> Modifier
+                                        .bringIntoViewRequester(tourDrawerTargets.getValue(HelpTourStep.PHOTOS))
+                                        .helpAnchor(helpAnchors, HelpAnchor.PHOTOS)
+                                    else -> Modifier
+                                },
+                            )
+                        }
+                    }
                     DrawerSectionTitle(R.string.drawer_section_work)
                     WorkDrawerActions.forEach { action ->
                         DrawerActionItem(action = action, onClick = { openDrawerAction(action) })
@@ -1006,7 +1262,9 @@ fun MiGuardiaApp(
                         item = MainDestination.HELP,
                         selected = destination == MainDestination.HELP,
                         onClick = { selectDestination(MainDestination.HELP) },
-                        modifier = Modifier.helpAnchor(helpAnchors, HelpAnchor.HELP),
+                        modifier = Modifier
+                            .bringIntoViewRequester(tourDrawerTargets.getValue(HelpTourStep.HELP))
+                            .helpAnchor(helpAnchors, HelpAnchor.HELP),
                     )
                     DrawerDestinationItem(
                         item = MainDestination.ACCESS_LOCK,
@@ -1024,11 +1282,31 @@ fun MiGuardiaApp(
         },
     ) {
         Scaffold(
-            modifier = modifier.fillMaxSize(),
+            // Style v2: page color plus the soft top glow; the Scaffold itself stays transparent.
+            // A transparent container has no matching content color, so pass the theme's own:
+            // without it, text that inherits the color falls back to black (seen on the phone).
+            containerColor = Color.Transparent,
+            contentColor = MaterialTheme.colorScheme.onBackground,
+            modifier = modifier.fillMaxSize().vigiliaScreenBackground().onSizeChanged {
+                calendarWindowHeightPx = it.height
+                calendarWindowWidthPx = it.width
+            }.onGloballyPositioned {
+                calendarViewportBounds = it.boundsInWindow()
+            },
+            contentWindowInsets = if (monthlyCalendarSurface) monthlyContentInsets else defaultContentInsets,
             topBar = {
+                val monthlyCalendar = monthlyCalendarSurface
+                // A short-window selection keeps month navigation and its contextual actions;
+                // branding/menu returns as soon as selection ends. This reserves 48-dp rows.
+                if (!selectionNeedsSpace && !sideRailCalendar) {
                 val openMenuDescription = stringResource(R.string.open_menu)
                 CenterAlignedTopAppBar(
                     modifier = Modifier.testTag("main-top-bar"),
+                    expandedHeight = if (monthlyCalendar) 56.dp else 64.dp,
+                    windowInsets = if (monthlyCalendar && clippedCalendarInsets != null) {
+                        WindowInsets(left = clippedCalendarInsets.left, top = clippedCalendarInsets.top,
+                            right = clippedCalendarInsets.right, bottom = 0)
+                    } else androidx.compose.material3.TopAppBarDefaults.windowInsets,
                     colors = androidx.compose.material3.TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.background,
                         titleContentColor = MaterialTheme.colorScheme.onBackground,
@@ -1045,19 +1323,40 @@ fun MiGuardiaApp(
                             Text(
                                 text = "☰",
                                 modifier = Modifier.clearAndSetSemantics {},
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
+                                style = if (monthlyCalendar) MaterialTheme.typography.titleLarge.copy(
+                                    fontSize = 20.sp, lineHeight = 24.sp,
+                                ) else MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.SemiBold,
                             )
                         }
                     },
                     title = {
+                        if (monthlyCalendar && calendarConfirmationMessage != null) {
+                            TextButton(
+                                onClick = { calendarNoticeDetails = calendarConfirmationMessage },
+                                modifier = Modifier.heightIn(min = 48.dp)
+                                    .testTag("calendar-header-notice")
+                                    .semantics {
+                                        contentDescription = "Aviso: $calendarConfirmationMessage. Tocar para ver el mensaje completo"
+                                        liveRegion = LiveRegionMode.Polite
+                                    },
+                            ) {
+                                Text("Ver aviso", fontSize = 14.sp, lineHeight = 20.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.vigiliaColors.success)
+                            }
+                        } else {
                         Text(
                             stringResource(R.string.app_name),
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
+                            style = if (monthlyCalendar) MaterialTheme.typography.titleLarge.copy(
+                                fontSize = 16.sp, lineHeight = 20.sp,
+                            ) else MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.SemiBold,
                         )
+                        }
                     },
                 )
+                }
             },
         ) { innerPadding ->
             when (destination) {
@@ -1065,9 +1364,16 @@ fun MiGuardiaApp(
                     state = displayedCalendarState,
                     nextEventState = nextEventState,
                     contentPadding = innerPadding,
+                    confirmationMessage = calendarConfirmationMessage,
+                    onDismissConfirmation = dismissCalendarConfirmation,
+                    confirmationInHeader = monthlyCalendarSurface,
+                    headerNoticeVisible = headerNoticeVisible,
+                    sideRail = sideRailCalendar,
+                    onOpenMenu = { coroutineScope.launch { drawerState.open() } },
+                    menuEnabled = canOpenDrawer,
+                    onShowHeaderNotice = { calendarNoticeDetails = calendarConfirmationMessage },
                     onPreviousMonth = onPreviousMonth,
                     onNextMonth = onNextMonth,
-                    onToday = onToday,
                     onSelectDate = onSelectDate,
                     onEditSelectionChange = onEditSelectionChange,
                     onConfirmEditSelection = onConfirmEditSelection,
@@ -1075,6 +1381,15 @@ fun MiGuardiaApp(
                     onRetry = onRetry,
                     onNextEventRetry = onNextEventRetry,
                     onFinishEditMode = onFinishCalendarEditMode,
+                    onEnterGeneralSelection = onEnterCalendarEditMode,
+                    onUseSelectionForManualLoad = {
+                        v2ManualShiftLoadActions.start(workSetupState.rootState)
+                        onSetCalendarSelectionPurpose(CalendarSelectionPurpose.MANUAL_LOAD)
+                    },
+                    onPreviewCalendarBatch = onPreviewCalendarBatch,
+                    onDismissCalendarBatchPreview = onDismissCalendarBatchPreview,
+                    onApplyCalendarBatch = onApplyCalendarBatch,
+                    onClearCalendarBatchMessage = onClearCalendarBatchMessage,
                     v2ManualShiftLoadState = v2ManualShiftLoadState,
                     v2ManualShiftLoadActions = v2ManualShiftLoadActions,
                     v2ShiftEditState = v2ShiftEditState,
@@ -1087,22 +1402,12 @@ fun MiGuardiaApp(
                     hoursAndExtrasActions = hoursAndExtrasActions,
                     availabilityState = availabilityState,
                     availabilityActions = availabilityActions,
+                    stage2Actions = stage2Actions,
                     holidaySelectionState = exceptionsState.takeIf { holidaySelectionActive },
                     holidaySelectionActions = exceptionsActions,
-                    onOpenPhotos = { photosActions.open(calendarState.visibleMonth) },
-                    appZoom = appZoom,
                     needsFirstWorkSet = needsFirstWorkSet && !v2ManualLoadActive,
-                    onOpenWorkSetup = workSetupActions.openOverview,
                     onCreateFirstWorkSet = workSetupActions.openFirstWorkSet,
-                    onStartV2ManualLoad = {
-                        v2ManualShiftLoadActions.start(workSetupState.rootState)
-                        onEnterCalendarEditMode(null)
-                    },
-                    onStartV2Recurring = {
-                        v2RecurringActions.openCreate(workSetupState.rootState)
-                    },
                     helpAnchors = helpAnchors,
-                    helpTourStep = activeTourStep,
                 )
 
                 MainDestination.SUMMARY -> Box(
@@ -1131,8 +1436,6 @@ fun MiGuardiaApp(
 
                 MainDestination.APPEARANCE -> AppearanceScreen(
                     contentPadding = innerPadding,
-                    appZoom = appZoom,
-                    onAppZoomChange = onAppZoomChange,
                     appThemeMode = appThemeMode,
                     onAppThemeModeChange = onAppThemeModeChange,
                 )
@@ -1146,9 +1449,18 @@ fun MiGuardiaApp(
         }
     }
 
+    calendarNoticeDetails?.let { message ->
+        AlertDialog(
+            modifier = Modifier.testTag("calendar-notice-details"),
+            onDismissRequest = { calendarNoticeDetails = null },
+            title = { Text("Aviso") },
+            text = { Column(Modifier.verticalScroll(rememberScrollState())) { Text(message) } },
+            confirmButton = { TextButton(onClick = { calendarNoticeDetails = null }) { Text("Entendido") } },
+        )
+    }
+
     BackHandler(
-        enabled = destination == MainDestination.CALENDAR &&
-            v2ManualLoadActive,
+        enabled = calendarBackOwner == CalendarSelectionBackOwner.MANUAL_LOAD,
         onBack = {
             if (v2ManualShiftLoadState.isLoading || v2ManualShiftLoadState.isSaving || v2ManualShiftLoadState.creationRequest != null) {
                 Unit
@@ -1165,8 +1477,11 @@ fun MiGuardiaApp(
         },
     )
     BackHandler(
-        enabled = destination == MainDestination.CALENDAR && holidaySelectionActive,
-        onBack = exceptionsActions.cancelHolidaySelection,
+        enabled = calendarBackOwner == CalendarSelectionBackOwner.HOLIDAY,
+        onBack = {
+            exceptionsActions.cancelHolidaySelection()
+            onFinishCalendarEditMode()
+        },
     )
     BackHandler(
         enabled = destination == MainDestination.SUMMARY && summaryState.hasSubsurface,
@@ -1179,10 +1494,7 @@ fun MiGuardiaApp(
         onBack = { destination = MainDestination.CALENDAR },
     )
     BackHandler(
-        enabled = destination == MainDestination.CALENDAR &&
-            displayedCalendarState.interactionMode == CalendarInteractionMode.EDIT &&
-            selectedDay == null &&
-            !hasBlockingSurface,
+        enabled = calendarBackOwner == CalendarSelectionBackOwner.GENERAL,
         onBack = {
             if (calendarState.editSelectionConfirmed) {
                 onResumeEditSelection()
@@ -1198,7 +1510,7 @@ fun MiGuardiaApp(
     val weatherBriefIds = selectedDay
         ?.shifts
         ?.map(CalendarShift::shift)
-        ?.filter { it.isEligibleForWeather(calendarState.referenceInstant, listOfNotNull(selectedDay.vacation)) }
+        ?.filter { it.isEligibleForWeather(calendarState.referenceInstant, listOfNotNull(selectedDay.vacation), selectedDay.medicalLeaves) }
         ?.mapTo(linkedSetOf()) { it.id }
         .orEmpty()
     LaunchedEffect(weatherBriefIds, weatherState.preferences.enabled) {
@@ -1208,10 +1520,9 @@ fun MiGuardiaApp(
             weatherActions.loadBriefs(weatherBriefIds)
         }
     }
-    val navigationBarBottomPadding = WindowInsets.navigationBars
-        .asPaddingValues()
-        .calculateBottomPadding()
-    val dayDetailSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    // Lives outside the sheet: a blocking surface (for example a cancelled availability deletion)
+    // removes the sheet, and returning must show the same day options the person had open.
+    val dayOptionsOpen = rememberSaveable(selectedDay?.date) { mutableStateOf(false) }
     if (
         selectedDay != null &&
         !v2ShiftEditActive &&
@@ -1220,13 +1531,17 @@ fun MiGuardiaApp(
         !hoursAndExtrasActive &&
         !availabilityActive
     ) {
+        // Each opening owns its anchors/animation. Do not reuse the Hidden state
+        // of a dismissed sheet while asynchronous detail content is being measured.
+        val dayDetailSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
         ModalBottomSheet(
             onDismissRequest = onDismissDate,
             sheetState = dayDetailSheetState,
-            modifier = Modifier.padding(bottom = navigationBarBottomPadding + 16.dp),
+            modifier = Modifier.testTag("day-detail-modal-sheet"),
         ) {
             DayDetailSheet(
                 day = selectedDay,
+                editingDayState = dayOptionsOpen,
                 referenceInstant = calendarState.referenceInstant,
                 onEditDay = v2ReadyState?.let { v2ShiftEditActions.beginDayEditing },
                 onManageDayOff = if (v2ReadyState != null || needsFirstWorkSet) {
@@ -1234,7 +1549,8 @@ fun MiGuardiaApp(
                         val date = selectedDay.date
                         onDismissDate()
                         v2ManualShiftLoadActions.start(workSetupState.rootState)
-                        onEnterCalendarEditMode(date)
+                        onEnterManualCalendarSelection(date)
+                        v2ManualShiftLoadActions.confirmDates(setOf(date))
                     }
                 } else null,
                 onOpenNotes = { shift ->
@@ -1246,7 +1562,6 @@ fun MiGuardiaApp(
                     notificationActions.openShift(shift)
                 },
                 onOpenWeather = { shiftId ->
-                    onDismissDate()
                     weatherActions.openShift(shiftId)
                 },
                 weatherState = weatherState,
@@ -1264,12 +1579,15 @@ fun MiGuardiaApp(
                 onDeleteIndependentExtra = hoursAndExtrasActions.requestDelete,
                 availabilityState = availabilityState,
                 availabilityActions = availabilityActions,
+                stage2Actions = stage2Actions,
+                stage2Busy = calendarState.stage2Busy,
+                stage2Expectations = calendarState.stage2Expectations,
             )
         }
     }
 
     if (exceptionsState.surface != ExceptionsSurface.NONE) {
-        ExceptionsSurfaceHost(exceptionsState, exceptionsActions)
+        ExceptionsSurfaceHost(exceptionsState, exceptionsActions, photosViewModel?.fileStore)
     }
     if (vacationState.surface != VacationSurface.NONE) {
         VacationSurfaceHost(vacationState, vacationActions)
@@ -1286,38 +1604,48 @@ fun MiGuardiaApp(
     if (widgetState.surface != WidgetSurface.NONE) {
         WidgetSurfaceHost(widgetState, widgetActions)
     }
-    if (workSetupState.surface != WorkSetupSurface.NONE) {
-        WorkSetupSurfaceHost(
-            workSetupState,
-            workSetupActions.copy(
-                openRecurringPlans = {
-                    workSetupActions.requestBack()
-                    v2RecurringActions.openPlans(workSetupState.rootState)
-                },
-                openExtraClasses = {
-                    workSetupActions.requestBack()
+    // The parent stays in its coordinator while a child owns the visible surface and Back.
+    // Saveable state preserves the advanced section and scroll position across child/recreation.
+    LaunchedEffect(workSetupState.surface) {
+        if (workSetupState.surface == WorkSetupSurface.NONE) surfaceStateHolder.removeState("work-setup")
+    }
+    LaunchedEffect(hoursAndExtrasActive) {
+        if (!hoursAndExtrasActive) surfaceStateHolder.removeState("hours-progress")
+    }
+    if (workSetupState.surface != WorkSetupSurface.NONE &&
+        !v2RecurringActive && !v2ShiftActualActive && !hoursAndExtrasActive && !availabilityActive
+    ) {
+        surfaceStateHolder.SaveableStateProvider("work-setup") {
+            WorkSetupSurfaceHost(
+                workSetupState,
+                workSetupActions.copy(
+                    openRecurringPlans = {
+                        v2RecurringActions.openPlans(workSetupState.rootState)
+                    },
+                    openExtraClasses = {
+                        v2ShiftActualActions.openCatalog(workSetupState.rootState)
+                    },
+                    openHoursProgress = {
+                        hoursAndExtrasActions.openProgress()
+                    },
+                    openAvailability = {
+                        availabilityActions.openOverview()
+                    },
+                ),
+            )
+        }
+    }
+    if (hoursAndExtrasActive && !v2ShiftActualActive) {
+        surfaceStateHolder.SaveableStateProvider("hours-progress") {
+            HoursAndExtrasSurfaceHost(
+                state = hoursAndExtrasState,
+                actions = hoursAndExtrasActions,
+                availabilityState = availabilityState,
+                onOpenExtraClassCatalog = {
                     v2ShiftActualActions.openCatalog(workSetupState.rootState)
                 },
-                openHoursProgress = {
-                    workSetupActions.requestBack()
-                    hoursAndExtrasActions.openProgress()
-                },
-                openAvailability = {
-                    workSetupActions.requestBack()
-                    availabilityActions.openOverview()
-                },
-            ),
-        )
-    }
-    if (hoursAndExtrasActive) {
-        HoursAndExtrasSurfaceHost(
-            state = hoursAndExtrasState,
-            actions = hoursAndExtrasActions,
-            availabilityState = availabilityState,
-            onOpenExtraClassCatalog = {
-                v2ShiftActualActions.openCatalog(workSetupState.rootState)
-            },
-        )
+            )
+        }
     }
     if (availabilityActive) {
         AvailabilitySurfaceHost(availabilityState, availabilityActions)
@@ -1360,6 +1688,25 @@ fun MiGuardiaApp(
                     } else {
                         v2ShiftEditActions.reportActualHandoffUnavailable()
                     }
+                },
+                addShift = { date ->
+                    v2ShiftEditActions.cancelToDetail()
+                    onDismissDate()
+                    v2ManualShiftLoadActions.start(workSetupState.rootState)
+                    onEnterManualCalendarSelection(date)
+                    v2ManualShiftLoadActions.confirmDates(setOf(date))
+                },
+                markDayOff = { date ->
+                    v2ShiftEditActions.cancelToDetail()
+                    onDismissDate()
+                    v2ManualShiftLoadActions.start(workSetupState.rootState)
+                    onEnterManualCalendarSelection(date)
+                    v2ManualShiftLoadActions.requestDayOff(setOf(date), true)
+                },
+                markRetainer = { date ->
+                    v2ShiftEditActions.cancelToDetail()
+                    onDismissDate()
+                    availabilityActions.openRetainer(date)
                 },
             ),
         )

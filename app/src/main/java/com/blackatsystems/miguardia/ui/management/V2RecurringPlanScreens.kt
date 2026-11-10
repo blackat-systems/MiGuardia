@@ -20,12 +20,11 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
@@ -36,6 +35,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -60,10 +60,23 @@ import com.blackatsystems.miguardia.core.domain.shift.RecurringOccupantKind
 import com.blackatsystems.miguardia.core.domain.shift.ShiftPlanningWarning
 import com.blackatsystems.miguardia.core.domain.shift.describeRecurringPattern
 import com.blackatsystems.miguardia.core.domain.work.WorkSetupState
+import com.blackatsystems.miguardia.R
 import com.blackatsystems.miguardia.ui.components.AdvancedOptionsSection
 import com.blackatsystems.miguardia.ui.components.ContextHelp
+import com.blackatsystems.miguardia.ui.components.DateFieldFormat
+import com.blackatsystems.miguardia.ui.components.MiGuardiaDatePickerDialog
+import com.blackatsystems.miguardia.ui.components.MiGuardiaSpacing
+import com.blackatsystems.miguardia.ui.components.PICKER_BUTTON_SUFFIX
 import com.blackatsystems.miguardia.ui.components.PersistentMessage
+import com.blackatsystems.miguardia.ui.components.PickerTrailingButton
+import com.blackatsystems.miguardia.ui.components.PrimaryAction
+import com.blackatsystems.miguardia.ui.components.ScreenHeading
+import com.blackatsystems.miguardia.ui.components.SecondaryAction
+import com.blackatsystems.miguardia.ui.components.SectionCard
+import com.blackatsystems.miguardia.ui.components.SurfaceHeader
 import com.blackatsystems.miguardia.ui.components.removedOnlyAutomaticSeparator
+import com.blackatsystems.miguardia.ui.components.vigiliaScreenBackground
+import com.blackatsystems.miguardia.ui.theme.vigiliaColors
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -144,6 +157,7 @@ fun V2RecurringPlanSurfaceHost(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .vigiliaScreenBackground()
                 .safeDrawingPadding(),
         ) {
             RecurringHeader(state, actions.back)
@@ -152,9 +166,9 @@ fun V2RecurringPlanSurfaceHost(
                 modifier = Modifier
                     .weight(1f)
                     .verticalScroll(rememberScrollState())
-                    .padding(16.dp)
+                    .padding(MiGuardiaSpacing.large)
                     .testTag("v2-recurring-scroll"),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
+                verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.large),
             ) {
                 state.errorMessage?.let { message ->
                     PersistentMessage(
@@ -177,7 +191,7 @@ fun V2RecurringPlanSurfaceHost(
                         modifier = Modifier
                             .fillMaxWidth()
                             .testTag("v2-recurring-loading"),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         CircularProgressIndicator(modifier = Modifier.size(24.dp))
@@ -196,6 +210,7 @@ fun V2RecurringPlanSurfaceHost(
             confirmButton = {
                 TextButton(
                     onClick = actions.confirmDiscard,
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
                     modifier = Modifier.testTag("v2-recurring-confirm-discard"),
                 ) { Text("Descartar") }
             },
@@ -208,31 +223,24 @@ fun V2RecurringPlanSurfaceHost(
 
 @Composable
 private fun RecurringHeader(state: V2RecurringUiState, onBack: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        TextButton(onClick = onBack, enabled = !state.isLoading && !state.isSaving) {
-            Text(if (state.stage == V2RecurringStage.PLANS) "Cerrar" else "Volver")
-        }
-        Text(
-            text = when (state.stage) {
-                V2RecurringStage.PLANS,
-                V2RecurringStage.PLAN_DETAIL,
-                -> "Planes recurrentes"
-                V2RecurringStage.PREVIEW -> "Confirmar repetición"
-                else -> when (state.mode) {
-                    V2RecurringMode.CREATE -> "Repetir jornadas"
-                    V2RecurringMode.CHANGE -> "Cambiar desde una fecha"
-                    V2RecurringMode.FINALIZE -> "Finalizar desde una fecha"
-                }
-            },
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-        )
-    }
+    // Common style v2 header: the action sits on the right, disabled while loading or saving
+    // as before stage 13.5.
+    SurfaceHeader(
+        title = when (state.stage) {
+            V2RecurringStage.PLANS,
+            V2RecurringStage.PLAN_DETAIL,
+            -> "Planes recurrentes"
+            V2RecurringStage.PREVIEW -> "Confirmar repetición"
+            else -> when (state.mode) {
+                V2RecurringMode.CREATE -> "Repetir jornadas"
+                V2RecurringMode.CHANGE -> "Cambiar desde una fecha"
+                V2RecurringMode.FINALIZE -> "Finalizar desde una fecha"
+            }
+        },
+        navigationLabel = if (state.stage == V2RecurringStage.PLANS) "Cerrar" else "Volver",
+        onNavigation = onBack,
+        navigationEnabled = !state.isLoading && !state.isSaving,
+    )
 }
 
 @Composable
@@ -256,10 +264,10 @@ private fun PlansStep(state: V2RecurringUiState, actions: V2RecurringActions) {
             color = MaterialTheme.colorScheme.surfaceContainerLow,
         ) {
             Column(
-                modifier = Modifier.padding(14.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
+                modifier = Modifier.padding(MiGuardiaSpacing.large),
+                verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.extraSmall),
             ) {
-                Text(latest.objectiveNameSnapshot, fontWeight = FontWeight.Bold)
+                Text(latest.objectiveNameSnapshot, style = MaterialTheme.typography.titleMedium)
                 Text(describeRecurringPattern(latest.pattern))
                 Text("${latest.startTimeSnapshot}–${latest.endTimeSnapshot} · hasta ${latest.endDateInclusive.fullDate()}")
                 Text(
@@ -275,7 +283,7 @@ private fun PlansStep(state: V2RecurringUiState, actions: V2RecurringActions) {
 private fun PlanDetailStep(state: V2RecurringUiState, actions: V2RecurringActions) {
     val plan = state.selectedPlan ?: return
     val latest = plan.latestRevision
-    Text(latest.objectiveNameSnapshot, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+    ScreenHeading(title = latest.objectiveNameSnapshot)
     RevisionSummary(latest)
     Text(
         if (latest.kind == RecurringPlanRevisionKind.FINALIZED) "Estado: finalizado" else "Estado: activo",
@@ -302,18 +310,18 @@ private fun PlanDetailStep(state: V2RecurringUiState, actions: V2RecurringAction
     }
     if (latest.kind == RecurringPlanRevisionKind.ACTIVE) {
         val suggestedCut = maxOf(state.referenceDate ?: latest.effectiveFrom, latest.effectiveFrom)
-        Button(
+        PrimaryAction(
+            label = "Cambiar desde hoy",
             onClick = { actions.changeFrom(plan.plan.id, suggestedCut) },
-            modifier = Modifier
-                .fillMaxWidth()
-                .testTag("v2-recurring-change-plan"),
-        ) { Text("Cambiar desde hoy") }
-        OutlinedButton(
+            modifier = Modifier.testTag("v2-recurring-change-plan"),
+        )
+        SecondaryAction(
+            label = "Finalizar desde hoy",
             onClick = { actions.finalizeFrom(plan.plan.id, suggestedCut) },
             modifier = Modifier
                 .fillMaxWidth()
                 .testTag("v2-recurring-finalize-plan"),
-        ) { Text("Finalizar desde hoy") }
+        )
     } else {
         Text("Este plan está finalizado y se conserva como historia.")
     }
@@ -326,88 +334,102 @@ private fun EditorStep(state: V2RecurringUiState, actions: V2RecurringActions) {
         return
     }
     state.cutDate?.let { cut ->
-        Text("Fecha de corte fija", style = MaterialTheme.typography.labelLarge)
-        Text(cut.fullDate(), fontWeight = FontWeight.Bold, modifier = Modifier.testTag("v2-recurring-cut-date"))
-        Text("El pasado y las excepciones no se modificarán.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        SectionCard(
+            title = "Fecha de corte fija",
+            supportingText = "El pasado y las excepciones no se modificarán.",
+        ) {
+            Text(cut.fullDate(), fontWeight = FontWeight.SemiBold, modifier = Modifier.testTag("v2-recurring-cut-date"))
+        }
     }
-    Text("1. Elegí un horario", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-    Column(modifier = Modifier.selectableGroup(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        state.templateOptions.forEach { option ->
-            val selected = option.template.id == state.selectedTemplateId
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .selectable(
-                        selected = selected,
-                        enabled = !state.isLoading && !state.isSaving,
-                        role = Role.RadioButton,
-                        onClick = { actions.selectTemplate(option.template.id) },
-                    )
-                    .testTag("v2-recurring-template-${option.template.id}"),
-                border = BorderStroke(
-                    if (selected) 2.dp else 1.dp,
-                    if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
-                ),
-                shape = MaterialTheme.shapes.medium,
-            ) {
-                Row(
-                    modifier = Modifier.padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+    SectionCard(title = "1. Elegí un horario") {
+        Column(modifier = Modifier.selectableGroup(), verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small)) {
+            state.templateOptions.forEach { option ->
+                val selected = option.template.id == state.selectedTemplateId
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .selectable(
+                            selected = selected,
+                            enabled = !state.isLoading && !state.isSaving,
+                            role = Role.RadioButton,
+                            onClick = { actions.selectTemplate(option.template.id) },
+                        )
+                        .testTag("v2-recurring-template-${option.template.id}"),
+                    border = BorderStroke(
+                        if (selected) 2.dp else 1.dp,
+                        if (selected) MaterialTheme.vigiliaColors.active else MaterialTheme.colorScheme.outline,
+                    ),
+                    color = if (selected) MaterialTheme.vigiliaColors.selection else MaterialTheme.colorScheme.surfaceContainer,
+                    contentColor = if (selected) MaterialTheme.vigiliaColors.onSelection else MaterialTheme.colorScheme.onSurface,
+                    shape = MaterialTheme.shapes.medium,
                 ) {
-                    RadioButton(selected = selected, onClick = null)
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(option.objective.fullName, fontWeight = FontWeight.SemiBold)
-                        Text("${option.workType.name} · ${option.template.startTime}–${option.template.endTime}")
-                        Text("Color ${option.template.colorArgb.toArgbLabel()}")
+                    Row(
+                        modifier = Modifier.padding(MiGuardiaSpacing.medium),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small),
+                    ) {
+                        RadioButton(selected = selected, onClick = null, enabled = !state.isLoading && !state.isSaving)
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(option.objective.fullName, style = MaterialTheme.typography.titleSmall)
+                            Text("${option.workType.name} · ${option.template.startTime}–${option.template.endTime}")
+                            Text("Color ${option.template.colorArgb.toArgbLabel()}")
+                        }
+                        Box(
+                            Modifier
+                                .size(24.dp)
+                                .background(Color(option.template.colorArgb)),
+                        )
                     }
-                    Box(
-                        Modifier
-                            .size(24.dp)
-                            .background(Color(option.template.colorArgb)),
-                    )
                 }
             }
         }
     }
-    Text("2. Elegí los días", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-    if (state.patternKind == V2RecurringPatternKind.WEEKDAYS) {
-        Text("Marcá los días de la semana en los que trabajás.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-        DayOfWeek.entries.forEach { day ->
-            MultiChoiceRow(
-                label = day.visibleName(),
-                selected = day in state.weekdays,
-                enabled = !state.isLoading && !state.isSaving,
-                tag = "v2-recurring-weekday-${day.name}",
-                onClick = { actions.toggleWeekday(day) },
+    SectionCard(title = "2. Elegí los días") {
+        if (state.patternKind == V2RecurringPatternKind.WEEKDAYS) {
+            Text("Marcá los días de la semana en los que trabajás.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            DayOfWeek.entries.forEach { day ->
+                MultiChoiceRow(
+                    label = day.visibleName(),
+                    selected = day in state.weekdays,
+                    enabled = !state.isLoading && !state.isSaving,
+                    tag = "v2-recurring-weekday-${day.name}",
+                    onClick = { actions.toggleWeekday(day) },
+                )
+            }
+        } else {
+            Text(
+                "Forma elegida: ${state.patternKind.visibleName()}. Podés cambiarla en Opciones avanzadas.",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-    } else {
-        Text(
-            "Forma elegida: ${state.patternKind.visibleName()}. Podés cambiarla en Opciones avanzadas.",
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
     }
 
-    Text("3. Elegí desde cuándo y hasta cuándo", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-    AutomaticRecurringDateField(
-        value = state.startDateText,
-        onValueChange = actions.updateStartDate,
-        enabled = state.cutDate == null && !state.isLoading && !state.isSaving,
-        label = "Desde",
-        modifier = Modifier
-            .fillMaxWidth()
-            .testTag("v2-recurring-start-date"),
-    )
-    AutomaticRecurringDateField(
-        value = state.endDateText,
-        onValueChange = actions.updateEndDate,
-        enabled = !state.isLoading && !state.isSaving,
-        label = "Hasta",
-        modifier = Modifier
-            .fillMaxWidth()
-            .testTag("v2-recurring-end-date"),
-    )
+    // The calendar starts on the typed date when it is valid, otherwise on today.
+    val pickerToday = { state.referenceDate ?: LocalDate.now() }
+    SectionCard(title = "3. Elegí desde cuándo y hasta cuándo") {
+        AutomaticRecurringDateField(
+            value = state.startDateText,
+            onValueChange = actions.updateStartDate,
+            enabled = state.cutDate == null && !state.isLoading && !state.isSaving,
+            label = "Desde",
+            pickerTestTag = "v2-recurring-start-date$PICKER_BUTTON_SUFFIX",
+            pickerFallback = pickerToday,
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag("v2-recurring-start-date"),
+        )
+        AutomaticRecurringDateField(
+            value = state.endDateText,
+            onValueChange = actions.updateEndDate,
+            enabled = !state.isLoading && !state.isSaving,
+            label = "Hasta",
+            pickerTestTag = "v2-recurring-end-date$PICKER_BUTTON_SUFFIX",
+            pickerFallback = pickerToday,
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag("v2-recurring-end-date"),
+        )
+    }
 
     advancedRecurringRequirementMessage(state)?.let { message ->
         Text(
@@ -438,7 +460,7 @@ private fun EditorStep(state: V2RecurringUiState, actions: V2RecurringActions) {
                 .testTag("v2-recurring-position"),
             singleLine = true,
         )
-        Text("Otra forma de repetición", fontWeight = FontWeight.SemiBold)
+        Text("Otra forma de repetición", style = MaterialTheme.typography.titleSmall)
         V2RecurringPatternKind.entries.forEach { kind ->
             ChoiceRow(
                 label = kind.visibleName(),
@@ -472,7 +494,7 @@ private fun EditorStep(state: V2RecurringUiState, actions: V2RecurringActions) {
                 singleLine = true,
             )
             V2RecurringPatternKind.MONTHLY -> {
-                Text("Qué semana del mes", fontWeight = FontWeight.SemiBold)
+                Text("Qué semana del mes", style = MaterialTheme.typography.titleSmall)
                 MonthlyOrdinal.entries.forEach { ordinal ->
                     ChoiceRow(
                         label = ordinal.visibleName(),
@@ -482,7 +504,7 @@ private fun EditorStep(state: V2RecurringUiState, actions: V2RecurringActions) {
                         onClick = { actions.selectMonthlyOrdinal(ordinal) },
                     )
                 }
-                Text("Qué día", fontWeight = FontWeight.SemiBold)
+                Text("Qué día", style = MaterialTheme.typography.titleSmall)
                 DayOfWeek.entries.forEach { day ->
                     ChoiceRow(
                         label = day.visibleName(),
@@ -494,7 +516,7 @@ private fun EditorStep(state: V2RecurringUiState, actions: V2RecurringActions) {
                 }
             }
         }
-        Text("Si una fecha ya tiene una jornada", fontWeight = FontWeight.SemiBold)
+        Text("Si una fecha ya tiene una jornada", style = MaterialTheme.typography.titleSmall)
         Text(
             "Las jornadas que cambiaste a mano o tienen datos protegidos siempre se conservan.",
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -515,13 +537,12 @@ private fun EditorStep(state: V2RecurringUiState, actions: V2RecurringActions) {
             )
         }
     }
-    Button(
+    PrimaryAction(
+        label = "Ver cuántas jornadas se crearán",
         onClick = actions.review,
         enabled = state.selectedOption != null && !state.isLoading && !state.isSaving,
-        modifier = Modifier
-            .fillMaxWidth()
-            .testTag("v2-recurring-review"),
-    ) { Text("Ver cuántas jornadas se crearán") }
+        modifier = Modifier.testTag("v2-recurring-review"),
+    )
 }
 
 internal fun advancedRecurringRequirementMessage(state: V2RecurringUiState): String? =
@@ -543,14 +564,14 @@ internal fun advancedRecurringRequirementMessage(state: V2RecurringUiState): Str
 private fun PreviewStep(state: V2RecurringUiState, actions: V2RecurringActions) {
     val preview = state.preview ?: return
     val option = state.selectedOption
-    Text(preview.patternDescription, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+    ScreenHeading(title = preview.patternDescription)
     option?.let {
         Text("${it.objective.fullName} · ${it.workType.name}")
         Text("${it.template.startTime}–${it.template.endTime} · color ${it.template.colorArgb.toArgbLabel()}")
         Text("Puesto: ${state.position.ifBlank { "sin puesto" }}")
     }
     Text("Inicio ${state.startDateText} · final ${state.endDateText}")
-    Text("Cantidad total de fechas: ${preview.dates.size}", fontWeight = FontWeight.Bold)
+    Text("Cantidad total de fechas: ${preview.dates.size}", fontWeight = FontWeight.SemiBold)
     if (preview.medicalLeaveDates.isNotEmpty()) {
         Text(
             "Carpeta médica: ${preview.medicalLeaveDates.sorted().joinToString { it.fullDate() }}",
@@ -577,9 +598,9 @@ private fun PreviewStep(state: V2RecurringUiState, actions: V2RecurringActions) 
             ) {
                 Column(
                     modifier = Modifier
-                        .padding(12.dp)
+                        .padding(MiGuardiaSpacing.medium)
                         .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(5.dp),
+                    verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.extraSmall),
                 ) {
                     preview.dates.forEach { date ->
                         val result = preview.results.firstOrNull { it.date == date }
@@ -610,32 +631,28 @@ private fun PreviewStep(state: V2RecurringUiState, actions: V2RecurringActions) 
                 "se conservarán $preserved excepciones o protecciones.",
         )
     }
-    Button(
+    PrimaryAction(
+        label = when (state.mode) {
+            V2RecurringMode.CREATE -> "Guardar repetición"
+            V2RecurringMode.CHANGE -> "Cambiar todo lo futuro"
+            V2RecurringMode.FINALIZE -> "Finalizar desde esta fecha"
+        },
         onClick = actions.save,
         enabled = preview.canConfirm && !state.isLoading && !state.isSaving,
-        modifier = Modifier
-            .fillMaxWidth()
-            .testTag("v2-recurring-save"),
-    ) {
-        Text(
-            when (state.mode) {
-                V2RecurringMode.CREATE -> "Guardar repetición"
-                V2RecurringMode.CHANGE -> "Cambiar todo lo futuro"
-                V2RecurringMode.FINALIZE -> "Finalizar desde esta fecha"
-            },
-        )
-    }
-    OutlinedButton(
+        modifier = Modifier.testTag("v2-recurring-save"),
+    )
+    SecondaryAction(
+        label = if (state.mode == V2RecurringMode.FINALIZE) "Cancelar" else "Modificar opciones",
         onClick = actions.back,
         enabled = !state.isLoading && !state.isSaving,
         modifier = Modifier.fillMaxWidth(),
-    ) { Text(if (state.mode == V2RecurringMode.FINALIZE) "Cancelar" else "Modificar opciones") }
+    )
 }
 
 @Composable
 private fun WarningList(preview: RecurringMutationPreview) {
     if (preview.warnings.isEmpty()) return
-    Text("Advertencias", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+    Text("Advertencias", style = MaterialTheme.typography.titleMedium)
     preview.warnings.forEach { warning ->
         Text(
             "• ${warning.visibleName()}",
@@ -651,7 +668,10 @@ private fun AutomaticRecurringDateField(
     label: String,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    pickerTestTag: String? = null,
+    pickerFallback: () -> LocalDate = { LocalDate.now() },
 ) {
+    var showPicker by rememberSaveable { mutableStateOf(false) }
     var editingValue by remember {
         mutableStateOf(TextFieldValue(value, selection = TextRange(value.length)))
     }
@@ -671,10 +691,31 @@ private fun AutomaticRecurringDateField(
         enabled = enabled,
         label = { Text(label) },
         placeholder = { Text("DD/MM/AAAA") },
-        supportingText = { Text("Escribí 8 números. MiGuardia agrega las barras.") },
+        supportingText = { Text("Escribí 8 números o tocá el calendario. MiGuardia agrega las barras.") },
+        trailingIcon = {
+            PickerTrailingButton(
+                iconRes = R.drawable.ic_pick_date,
+                description = "Elegir en el calendario: $label",
+                enabled = enabled,
+                testTag = pickerTestTag,
+            ) { showPicker = true }
+        },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         singleLine = true,
     )
+    if (showPicker) {
+        // The calendar only writes the same DD/MM/AAAA text typing produces; review stays explicit.
+        MiGuardiaDatePickerDialog(
+            initial = DateFieldFormat.DAY_MONTH_YEAR.parseOrNull(value) ?: pickerFallback(),
+            onConfirm = { picked ->
+                showPicker = false
+                val text = DateFieldFormat.DAY_MONTH_YEAR.format(picked)
+                editingValue = TextFieldValue(text, selection = TextRange(text.length))
+                onValueChange(text)
+            },
+            onDismiss = { showPicker = false },
+        )
+    }
 }
 
 internal fun applyAutomaticDateEdit(
@@ -729,10 +770,10 @@ private fun ChoiceRow(
                 role = Role.RadioButton,
                 onClick = onClick,
             )
-            .padding(vertical = 5.dp)
+            .padding(vertical = MiGuardiaSpacing.extraSmall)
             .testTag(tag),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small),
     ) {
         RadioButton(selected = selected, onClick = null, enabled = enabled)
         Text(label)
@@ -756,10 +797,10 @@ private fun MultiChoiceRow(
                 role = Role.Checkbox,
                 onValueChange = { onClick() },
             )
-            .padding(vertical = 5.dp)
+            .padding(vertical = MiGuardiaSpacing.extraSmall)
             .testTag(tag),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small),
     ) {
         Checkbox(checked = selected, onCheckedChange = null, enabled = enabled)
         Text(label)

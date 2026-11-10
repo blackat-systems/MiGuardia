@@ -86,11 +86,11 @@ class V2RecurringPlanActivityTest {
 
         scenario = ActivityScenario.launch(MainActivity::class.java)
         compose.waitUntil(WAIT_MILLIS) {
-            compose.onAllNodesWithTag("advanced-options-toggle").fetchSemanticsNodes().isNotEmpty()
+            compose.onAllNodesWithTag("main-menu-button").fetchSemanticsNodes().isNotEmpty()
         }
-        compose.onNodeWithTag("advanced-options-toggle").performScrollTo().performClick()
+        compose.onNodeWithTag("main-menu-button").performClick()
         compose.waitUntil(WAIT_MILLIS) {
-            compose.onAllNodesWithTag("calendar-v2-repeat-shifts").fetchSemanticsNodes().isNotEmpty()
+            compose.onAllNodesWithTag("drawer-action-calendar-repeat").fetchSemanticsNodes().isNotEmpty()
         }
     }
 
@@ -102,7 +102,7 @@ class V2RecurringPlanActivityTest {
 
     @Test
     fun draftSurvivesRecreationAndMultiMonthPlanReturnsReactivelyToCalendar() {
-        compose.onNodeWithTag("calendar-v2-repeat-shifts").performScrollTo().performClick()
+        compose.onNodeWithTag("drawer-action-calendar-repeat").performClick()
         compose.waitUntil(WAIT_MILLIS) {
             compose.onAllNodesWithTag("v2-recurring-template-$TEMPLATE_ID").fetchSemanticsNodes().isNotEmpty()
         }

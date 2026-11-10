@@ -1,5 +1,12 @@
 package com.blackatsystems.miguardia.core.domain.backup
 
+import com.blackatsystems.miguardia.core.domain.model.CancellationEvidence
+import com.blackatsystems.miguardia.core.domain.model.CancellationActor
+import com.blackatsystems.miguardia.core.domain.model.ShiftSituation
+import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
+import java.time.Instant
+import java.util.UUID
+
 data class BackupTableSpec(
     val name: String,
     val columns: List<String>,
@@ -84,10 +91,190 @@ object MiGuardiaBackupSchemaV6 {
     fun requireValid(snapshot: BackupDatabaseSnapshot) {
         requireValidBackupSnapshot(
             snapshot = snapshot,
-            expectedRoomVersion = MiGuardiaBackupContract.ROOM_VERSION,
-            expectedIdentityHash = MiGuardiaBackupContract.ROOM_IDENTITY_HASH,
+            expectedRoomVersion = MiGuardiaBackupContract.LEGACY_ROOM_VERSION_V6,
+            expectedIdentityHash = MiGuardiaBackupContract.LEGACY_ROOM_IDENTITY_HASH_V6,
             expectedTables = tables,
         )
+    }
+}
+
+/** Current V7 allowlist. Note attachments are metadata only; binary inclusion follows photoMode. */
+object MiGuardiaBackupSchemaV7 {
+    val tables: List<BackupTableSpec> = MiGuardiaBackupSchemaV6.tables + spec(
+        "shift_note_attachments",
+        "id",
+        "noteId",
+        "storageKey",
+        "mimeType",
+        "byteSize",
+        "pixelWidth",
+        "pixelHeight",
+        "position",
+        "createdAtEpochMillis",
+        "updatedAtEpochMillis",
+        pk = listOf("id"),
+    )
+
+    val byName: Map<String, BackupTableSpec> = tables.associateBy(BackupTableSpec::name)
+
+    init {
+        check(tables.size == 28)
+        check(byName.size == tables.size)
+    }
+
+    fun requireValid(snapshot: BackupDatabaseSnapshot) {
+        requireValidBackupSnapshot(
+            snapshot = snapshot,
+            expectedRoomVersion = MiGuardiaBackupContract.LEGACY_ROOM_VERSION_V7,
+            expectedIdentityHash = MiGuardiaBackupContract.LEGACY_ROOM_IDENTITY_HASH_V7,
+            expectedTables = tables,
+        )
+        requireValidNoteAttachments(snapshot)
+    }
+
+    internal fun requireValidNoteAttachments(snapshot: BackupDatabaseSnapshot) {
+        val notes = snapshot.table("shift_notes")
+        val noteIdIndex = notes.columns.indexOf("id")
+        val noteBodyIndex = notes.columns.indexOf("body")
+        val noteBodies = notes.records.associate { record ->
+            val id = (record.values[noteIdIndex] as? BackupValue.Text)?.value
+                ?: throw InvalidBackupException("Una nota de la copia tiene una identidad inválida.")
+            val body = (record.values[noteBodyIndex] as? BackupValue.Text)?.value
+                ?: throw InvalidBackupException("Una nota de la copia tiene un contenido inválido.")
+            id to body
+        }
+
+        val attachments = snapshot.table("shift_note_attachments")
+        val attachmentNoteIdIndex = attachments.columns.indexOf("noteId")
+        val positionIndex = attachments.columns.indexOf("position")
+        val positionsByNote = attachments.records.groupBy { record ->
+            (record.values[attachmentNoteIdIndex] as? BackupValue.Text)?.value
+                ?: throw InvalidBackupException("Un adjunto de nota tiene una referencia inválida.")
+        }.mapValues { (noteId, records) ->
+            if (noteId !in noteBodies) {
+                throw InvalidBackupException("Un adjunto de nota no pertenece a una nota de la copia.")
+            }
+            records.map { record ->
+                (record.values[positionIndex] as? BackupValue.Integer)?.value
+                    ?: throw InvalidBackupException("Un adjunto de nota tiene una posición inválida.")
+            }.sorted()
+        }
+
+        positionsByNote.forEach { (_, positions) ->
+            val expected = positions.indices.map(Int::toLong)
+            if (positions != expected || positions.size > 30) {
+                throw InvalidBackupException("Los adjuntos de una nota no conservan un orden continuo válido.")
+            }
+        }
+        noteBodies.forEach { (noteId, body) ->
+            if (body.isBlank() && positionsByNote[noteId].isNullOrEmpty()) {
+                throw InvalidBackupException("La copia contiene una nota vacía sin imágenes.")
+            }
+        }
+    }
+
+    private fun spec(name: String, vararg columns: String, pk: List<String>) =
+        BackupTableSpec(name, columns.toList(), pk)
+}
+
+/** Current V8 allowlist. Legacy ABSENT/CANCELLED rows may omit the controller table. */
+object MiGuardiaBackupSchemaV8 {
+    val tables: List<BackupTableSpec> = MiGuardiaBackupSchemaV7.tables + BackupTableSpec(
+        name = "shift_situations",
+        columns = listOf(
+            "shiftId", "status", "reason", "privateNote", "cancellationActor",
+            "notifiedAtEpochMillis", "evidenceStorageKey", "evidenceMimeType",
+            "evidenceByteSize", "evidencePixelWidth", "evidencePixelHeight", "evidenceSha256",
+            "createdAtEpochMillis", "updatedAtEpochMillis",
+        ),
+        primaryKey = listOf("shiftId"),
+    )
+    val byName: Map<String, BackupTableSpec> = tables.associateBy(BackupTableSpec::name)
+
+    init { check(tables.size == 29 && byName.size == tables.size) }
+
+    fun requireValid(snapshot: BackupDatabaseSnapshot) {
+        requireValidBackupSnapshot(snapshot, MiGuardiaBackupContract.ROOM_VERSION,
+            MiGuardiaBackupContract.ROOM_IDENTITY_HASH, tables)
+        MiGuardiaBackupSchemaV7.requireValidNoteAttachments(snapshot)
+        requireValidShiftSituations(snapshot)
+    }
+
+    private fun requireValidShiftSituations(snapshot: BackupDatabaseSnapshot) {
+        val shifts = snapshot.table("shifts")
+        val shiftIdIndex = shifts.columns.indexOf("id")
+        val shiftStatusIndex = shifts.columns.indexOf("status")
+        val statusById = shifts.records.associate { row ->
+            (row.values[shiftIdIndex] as? BackupValue.Text)?.value to
+                (row.values[shiftStatusIndex] as? BackupValue.Text)?.value
+        }
+        val table = snapshot.table("shift_situations")
+        fun BackupRecord.value(column: String) = values[table.columns.indexOf(column)]
+        table.records.forEach { row ->
+            val shiftId = (row.value("shiftId") as? BackupValue.Text)?.value
+                ?: throw InvalidBackupException("Una situación laboral tiene una identidad inválida.")
+            runCatching { UUID.fromString(shiftId) }.getOrElse {
+                throw InvalidBackupException("Una situación laboral tiene una identidad inválida.")
+            }
+            val status = (row.value("status") as? BackupValue.Text)?.value
+            if (status !in setOf("ABSENT", "CANCELLED") || statusById[shiftId] != status) {
+                throw InvalidBackupException("Una situación laboral no coincide con su jornada.")
+            }
+            val actor = (row.value("cancellationActor") as? BackupValue.Text)?.value
+            val reason = (row.value("reason") as? BackupValue.Text)?.value
+            val notice = row.value("notifiedAtEpochMillis")
+            val evidenceValues = listOf(
+                row.value("evidenceStorageKey"), row.value("evidenceMimeType"), row.value("evidenceByteSize"),
+                row.value("evidencePixelWidth"), row.value("evidencePixelHeight"), row.value("evidenceSha256"),
+            )
+            if (status == "CANCELLED") {
+                if (reason.isNullOrBlank() || actor !in setOf("NOT_REPORTED", "EMPLOYER", "ME", "OTHER") ||
+                    notice !is BackupValue.Integer
+                ) {
+                    throw InvalidBackupException("Una cancelación no conserva quién canceló y cuándo se avisó.")
+                }
+            } else if (actor != null || notice !== BackupValue.Null || evidenceValues.any { it !== BackupValue.Null }) {
+                throw InvalidBackupException("Una ausencia contiene metadatos propios de una cancelación.")
+            }
+            val evidence = if (evidenceValues.any { it !== BackupValue.Null }) {
+                if (evidenceValues.any { it === BackupValue.Null }) {
+                    throw InvalidBackupException("La evidencia de una cancelación está incompleta.")
+                }
+                try {
+                    CancellationEvidence(
+                        storageKey = (evidenceValues[0] as BackupValue.Text).value,
+                        mimeType = (evidenceValues[1] as BackupValue.Text).value,
+                        byteSize = (evidenceValues[2] as BackupValue.Integer).value,
+                        pixelWidth = Math.toIntExact((evidenceValues[3] as BackupValue.Integer).value),
+                        pixelHeight = Math.toIntExact((evidenceValues[4] as BackupValue.Integer).value),
+                        sha256 = (evidenceValues[5] as BackupValue.Text).value,
+                    )
+                } catch (_: RuntimeException) {
+                    throw InvalidBackupException("La evidencia de una cancelación es inválida.")
+                }
+            } else null
+            try {
+                ShiftSituation(
+                    shiftId = UUID.fromString(shiftId),
+                    status = ShiftStatus.valueOf(requireNotNull(status)),
+                    reason = (row.value("reason") as? BackupValue.Text)?.value,
+                    privateNote = (row.value("privateNote") as? BackupValue.Text)?.value,
+                    cancellationActor = actor?.let(CancellationActor::valueOf),
+                    notifiedAt = (notice as? BackupValue.Integer)?.value?.let(Instant::ofEpochMilli),
+                    evidence = evidence,
+                    createdAt = Instant.ofEpochMilli(
+                        (row.value("createdAtEpochMillis") as? BackupValue.Integer)?.value
+                            ?: throw IllegalArgumentException(),
+                    ),
+                    updatedAt = Instant.ofEpochMilli(
+                        (row.value("updatedAtEpochMillis") as? BackupValue.Integer)?.value
+                            ?: throw IllegalArgumentException(),
+                    ),
+                )
+            } catch (_: RuntimeException) {
+                throw InvalidBackupException("Una situación laboral contiene metadatos inválidos.")
+            }
+        }
     }
 }
 
@@ -122,7 +309,9 @@ private fun compareBackupValues(first: BackupValue, second: BackupValue): Int {
 
 internal fun requireSupportedBackupSchema(snapshot: BackupDatabaseSnapshot) {
     when (snapshot.roomVersion) {
-        MiGuardiaBackupContract.ROOM_VERSION -> MiGuardiaBackupSchemaV6.requireValid(snapshot)
+        MiGuardiaBackupContract.ROOM_VERSION -> MiGuardiaBackupSchemaV8.requireValid(snapshot)
+        MiGuardiaBackupContract.LEGACY_ROOM_VERSION_V7 -> MiGuardiaBackupSchemaV7.requireValid(snapshot)
+        MiGuardiaBackupContract.LEGACY_ROOM_VERSION_V6 -> MiGuardiaBackupSchemaV6.requireValid(snapshot)
         MiGuardiaBackupContract.LEGACY_ROOM_VERSION_V5 -> MiGuardiaBackupSchemaV5.requireValid(snapshot)
         else -> throw InvalidBackupException("La copia usa una versión de datos no compatible.")
     }
@@ -131,10 +320,11 @@ internal fun requireSupportedBackupSchema(snapshot: BackupDatabaseSnapshot) {
 fun upgradeSupportedBackupSchema(snapshot: BackupDatabaseSnapshot): BackupDatabaseSnapshot {
     requireSupportedBackupSchema(snapshot)
     if (snapshot.roomVersion == MiGuardiaBackupContract.ROOM_VERSION) return snapshot
-    val upgraded = snapshot.copy(
-        roomVersion = MiGuardiaBackupContract.ROOM_VERSION,
-        roomIdentityHash = MiGuardiaBackupContract.ROOM_IDENTITY_HASH,
-        tables = snapshot.tables.map { table ->
+    val v6 = if (snapshot.roomVersion == MiGuardiaBackupContract.LEGACY_ROOM_VERSION_V5) {
+        snapshot.copy(
+            roomVersion = MiGuardiaBackupContract.LEGACY_ROOM_VERSION_V6,
+            roomIdentityHash = MiGuardiaBackupContract.LEGACY_ROOM_IDENTITY_HASH_V6,
+            tables = snapshot.tables.map { table ->
             if (table.name == "objectives") {
                 table.copy(
                     columns = table.columns + listOf("weatherLatitude", "weatherLongitude"),
@@ -146,8 +336,35 @@ fun upgradeSupportedBackupSchema(snapshot: BackupDatabaseSnapshot): BackupDataba
                 table
             }
         },
+        )
+    } else {
+        snapshot
+    }
+    val v7 = if (v6.roomVersion == MiGuardiaBackupContract.LEGACY_ROOM_VERSION_V7) v6 else {
+        MiGuardiaBackupSchemaV6.requireValid(v6)
+        v6.copy(
+            roomVersion = MiGuardiaBackupContract.LEGACY_ROOM_VERSION_V7,
+            roomIdentityHash = MiGuardiaBackupContract.LEGACY_ROOM_IDENTITY_HASH_V7,
+            tables = v6.tables + BackupTable(
+                name = "shift_note_attachments",
+                columns = MiGuardiaBackupSchemaV7.byName.getValue("shift_note_attachments").columns,
+                primaryKey = listOf("id"),
+                records = emptyList(),
+            ),
+        )
+    }
+    MiGuardiaBackupSchemaV7.requireValid(v7)
+    val upgraded = v7.copy(
+        roomVersion = MiGuardiaBackupContract.ROOM_VERSION,
+        roomIdentityHash = MiGuardiaBackupContract.ROOM_IDENTITY_HASH,
+        tables = v7.tables + BackupTable(
+            name = "shift_situations",
+            columns = MiGuardiaBackupSchemaV8.byName.getValue("shift_situations").columns,
+            primaryKey = listOf("shiftId"),
+            records = emptyList(),
+        ),
     )
-    MiGuardiaBackupSchemaV6.requireValid(upgraded)
+    MiGuardiaBackupSchemaV8.requireValid(upgraded)
     return upgraded
 }
 
@@ -164,7 +381,7 @@ private fun requireValidBackupSnapshot(
         throw InvalidBackupException("La identidad Room de la copia no coincide con MiGuardia 2.0.")
     }
     if (snapshot.tables.map(BackupTable::name) != expectedTables.map(BackupTableSpec::name)) {
-        throw InvalidBackupException("La copia no contiene exactamente las 27 tablas esperadas.")
+        throw InvalidBackupException("La copia no contiene exactamente las tablas esperadas.")
     }
     var total = 0
     snapshot.tables.zip(expectedTables).forEach { (table, expected) ->

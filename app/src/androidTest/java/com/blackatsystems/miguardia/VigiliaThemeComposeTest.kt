@@ -28,13 +28,13 @@ class VigiliaThemeComposeTest {
         }
 
         compose.runOnIdle {
-            assertEquals(Color(0xFF090812), scheme.background)
-            assertEquals(Color(0xFF151125), scheme.surface)
-            assertEquals(Color(0xFF8B5CFF), scheme.primary)
-            assertEquals(Color(0xFF34254A), scheme.outline)
-            assertEquals(Color(0xFFEC63F5), roles?.active)
-            assertEquals(Color(0xFF42D392), roles?.success)
-            assertEquals(Color(0xFF71D8D1), roles?.vacation)
+            assertEquals(Color(0xFF13141C), scheme.background)
+            assertEquals(Color(0xFF1E2030), scheme.surface)
+            assertEquals(Color(0xFF7AA2F7), scheme.primary)
+            assertEquals(Color(0xFF737AA2), scheme.outline)
+            assertEquals(Color(0xFFBB9AF7), roles?.active)
+            assertEquals(Color(0xFFA9DC76), roles?.success)
+            assertEquals(Color(0xFF73DACA), roles?.vacation)
             assertThemeContrast(scheme, requireNotNull(roles))
         }
     }
@@ -51,13 +51,13 @@ class VigiliaThemeComposeTest {
         }
 
         compose.runOnIdle {
-            assertEquals(Color(0xFFF7F4FA), scheme.background)
-            assertEquals(Color.White, scheme.surface)
-            assertEquals(Color(0xFF6F3DE1), scheme.primary)
-            assertEquals(Color(0xFFDDD3E7), scheme.outline)
-            assertEquals(Color(0xFFB62AC8), roles?.active)
-            assertEquals(Color(0xFF167A56), roles?.success)
-            assertEquals(Color(0xFF006A65), roles?.vacation)
+            assertEquals(Color(0xFFF4F5FA), scheme.background)
+            assertEquals(Color(0xFFFFFFFF), scheme.surface)
+            assertEquals(Color(0xFF2F5DC6), scheme.primary)
+            assertEquals(Color(0xFF6E7596), scheme.outline)
+            assertEquals(Color(0xFF6D4FD6), roles?.active)
+            assertEquals(Color(0xFF3C6B20), roles?.success)
+            assertEquals(Color(0xFF33635C), roles?.vacation)
             assertThemeContrast(scheme, requireNotNull(roles))
         }
     }
@@ -68,6 +68,13 @@ class VigiliaThemeComposeTest {
     ) {
         assertContrast(scheme.onSurface, scheme.surface)
         assertContrast(roles.onSurfaceMuted, scheme.surface)
+        assertContrast(roles.onSurfaceMuted, scheme.surfaceContainerHighest)
+        assertContrast(scheme.onSurface, roles.surfaceHero)
+        assertContrast(scheme.onSurface, roles.heroEnd)
+        assertContrast(roles.onSelection, roles.selection)
+        assertContrast(roles.onDateContainer, roles.dateContainer)
+        assertContrast(roles.onCompletedContainer, roles.completedContainer)
+        assertContrast(roles.onPlannedContainer, roles.plannedContainer)
         assertContrast(scheme.onPrimary, scheme.primary)
         assertContrast(roles.onActive, roles.active)
         assertContrast(roles.onSuccess, roles.success)

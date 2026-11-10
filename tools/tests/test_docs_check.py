@@ -98,6 +98,70 @@ class DocumentationRegressionTest(unittest.TestCase):
         self.write(snapshot, "Cambiado")
         self.assertTrue(any("alterado" in p for p in docs.check(self.root)["problems"]))
 
+    def write_external_snapshot(self, snapshot="docs/archive/original.md"):
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        backup = Path(temp.name) / "checkout"
+        backup.mkdir()
+        path = backup / snapshot
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(b"Original")
+        self.write(docs.ARCHIVE_LOCATION, json.dumps({"checkout_root": str(backup)}))
+        self.write(docs.SNAPSHOT, json.dumps({
+            "storage": "external-backup",
+            "files": [{
+                "source": "docs/prompts/ARCHIVED.md",
+                "snapshot": snapshot,
+                "sha256": hashlib.sha256(b"Original").hexdigest(),
+            }],
+        }))
+        return path
+
+    def test_external_snapshot_verifies_original_without_local_stub(self):
+        self.write_external_snapshot()
+        result = docs.check(self.root)
+        self.assertTrue(result["ok"], result["problems"])
+        self.assertEqual(result["snapshots_verified"], 1)
+
+    def test_external_snapshot_requires_locator(self):
+        self.write_external_snapshot()
+        (self.root / docs.ARCHIVE_LOCATION).unlink()
+        result = docs.check(self.root)
+        self.assertFalse(result["ok"])
+        self.assertTrue(any("Localizador" in p for p in result["problems"]))
+
+    def test_external_snapshot_rejects_missing_or_altered_file(self):
+        path = self.write_external_snapshot()
+        for state in ("missing", "altered"):
+            with self.subTest(state=state):
+                if state == "missing":
+                    path.unlink()
+                else:
+                    path.write_bytes(b"Changed")
+                result = docs.check(self.root)
+                self.assertFalse(result["ok"])
+                self.assertEqual(result["snapshots_verified"], 0)
+
+    def test_external_snapshot_cannot_escape_backup_root(self):
+        self.write_external_snapshot("../outside.md")
+        result = docs.check(self.root)
+        self.assertFalse(result["ok"])
+        self.assertEqual(result["snapshots_verified"], 0)
+
+    def test_external_snapshot_does_not_replace_active_link_target(self):
+        self.write_external_snapshot()
+        self.write("AGENTS.md", "Leer `docs/prompts/ARCHIVED.md`.\n")
+        result = docs.check(self.root)
+        self.assertFalse(result["ok"])
+        self.assertTrue(any("Referencia rota" in p for p in result["problems"]))
+        self.assertEqual(result["snapshots_verified"], 1)
+
+    def test_paused_by_user_preserves_authorized_contract(self):
+        path = self.root / "docs/STATUS.md"
+        status = path.read_text(encoding="utf-8").replace("EN_CURSO", "PAUSADO_POR_USUARIO")
+        self.write("docs/STATUS.md", status)
+        self.assertTrue(self.result()["ok"], self.result()["problems"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,8 +1,12 @@
 package com.blackatsystems.miguardia
 
 import androidx.compose.runtime.getValue
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.StateRestorationTester
@@ -12,7 +16,6 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performScrollTo
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.UiDevice
 import com.blackatsystems.miguardia.core.domain.AppDefaults
@@ -28,6 +31,7 @@ import com.blackatsystems.miguardia.core.domain.model.ShiftWorkSnapshot
 import com.blackatsystems.miguardia.core.domain.model.V2ShiftWrite
 import com.blackatsystems.miguardia.core.domain.model.Vacation
 import com.blackatsystems.miguardia.core.domain.nextevent.NextEventInput
+import com.blackatsystems.miguardia.core.domain.nextevent.NextEventItem
 import com.blackatsystems.miguardia.core.domain.nextevent.TodayCardProjection
 import com.blackatsystems.miguardia.core.domain.nextevent.projectNextEvent
 import com.blackatsystems.miguardia.core.domain.nextevent.projectTodayCard
@@ -39,8 +43,8 @@ import com.blackatsystems.miguardia.ui.calendar.CalendarUiState
 import com.blackatsystems.miguardia.ui.nextevent.NextEventCard
 import com.blackatsystems.miguardia.ui.nextevent.NextEventLoadState
 import com.blackatsystems.miguardia.ui.nextevent.NextEventUiState
-import com.blackatsystems.miguardia.ui.theme.AppZoom
-import com.blackatsystems.miguardia.ui.theme.MiGuardiaTheme
+import com.blackatsystems.miguardia.testsupport.TestFontScale
+import com.blackatsystems.miguardia.testsupport.AndroidFontScaleTheme
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
@@ -48,6 +52,7 @@ import java.time.YearMonth
 import java.time.ZonedDateTime
 import java.util.UUID
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -56,11 +61,144 @@ class NextEventComposeTest {
     val compose = createComposeRule()
 
     @Test
+    fun upcomingJourneyHasRequestedVisualOrderAndSubMinuteCountdown() {
+        val journey = todayShift(
+            id = "71000000-0000-0000-0000-000000000001",
+            hour = 13,
+        )
+        setCard(projection(now = journey.startAt.minusSeconds(30), shifts = listOf(journey)))
+
+        val title = compose.onNodeWithText("Próxima jornada").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+        val date = compose.onNodeWithText("Hoy").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+        val countdown = compose.onNodeWithText("Comienza en menos de un minuto")
+            .assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+        val identity = compose.onNodeWithTag("next-journey-identity").assertIsDisplayed()
+            .fetchSemanticsNode().boundsInRoot
+        assertTrue(title.bottom <= date.top)
+        assertTrue(date.bottom <= countdown.top)
+        assertTrue(countdown.bottom <= identity.top)
+        compose.onNodeWithText("13:00–17:00").assertIsDisplayed()
+    }
+
+    @Test
+    fun singleOngoingJourneyIsShownWithoutARedundantExpandableCopy() {
+        val ongoing = todayShift(
+            id = "73000000-0000-0000-0000-000000000001",
+            hour = 8,
+            durationHours = 8,
+        )
+
+        setCard(projection(shifts = listOf(ongoing)))
+
+        compose.onNodeWithText("Jornada en curso").assertIsDisplayed()
+        compose.onNodeWithText("08:00–16:00").assertIsDisplayed()
+        compose.onAllNodesWithText("FIC · Objetivo ficticio").assertCountEquals(1)
+        compose.onNodeWithTag("today-card-toggle").assertDoesNotExist()
+        compose.onNodeWithTag("today-card-list").assertDoesNotExist()
+    }
+
+    @Test
+    fun singleJourneyDoesNotDuplicateWhenUpcomingBecomesOngoing() {
+        val journey = todayShift(
+            id = "73000000-0000-0000-0000-000000000002",
+            hour = 13,
+            durationHours = 4,
+        )
+        var state by mutableStateOf(contentState(projection(shifts = listOf(journey))))
+        compose.setContent { AndroidFontScaleTheme { NextEventCard(state, {}) } }
+
+        compose.onNodeWithText("Próxima jornada").assertIsDisplayed()
+        compose.onNodeWithText("13:00–17:00").assertIsDisplayed()
+        compose.onNodeWithTag("today-card-toggle").assertDoesNotExist()
+        compose.runOnIdle {
+            state = contentState(projection(now = journey.startAt, shifts = listOf(journey)))
+        }
+        compose.onNodeWithText("Jornada en curso").assertIsDisplayed()
+        compose.onAllNodesWithText("FIC · Objetivo ficticio").assertCountEquals(1)
+        compose.onNodeWithTag("today-card-toggle").assertDoesNotExist()
+        compose.onNodeWithTag("today-card-list").assertDoesNotExist()
+
+        compose.runOnIdle {
+            state = contentState(projection(now = journey.endAt, shifts = listOf(journey)))
+        }
+        compose.onNodeWithText("Hoy: 1 jornada completada").assertIsDisplayed()
+        compose.onNodeWithTag("today-card-toggle").performClick()
+        compose.onNodeWithTag("today-card-shift-${journey.id}").assertExists()
+        compose.onNodeWithText("Completada").assertExists()
+    }
+
+    @Test
+    fun expansionDisappearsWhenOnlyTheAlreadyShownPrimaryJourneyRemains() {
+        val ongoing = todayShift(
+            id = "73000000-0000-0000-0000-000000000003",
+            hour = 8,
+            durationHours = 8,
+        )
+        val upcoming = todayShift(
+            id = "73000000-0000-0000-0000-000000000004",
+            hour = 17,
+            name = "Segundo objetivo ficticio",
+        )
+        var state by mutableStateOf(contentState(projection(shifts = listOf(ongoing, upcoming))))
+        compose.setContent { AndroidFontScaleTheme { NextEventCard(state, {}) } }
+
+        compose.onNodeWithTag("today-card-toggle").performClick()
+        compose.onNodeWithTag("today-card-shift-${ongoing.id}").assertExists()
+        compose.onNodeWithTag("today-card-shift-${upcoming.id}").assertExists()
+        compose.runOnIdle { state = contentState(projection(shifts = listOf(ongoing))) }
+
+        compose.onNodeWithTag("today-card-toggle").assertDoesNotExist()
+        compose.onNodeWithTag("today-card-list").assertDoesNotExist()
+        compose.onAllNodesWithText("FIC · Objetivo ficticio").assertCountEquals(1)
+        compose.onNodeWithText("08:00–16:00").assertIsDisplayed()
+    }
+
+    @Test
+    fun completedTodayDoesNotHideTheNextJourneyOrItsCountdown() {
+        val completed = todayShift(
+            id = "72000000-0000-0000-0000-000000000001",
+            hour = 6,
+            durationHours = 2,
+        )
+        setCard(projection(shifts = listOf(completed, futureShift())))
+
+        compose.onNodeWithText("Próxima jornada").assertIsDisplayed()
+        compose.onNodeWithText("Mañana").assertIsDisplayed()
+        compose.onNodeWithText("Comienza en 1 día, 7 horas").assertIsDisplayed()
+        compose.onNodeWithText("Hoy: 1 jornada completada").assertIsDisplayed()
+        compose.onNodeWithText("Ver jornadas de hoy").performClick()
+        compose.onNodeWithTag("today-card-shift-${completed.id}").assertExists()
+    }
+
+    @Test
+    fun upcomingJourneyIsReadableInBothThemesAndEveryAndroidFontScale() {
+        var dark by mutableStateOf(false)
+        var fontScale by mutableStateOf(TestFontScale.STANDARD)
+        compose.setContent {
+            AndroidFontScaleTheme(darkTheme = dark, fontScale = fontScale) {
+                NextEventCard(contentState(projection(shifts = listOf(futureShift()))), {})
+            }
+        }
+        listOf(false, true).forEach { theme ->
+            TestFontScale.entries.forEach { option ->
+                compose.runOnIdle {
+                    dark = theme
+                    fontScale = option
+                }
+                compose.onNodeWithText("Próxima jornada").assertIsDisplayed()
+                compose.onNodeWithText("Mañana").assertIsDisplayed()
+                compose.onNodeWithText("Comienza en 1 día, 7 horas").assertIsDisplayed()
+                compose.onNodeWithText("19:00–07:00 (+1 día)").assertIsDisplayed()
+            }
+        }
+    }
+
+    @Test
     fun loadingAndRecoverableErrorExposeRetryWithoutHidingLastValidResult() {
         var retries = 0
         var state by mutableStateOf(NextEventUiState())
         compose.setContent {
-            MiGuardiaTheme {
+            AndroidFontScaleTheme {
                 NextEventCard(state = state, onRetry = { retries += 1 })
             }
         }
@@ -95,10 +233,11 @@ class NextEventComposeTest {
 
         compose.onNodeWithText("Jornada en curso").assertExists()
         compose.onNodeWithText("NRT · Objetivo ficticio Norte").assertExists()
-        compose.onNodeWithText("21:00–06:00", substring = true).assertExists()
+        compose.onNodeWithText("21:00–06:00 (+1 día)", substring = true).assertExists()
         compose.onNodeWithText("Inició ayer, 14/08/2026").assertExists()
         compose.onNodeWithText("Puesto: Acceso uno").assertExists()
-        compose.onNodeWithText("Termina en 4 h").assertExists()
+        compose.onNodeWithText("Termina en 4 horas").assertExists()
+        compose.onNodeWithTag("today-card-toggle").assertDoesNotExist()
         compose.onNodeWithTag("today-card-list").assertDoesNotExist()
         compose.onNodeWithText("nota médica privada", substring = true).assertDoesNotExist()
         compose.onNodeWithContentDescription("Jornada en curso", substring = true).assertExists()
@@ -118,9 +257,53 @@ class NextEventComposeTest {
         compose.onNodeWithText("Disponibilidad activa").assertExists()
         compose.onNodeWithText("Retén").assertExists()
         compose.onNodeWithText("15/08/2026 · 09:00–17:00").assertExists()
-        compose.onNodeWithText("Termina en 5 h").assertExists()
+        compose.onNodeWithText("Termina en 5 horas").assertExists()
         compose.onNodeWithText("1 jornada", substring = true).assertDoesNotExist()
         compose.onNodeWithText("Puesto:", substring = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun twentyFiveHourAvailabilityKeepsItsCivilEndDayInTextAndAccessibility() {
+        val window = availability(
+            id = "11000000-0000-0000-0000-000000000012",
+            start = instant(2026, 10, 23, 8, 0),
+            end = instant(2026, 10, 24, 9, 0),
+            label = "Retén",
+        )
+
+        setCard(projection(now = instant(2026, 10, 23, 7, 0), availability = listOf(window)))
+
+        compose.onNodeWithText("23/10/2026 · 08:00–09:00 (+1 día)").assertIsDisplayed()
+        compose.onNodeWithContentDescription("23/10/2026 · 08:00–09:00 (+1 día)", substring = true).assertExists()
+    }
+
+    @Test
+    fun resumedAvailabilityShowsTheSegmentDateWithoutRewritingItsOwnerDate() {
+        val window = availability(
+            id = "11000000-0000-0000-0000-000000000013",
+            start = instant(2026, 10, 23, 8, 0),
+            end = instant(2026, 10, 24, 12, 0),
+            label = "Retén",
+        )
+        val work = shift(
+            id = "11000000-0000-0000-0000-000000000014",
+            start = instant(2026, 10, 23, 20, 0),
+            end = instant(2026, 10, 24, 4, 0),
+        )
+        val result = projection(
+            now = instant(2026, 10, 24, 5, 0),
+            availability = listOf(window),
+            shifts = listOf(work),
+        )
+        val segment = result.futureEvent.primaryEvents.single() as NextEventItem.Availability
+        assertEquals(LocalDate.of(2026, 10, 23), segment.ownerLocalDate)
+        assertTrue(segment.isResumption)
+
+        setCard(result)
+
+        compose.onNodeWithText("24/10/2026 · 04:00–12:00").assertIsDisplayed()
+        compose.onNodeWithText("23/10/2026 · 04:00–12:00").assertDoesNotExist()
+        compose.onNodeWithContentDescription("24/10/2026 · 04:00–12:00", substring = true).assertExists()
     }
 
     @Test
@@ -142,13 +325,13 @@ class NextEventComposeTest {
         setCard(projection(shifts = listOf(shift), availability = listOf(availability)))
 
         compose.onNodeWithText("Próxima jornada").assertExists()
-        compose.onNodeWithText("También: Disponible para llamado · 13:00–18:00").assertExists()
+        compose.onNodeWithText("También: Disponible para llamado · 15/08/2026 · 13:00–18:00").assertExists()
         compose.onNodeWithText("2 jornadas comparten este estado.").assertDoesNotExist()
-        compose.onNodeWithText("Ver jornadas de hoy").assertExists()
+        compose.onNodeWithTag("today-card-toggle").assertDoesNotExist()
     }
 
     @Test
-    fun availabilityRemainsReadableInLightDarkAndEveryInternalZoom() {
+    fun availabilityRemainsReadableInLightDarkAndEveryAndroidFontScale() {
         val result = projection(
             availability = listOf(
                 availability(
@@ -160,15 +343,15 @@ class NextEventComposeTest {
             ),
         )
         var dark by mutableStateOf(false)
-        var zoom by mutableStateOf(AppZoom.STANDARD)
+        var fontScale by mutableStateOf(TestFontScale.STANDARD)
         compose.setContent {
-            MiGuardiaTheme(darkTheme = dark, appZoom = zoom) {
+            AndroidFontScaleTheme(darkTheme = dark, fontScale = fontScale) {
                 NextEventCard(contentState(result), {})
             }
         }
 
-        AppZoom.entries.forEach { option ->
-            compose.runOnIdle { zoom = option }
+        TestFontScale.entries.forEach { option ->
+            compose.runOnIdle { fontScale = option }
             compose.onNodeWithText("Disponibilidad activa").assertIsDisplayed()
             compose.onNodeWithText("Guardia pasiva").assertIsDisplayed()
         }
@@ -200,7 +383,7 @@ class NextEventComposeTest {
         compose.onNodeWithText("Próxima jornada").assertExists()
         compose.onNodeWithText("UNO · Objetivo ficticio uno").assertExists()
         compose.onAllNodesWithText("13:00–17:00", substring = true).assertCountEquals(2)
-        compose.onNodeWithText("Comienza en 1 h").assertExists()
+        compose.onNodeWithText("Comienza en 1 hora").assertExists()
         compose.onNodeWithText("2 jornadas hoy.").assertExists()
         compose.onNodeWithTag("today-card-list").assertDoesNotExist()
 
@@ -258,6 +441,72 @@ class NextEventComposeTest {
     }
 
     @Test
+    fun sameDayExpansionSurvivesContentLoadingWithoutResultAndContent() {
+        val historical = todayShift(
+            id = "30000000-0000-0000-0000-000000000007",
+            hour = 7,
+            name = "Historial sintético de recarga",
+            abbreviation = "REC",
+        ).copy(status = ShiftStatus.CANCELLED)
+        val result = projection(shifts = listOf(historical))
+        var state by mutableStateOf(contentState(result))
+        compose.setContent { AndroidFontScaleTheme { NextEventCard(state, {}) } }
+
+        compose.onNodeWithTag("today-card-toggle").performClick()
+        compose.onNodeWithText("Ocultar jornadas de hoy").assertIsDisplayed()
+        compose.onNodeWithTag("today-card-shift-${historical.id}").assertIsDisplayed()
+
+        compose.runOnIdle { state = NextEventUiState(loadState = NextEventLoadState.LOADING, result = null) }
+        compose.onNodeWithText("Buscando jornadas, disponibilidad y francos…").assertIsDisplayed()
+        compose.onNodeWithTag("today-card-list").assertDoesNotExist()
+        compose.runOnIdle { state = contentState(result) }
+
+        compose.onNodeWithText("Ocultar jornadas de hoy").assertIsDisplayed()
+        compose.onNodeWithTag("today-card-shift-${historical.id}").assertIsDisplayed()
+        compose.onNodeWithText("Cancelada").assertIsDisplayed()
+        compose.onNodeWithTag("today-card-toggle").performClick()
+        compose.onNodeWithTag("today-card-list").assertDoesNotExist()
+        compose.onNodeWithText("Ver jornadas de hoy").assertIsDisplayed()
+    }
+
+    @Test
+    fun restoredSameDayExpansionSurvivesNullLoadingButDoesNotExpandAnotherCivilDate() {
+        val historical = todayShift(
+            id = "30000000-0000-0000-0000-000000000008",
+            hour = 7,
+            name = "Historial sintético restaurado",
+            abbreviation = "RST",
+        ).copy(status = ShiftStatus.CANCELLED)
+        val result = projection(shifts = listOf(historical))
+        var state by mutableStateOf(contentState(result))
+        val restoration = StateRestorationTester(compose)
+        restoration.setContent { AndroidFontScaleTheme { NextEventCard(state, {}) } }
+
+        compose.onNodeWithTag("today-card-toggle").performClick()
+        compose.onNodeWithTag("today-card-shift-${historical.id}").assertIsDisplayed()
+        restoration.emulateSavedInstanceStateRestore()
+        compose.onNodeWithText("Ocultar jornadas de hoy").assertIsDisplayed()
+        compose.onNodeWithTag("today-card-shift-${historical.id}").assertIsDisplayed()
+
+        compose.runOnIdle { state = NextEventUiState(loadState = NextEventLoadState.LOADING, result = null) }
+        compose.onNodeWithText("Buscando jornadas, disponibilidad y francos…").assertIsDisplayed()
+        compose.onNodeWithTag("today-card-list").assertDoesNotExist()
+        compose.runOnIdle { state = contentState(result) }
+        compose.onNodeWithText("Ocultar jornadas de hoy").assertIsDisplayed()
+        compose.onNodeWithTag("today-card-shift-${historical.id}").assertIsDisplayed()
+
+        val nextDay = historical.copy(id = UUID(0L, 709L), startAt = historical.startAt.plusSeconds(86_400),
+            endAt = historical.endAt.plusSeconds(86_400), localStartDate = TODAY.plusDays(1))
+        compose.runOnIdle {
+            state = contentState(projection(now = NOW.plusSeconds(86_400), shifts = listOf(nextDay)))
+        }
+        compose.onNodeWithText("Ver jornadas de hoy").assertIsDisplayed()
+        compose.onNodeWithTag("today-card-list").assertDoesNotExist()
+        compose.onNodeWithTag("today-card-shift-${historical.id}").assertDoesNotExist()
+        compose.onNodeWithTag("today-card-shift-${nextDay.id}").assertDoesNotExist()
+    }
+
+    @Test
     fun expansionResetsWhenTheCivilDateChanges() {
         val firstDay = shift(
             id = "30000000-0000-0000-0000-000000000002",
@@ -270,7 +519,7 @@ class NextEventComposeTest {
             end = instant(2026, 8, 16, 11, 0),
         )
         var state by mutableStateOf(contentState(projection(shifts = listOf(firstDay))))
-        compose.setContent { MiGuardiaTheme { NextEventCard(state, {}) } }
+        compose.setContent { AndroidFontScaleTheme { NextEventCard(state, {}) } }
 
         compose.onNodeWithText("Ver jornadas de hoy").performClick()
         compose.onNodeWithTag("today-card-list").assertExists()
@@ -301,7 +550,7 @@ class NextEventComposeTest {
         )
         var state = contentState(projection(shifts = listOf(firstDay)))
         val restoration = StateRestorationTester(compose)
-        restoration.setContent { MiGuardiaTheme { NextEventCard(state, {}) } }
+        restoration.setContent { AndroidFontScaleTheme { NextEventCard(state, {}) } }
 
         compose.onNodeWithText("Ver jornadas de hoy").performClick()
         compose.onNodeWithTag("today-card-list").assertExists()
@@ -441,12 +690,12 @@ class NextEventComposeTest {
     @Test
     fun futureShiftExplicitDayOffAndHonestEmptyStateAreDistinct() {
         var state by mutableStateOf(contentState(projection(shifts = listOf(futureShift()))))
-        compose.setContent { MiGuardiaTheme { NextEventCard(state, {}) } }
+        compose.setContent { AndroidFontScaleTheme { NextEventCard(state, {}) } }
 
         compose.onNodeWithText("Próxima jornada").assertExists()
-        compose.onNodeWithText("16/08/2026", substring = true).assertExists()
-        compose.onNodeWithText("19:00–07:00", substring = true).assertExists()
-        compose.onNodeWithText("Comienza en 1 d 7 h").assertExists()
+        compose.onNodeWithText("Mañana").assertExists()
+        compose.onNodeWithText("19:00–07:00 (+1 día)", substring = true).assertExists()
+        compose.onNodeWithText("Comienza en 1 día, 7 horas").assertExists()
 
         compose.runOnIdle {
             state = contentState(
@@ -502,7 +751,7 @@ class NextEventComposeTest {
             durationHours = 4,
         )
         var state by mutableStateOf(contentState(projection(now = NOW, shifts = listOf(shift))))
-        compose.setContent { MiGuardiaTheme { NextEventCard(state, {}) } }
+        compose.setContent { AndroidFontScaleTheme { NextEventCard(state, {}) } }
 
         compose.onNodeWithText("Próxima jornada").assertExists()
         compose.runOnIdle {
@@ -520,7 +769,7 @@ class NextEventComposeTest {
         var nextState by mutableStateOf(contentState(projection(shifts = listOf(futureShift()))))
         var calendarState by mutableStateOf(calendarState(YearMonth.of(2026, 8)))
         compose.setContent {
-            MiGuardiaTheme {
+            AndroidFontScaleTheme {
                 MiGuardiaApp(
                     calendarState = calendarState,
                     onPreviousMonth = { calendarState = calendarState(YearMonth.of(2026, 7)) },
@@ -547,37 +796,42 @@ class NextEventComposeTest {
     }
 
     @Test
-    fun engineErrorKeepsCalendarUsableAcrossThemeAndInternalZoom() {
+    fun engineErrorDoesNotForceTheCardIntoAShortCalendarAcrossThemeAndAndroidFontScale() {
         var dark by mutableStateOf(false)
-        var zoom by mutableStateOf(AppZoom.STANDARD)
+        var fontScale by mutableStateOf(TestFontScale.STANDARD)
         compose.setContent {
-            MiGuardiaTheme(darkTheme = dark, appZoom = zoom) {
-                MiGuardiaApp(
-                    calendarState = calendarState(YearMonth.of(2026, 8)),
-                    onPreviousMonth = {},
-                    onNextMonth = {},
-                    onToday = {},
-                    onSelectDate = {},
-                    onDismissDate = {},
-                    onRetry = {},
-                    nextEventState = NextEventUiState(
-                        loadState = NextEventLoadState.ERROR,
-                        errorMessage = "Motor temporalmente no disponible",
-                    ),
-                    appZoom = zoom,
-                )
+            AndroidFontScaleTheme(darkTheme = dark, fontScale = fontScale) {
+                Box(Modifier.heightIn(max = 500.dp)) {
+                    MiGuardiaApp(
+                        calendarState = calendarState(YearMonth.of(2026, 8)),
+                        onPreviousMonth = {},
+                        onNextMonth = {},
+                        onToday = {},
+                        onSelectDate = {},
+                        onDismissDate = {},
+                        onRetry = {},
+                        nextEventState = NextEventUiState(
+                            loadState = NextEventLoadState.ERROR,
+                            errorMessage = "Motor temporalmente no disponible",
+                        ),
+                        )
+                }
             }
         }
 
-        compose.onNodeWithText("Motor temporalmente no disponible").assertExists()
-        compose.onNodeWithTag("month-grid").assertExists()
+        compose.onNodeWithTag("next-event-card").assertDoesNotExist()
+        compose.onNodeWithTag("month-grid").assertIsDisplayed()
         compose.runOnIdle {
             dark = true
-            zoom = AppZoom.LARGE
+            fontScale = TestFontScale.LARGE
         }
-        compose.onNodeWithTag("next-event-card").performScrollTo().assertIsDisplayed()
-        compose.runOnIdle { zoom = AppZoom.EXTRA_LARGE }
-        compose.onNodeWithText("Reintentar").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("next-event-card").assertDoesNotExist()
+        compose.onNodeWithTag("month-grid").assertIsDisplayed()
+        compose.onNodeWithTag("calendar-scroll-container").assertDoesNotExist()
+        compose.runOnIdle { fontScale = TestFontScale.EXTRA_LARGE }
+        compose.onNodeWithTag("next-event-card").assertDoesNotExist()
+        compose.onNodeWithTag("month-grid").assertIsDisplayed()
+        compose.onNodeWithTag("calendar-scroll-container").assertDoesNotExist()
     }
 
     @Test
@@ -587,14 +841,14 @@ class NextEventComposeTest {
             device.setOrientationLeft()
             device.waitForIdle()
             compose.setContent {
-                MiGuardiaTheme(darkTheme = false) {
+                AndroidFontScaleTheme(darkTheme = false) {
                     NextEventCard(contentState(projection(shifts = listOf(futureShift()))), {})
                 }
             }
 
             compose.onNodeWithText("Próxima jornada").assertIsDisplayed()
-            compose.onNodeWithText("19:00–07:00", substring = true).assertIsDisplayed()
-            compose.onNodeWithText("Comienza en 1 d 7 h").assertIsDisplayed()
+            compose.onNodeWithText("19:00–07:00 (+1 día)", substring = true).assertIsDisplayed()
+            compose.onNodeWithText("Comienza en 1 día, 7 horas").assertIsDisplayed()
         } finally {
             device.setOrientationNatural()
             device.unfreezeRotation()
@@ -603,7 +857,7 @@ class NextEventComposeTest {
 
     private fun setCard(result: TodayCardProjection) {
         compose.setContent {
-            MiGuardiaTheme {
+            AndroidFontScaleTheme {
                 NextEventCard(contentState(result), {})
             }
         }

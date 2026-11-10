@@ -14,4 +14,12 @@ interface MedicalLeaveRepository {
     suspend fun create(medicalLeave: MedicalLeave)
     suspend fun update(medicalLeave: MedicalLeave)
     suspend fun delete(id: UUID)
+
+    suspend fun updateExpected(expected: MedicalLeave, replacement: MedicalLeave) {
+        update(replacement)
+    }
+
+    suspend fun deleteExpected(expected: MedicalLeave) {
+        delete(expected.id)
+    }
 }

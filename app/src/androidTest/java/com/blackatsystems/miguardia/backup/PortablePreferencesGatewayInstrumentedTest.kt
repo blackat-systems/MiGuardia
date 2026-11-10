@@ -18,7 +18,7 @@ import com.blackatsystems.miguardia.core.domain.backup.BackupRecord
 import com.blackatsystems.miguardia.core.domain.backup.BackupTable
 import com.blackatsystems.miguardia.core.domain.backup.BackupValue
 import com.blackatsystems.miguardia.core.domain.backup.MiGuardiaBackupContract
-import com.blackatsystems.miguardia.core.domain.backup.MiGuardiaBackupSchemaV6
+import com.blackatsystems.miguardia.core.domain.backup.MiGuardiaBackupSchemaV8
 import com.blackatsystems.miguardia.core.domain.backup.InvalidBackupException
 import com.blackatsystems.miguardia.core.domain.summary.SummaryOptionalFamily
 import com.blackatsystems.miguardia.core.domain.weather.WeatherUnitSystem
@@ -126,8 +126,12 @@ class PortablePreferencesGatewayInstrumentedTest {
 
             val database = snapshotWithShift(EVENT_SHIFT_ID)
             val portable = gateway.capture(database)
-            assertEquals(17, portable.size)
-            assertFalse(portable.any { it.key.contains("lock", ignoreCase = true) })
+            assertEquals(20, portable.size)
+            // The access lock stays on the device. «Show on lock screen» is a notification choice.
+            assertEquals(
+                listOf("notifications.show_on_lock_screen"),
+                portable.map { it.key }.filter { it.contains("lock", ignoreCase = true) },
+            )
             assertFalse(portable.any { it.key.contains("sound") || it.key.contains("retry") })
             assertEquals(
                 listOf(EVENT_KEY),
@@ -183,9 +187,117 @@ class PortablePreferencesGatewayInstrumentedTest {
         }
     }
 
+    @Test
+    fun legacyZoomValuesRoundTripWithoutDroppingAnyPortablePreference() = runBlocking {
+        withIsolatedGateway { gateway, display ->
+            val database = snapshotWithShift(EVENT_SHIFT_ID)
+            val portable = gateway.capture(database).map { preference ->
+                when (preference.key) {
+                    "profile.display_name" -> preference.copy(values = listOf("Persona ficticia compatible"))
+                    "display.theme" -> preference.copy(values = listOf(AppThemeMode.SYSTEM.name))
+                    "summary.intro_seen", "notifications.enabled", "weather.enabled",
+                    "weather.explanation_accepted" -> preference.copy(values = listOf("true"))
+                    "notifications.privacy" -> preference.copy(values = listOf(NotificationPrivacy.REDUCED.name))
+                    "notifications.attention" -> preference.copy(
+                        values = listOf(NotificationAttentionMode.VIBRATION_ONLY.name),
+                    )
+                    "notifications.reminder_minutes" -> preference.copy(values = listOf("120", "720"))
+                    "weather.unit" -> preference.copy(values = listOf(WeatherUnitSystem.FAHRENHEIT.name))
+                    else -> preference
+                }
+            }
+
+            // The retired UI preference remains lossless in old and newly captured Copias.
+            AppZoom.entries.forEach { legacyZoom ->
+                val incoming = portable.map { preference ->
+                    if (preference.key == LEGACY_ZOOM_PREFERENCE) {
+                        preference.copy(values = listOf(legacyZoom.percent.toString()))
+                    } else {
+                        preference
+                    }
+                }
+                assertTrue(display.edit().putInt(MainActivity.APP_ZOOM_PERCENT, -1).commit())
+
+                val restored = gateway.replace(incoming, database)
+                val capturedAgain = gateway.capture(database)
+
+                assertEquals(legacyZoom, restored.zoom)
+                assertEquals(AppThemeMode.SYSTEM, restored.theme)
+                assertEquals(legacyZoom.percent, display.getInt(MainActivity.APP_ZOOM_PERCENT, -1))
+                assertEquals(20, capturedAgain.size)
+                assertEquals(incoming, capturedAgain)
+            }
+        }
+    }
+
+    @Test
+    fun invalidLegacyZoomIsRejectedBeforeWritingPortablePreferences() = runBlocking {
+        withIsolatedGateway { gateway, display ->
+            val database = snapshotWithShift(EVENT_SHIFT_ID)
+            val initial = gateway.capture(database).map { preference ->
+                when (preference.key) {
+                    LEGACY_ZOOM_PREFERENCE -> preference.copy(values = listOf("150"))
+                    "profile.display_name" -> preference.copy(values = listOf("Persona ficticia original"))
+                    "display.theme" -> preference.copy(values = listOf(AppThemeMode.DARK.name))
+                    else -> preference
+                }
+            }
+            gateway.replace(initial, database)
+            val before = gateway.capture(database)
+            val zoomPreference = before.single { it.key == LEGACY_ZOOM_PREFERENCE }
+            val invalidZooms = listOf(
+                "-100", "0", "99", "101", "175", "201",
+                "4294967396", Long.MIN_VALUE.toString(), Long.MAX_VALUE.toString(), "not-a-number",
+            ).map { zoomPreference.copy(values = listOf(it)) } + listOf(
+                zoomPreference.copy(values = emptyList()),
+                zoomPreference.copy(values = listOf("100", "150")),
+                zoomPreference.copy(type = BackupPreferenceType.TEXT, values = listOf("100")),
+                zoomPreference.copy(type = BackupPreferenceType.BOOLEAN, values = listOf("true")),
+            )
+
+            invalidZooms.forEach { invalidZoom ->
+                val incoming = before.map { preference ->
+                    when (preference.key) {
+                        LEGACY_ZOOM_PREFERENCE -> invalidZoom
+                        "profile.display_name" -> preference.copy(values = listOf("No debe guardarse"))
+                        "display.theme" -> preference.copy(values = listOf(AppThemeMode.LIGHT.name))
+                        else -> preference
+                    }
+                }
+
+                assertTrue(assertSuspendFails { gateway.replace(incoming, database) } is InvalidBackupException)
+                assertEquals(before, gateway.capture(database))
+                assertEquals(150, display.getInt(MainActivity.APP_ZOOM_PERCENT, -1))
+            }
+        }
+    }
+
+    private suspend fun withIsolatedGateway(
+        block: suspend (PortablePreferencesGateway, SharedPreferences) -> Unit,
+    ) {
+        val base = ApplicationProvider.getApplicationContext<Context>()
+        val root = File(base.cacheDir, "portable-legacy-zoom-${UUID.randomUUID()}")
+            .also { check(it.mkdirs()) }
+        val context = IsolatedPreferencesContext(base, "backup-test-${UUID.randomUUID()}", root)
+        try {
+            val stores = List(4) { TestPreferencesDataStore(failReads = false) }
+            val gateway = PortablePreferencesGateway(
+                context,
+                GuardProfileStore(stores[0]),
+                SummaryPreferencesStore(stores[1]),
+                NotificationPreferencesStore(stores[2]),
+                WeatherPreferencesStore(stores[3]),
+            )
+            block(gateway, context.getSharedPreferences(MainActivity.DISPLAY_PREFERENCES, Context.MODE_PRIVATE))
+        } finally {
+            context.clearIsolatedPreferences()
+            root.deleteRecursively()
+        }
+    }
+
     private fun snapshotWithShift(shiftId: String): BackupDatabaseSnapshot = BackupDatabaseSnapshot(
         timelineId = null,
-        tables = MiGuardiaBackupSchemaV6.tables.map { spec ->
+        tables = MiGuardiaBackupSchemaV8.tables.map { spec ->
             BackupTable(
                 spec.name,
                 spec.columns,
@@ -262,6 +374,7 @@ class PortablePreferencesGatewayInstrumentedTest {
     }
 
     private companion object {
+        const val LEGACY_ZOOM_PREFERENCE = "display.zoom_percent"
         const val EVENT_SHIFT_ID = "00000000-0000-4000-8000-000000000019"
         const val EVENT_KEY = "shift:$EVENT_SHIFT_ID"
         const val STALE_EVENT_KEY = "shift:00000000-0000-4000-8000-000000000020"

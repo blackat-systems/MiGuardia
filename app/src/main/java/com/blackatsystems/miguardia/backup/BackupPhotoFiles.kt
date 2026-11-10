@@ -18,6 +18,16 @@ import java.util.UUID
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+enum class BackupPhotoSourcePolicy {
+    MERGE_BY_RECORD,
+    INCOMING_ONLY;
+
+    internal fun <T> select(current: T?, incoming: T?, resolvedRecords: Boolean): T? = when (this) {
+        MERGE_BY_RECORD -> if (resolvedRecords) current ?: incoming else incoming ?: current
+        INCOMING_ONLY -> incoming
+    }
+}
+
 class BackupPhotoFiles(context: Context) {
     private val applicationContext = context.applicationContext
     private val root = File(applicationContext.filesDir, PHOTO_DIRECTORY)
@@ -37,6 +47,8 @@ class BackupPhotoFiles(context: Context) {
         destination: File,
         currentSnapshot: BackupDatabaseSnapshot? = null,
         incomingSnapshot: BackupDatabaseSnapshot? = null,
+        sourcePolicy: BackupPhotoSourcePolicy = BackupPhotoSourcePolicy.MERGE_BY_RECORD,
+        expectedSha256ByStorageKey: Map<String, String>? = null,
     ): List<BackupPhotoAsset> = withContext(Dispatchers.IO) {
         if ((currentSnapshot == null) != (incomingSnapshot == null)) {
             throw InvalidBackupException("Falta la procedencia completa de las fotografías restauradas.")
@@ -44,6 +56,11 @@ class BackupPhotoFiles(context: Context) {
         destination.deletePrivateTreeChecked("una preparación anterior de fotografías")
         if (!destination.mkdirs()) throw IOException("No se pudo preparar las fotografías restauradas.")
         val rows = snapshot.photoRows()
+        if (expectedSha256ByStorageKey != null &&
+            expectedSha256ByStorageKey.keys != rows.mapTo(linkedSetOf(), BackupPhotoMetadata::storageKey)
+        ) {
+            throw InvalidBackupException("Faltan huellas de origen para preparar las fotografías restauradas.")
+        }
         val desiredRecords = snapshot.photoRecordsByStorageKey()
         val currentRecords = currentSnapshot?.photoRecordsByStorageKey()
         val incomingRecords = incomingSnapshot?.photoRecordsByStorageKey()
@@ -60,24 +77,35 @@ class BackupPhotoFiles(context: Context) {
                     incomingRecords == null || incomingRecords[photo.storageKey] == desiredRecord
                 }
                 ?.takeIf { candidate -> runCatching { requireMatchingFile(candidate, photo) }.isSuccess }
-            val source = (if (currentRecords == null) incoming ?: current else current ?: incoming)
+            val source = sourcePolicy.select(current, incoming, currentRecords != null)
                 ?: throw InvalidBackupException("No está disponible el archivo de la foto ${photo.storageKey}.")
+            val expectedHash = expectedSha256ByStorageKey?.getValue(photo.storageKey)
+            if (expectedHash != null && source.sha256() != expectedHash) {
+                throw InvalidBackupException("La fotografía de origen no coincide con la huella de la copia.")
+            }
             val target = safePhotoFile(destination, photo.storageKey)
             copyDurably(source, target)
             requireMatchingFile(target, photo)
-            BackupPhotoAsset(photo.copy(sha256 = target.sha256()), target)
+            val materializedHash = target.sha256()
+            if (expectedHash != null && materializedHash != expectedHash) {
+                throw InvalidBackupException("La fotografía preparada no coincide con la huella de la copia.")
+            }
+            BackupPhotoAsset(photo.copy(sha256 = materializedHash), target)
         }
     }
 
     suspend fun replaceFrom(
         snapshot: BackupDatabaseSnapshot,
         sourceDirectory: File?,
+        expectedSha256ByStorageKey: Map<String, String>? = null,
     ) = withContext(Dispatchers.IO) {
         val peer = File(applicationContext.filesDir, "$PHOTO_DIRECTORY.restore-new-${UUID.randomUUID()}")
         val previous = File(applicationContext.filesDir, "$PHOTO_DIRECTORY.restore-previous")
         var replacementFailure: Throwable? = null
         try {
-            materializeDesired(snapshot, sourceDirectory, peer)
+            materializeDesired(snapshot, sourceDirectory, peer,
+                sourcePolicy = BackupPhotoSourcePolicy.INCOMING_ONLY,
+                expectedSha256ByStorageKey = expectedSha256ByStorageKey)
             if (!root.exists() && previous.exists() && !previous.renameTo(root)) {
                 throw IOException("No se pudo recuperar el directorio de fotografías anterior.")
             }
@@ -155,19 +183,53 @@ class BackupPhotoFiles(context: Context) {
     }
 
     private fun BackupDatabaseSnapshot.photoRows(): List<BackupPhotoMetadata> {
-        val table = table("schedule_photos")
-        return table.records.map { row -> row.toPhotoMetadata(table.columns) }.sortedBy {
-            it.storageKey
+        val regular = PHOTO_METADATA_TABLES.flatMap { tableName ->
+            val table = table(tableName)
+            table.records.map { row -> row.toPhotoMetadata(table.columns) }
         }
+        val situations = tables.firstOrNull { it.name == "shift_situations" }?.let { table ->
+            table.records.mapNotNull { row -> row.toSituationEvidenceMetadata(table.columns) }
+        }.orEmpty()
+        return (regular + situations).sortedBy(BackupPhotoMetadata::storageKey)
     }
 
     private fun BackupDatabaseSnapshot.photoRecordsByStorageKey(): Map<String, BackupRecord> {
-        val table = table("schedule_photos")
-        val storageKeyIndex = table.columns.indexOf("storageKey")
-        return table.records.associateBy { record ->
-            (record.values[storageKeyIndex] as? BackupValue.Text)?.value
-                ?: throw InvalidBackupException("Un registro de fotografía no tiene storageKey.")
+        val pairs = PHOTO_METADATA_TABLES.flatMap { tableName ->
+            val table = table(tableName)
+            val storageKeyIndex = table.columns.indexOf("storageKey")
+            table.records.map { record ->
+                val key = (record.values[storageKeyIndex] as? BackupValue.Text)?.value
+                    ?: throw InvalidBackupException("Un registro de imagen no tiene storageKey.")
+                key to record
+            }
+        }.toMutableList()
+        tables.firstOrNull { it.name == "shift_situations" }?.let { situations ->
+            val situationKeyIndex = situations.columns.indexOf("evidenceStorageKey")
+            situations.records.forEach { record ->
+                val key = (record.values[situationKeyIndex] as? BackupValue.Text)?.value ?: return@forEach
+                pairs += key to record
+            }
         }
+        if (pairs.map(Pair<String, BackupRecord>::first).distinct().size != pairs.size) {
+            throw InvalidBackupException("Dos imágenes privadas comparten la misma referencia de archivo.")
+        }
+        return pairs.toMap()
+    }
+
+    private fun BackupRecord.toSituationEvidenceMetadata(columns: List<String>): BackupPhotoMetadata? {
+        fun value(name: String) = values[columns.indexOf(name)]
+        val key = (value("evidenceStorageKey") as? BackupValue.Text)?.value ?: return null
+        fun text(name: String): String = (value(name) as? BackupValue.Text)?.value
+            ?: throw InvalidBackupException("Una evidencia no tiene $name.")
+        fun integer(name: String): Long = (value(name) as? BackupValue.Integer)?.value
+            ?: throw InvalidBackupException("Una evidencia no tiene $name.")
+        return BackupPhotoMetadata(
+            recordId = text("shiftId"), storageKey = key,
+            mimeType = text("evidenceMimeType"), byteSize = integer("evidenceByteSize"),
+            pixelWidth = integer("evidencePixelWidth").toIntExact("ancho"),
+            pixelHeight = integer("evidencePixelHeight").toIntExact("alto"),
+            sha256 = text("evidenceSha256"),
+        )
     }
 
     private fun BackupRecord.toPhotoMetadata(columns: List<String>): BackupPhotoMetadata {
@@ -264,10 +326,11 @@ class BackupPhotoFiles(context: Context) {
 
     private companion object {
         const val PHOTO_DIRECTORY = "schedule_photos"
+        val PHOTO_METADATA_TABLES = listOf("schedule_photos", "shift_note_attachments")
         const val SPACE_MARGIN_BYTES = 8L * 1024L * 1024L
         val ZERO_SHA256 = "0".repeat(64)
         val SAFE_STORAGE_KEY = Regex(
-            "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}" +
+            "(?:(?:note|cancel)_)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}" +
                 "(?:_[0-9a-f]{8})?\\.(?:jpg|jpeg|png|webp)",
         )
     }

@@ -14,9 +14,10 @@ import java.time.Instant
 import java.util.UUID
 
 internal class AndroidShiftAlarmScheduler(private val context: Context) {
-    private val alarmManager = context.getSystemService(AlarmManager::class.java)
+    private val alarmManager by lazy { context.getSystemService(AlarmManager::class.java) }
 
     fun schedule(boundary: NotificationBoundary, preferExact: Boolean): Boolean {
+        com.blackatsystems.miguardia.QaInstrumentationScope.requireExternalAction(context, "notification.alarm-schedule")
         val triggerAt = boundary.identity.triggerAt.toEpochMilli()
         val pendingIntent = pendingIntent(boundary.identity.opaqueKey)
         val canUseExact = shouldScheduleExactAlarm(
@@ -50,6 +51,7 @@ internal class AndroidShiftAlarmScheduler(private val context: Context) {
     }
 
     fun cancel(opaqueKey: String) {
+        com.blackatsystems.miguardia.QaInstrumentationScope.requireExternalAction(context, "notification.alarm-cancel")
         alarmManager.cancel(pendingIntent(opaqueKey))
     }
 

@@ -19,11 +19,12 @@ import com.blackatsystems.miguardia.core.domain.backup.BackupPhotoMode
 import com.blackatsystems.miguardia.core.domain.backup.BackupPayloadCodec
 import com.blackatsystems.miguardia.core.domain.backup.BackupPreference
 import com.blackatsystems.miguardia.core.domain.backup.BackupPreview
+import com.blackatsystems.miguardia.core.domain.backup.BackupRecord
 import com.blackatsystems.miguardia.core.domain.backup.BackupValue
 import com.blackatsystems.miguardia.core.domain.backup.ExtractedBackup
 import com.blackatsystems.miguardia.core.domain.backup.InvalidBackupException
 import com.blackatsystems.miguardia.core.domain.backup.MiGuardiaBackupContract
-import com.blackatsystems.miguardia.core.domain.backup.MiGuardiaBackupSchemaV6
+import com.blackatsystems.miguardia.core.domain.backup.MiGuardiaBackupSchemaV8
 import com.blackatsystems.miguardia.core.domain.backup.ResolvedBackupConflict
 import com.blackatsystems.miguardia.core.domain.backup.backupKey
 import com.blackatsystems.miguardia.reports.ReportArtifactStore
@@ -449,8 +450,8 @@ class LocalBackupCoordinator(
                     currentPreferences,
                     incomingPreferences,
                 )
-                val currentPhotoRecords = currentDatabase.table("schedule_photos").records
-                val incomingPhotoRecords = extracted.payload.database.table("schedule_photos").records
+                val currentPhotoRecords = currentDatabase.imageMetadataRecords()
+                val incomingPhotoRecords = extracted.payload.database.imageMetadataRecords()
                 val incomingPhotos = incomingPhotoRecords.size
                 val incomingPhotoSet = incomingPhotoRecords.toSet()
                 val photosMissingFromBackup = currentPhotoRecords.count { it !in incomingPhotoSet }
@@ -546,6 +547,10 @@ class LocalBackupCoordinator(
                 incomingDatabase = session.extracted.payload.database,
                 expectedCurrentDatabase = session.currentDatabase,
                 expectedCurrentPreferences = session.currentPreferences,
+                photoSourcePolicy = if (choice == RestoreChoice.REPLACE_ALL)
+                    BackupPhotoSourcePolicy.INCOMING_ONLY else BackupPhotoSourcePolicy.MERGE_BY_RECORD,
+                expectedDesiredPhotoHashes = if (choice == RestoreChoice.REPLACE_ALL)
+                    session.extracted.payload.photos.associate { it.storageKey to it.sha256 } else null,
             )
         }
     }
@@ -600,6 +605,8 @@ class LocalBackupCoordinator(
         incomingDatabase: BackupDatabaseSnapshot,
         expectedCurrentDatabase: BackupDatabaseSnapshot,
         expectedCurrentPreferences: List<BackupPreference>,
+        photoSourcePolicy: BackupPhotoSourcePolicy,
+        expectedDesiredPhotoHashes: Map<String, String>?,
     ): PortableSettings = withContext(Dispatchers.IO) {
         val materialized = File(privateStaging, "desired-photos-${UUID.randomUUID()}")
         var operationFailure: Throwable? = null
@@ -615,7 +622,11 @@ class LocalBackupCoordinator(
                 materialized,
                 currentSnapshot = expectedCurrentDatabase,
                 incomingSnapshot = incomingDatabase,
+                sourcePolicy = photoSourcePolicy,
+                expectedSha256ByStorageKey = expectedDesiredPhotoHashes,
             )
+            val desiredPhotoHashes = expectedDesiredPhotoHashes
+                ?: newPhotos.associate { it.metadata.storageKey to it.metadata.sha256 }
             pauseRuntimesSafely()
             try {
                 localDataStore.backups.replaceWithWriteBarrier(
@@ -653,7 +664,7 @@ class LocalBackupCoordinator(
                         faultInjector.hit(RestoreCheckpoint.AFTER_DATABASE)
                         preferences.replace(desiredPreferences, desiredDatabase)
                         faultInjector.hit(RestoreCheckpoint.AFTER_PREFERENCES)
-                        photoFiles.replaceFrom(desiredDatabase, materialized)
+                        photoFiles.replaceFrom(desiredDatabase, materialized, desiredPhotoHashes)
                         faultInjector.hit(RestoreCheckpoint.AFTER_PHOTOS)
                     },
                 )
@@ -669,7 +680,7 @@ class LocalBackupCoordinator(
                 val verifiedSettings = verifyState(
                     desiredDatabase,
                     desiredPreferences,
-                    newPhotos.associate { it.metadata.storageKey to it.metadata.sha256 },
+                    desiredPhotoHashes,
                 )
                 journal.writePhase(RestoreJournalPhase.VERIFIED)
                 faultInjector.hit(RestoreCheckpoint.AFTER_VERIFIED)
@@ -798,7 +809,8 @@ class LocalBackupCoordinator(
             )
         }
         journal.openOld(snapshotMemoryLimitBytes).use { previous ->
-            applyState(previous.payload.database, previous.payload.preferences, previous.photoDirectory)
+            applyState(previous.payload.database, previous.payload.preferences, previous.photoDirectory,
+                previous.payload.photos.associate { it.storageKey to it.sha256 })
             verifyState(previous)
         }
         journal.writePhase(RestoreJournalPhase.COMMITTED)
@@ -809,12 +821,13 @@ class LocalBackupCoordinator(
         database: BackupDatabaseSnapshot,
         portablePreferences: List<BackupPreference>,
         photoDirectory: File,
+        photoHashes: Map<String, String>,
     ) {
         localDataStore.backups.replace(database)
         faultInjector.hit(RestoreCheckpoint.AFTER_DATABASE)
         preferences.replace(portablePreferences, database)
         faultInjector.hit(RestoreCheckpoint.AFTER_PREFERENCES)
-        photoFiles.replaceFrom(database, photoDirectory)
+        photoFiles.replaceFrom(database, photoDirectory, photoHashes)
         faultInjector.hit(RestoreCheckpoint.AFTER_PHOTOS)
     }
 
@@ -831,7 +844,9 @@ class LocalBackupCoordinator(
     ): PortableSettings {
         localDataStore.backups.verifyLiveAfterReopen(expectedDatabase, snapshotMemoryLimitBytes)
         val actualPreferences = preferences.capture(expectedDatabase)
-        if (actualPreferences != expectedPreferences) {
+        // A journal written before a preference existed does not list it. What gets applied is the
+        // completed list, so that is what the reopened state has to match.
+        if (actualPreferences != completePortablePreferences(expectedPreferences)) {
             throw InvalidBackupException("Las preferencias reabiertas no coinciden con la restauración.")
         }
         photoFiles.verify(expectedDatabase, expectedPhotoHashes)
@@ -846,6 +861,8 @@ class LocalBackupCoordinator(
                 extracted.payload.database,
                 extracted.photoDirectory,
                 temporary,
+                sourcePolicy = BackupPhotoSourcePolicy.INCOMING_ONLY,
+                expectedSha256ByStorageKey = extracted.payload.photos.associate { it.storageKey to it.sha256 },
             )
         } catch (error: Throwable) {
             validationFailure = error
@@ -899,16 +916,33 @@ class LocalBackupCoordinator(
     }
 
     private fun photoBytes(snapshot: BackupDatabaseSnapshot): Long {
-        val table = snapshot.table("schedule_photos")
-        val byteSizeIndex = table.columns.indexOf("byteSize")
-        return table.records.sumOf { record ->
-            (record.values[byteSizeIndex] as? BackupValue.Integer)?.value
-                ?: throw InvalidBackupException("Una fotografía no declara un tamaño válido.")
+        val regular = IMAGE_METADATA_TABLES.sumOf { tableName ->
+            val table = snapshot.table(tableName)
+            val byteSizeIndex = table.columns.indexOf("byteSize")
+            table.records.sumOf { record ->
+                (record.values[byteSizeIndex] as? BackupValue.Integer)?.value
+                    ?: throw InvalidBackupException("Una imagen no declara un tamaño válido.")
+            }
+        }
+        val situations = snapshot.table("shift_situations")
+        val sizeIndex = situations.columns.indexOf("evidenceByteSize")
+        return regular + situations.records.sumOf { record ->
+            when (val value = record.values[sizeIndex]) {
+                BackupValue.Null -> 0L
+                is BackupValue.Integer -> value.value
+                else -> throw InvalidBackupException("Una evidencia no declara un tamaño válido.")
+            }
         }
     }
 
+    private fun BackupDatabaseSnapshot.imageMetadataRecords(): List<BackupRecord> =
+        IMAGE_METADATA_TABLES.flatMap { table(it).records } + table("shift_situations").let { table ->
+            val keyIndex = table.columns.indexOf("evidenceStorageKey")
+            table.records.filter { it.values[keyIndex] != BackupValue.Null }
+        }
+
     private fun BackupDatabaseSnapshot.withPhotoChoice(includePhotos: Boolean): BackupDatabaseSnapshot =
-        if (includePhotos) this else localDataStore.backups.withoutSchedulePhotos(this)
+        if (includePhotos) this else localDataStore.backups.withoutPrivateImages(this)
 
     private fun historicalSectors(snapshot: BackupDatabaseSnapshot): List<String> = snapshot.tables
         .flatMap { table ->
@@ -922,7 +956,7 @@ class LocalBackupCoordinator(
 
     private fun BackupDatabaseSnapshot.recordsMissingOrChangedIn(
         replacement: BackupDatabaseSnapshot,
-    ): Int = MiGuardiaBackupSchemaV6.tables.sumOf { spec ->
+    ): Int = MiGuardiaBackupSchemaV8.tables.sumOf { spec ->
         val replacementByKey = replacement.table(spec.name).records.associateBy { record ->
             record.backupKey(spec)
         }
@@ -986,6 +1020,7 @@ class LocalBackupCoordinator(
     }
 
     companion object {
+        private val IMAGE_METADATA_TABLES = listOf("schedule_photos", "shift_note_attachments")
         const val REPLACE_CONFIRMATION = "Reemplazar todo"
         private val SUGGESTED_NAME_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd_HHmm")
         private const val SPACE_MARGIN_BYTES = 16L * 1024L * 1024L

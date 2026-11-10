@@ -1,5 +1,7 @@
 package com.blackatsystems.miguardia.ui.management
 
+import com.blackatsystems.miguardia.ui.EventTimeRangeStyle
+import com.blackatsystems.miguardia.ui.formatEventTimeRange
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -32,6 +34,7 @@ import com.blackatsystems.miguardia.core.domain.shift.buildV2ShiftWrite
 import com.blackatsystems.miguardia.core.domain.shift.editV2ShiftPositionOnly
 import com.blackatsystems.miguardia.core.domain.shift.editV2ShiftWrite
 import com.blackatsystems.miguardia.core.domain.shift.planV2ShiftBatch
+import com.blackatsystems.miguardia.core.domain.shift.stampV2ShiftEditAtSave
 import com.blackatsystems.miguardia.core.domain.work.ResolvedWorkConfigurationRevision
 import com.blackatsystems.miguardia.core.domain.work.WorkCatalog
 import com.blackatsystems.miguardia.core.domain.work.WorkConfigurationHistory
@@ -321,8 +324,7 @@ internal class V2ShiftEditCoordinator(
         val state = _uiState.value
         if (
             state.isBlocking ||
-            state.inspectionState != V2ShiftDayInspectionState.CONTENT ||
-            !state.hasEditableRows
+            state.inspectionState != V2ShiftDayInspectionState.CONTENT
         ) {
             return
         }
@@ -670,8 +672,14 @@ internal class V2ShiftEditCoordinator(
                 return@launch
             }
             try {
+                val savedAt = clock.instant()
+                val mutation = prepared.mutation.copy(
+                    shiftsToUpdate = prepared.mutation.shiftsToUpdate.map { reviewed ->
+                        stampV2ShiftEditAtSave(prepared.original, reviewed, savedAt)
+                    },
+                )
                 v2ShiftRepository.applyV2Batch(
-                    mutation = prepared.mutation,
+                    mutation = mutation,
                     expectedOccupancy = prepared.expectedOccupancy,
                     expectedUpdates = V2ShiftWriteExpectation.capture(listOf(prepared.original)),
                 )
@@ -1239,6 +1247,7 @@ internal class V2ShiftEditCoordinator(
         val templates = catalog.workTemplates.filter { template ->
             template.isActive &&
                 places[template.workPlaceId] != null &&
+                places[template.workPlaceId]?.objectiveId == write.snapshot.objectiveId &&
                 types[template.workTypeId] != null &&
                 catalog.ruleRevisionAt(template.workPlaceId, write.shift.localStartDate) != null
         }
@@ -1552,7 +1561,7 @@ internal class V2ShiftEditCoordinator(
     }
 
     private fun Shift.timeRange(): String =
-        "${startTimeSnapshot.format(TIME_FORMATTER)}–${endTimeSnapshot.format(TIME_FORMATTER)}"
+        formatEventTimeRange(startAt, endAt, zoneId, EventTimeRangeStyle.COMPACT)
 
     private fun reviewFingerprint(
         original: V2ShiftWrite,
@@ -1667,7 +1676,6 @@ internal class V2ShiftEditCoordinator(
     private companion object {
         const val MAX_POSITION_LENGTH = 120
         val DATE_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/uuuu")
-        val TIME_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
     }
 }
 

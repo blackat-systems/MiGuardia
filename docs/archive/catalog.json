@@ -1,0 +1,2582 @@
+{
+  "kind": "recoverable_archive_not_instructions",
+  "backup_id": "MG3-backup-20261103-poda",
+  "files": [
+    {
+      "source": ".ignore",
+      "snapshot": ".ignore",
+      "sha256": "053e5e49157520c803f8203e9b477043315e700a8495284ed9212653f29a1e48",
+      "bytes": 2879,
+      "disposition": "replaced"
+    },
+    {
+      "source": "AGENTS.md",
+      "snapshot": "AGENTS.md",
+      "sha256": "d4d3a9addad7824fb3b03db8e6890a2c3b82b70cc61c90d5ef2d9121759b9ff8",
+      "bytes": 8608,
+      "disposition": "replaced"
+    },
+    {
+      "source": "README.md",
+      "snapshot": "README.md",
+      "sha256": "245ba8c46390cd2128411c0edbe8839e23e9abc8a850505e1486c9db10f5fd24",
+      "bytes": 6184,
+      "disposition": "replaced"
+    },
+    {
+      "source": "docs/EVIDENCIA.md",
+      "snapshot": "docs/EVIDENCIA.md",
+      "sha256": "9c4ecf35393c0ea4608589841a42581416dfbc67ac4076b414dfc06295558aea",
+      "bytes": 2932,
+      "disposition": "replaced"
+    },
+    {
+      "source": "docs/GUIA_DE_TRABAJO_CODEX_2_0.md",
+      "snapshot": "docs/GUIA_DE_TRABAJO_CODEX_2_0.md",
+      "sha256": "7af04fb89757e3e90e3daa4e52c0a7c20e7115884deabdee81b9a29af1d1a48c",
+      "bytes": 1557,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/HANDOFF_A_MAIN_3_0.md",
+      "snapshot": "docs/HANDOFF_A_MAIN_3_0.md",
+      "sha256": "84b949d75a228ec3bddc10ff72926ae93a7d225d98a1eb613f44e95bb45b784a",
+      "bytes": 11713,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/HANDOFF_STAGE_10_A_MAIN_3_0.md",
+      "snapshot": "docs/HANDOFF_STAGE_10_A_MAIN_3_0.md",
+      "sha256": "ff7e1d95ba002483deffeeec08acbbd3ca6be4c6b9d7a29201a19390a4dc6347",
+      "bytes": 5751,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/HANDOFF_STAGE_11_A_MAIN_3_0.md",
+      "snapshot": "docs/HANDOFF_STAGE_11_A_MAIN_3_0.md",
+      "sha256": "0595024d5aee5b64c1a3c079684655804377eab86155572e584aaa5ca33a761b",
+      "bytes": 7945,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/HANDOFF_STAGE_2_A_MAIN_3_0.md",
+      "snapshot": "docs/HANDOFF_STAGE_2_A_MAIN_3_0.md",
+      "sha256": "3c55e8253e7e4249d4e1b92c2256c87af393b637d034797ceaa4f864f93343d6",
+      "bytes": 16555,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/HANDOFF_STAGE_3_A_MAIN_3_0.md",
+      "snapshot": "docs/HANDOFF_STAGE_3_A_MAIN_3_0.md",
+      "sha256": "e4f7b09889a8bfbc78693cacf649400a8e369f1e457c67c00b97c6295252027c",
+      "bytes": 23578,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/HANDOFF_STAGE_4_A_MAIN_3_0.md",
+      "snapshot": "docs/HANDOFF_STAGE_4_A_MAIN_3_0.md",
+      "sha256": "a781e8bd6135ed3fff702d894e7748d3104b34426c9e619a5c15d26e5866055a",
+      "bytes": 5108,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/HANDOFF_STAGE_5_A_MAIN_3_0.md",
+      "snapshot": "docs/HANDOFF_STAGE_5_A_MAIN_3_0.md",
+      "sha256": "0baa467534504276898c93b723ca6a48ed0584f85ce4abff4293bcca4093a793",
+      "bytes": 27186,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/HANDOFF_STAGE_6_A_MAIN_3_0.md",
+      "snapshot": "docs/HANDOFF_STAGE_6_A_MAIN_3_0.md",
+      "sha256": "b37845c47d1c415ea89d331dd7674e5a9a413dcee1c9b5b6e7b7f974fa36595d",
+      "bytes": 5869,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/HANDOFF_STAGE_6_RELEVAMIENTO_NUEVO_A_MAIN_3_0.md",
+      "snapshot": "docs/HANDOFF_STAGE_6_RELEVAMIENTO_NUEVO_A_MAIN_3_0.md",
+      "sha256": "30c1c1640b22c63557f741daec07e04379be4af4fb0a01b899e9309fc146f23e",
+      "bytes": 5042,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/HANDOFF_STAGE_7_A_MAIN_3_0.md",
+      "snapshot": "docs/HANDOFF_STAGE_7_A_MAIN_3_0.md",
+      "sha256": "e646e42e3db6edc3879aa179c0f69f1a8d26cfa07bbda95953526304672faab4",
+      "bytes": 11967,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/HANDOFF_STAGE_8_A_MAIN_3_0.md",
+      "snapshot": "docs/HANDOFF_STAGE_8_A_MAIN_3_0.md",
+      "sha256": "c8f99fc11c537ea810ef22aebba2d0e5c515520d458e33ecbebac18768151086",
+      "bytes": 22597,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/HANDOFF_STAGE_9_A_MAIN_3_0.md",
+      "snapshot": "docs/HANDOFF_STAGE_9_A_MAIN_3_0.md",
+      "sha256": "3d21154c45b9f2bc3b5120f3f5c3da7e1044ed0ef01e749bd6e806f556f41473",
+      "bytes": 12739,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/LECTURAS_POR_TAREA.md",
+      "snapshot": "docs/LECTURAS_POR_TAREA.md",
+      "sha256": "200d5a7f5761f90bbfaa6b655fc2dcf3e9e9f74d369d5c236f6b91676ca4c1da",
+      "bytes": 2780,
+      "disposition": "replaced"
+    },
+    {
+      "source": "docs/MAPA_MAESTRO_MIGUARDIA_2_0.md",
+      "snapshot": "docs/MAPA_MAESTRO_MIGUARDIA_2_0.md",
+      "sha256": "84d4d2943e36f2a9c7a978c96b1976de17c30b2f90c0e7b9a84c679ad4c53e8b",
+      "bytes": 3161,
+      "disposition": "replaced"
+    },
+    {
+      "source": "docs/ORQUESTACION_MAIN.md",
+      "snapshot": "docs/ORQUESTACION_MAIN.md",
+      "sha256": "388d7ef1e43f3e889910099179b0dc6b5e603cd6571fd48b83eed60d0ff4b250",
+      "bytes": 16170,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/PLANIFICACION_MIGUARDIA_2_0.md",
+      "snapshot": "docs/PLANIFICACION_MIGUARDIA_2_0.md",
+      "sha256": "8e575553932c893ecc0710cd411a6bb7fcb6b0c1b1466cb2d6907a679ab8e5ef",
+      "bytes": 29200,
+      "disposition": "replaced"
+    },
+    {
+      "source": "docs/PLAN_MAESTRO_CIERRE_3_0.md",
+      "snapshot": "docs/PLAN_MAESTRO_CIERRE_3_0.md",
+      "sha256": "b9c3022991c0cab185faa62ea8bbae2270a5e93a8f78cbc19b6f15d561302cdb",
+      "bytes": 18584,
+      "disposition": "replaced"
+    },
+    {
+      "source": "docs/PROMPT_MAESTRO_MAIN.md",
+      "snapshot": "docs/PROMPT_MAESTRO_MAIN.md",
+      "sha256": "f5f00c8867eb61f6394367775bdb8aadb6290ac49cbe72eef2469876e5fc2032",
+      "bytes": 291,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/PROMPT_MAESTRO_MAIN_2_0.md",
+      "snapshot": "docs/PROMPT_MAESTRO_MAIN_2_0.md",
+      "sha256": "c79ed653e364ff960e5fbc51dfad24c24f765cb0e0268bba266a210de3b66a7a",
+      "bytes": 230,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/PROMPT_MAESTRO_PAUSA_REVISION_Y_REANUDACION.md",
+      "snapshot": "docs/PROMPT_MAESTRO_PAUSA_REVISION_Y_REANUDACION.md",
+      "sha256": "897ecd8868d25d2b597ecbbf06a2cdc10255f4b22ee82fd49ea6531917ea4d95",
+      "bytes": 264,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/PROMPT_MAESTRO_PLANIFICACION_2_0.md",
+      "snapshot": "docs/PROMPT_MAESTRO_PLANIFICACION_2_0.md",
+      "sha256": "97dca56be3c5fbd67a827fbe9ffce4fd1b8a3084dc8e853368ab709cf45e057d",
+      "bytes": 269,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/STATUS.md",
+      "snapshot": "docs/STATUS.md",
+      "sha256": "170a2c1187ce9851d3b6362d5e4bb2843f527819e888e275425881d9ca6a8284",
+      "bytes": 10024,
+      "disposition": "replaced"
+    },
+    {
+      "source": "docs/WORKFLOW.md",
+      "snapshot": "docs/WORKFLOW.md",
+      "sha256": "4995463ef6cfd99000e92749e96575664000b9e4e251b374db94a10151cb9d2d",
+      "bytes": 7370,
+      "disposition": "replaced"
+    },
+    {
+      "source": "docs/adr/0001-base-tecnica-y-arquitectura-inicial.md",
+      "snapshot": "docs/adr/0001-base-tecnica-y-arquitectura-inicial.md",
+      "sha256": "74b56a03206d6c46a18332134d3b5fe0386c44b7ce84e1475f4e490b570e1dea",
+      "bytes": 8544,
+      "disposition": "replaced"
+    },
+    {
+      "source": "docs/adr/0005-motor-basico-de-horas.md",
+      "snapshot": "docs/adr/0005-motor-basico-de-horas.md",
+      "sha256": "cdaa9229a63e1a5c60019f833778d5e90b63b39923af2ba2881dcdd9808c2f22",
+      "bytes": 3830,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/adr/0006-novedades-feriados-y-notas.md",
+      "snapshot": "docs/adr/0006-novedades-feriados-y-notas.md",
+      "sha256": "dc09f892af6b6f41568a394a1a8dd3c25e9aa324fd73d61fb94bb100c1602f39",
+      "bytes": 3250,
+      "disposition": "replaced"
+    },
+    {
+      "source": "docs/adr/0010-notificaciones-y-alarmas-locales.md",
+      "snapshot": "docs/adr/0010-notificaciones-y-alarmas-locales.md",
+      "sha256": "edff7dced8a62273f2902731e025783e8f2ad0f7da7319559dc0de886bcd6cd8",
+      "bytes": 13333,
+      "disposition": "replaced"
+    },
+    {
+      "source": "docs/adr/0014-onboarding-local-versionado-y-primera-carga-guiada.md",
+      "snapshot": "docs/adr/0014-onboarding-local-versionado-y-primera-carga-guiada.md",
+      "sha256": "b0b0bd039c871eb6bf39f9b633b9a00e551226b7192e5d31633aa463675d8f79",
+      "bytes": 4387,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/adr/0016-corte-funcional-miguardia-1-0.md",
+      "snapshot": "docs/adr/0016-corte-funcional-miguardia-1-0.md",
+      "sha256": "217a3d673267846486513bbadfbebfbbad058d1256c04c51384cb49be632128e",
+      "bytes": 3497,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/adr/0017-inicio-miguardia-2-0.md",
+      "snapshot": "docs/adr/0017-inicio-miguardia-2-0.md",
+      "sha256": "c6fc17d12062fce653848974b490d081383e939ffb9e63501e6f18df7a8fc2e1",
+      "bytes": 1957,
+      "disposition": "replaced"
+    },
+    {
+      "source": "docs/adr/0018-motor-horas-configurable-2-0.md",
+      "snapshot": "docs/adr/0018-motor-horas-configurable-2-0.md",
+      "sha256": "16d458fb49f9139e58d4d6d12cf4133179eb814060deff06b5a6c79659a4006c",
+      "bytes": 8691,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/adr/0021-persistencia-configuracion-y-origen-room-v6.md",
+      "snapshot": "docs/adr/0021-persistencia-configuracion-y-origen-room-v6.md",
+      "sha256": "55ba8f2870caf7c01f72123520411f64aebd632958fdd334d655382cf7bdb53c",
+      "bytes": 5476,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/adr/README.md",
+      "snapshot": "docs/adr/README.md",
+      "sha256": "9e5f36526c8dbc40d0c33f5f0972584a2389ae652bc39579a73b7dcc52ab644c",
+      "bytes": 13925,
+      "disposition": "replaced"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/AGENTS.snapshot.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/AGENTS.snapshot.md",
+      "sha256": "310ab1dd6c850a22d0758ac842a34f903917afb0f903ff2340200420ca6f7f5a",
+      "bytes": 14187,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/README.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/README.md",
+      "sha256": "f6bcb44db37502891d52902048f27da645a5e4644e43054e479cc972e0c35fe3",
+      "bytes": 4276,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/GUIA_DE_TRABAJO_CODEX_2_0.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/GUIA_DE_TRABAJO_CODEX_2_0.md",
+      "sha256": "6a13b544821d0fe817d53cee1f10a8ad1d71c9bb53f2991b930770cc86b3c494",
+      "bytes": 7033,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/MAPA_MAESTRO_MIGUARDIA_2_0.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/MAPA_MAESTRO_MIGUARDIA_2_0.md",
+      "sha256": "7feee6c7d15152c9934b44534274aef1c9839c84aaf363a557cdcebbd9a1b62a",
+      "bytes": 21771,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/PLANIFICACION_MIGUARDIA_2_0.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/PLANIFICACION_MIGUARDIA_2_0.md",
+      "sha256": "89abbb02805b8b1c870ab6cc445118d325d50bf1ec4d9c2fca4cc6248686df82",
+      "bytes": 36958,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/PROMPT_MAESTRO_MAIN.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/PROMPT_MAESTRO_MAIN.md",
+      "sha256": "c8f8b18ab9d927e41d8d420198f4d047b7826a641192a6e813748bcfd27e533f",
+      "bytes": 66063,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/PROMPT_MAESTRO_MAIN_2_0.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/PROMPT_MAESTRO_MAIN_2_0.md",
+      "sha256": "fe92969be5bb1c7a611804d2e6b4c75c265ba78d77dc93c2aaf6d64734fafdcd",
+      "bytes": 16140,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/PROMPT_MAESTRO_PAUSA_REVISION_Y_REANUDACION.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/PROMPT_MAESTRO_PAUSA_REVISION_Y_REANUDACION.md",
+      "sha256": "615f529c7a78f6527a83c93177d7d3c2008840a7a537287634295c42c3da93b8",
+      "bytes": 37172,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/PROMPT_MAESTRO_PLANIFICACION_2_0.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/PROMPT_MAESTRO_PLANIFICACION_2_0.md",
+      "sha256": "c7b64b5a10183bb38ec2da3044edd0368abcb87d944528cc23a0a3f1dceb87e9",
+      "bytes": 6307,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/STATUS.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/STATUS.md",
+      "sha256": "6170beba19fb1d67f0c66a7f8ebd61905709535b03fa6de0559db7a984f0941b",
+      "bytes": 102672,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/adr/0001-base-tecnica-y-arquitectura-inicial.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/adr/0001-base-tecnica-y-arquitectura-inicial.md",
+      "sha256": "722015e555155452443756b0b0ea1611282eb9c7cdf934be6d9841d9ed0f65c5",
+      "bytes": 8250,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/adr/0002-persistencia-local-v1.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/adr/0002-persistencia-local-v1.md",
+      "sha256": "42e969e98b495b3b35fc68cb91e4663533cdd0810671610a84ce366086fed562",
+      "bytes": 3098,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/adr/0003-proyeccion-y-calendario-mensual.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/adr/0003-proyeccion-y-calendario-mensual.md",
+      "sha256": "9fe30a79d91749f4ad781888770a9494b2fae055fd437c0d9bed0d230fc89d9e",
+      "bytes": 3674,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/adr/0004-objetivos-horarios-y-mutaciones-de-guardias.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/adr/0004-objetivos-horarios-y-mutaciones-de-guardias.md",
+      "sha256": "4a276105bab6a2210baee295f4790e95d9e4384e443e0f77aafe0a99903fdaad",
+      "bytes": 4352,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/adr/0005-motor-basico-de-horas.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/adr/0005-motor-basico-de-horas.md",
+      "sha256": "0f2554b45b6785067506df9f023f00c51e95b88b053454c040590bbc7cc7a8cb",
+      "bytes": 3461,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/adr/0006-novedades-feriados-y-notas.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/adr/0006-novedades-feriados-y-notas.md",
+      "sha256": "b5b60950386cccf51114f543ba12e01934b84ba11da62bab23711d0ce9aee0b5",
+      "bytes": 3024,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/adr/0007-vacaciones-y-persistencia-local-v3.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/adr/0007-vacaciones-y-persistencia-local-v3.md",
+      "sha256": "b5b9b7004704a3c65c910e8b3dc5fa32fe2ea61e97cdcd1e7b33192e6036d69c",
+      "bytes": 2704,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/adr/0008-fotos-mensuales-y-persistencia-local-v4.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/adr/0008-fotos-mensuales-y-persistencia-local-v4.md",
+      "sha256": "9dfd7f130a46dcee30339aa0003c92e3da15f374e094cb4f434e3be5c8f9d0aa",
+      "bytes": 2840,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/adr/0009-motor-de-proximo-evento.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/adr/0009-motor-de-proximo-evento.md",
+      "sha256": "55eacc83005b66493f447fe707bebde2d9526d6602bf9ca6d7b89d4b5cd18bb6",
+      "bytes": 2787,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/adr/0010-notificaciones-y-alarmas-locales.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/adr/0010-notificaciones-y-alarmas-locales.md",
+      "sha256": "f5041d2db7ede1eabd72c2103e916e8db3f4967fbba587c1f26c4aab0a28354a",
+      "bytes": 13197,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/adr/0011-clima-local-cache-y-proveedor.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/adr/0011-clima-local-cache-y-proveedor.md",
+      "sha256": "0b0b2b2d661e69f6065127c93006508a8a6eccee5439fa49d453453d735c09db",
+      "bytes": 11147,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/adr/0013-perfil-laboral-local-en-datastore.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/adr/0013-perfil-laboral-local-en-datastore.md",
+      "sha256": "b448d7c5e915851486af64ec546a3a226f63d6ff2271f0404dd377cdd7e24736",
+      "bytes": 2910,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/adr/0014-onboarding-local-versionado-y-primera-carga-guiada.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/adr/0014-onboarding-local-versionado-y-primera-carga-guiada.md",
+      "sha256": "d9c50e046040165f4dead52b15f6ea0239cb5b187cbe8de3208f7e02ddcaae79",
+      "bytes": 4288,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/adr/0015-menu-lateral-como-navegacion-principal.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/adr/0015-menu-lateral-como-navegacion-principal.md",
+      "sha256": "2295508c2b56bb4af2f7b2aaf74ff5e23dacdefab55b4d796df93356a856933f",
+      "bytes": 3476,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/adr/0016-corte-funcional-miguardia-1-0.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/adr/0016-corte-funcional-miguardia-1-0.md",
+      "sha256": "e6368db7b56088a3777868acad666c08068daf673e9ffae384b315a4e88b6c5d",
+      "bytes": 3278,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/adr/0017-inicio-miguardia-2-0.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/adr/0017-inicio-miguardia-2-0.md",
+      "sha256": "08df8940bc47cdef44a9cac551efc2ea3eee250f66220188d690f6fb47542d9e",
+      "bytes": 1779,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/adr/0018-motor-horas-configurable-2-0.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/adr/0018-motor-horas-configurable-2-0.md",
+      "sha256": "061ef652498a97f2a63b9235303d2806473d8723f66600abea5b52e40b014a8b",
+      "bytes": 8556,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/adr/0019-configuracion-laboral-versionada-y-vocabulario-sectorial.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/adr/0019-configuracion-laboral-versionada-y-vocabulario-sectorial.md",
+      "sha256": "34e8b513946320ce4f2c3ebe75d8a6d25f9f8b357bc6a224d7e4b4eb6dba3fc9",
+      "bytes": 11246,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/adr/0020-modelo-laboral-personalizable-y-vigencia-por-fecha.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/adr/0020-modelo-laboral-personalizable-y-vigencia-por-fecha.md",
+      "sha256": "0d1a203ee9666964794e409ba3ba4656602d2546564d58233febcbaba1a5d24b",
+      "bytes": 3867,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/adr/0021-persistencia-configuracion-y-origen-room-v6.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/adr/0021-persistencia-configuracion-y-origen-room-v6.md",
+      "sha256": "2b2622206f36a872d65f020bf40c39c86d48fd2690dccc0c9760071df5807c8c",
+      "bytes": 5311,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/adr/0022-catalogo-laboral-y-fotografia-room-v7.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/adr/0022-catalogo-laboral-y-fotografia-room-v7.md",
+      "sha256": "aa53b89f7d0f23f039a335326ee4c75f6c9d8972c14f67ad1d45dd9e293d44e2",
+      "bytes": 5351,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/adr/0023-precondicion-transaccional-para-lotes-v2.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/adr/0023-precondicion-transaccional-para-lotes-v2.md",
+      "sha256": "2c2140bbd1302a9efc7920ea666dbb636d837466100739a1f7f614dbe58b49b7",
+      "bytes": 4245,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/adr/0024-continuidad-de-codigo-sin-migracion-de-datos-v1.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/adr/0024-continuidad-de-codigo-sin-migracion-de-datos-v1.md",
+      "sha256": "f075480a8f7bf47a11735480a6f04d4ff23a62afc9f1dc7ceafdf3d02e2fb32f",
+      "bytes": 4690,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/adr/0025-cas-par-historico-edicion-eliminacion-v2.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/adr/0025-cas-par-historico-edicion-eliminacion-v2.md",
+      "sha256": "54f0532d13ddb62f018cc15c56cd3cfd27b8611faae9b3936693d6b15073b341",
+      "bytes": 3987,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/adr/0026-base-room-exclusiva-v2-y-retiro-del-modo-v1.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/adr/0026-base-room-exclusiva-v2-y-retiro-del-modo-v1.md",
+      "sha256": "64f6c6b2309113068690f1af8b9df3fd31b5f6683d4c2f6c742151bee05c31a5",
+      "bytes": 8540,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/adr/0027-planes-recurrentes-versionados-y-ocurrencias-protegidas.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/adr/0027-planes-recurrentes-versionados-y-ocurrencias-protegidas.md",
+      "sha256": "406dc23482882ad95a46b5453eabc3159c042bcaa450c06e2382964e9985751e",
+      "bytes": 11440,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/adr/0028-horario-real-y-extras-exactas-v2.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/adr/0028-horario-real-y-extras-exactas-v2.md",
+      "sha256": "75875d2ce1fc35e86fb39dc9eee3733477155a0168c17c609a18e1f40280a97c",
+      "bytes": 12273,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/adr/0029-reinicio-explicito-y-extras-independientes.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/adr/0029-reinicio-explicito-y-extras-independientes.md",
+      "sha256": "9e27bf0ab00a219af7624d9ade739d0666cc0e7370931db54645e5f5a1279c21",
+      "bytes": 8033,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/adr/0030-disponibilidad-como-ventana-pasiva.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/adr/0030-disponibilidad-como-ventana-pasiva.md",
+      "sha256": "71264a97e699dd381b5375488afd0e0ba42ead3917dad7ad763428f4648e54b0",
+      "bytes": 4028,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/adr/0031-resumen-derivado-y-presentacion-personalizable.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/adr/0031-resumen-derivado-y-presentacion-personalizable.md",
+      "sha256": "44bf985ffb9a5f1d8ae6909839dd2bc10a117fc7d2f8c8aa5a379fe83a421c66",
+      "bytes": 4253,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/adr/0032-proyeccion-unica-de-eventos-y-avisos-locales-v2.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/adr/0032-proyeccion-unica-de-eventos-y-avisos-locales-v2.md",
+      "sha256": "212c5ae53685b68cc775210253904f052197a7d2e6cf03c5067473ddf0a9135b",
+      "bytes": 5935,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/adr/0033-widget-local-sobre-proyeccion-v2.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/adr/0033-widget-local-sobre-proyeccion-v2.md",
+      "sha256": "6f12608f54ddae47efbe7dbdd5d805c127e5264c18a21069935ad561209cebac",
+      "bytes": 9500,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/adr/0034-informes-locales-derivados-y-exportacion-segura.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/adr/0034-informes-locales-derivados-y-exportacion-segura.md",
+      "sha256": "e62beaa7486f7092f9367f43f73919e336e5b137ff060d06cc3654ef08aa6043",
+      "bytes": 8341,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/adr/0035-copias-locales-versionadas-y-restauracion-atomica.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/adr/0035-copias-locales-versionadas-y-restauracion-atomica.md",
+      "sha256": "0e76eb56fcf5b00f8dae440ca58b5879aa0bb21dfe8c828bb253a3dc427f41b2",
+      "bytes": 15453,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/adr/0036-bloqueo-local-con-autenticacion-del-dispositivo.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/adr/0036-bloqueo-local-con-autenticacion-del-dispositivo.md",
+      "sha256": "2cf91f8ec83888718696417bf02b566677e3634b58f56c0ad5e90726199fdeb1",
+      "bytes": 11157,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/adr/0037-ayuda-y-recorrido-inicial-versionado-v2.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/adr/0037-ayuda-y-recorrido-inicial-versionado-v2.md",
+      "sha256": "bd6c9ba6354844952eb07db07e0dcd3e350fb8a76ed95abf1923bc8ff6df58cf",
+      "bytes": 8618,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/adr/0038-ubicacion-puntual-y-clima-por-objetivo.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/adr/0038-ubicacion-puntual-y-clima-por-objetivo.md",
+      "sha256": "9d340626a50973aa265150d0ba0397bb84f0d8f820debc764c541ccb705d0bf0",
+      "bytes": 5367,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/adr/0039-distribucion-beta-mediante-apk-firmada-y-web-limitada.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/adr/0039-distribucion-beta-mediante-apk-firmada-y-web-limitada.md",
+      "sha256": "4ab59f92c9dd8111bab00514878c3c2fea1ac6c191af0cb8a44dd094f819174d",
+      "bytes": 14669,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/adr/0040-actualizacion-manual-verificada-sin-instalador.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/adr/0040-actualizacion-manual-verificada-sin-instalador.md",
+      "sha256": "e6b6a5d2207eb90e8a29c224fccc5582075d1865345c9254503b60f744eb45d6",
+      "bytes": 4424,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/prompts/ACCESO_A_LA_BETA_Y_OPINIONES_ANDROID_V2.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/prompts/ACCESO_A_LA_BETA_Y_OPINIONES_ANDROID_V2.md",
+      "sha256": "f183ef84edbb107e48bd4b779d3703796c2ea21f4cddef613c8eade757bc1759",
+      "bytes": 30951,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/prompts/ACTUALIZACION_MANUAL_SIN_PERDER_DATOS_V2.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/prompts/ACTUALIZACION_MANUAL_SIN_PERDER_DATOS_V2.md",
+      "sha256": "bc0e054d3310a0e859d20ee01935fef8615bf061338eb09f2c1ae45a40458906",
+      "bytes": 34196,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/prompts/APOYAR_MIGUARDIA_EN_EL_MENU_ANDROID_V2.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/prompts/APOYAR_MIGUARDIA_EN_EL_MENU_ANDROID_V2.md",
+      "sha256": "db695a08ce168a59f2b590daad0c70d5be9cd9f10dd104a53eb9539f8117e055",
+      "bytes": 18754,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/prompts/AUDITORIA_INTEGRAL_DEL_NUCLEO_Y_COMPATIBILIDAD_ANDROID_V2.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/prompts/AUDITORIA_INTEGRAL_DEL_NUCLEO_Y_COMPATIBILIDAD_ANDROID_V2.md",
+      "sha256": "3273e6986a90ba45bb07a8329b976159596b0a76176f5cdf033eb2001b267227",
+      "bytes": 37015,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/prompts/AYUDA_Y_RECORRIDO_INICIAL_V2.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/prompts/AYUDA_Y_RECORRIDO_INICIAL_V2.md",
+      "sha256": "9851ce74b08620798d7aaae75b6ac573ecbb468b10d7f7135aebbb6f07ee725d",
+      "bytes": 27556,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/prompts/BLOQUEO_DE_ACCESO_LOCAL_V2.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/prompts/BLOQUEO_DE_ACCESO_LOCAL_V2.md",
+      "sha256": "212dcd4c4a70620930fd26b5f00435aedac1b021169173341e5bdf4722ba412d",
+      "bytes": 34569,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/prompts/CALENDARIO_FINAL_Y_TARJETA_SUPERIOR_V2.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/prompts/CALENDARIO_FINAL_Y_TARJETA_SUPERIOR_V2.md",
+      "sha256": "411468a0c6d1b531aed8f4832e0f5c98e047b8c20e668fafc192ef4370d0b5b3",
+      "bytes": 29588,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/prompts/CALENDARIO_MENSUAL.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/prompts/CALENDARIO_MENSUAL.md",
+      "sha256": "91316b07a07210173c00693f7ffa9f0e91b2ed98b66cd5d1fc7b32b04d0f3ee7",
+      "bytes": 24205,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/prompts/CALENDARIO_MODO_CONSULTA_Y_EDICION.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/prompts/CALENDARIO_MODO_CONSULTA_Y_EDICION.md",
+      "sha256": "69f57504e55769fa7df285adc513f03a3e4c654d3b9a41de74225e91f841249c",
+      "bytes": 15677,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/prompts/CALENDARIO_SELECCION_DIRECTA.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/prompts/CALENDARIO_SELECCION_DIRECTA.md",
+      "sha256": "5688d42419b3edab3d4fcac7226b7e1bd46064d1f7ae1899e52159b818af50e5",
+      "bytes": 14759,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/prompts/CARGA_MANUAL_DE_JORNADAS_V2.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/prompts/CARGA_MANUAL_DE_JORNADAS_V2.md",
+      "sha256": "a3f12665b7f8a178a58e1c3c22e3f0ea7437abe9535d462f9583bdce34787c38",
+      "bytes": 22068,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/prompts/CLIMA.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/prompts/CLIMA.md",
+      "sha256": "b0bc0cbc06478b96981950dca1420ae72b23dfe63b506d1c96bfcabfdbc3ee3a",
+      "bytes": 26329,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/prompts/CONFIGURACION_PERSISTENTE_Y_MIGRACION_ROOM_V6.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/prompts/CONFIGURACION_PERSISTENTE_Y_MIGRACION_ROOM_V6.md",
+      "sha256": "4ddd9292049541321b89301010db911aaf344680c2537d882008bae22fd6e7d9",
+      "bytes": 10350,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/prompts/COORDINACION_EXPERIENCIA_INICIAL_Y_PERFIL_MAIN.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/prompts/COORDINACION_EXPERIENCIA_INICIAL_Y_PERFIL_MAIN.md",
+      "sha256": "353054c5b8c81b59bc7bc7001ae0aea5234422ae2608cc388793b1f87e228465",
+      "bytes": 13512,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/prompts/COPIAS_Y_RESTAURACION_LOCALES_SEGURAS_V2.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/prompts/COPIAS_Y_RESTAURACION_LOCALES_SEGURAS_V2.md",
+      "sha256": "71995fd038e10a637ba3b5fad24d148d860243f64e2b7af05cdb909ef6ef2ded",
+      "bytes": 31965,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/prompts/CORRECCION_ORIENTACION_FOTOS.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/prompts/CORRECCION_ORIENTACION_FOTOS.md",
+      "sha256": "d50c6674f1001d65806bd54046896f52ceb7f42bd92a2f9e0bd391ca9be148ab",
+      "bytes": 5360,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/prompts/DATA_LOCAL.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/prompts/DATA_LOCAL.md",
+      "sha256": "57a43a2a6aa34627613d423138b34c38fc1d50639c53ad26f0a48028aed35c15",
+      "bytes": 12512,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/prompts/EDICION_Y_ELIMINACION_DE_JORNADAS_V2.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/prompts/EDICION_Y_ELIMINACION_DE_JORNADAS_V2.md",
+      "sha256": "c6b70d97ef6d9f1f68abd36b3f92bfdceb5777d45050c1a122827bb7807ea315",
+      "bytes": 29981,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/prompts/EXTRAS_INDEPENDIENTES_Y_AVANCE_DE_HORAS_V2.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/prompts/EXTRAS_INDEPENDIENTES_Y_AVANCE_DE_HORAS_V2.md",
+      "sha256": "f13fe91b7405cf33a06e083299b1b4ab5b9522c0d640e4c778ef79fe60e7285d",
+      "bytes": 32921,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/prompts/FOTOS_MENSUALES_DEL_CRONOGRAMA.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/prompts/FOTOS_MENSUALES_DEL_CRONOGRAMA.md",
+      "sha256": "fb3f451aca3ec1d00f3e413ab32828ad01437bad0e1916db7209db235dd7cbc9",
+      "bytes": 12793,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/prompts/GUARDIAS_PASIVAS_Y_DISPONIBILIDAD_V2.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/prompts/GUARDIAS_PASIVAS_Y_DISPONIBILIDAD_V2.md",
+      "sha256": "feb1513c5e9750b3ec621fd41ca6199995d4a101e0f11e3b89eb9a13092253ad",
+      "bytes": 27390,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/prompts/INFORMES_LOCALES_DE_JORNADAS_Y_HORAS_V2.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/prompts/INFORMES_LOCALES_DE_JORNADAS_Y_HORAS_V2.md",
+      "sha256": "4ae84422ee072579c145a483be8883b63ac6fdaa60e5f40da4b637fc17bc358d",
+      "bytes": 28485,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/prompts/INTEGRACION_Y_DEPURACION_DE_CAMBIOS_DE_ULTIMO_MOMENTO_V2.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/prompts/INTEGRACION_Y_DEPURACION_DE_CAMBIOS_DE_ULTIMO_MOMENTO_V2.md",
+      "sha256": "5f15f3a69131e3119ee1f4c436c5bf8779ac16bdf5958310ad9a0c8e09134efb",
+      "bytes": 27399,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/prompts/LUGARES_TIPOS_PLANTILLAS_Y_PRIMERA_CARGA_V2.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/prompts/LUGARES_TIPOS_PLANTILLAS_Y_PRIMERA_CARGA_V2.md",
+      "sha256": "451f05a5ed38ab265b4f6acaefc16f2929898d31086951ad22b4f683035273bc",
+      "bytes": 39432,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/prompts/MOTOR_BASICO_DE_HORAS.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/prompts/MOTOR_BASICO_DE_HORAS.md",
+      "sha256": "8dacdab5bfc12101518c9761ae8e82670a64b6f26b8f9b2cb9db83e5b52deecc",
+      "bytes": 18867,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/prompts/MOTOR_DE_PROXIMO_EVENTO.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/prompts/MOTOR_DE_PROXIMO_EVENTO.md",
+      "sha256": "2b547514d29a5425c870ba8e67cd9a396f67682c3d94495eb9766bbec77334b6",
+      "bytes": 21376,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/prompts/NAVEGACION_MENU_LATERAL.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/prompts/NAVEGACION_MENU_LATERAL.md",
+      "sha256": "ca6ada33efa0fd92eb2251a9cf8a996e8ecda5dcf6f4c732109d4370597b56dd",
+      "bytes": 4153,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/prompts/NOTIFICACIONES.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/prompts/NOTIFICACIONES.md",
+      "sha256": "7704e5ae6b703bba4e795e2daf365f8d5e78c534fbca5227177d522083ba53c3",
+      "bytes": 26314,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/prompts/NOTIFICACIONES_PULSO_VIGILIA.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/prompts/NOTIFICACIONES_PULSO_VIGILIA.md",
+      "sha256": "ffcb328f021cf13413427e73c16add9399fee4784a0a6591d87e50191d8e25a5",
+      "bytes": 18802,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/prompts/NOVEDADES_FERIADOS_Y_NOTAS.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/prompts/NOVEDADES_FERIADOS_Y_NOTAS.md",
+      "sha256": "163d7cdae6755563ec61c08c641e14dcc7ee9fb289f56fba91b61a19f4482867",
+      "bytes": 26831,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/prompts/OBJETIVOS_Y_GUARDIAS.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/prompts/OBJETIVOS_Y_GUARDIAS.md",
+      "sha256": "619db3636f0d5248acccfc822e2d70113cf154ad63c423c81121cdd01ae4b038",
+      "bytes": 26709,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/prompts/ONBOARDING_Y_PRIMERA_CARGA.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/prompts/ONBOARDING_Y_PRIMERA_CARGA.md",
+      "sha256": "81a3fe416b797c3f85a5bf4f98c73f0fb3f631e5df770713f0f04beb1ca61862",
+      "bytes": 17637,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/prompts/ORQUESTACION_SECUENCIAL_MAIN_2_0.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/prompts/ORQUESTACION_SECUENCIAL_MAIN_2_0.md",
+      "sha256": "8576e917ae46ebdc42870a173680615a6662643d4fedc9e94b5eb8ba13a2a6ca",
+      "bytes": 33795,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/prompts/PAGINA_DE_APORTES_VOLUNTARIOS_WEB_V2.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/prompts/PAGINA_DE_APORTES_VOLUNTARIOS_WEB_V2.md",
+      "sha256": "e5fdf7a2c6ab8cb6604e23d90d1f21d1c284946c2039ce888e88316f7ed0a7e0",
+      "bytes": 22490,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/prompts/PAGINA_PUBLICA_DE_MIGUARDIA_Y_ACCESO_A_LA_BETA_WEB_V2.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/prompts/PAGINA_PUBLICA_DE_MIGUARDIA_Y_ACCESO_A_LA_BETA_WEB_V2.md",
+      "sha256": "d79dab8a847e3f1e676fb22607ef3fc5d8478e06c08423b20cec61f2805d8782",
+      "bytes": 20289,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/prompts/PERFIL_LABORAL_Y_CONFIGURACION.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/prompts/PERFIL_LABORAL_Y_CONFIGURACION.md",
+      "sha256": "939e3f3c041ec7f8e68d6ccf55079ee9b8e7a1de4178914d33e73161b9d002d7",
+      "bytes": 11491,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/prompts/PORTAL_BETA_PRIVADA_Y_CLAVES_DE_ACCESO_WEB_V2.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/prompts/PORTAL_BETA_PRIVADA_Y_CLAVES_DE_ACCESO_WEB_V2.md",
+      "sha256": "99b2746f46e9500b53b67e305255f8a745f1748f24caa6f4d490c0e49c459166",
+      "bytes": 20052,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/prompts/PREPARAR_APK_BETA_OFICIAL_PARA_WEB_V2.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/prompts/PREPARAR_APK_BETA_OFICIAL_PARA_WEB_V2.md",
+      "sha256": "a4eb88ba2f1fc3378b9dbfe75feb2a96192400adec88b42354fb27fcb49304ed",
+      "bytes": 14813,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/prompts/PRIMERA_APERTURA_Y_CONFIGURACION_LABORAL_VISIBLE_V2.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/prompts/PRIMERA_APERTURA_Y_CONFIGURACION_LABORAL_VISIBLE_V2.md",
+      "sha256": "b02df0f0c22f71a15ef17fd38244ff33e5a32e3d286e3fda0a790c4d53792733",
+      "bytes": 12361,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/prompts/PROXIMO_EVENTO_Y_NOTIFICACIONES_V2.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/prompts/PROXIMO_EVENTO_Y_NOTIFICACIONES_V2.md",
+      "sha256": "9a3431b2c9b9fab4f86c3841488fb8f8ebf2011c09c984309d0587f94a28f27b",
+      "bytes": 29684,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/prompts/PRUEBAS_CRUZADAS_DEL_NUCLEO_V2.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/prompts/PRUEBAS_CRUZADAS_DEL_NUCLEO_V2.md",
+      "sha256": "e9fef0ff790c9371e4fbe531e921afab6136c5c6e2b55bcfc11a5f547e58401c",
+      "bytes": 20851,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/prompts/PULIDO_VISUAL_Y_UX.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/prompts/PULIDO_VISUAL_Y_UX.md",
+      "sha256": "0341b53790c506df2ba450607f74ad4b16d33eb8210e55d7ecd70e79361e3ae3",
+      "bytes": 12217,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/prompts/README.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/prompts/README.md",
+      "sha256": "088e29832745a999823248cf362ca25a44d5e026f1eb9ab368cb723f80a4dc62",
+      "bytes": 25658,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/prompts/REGISTRAR_HORARIO_REAL_Y_CLASIFICAR_HORAS_EXTRA_V2.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/prompts/REGISTRAR_HORARIO_REAL_Y_CLASIFICAR_HORAS_EXTRA_V2.md",
+      "sha256": "9014ce392adc875cb26091ee06da215fd22d23d605f21838303ec0f6a268a0ed",
+      "bytes": 34821,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/prompts/REGLAS_CONFIGURACION_LABORAL_POR_MES.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/prompts/REGLAS_CONFIGURACION_LABORAL_POR_MES.md",
+      "sha256": "9592998fcc12395ea40f451ec3da5d7c20c90fc4b57c2a4f3c1286ddb7d3e513",
+      "bytes": 10155,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/prompts/REGLAS_DOMINIO_CONFIGURACION_Y_HORAS_V2.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/prompts/REGLAS_DOMINIO_CONFIGURACION_Y_HORAS_V2.md",
+      "sha256": "a70c888f1eb718adec8144134b72fe2ef8af73b87f63836edaa30f60562ebf83",
+      "bytes": 6827,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/prompts/REPETIR_JORNADAS_Y_CAMBIAR_DESDE_UNA_FECHA_V2.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/prompts/REPETIR_JORNADAS_Y_CAMBIAR_DESDE_UNA_FECHA_V2.md",
+      "sha256": "1260c2d9bd18de201bef84fae22de6885d9e08a7736d2143bdb1d6d8af03aae0",
+      "bytes": 27434,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/prompts/RESUMEN_PERSONALIZABLE_V2.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/prompts/RESUMEN_PERSONALIZABLE_V2.md",
+      "sha256": "cb4cddde4a88859edcd493d78bf201c250b67236ccbbde142e40aba18afb88ed",
+      "bytes": 28961,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/prompts/RETIRAR_MODO_V1_Y_FIJAR_BASE_EXCLUSIVA_V2.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/prompts/RETIRAR_MODO_V1_Y_FIJAR_BASE_EXCLUSIVA_V2.md",
+      "sha256": "6044c90a3f19ffb908897a0085f2f04ad41eee55fcec5ab2bf0ac25e16ec4252",
+      "bytes": 27117,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/prompts/SIMPLIFICACION_FLUJO_DE_CARGA.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/prompts/SIMPLIFICACION_FLUJO_DE_CARGA.md",
+      "sha256": "65aaea651c95c610b2144976492df4bac6f8d7a317785ece66843547d72706b2",
+      "bytes": 24185,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/prompts/UX_UI_CALENDARIO_ADAPTABLE_2_0.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/prompts/UX_UI_CALENDARIO_ADAPTABLE_2_0.md",
+      "sha256": "c4e13409c468e77e314a57f8aa937745dfd5a6842a76f3ac4585b1d0a2b9da86",
+      "bytes": 10786,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/prompts/VACACIONES.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/prompts/VACACIONES.md",
+      "sha256": "7dbd36d8ca7405be3e3606cca71c79cbf1003d2a6d286545c3282fe1a4ae4778",
+      "bytes": 20336,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/prompts/VIGILIA_SISTEMA_VISUAL.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/prompts/VIGILIA_SISTEMA_VISUAL.md",
+      "sha256": "a0d5109433a224f9aa3c1a4ddaf73b3c815a6eb32dec021e447067d367d655f0",
+      "bytes": 22608,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/docs/prompts/WIDGET_DE_PROXIMO_EVENTO_V2.md",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/docs/prompts/WIDGET_DE_PROXIMO_EVENTO_V2.md",
+      "sha256": "2b89923118e4c1ba18672483f6e51779f64802d264f097b4c388a1e4b6656c35",
+      "bytes": 35004,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-before-optimization/manifest.json",
+      "snapshot": "docs/archive/2026-09-06-before-optimization/manifest.json",
+      "sha256": "5344f17a45ce2fe7ce0f241f2d36e556411c4e87d8e84e44475b0647b35d02bc",
+      "bytes": 28953,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/2026-09-06-handoff-main.md",
+      "snapshot": "docs/archive/2026-09-06-handoff-main.md",
+      "sha256": "b80f52288974bfc0e2fa5b327c8fdf21179c1619f15eff78d4ff827c28be08b9",
+      "bytes": 4399,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/archive/README.md",
+      "snapshot": "docs/archive/README.md",
+      "sha256": "fec20fd8f22f859af11daebd009e1ef5470a2557c9f6efcb9f0455e5c85bad71",
+      "bytes": 10114,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-08-13-auditoria-integral.md",
+      "snapshot": "docs/audits/2026-08-13-auditoria-integral.md",
+      "sha256": "d29d5bb49d9f041e6b0c0925991627a8f6f0b6d9b44482e49a03a0ef93218f2b",
+      "bytes": 5560,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-08-17-puerta-0-consolidacion.md",
+      "snapshot": "docs/audits/2026-08-17-puerta-0-consolidacion.md",
+      "sha256": "c4af9501eaf6f669c8e5fd68a8540ffb36b899530c12f87c0dfb792d8f5926c5",
+      "bytes": 10511,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-08-18-base-canonica.md",
+      "snapshot": "docs/audits/2026-08-18-base-canonica.md",
+      "sha256": "fdfb678a4dbacec928b0d9c3e88b9ad6bd6c753b9c0740ddeee1d822be13337c",
+      "bytes": 5481,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-08-18-notificaciones-visibilidad.md",
+      "snapshot": "docs/audits/2026-08-18-notificaciones-visibilidad.md",
+      "sha256": "e99c1be838ee07bc4a0ad546e43493ecf6fa308c703bda91d8c48af2829f8de9",
+      "bytes": 3783,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-08-18-orientacion-fotos.md",
+      "snapshot": "docs/audits/2026-08-18-orientacion-fotos.md",
+      "sha256": "863388997bbd52f00d49fc572e5552de61162ee18e4c385183cc4f896d194c75",
+      "bytes": 4058,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-08-18-perfil-laboral.md",
+      "snapshot": "docs/audits/2026-08-18-perfil-laboral.md",
+      "sha256": "b07bb4ed43069953db3a9363534de04292724753d00f9201f99ff3a75f4646c9",
+      "bytes": 5280,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-08-20-calendario-adaptable-2-0.md",
+      "snapshot": "docs/audits/2026-08-20-calendario-adaptable-2-0.md",
+      "sha256": "f53e60b5e35c3692a9458c40f384669c3dd4f08209de18b50e594cf403f47c85",
+      "bytes": 4206,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-08-21-auditoria-documental-prompts-y-organizacion.md",
+      "snapshot": "docs/audits/2026-08-21-auditoria-documental-prompts-y-organizacion.md",
+      "sha256": "f791982ecd5c2634c42ff6d4a61a99980ef0aa64679daeb176d34be77e57e5cf",
+      "bytes": 4577,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-08-21-configuracion-persistente-y-room-v6.md",
+      "snapshot": "docs/audits/2026-08-21-configuracion-persistente-y-room-v6.md",
+      "sha256": "b8cc4be3221508f9278083cd83ec3ed7899043eea131477a14ed8c130e0d394f",
+      "bytes": 7147,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-08-21-dominio-configuracion-y-horas-v2.md",
+      "snapshot": "docs/audits/2026-08-21-dominio-configuracion-y-horas-v2.md",
+      "sha256": "6b645c9eb902075fd988490fb87b35e1033b1c41b4827ce1789c550ec9a2e497",
+      "bytes": 4403,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-08-21-reactivacion-main-y-puerta-cero.md",
+      "snapshot": "docs/audits/2026-08-21-reactivacion-main-y-puerta-cero.md",
+      "sha256": "1e3d685560a77443476394a39dbf4243d11528b3b7c5ef4dbcdb120cb2beb819",
+      "bytes": 5744,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-08-21-reglas-configuracion-laboral-por-mes-y-estado-git.md",
+      "snapshot": "docs/audits/2026-08-21-reglas-configuracion-laboral-por-mes-y-estado-git.md",
+      "sha256": "0b391317ea179cdfad84396bec929cfc3f5e3072a76fbde6255ce5d3cb13f76d",
+      "bytes": 4056,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-08-22-lugares-tipos-plantillas-room-v7-corte-a.md",
+      "snapshot": "docs/audits/2026-08-22-lugares-tipos-plantillas-room-v7-corte-a.md",
+      "sha256": "d9a2292bc9cce4fdc44eb70f7805f1068dc05accc8aca3e3ef4e00b404150397",
+      "bytes": 8642,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-08-22-primera-apertura-configuracion-laboral-visible.md",
+      "snapshot": "docs/audits/2026-08-22-primera-apertura-configuracion-laboral-visible.md",
+      "sha256": "108a5ca540677ba6974b421482000b57ea5f99452fdec7240cfa2de1c02d56ca",
+      "bytes": 9303,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-08-23-carga-manual-de-jornadas-v2.md",
+      "snapshot": "docs/audits/2026-08-23-carga-manual-de-jornadas-v2.md",
+      "sha256": "7e9575a3af9223bceaa8295c01766e72c3084630973a0e8ffaf88172e1a26492",
+      "bytes": 5609,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-08-23-continuidad-codigo-sin-migracion-datos-v1.md",
+      "snapshot": "docs/audits/2026-08-23-continuidad-codigo-sin-migracion-datos-v1.md",
+      "sha256": "ee64fa8efb1859ddcc87216b0dca82b1faf83a3df981ee2d62d1f23e41d838cd",
+      "bytes": 3712,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-08-23-edicion-eliminacion-jornadas-v2.md",
+      "snapshot": "docs/audits/2026-08-23-edicion-eliminacion-jornadas-v2.md",
+      "sha256": "3bce25eb416c0d941902aba19006e292ddf55cdb3fb9d4fd406755d94d07b38b",
+      "bytes": 6899,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-08-23-flujo-handoffs-y-checkpoints-main.md",
+      "snapshot": "docs/audits/2026-08-23-flujo-handoffs-y-checkpoints-main.md",
+      "sha256": "3dac3f84fb49541408442331e285b86c971e81b87fa655638db4db9283e039f5",
+      "bytes": 3062,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-08-23-preparacion-edicion-eliminacion-jornadas-v2.md",
+      "snapshot": "docs/audits/2026-08-23-preparacion-edicion-eliminacion-jornadas-v2.md",
+      "sha256": "f425729a5af49d357712713745812e8345a238d19ba8115aa386b240688ae908",
+      "bytes": 5268,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-08-23-preparacion-retiro-modo-v1-y-base-exclusiva-v2.md",
+      "snapshot": "docs/audits/2026-08-23-preparacion-retiro-modo-v1-y-base-exclusiva-v2.md",
+      "sha256": "bd09a5602820e1540a40cfc959957e4dfa74ade32ecd21ea83b64632f9ff4238",
+      "bytes": 5431,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-08-23-retiro-modo-v1-y-base-room-v2.md",
+      "snapshot": "docs/audits/2026-08-23-retiro-modo-v1-y-base-room-v2.md",
+      "sha256": "21700e87db5eeceb02e1fd92bb16764797bf1dc6e371f93a3d7b20b40c35b272",
+      "bytes": 8219,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-08-25-extras-independientes-y-avance-de-horas-v2.md",
+      "snapshot": "docs/audits/2026-08-25-extras-independientes-y-avance-de-horas-v2.md",
+      "sha256": "72a789d2d721f9af966fa5ea43cf082a4378889b2a99b5ef8181b6ba49379a3b",
+      "bytes": 6404,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-08-25-horario-real-y-horas-extra-v2.md",
+      "snapshot": "docs/audits/2026-08-25-horario-real-y-horas-extra-v2.md",
+      "sha256": "d6dbadf69ffcc8d4ae2edb17d2e72dff894a2fc9d9bc39e3db91141ad703ec35",
+      "bytes": 6150,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-08-25-planes-recurrentes-y-cambios-futuros-v2.md",
+      "snapshot": "docs/audits/2026-08-25-planes-recurrentes-y-cambios-futuros-v2.md",
+      "sha256": "ba5bebd0588f6ce3ec89e28d7929ab1ac741ba489f8739a84bd28177ff1018c6",
+      "bytes": 7086,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-08-27-calendario-final-y-tarjeta-superior-v2.md",
+      "snapshot": "docs/audits/2026-08-27-calendario-final-y-tarjeta-superior-v2.md",
+      "sha256": "8a9cd9ef110458336b16a04ebc3db213aa6dade40599a590e2326fcd59f74b6f",
+      "bytes": 7704,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-08-27-guardias-pasivas-y-disponibilidad-v2.md",
+      "snapshot": "docs/audits/2026-08-27-guardias-pasivas-y-disponibilidad-v2.md",
+      "sha256": "35e26ab9ef1495f8162ef58dbdf7d2a0cf0e4611a8c6e16a752584dfd3c17185",
+      "bytes": 6852,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-08-27-preparacion-calendario-final-y-tarjeta-superior-v2.md",
+      "snapshot": "docs/audits/2026-08-27-preparacion-calendario-final-y-tarjeta-superior-v2.md",
+      "sha256": "2b5552f09c4c57086ced7d2cb2348ac856476e221cdeae7144aab737c16a6139",
+      "bytes": 6421,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-08-27-preparacion-proximo-evento-y-notificaciones-v2.md",
+      "snapshot": "docs/audits/2026-08-27-preparacion-proximo-evento-y-notificaciones-v2.md",
+      "sha256": "65cc4b215a86fe22ed28102d297bcef22b24bb55a493ca92ae7cd98f0b5786d1",
+      "bytes": 7517,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-08-27-preparacion-resumen-personalizable-v2.md",
+      "snapshot": "docs/audits/2026-08-27-preparacion-resumen-personalizable-v2.md",
+      "sha256": "9c779af22ccb634bd2b3881fe380905760fb47fd15a4a372331cf56ed043759a",
+      "bytes": 5962,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-08-27-proximo-evento-y-notificaciones-v2.md",
+      "snapshot": "docs/audits/2026-08-27-proximo-evento-y-notificaciones-v2.md",
+      "sha256": "59340d408476dab75d96a6efd2e3aa5df0bd0f265b0e202e9a8b731bab8f532f",
+      "bytes": 6723,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-08-27-resumen-personalizable-v2.md",
+      "snapshot": "docs/audits/2026-08-27-resumen-personalizable-v2.md",
+      "sha256": "8d8cfd63cf600f2a847a31a2bc7a98b2e30471f94de762e353dd6be3c9383dd4",
+      "bytes": 6836,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-08-28-auditoria-integral-del-nucleo-y-compatibilidad-android-v2-parcial.md",
+      "snapshot": "docs/audits/2026-08-28-auditoria-integral-del-nucleo-y-compatibilidad-android-v2-parcial.md",
+      "sha256": "986bec873388059680f90d6839f6d2d45e86e8780c3c8f5aa2ea704ebd07023b",
+      "bytes": 8864,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-08-29-auditoria-integral-del-nucleo-y-compatibilidad-android-v2.md",
+      "snapshot": "docs/audits/2026-08-29-auditoria-integral-del-nucleo-y-compatibilidad-android-v2.md",
+      "sha256": "791902fb812bb35565d94a1d83324f049062e31e7c7cf7c473ebd799d155501e",
+      "bytes": 7620,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-08-29-informes-locales-de-jornadas-y-horas-v2-main.md",
+      "snapshot": "docs/audits/2026-08-29-informes-locales-de-jornadas-y-horas-v2-main.md",
+      "sha256": "8b07a503b3a689c3cd6c39e8b065ea9adf4c09c4823470860206cc196601e054",
+      "bytes": 9664,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-08-29-preparacion-copias-y-restauracion-locales-seguras-v2.md",
+      "snapshot": "docs/audits/2026-08-29-preparacion-copias-y-restauracion-locales-seguras-v2.md",
+      "sha256": "2d2e52af80495267b6abbf60d68b31310420051c190a975ef76abb53164bdfd3",
+      "bytes": 3299,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-08-29-preparacion-informes-locales-de-jornadas-y-horas-v2.md",
+      "snapshot": "docs/audits/2026-08-29-preparacion-informes-locales-de-jornadas-y-horas-v2.md",
+      "sha256": "d40ec61eaa55e6e7b75bb06fb02d205665ddfd893758e7ac351ffb807a8646f7",
+      "bytes": 4910,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-08-29-preparacion-widget-de-proximo-evento-v2.md",
+      "snapshot": "docs/audits/2026-08-29-preparacion-widget-de-proximo-evento-v2.md",
+      "sha256": "54efc0c531b1e16fc2e3ba62b535ca0c1e82d671aac5a9c6aef968d22620d2c5",
+      "bytes": 6567,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-08-29-pruebas-cruzadas-del-nucleo-v2.md",
+      "snapshot": "docs/audits/2026-08-29-pruebas-cruzadas-del-nucleo-v2.md",
+      "sha256": "46838312a71c6903d13808aaccb7f41a5fca53686301dd53c472d5b55cd273d4",
+      "bytes": 5384,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-08-29-widget-de-proximo-evento-v2-main.md",
+      "snapshot": "docs/audits/2026-08-29-widget-de-proximo-evento-v2-main.md",
+      "sha256": "bb6fe351b06cd1e6fe2458a28a1866d9c3cc9e60b2ba745e79d8fffa93f270f1",
+      "bytes": 6873,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-09-01-bloqueo-de-acceso-local-v2-main.md",
+      "snapshot": "docs/audits/2026-09-01-bloqueo-de-acceso-local-v2-main.md",
+      "sha256": "08c2b7b42c5b367c8ba21f7a439bd69d31d72adf47c711e6cadaf3d73161262b",
+      "bytes": 10115,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-09-01-copias-y-restauracion-locales-seguras-v2-main.md",
+      "snapshot": "docs/audits/2026-09-01-copias-y-restauracion-locales-seguras-v2-main.md",
+      "sha256": "b655dc25e62a465c9c4bab55a76077b481339007cdbc5a5c370f2852d9b7d921",
+      "bytes": 6412,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-09-01-preparacion-bloqueo-de-acceso-local-v2.md",
+      "snapshot": "docs/audits/2026-09-01-preparacion-bloqueo-de-acceso-local-v2.md",
+      "sha256": "903c16d7497ab8a01c84676e3193ce126dad7cac4ea81446764f9bf8aa27583c",
+      "bytes": 4613,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-09-02-preparacion-ayuda-y-recorrido-inicial-v2.md",
+      "snapshot": "docs/audits/2026-09-02-preparacion-ayuda-y-recorrido-inicial-v2.md",
+      "sha256": "2927534a76cecce1289432f8144fb6b5de001995b5ed851b9c00e548a3800c61",
+      "bytes": 5426,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-09-03-auditoria-final-aplicacion-y-candidato-local-v2.md",
+      "snapshot": "docs/audits/2026-09-03-auditoria-final-aplicacion-y-candidato-local-v2.md",
+      "sha256": "7842af941392022d460545fd8884f6559e28de4b09c667213fe401eeac0ad1ab",
+      "bytes": 10586,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-09-03-compatibilidad-api26-api33-candidato-local-v2.md",
+      "snapshot": "docs/audits/2026-09-03-compatibilidad-api26-api33-candidato-local-v2.md",
+      "sha256": "33191413b57cb33ea88ddf2c75f16262620fb93c2d660ff92239ca51e1f72576",
+      "bytes": 7179,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-09-03-compatibilidad-api37-candidato-local-v2.md",
+      "snapshot": "docs/audits/2026-09-03-compatibilidad-api37-candidato-local-v2.md",
+      "sha256": "257befbf9d585a53964a44477dc41497607a5a84cb25aab3d6b6fbd4cd94e0ec",
+      "bytes": 6947,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-09-03-integracion-y-depuracion-cambios-ultimo-momento-v2-main.md",
+      "snapshot": "docs/audits/2026-09-03-integracion-y-depuracion-cambios-ultimo-momento-v2-main.md",
+      "sha256": "3af7427ef55a246d4691cd23943a5872e753034103d3f174eeed1e7c4cfcceb8",
+      "bytes": 10618,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-09-04-pagina-publica-y-preparacion-acceso-beta-android-v2.md",
+      "snapshot": "docs/audits/2026-09-04-pagina-publica-y-preparacion-acceso-beta-android-v2.md",
+      "sha256": "d1cb4196766534263979ae9aa062bca0be866adc98dc47f994a26c9ab3e7f77f",
+      "bytes": 7088,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-09-05-acceso-beta-y-opiniones-android-v2-main.md",
+      "snapshot": "docs/audits/2026-09-05-acceso-beta-y-opiniones-android-v2-main.md",
+      "sha256": "b90920ad907ee28fbb89add7a354509694b4dd02fa58bbe818db8b24a319ac0b",
+      "bytes": 11071,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-09-05-apoyar-miguardia-android-v2-main.md",
+      "snapshot": "docs/audits/2026-09-05-apoyar-miguardia-android-v2-main.md",
+      "sha256": "412130c55ed483fcd726f5b664f8f61d2491baee1669db94c9de6ad0a586e676",
+      "bytes": 18824,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-09-05-pagina-aportes-voluntarios-web-v2-main.md",
+      "snapshot": "docs/audits/2026-09-05-pagina-aportes-voluntarios-web-v2-main.md",
+      "sha256": "46beaa61e4ba6fa1a60f5c18b42b9395fd7f2fe8289741fe1a9f20913800e84f",
+      "bytes": 6858,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-09-05-publicacion-aportes-y-preparacion-menu-android-v2.md",
+      "snapshot": "docs/audits/2026-09-05-publicacion-aportes-y-preparacion-menu-android-v2.md",
+      "sha256": "239696b6f40b07f88eda2449419f4747d15fd03cd340d7b3b32c37708cd83c5f",
+      "bytes": 7224,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-09-06-actualizacion-manual-sin-perder-datos-v2-main.md",
+      "snapshot": "docs/audits/2026-09-06-actualizacion-manual-sin-perder-datos-v2-main.md",
+      "sha256": "1592a42c922cd72f93895970e9e55be3cdaae43f45f0e4e52e118daebe3e8000",
+      "bytes": 27176,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-09-06-auditoria-instrucciones-y-flujo-inventario.json",
+      "snapshot": "docs/audits/2026-09-06-auditoria-instrucciones-y-flujo-inventario.json",
+      "sha256": "6e9b6b1ad2d5d42ab0d2a405a2d021cf0442ef37b98439f2c1aab5064b088380",
+      "bytes": 190843,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-09-06-auditoria-instrucciones-y-flujo.md",
+      "snapshot": "docs/audits/2026-09-06-auditoria-instrucciones-y-flujo.md",
+      "sha256": "036028e4b21e1ca3ab5a2b0cb3be2c2118c7bbf93ddc5d89ff0854754114fa30",
+      "bytes": 28967,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-09-06-custodia-clave-release-main.md",
+      "snapshot": "docs/audits/2026-09-06-custodia-clave-release-main.md",
+      "sha256": "be1748ebe645619dd527bc00acf4937cb302ddddd40e66fceb11988090a39436",
+      "bytes": 5135,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-09-06-optimizacion-instrucciones-y-flujo-resultados.json",
+      "snapshot": "docs/audits/2026-09-06-optimizacion-instrucciones-y-flujo-resultados.json",
+      "sha256": "2e1e6132112b42c2624f208d628697a56186b4c3163d849c6f413cb51f9cc849",
+      "bytes": 39896,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-09-06-optimizacion-instrucciones-y-flujo.md",
+      "snapshot": "docs/audits/2026-09-06-optimizacion-instrucciones-y-flujo.md",
+      "sha256": "8441f12f0cf1b38185d7344e7d67497f59f426e508ef3300b5b5933e75962d11",
+      "bytes": 12314,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-09-06-preparacion-actualizacion-manual-v2.md",
+      "snapshot": "docs/audits/2026-09-06-preparacion-actualizacion-manual-v2.md",
+      "sha256": "494d51bcd96c0fa3dd4302ee289a0182be6f2cadfa007719a52551a4e6ec2cce",
+      "bytes": 5016,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-09-06-preparacion-apk-beta-29-main.md",
+      "snapshot": "docs/audits/2026-09-06-preparacion-apk-beta-29-main.md",
+      "sha256": "e10e4c45a0a34cacdd2f55673723ea286561776836488968b95c14809d1526ab",
+      "bytes": 10984,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-09-07-auditoria-integral-y-plan-de-cierre.md",
+      "snapshot": "docs/audits/2026-09-07-auditoria-integral-y-plan-de-cierre.md",
+      "sha256": "9d9e32bd7dedae1106d45b8e4b326df134ce4b74736f002140df09e870e4fab8",
+      "bytes": 165048,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-09-07-crear-desde-carga-main.md",
+      "snapshot": "docs/audits/2026-09-07-crear-desde-carga-main.md",
+      "sha256": "34588e49863714b1d23bd73baf2588dc3639854cfaa29da8f2d122005dbf7dd9",
+      "bytes": 31684,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-09-07-creditos-clima-main.md",
+      "snapshot": "docs/audits/2026-09-07-creditos-clima-main.md",
+      "sha256": "5825c649ef0cbdcbc43cb4eb089b6e09f0f20745ca23b3ea99af5f317bc7b23b",
+      "bytes": 9034,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-09-07-plan-de-cierre-miguardia.png",
+      "snapshot": "docs/audits/2026-09-07-plan-de-cierre-miguardia.png",
+      "sha256": "647c1e24ea0506a07a072de990130ad7bbbde9e576fde8237c298dd9194f6af4",
+      "bytes": 372383,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-09-08-mapa-visual-y-guia-de-cierre.md",
+      "snapshot": "docs/audits/2026-09-08-mapa-visual-y-guia-de-cierre.md",
+      "sha256": "b40ac7ac33b04df22f0de4ddae64c6c3bb155ce151f92d980ca59a08a7abb99d",
+      "bytes": 59550,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-09-08-mapa-visual-y-guia-de-cierre.png",
+      "snapshot": "docs/audits/2026-09-08-mapa-visual-y-guia-de-cierre.png",
+      "sha256": "a268f32dac3dc9096d532b274417c45d1e5e4714cb931c34847fff018c98f1c5",
+      "bytes": 776365,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-09-09-android-publico-main.md",
+      "snapshot": "docs/audits/2026-09-09-android-publico-main.md",
+      "sha256": "15e0b6938eae3cdf10fae09d30440fa1ff2c73f7e079f0eb03c5ccb9f6912ce5",
+      "bytes": 9728,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-09-09-distribucion-publica-web-main.md",
+      "snapshot": "docs/audits/2026-09-09-distribucion-publica-web-main.md",
+      "sha256": "94acd2615d701be1f650ebdb74e5426c3e6c606bfb0cf62f2d29b60b01a76864",
+      "bytes": 14450,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-09-10-cierre-correctivo-code4-main.md",
+      "snapshot": "docs/audits/2026-09-10-cierre-correctivo-code4-main.md",
+      "sha256": "a4721ae24d05d2486f5de9ba0a8998e50bdff212aca190f25c64309b64faae30",
+      "bytes": 14978,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-09-10-congelacion-publica-y-firma-main.md",
+      "snapshot": "docs/audits/2026-09-10-congelacion-publica-y-firma-main.md",
+      "sha256": "b164ed023fa39e19852d5a5e22d3e57376b79ea687a66da4a81939519b9097fd",
+      "bytes": 17376,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-09-10-franco-arrastre-nocturno.md",
+      "snapshot": "docs/audits/2026-09-10-franco-arrastre-nocturno.md",
+      "sha256": "065599b6ce8236a7b9cb65eb6b77b710d3c8f78ed0699da51cffccaa65270818",
+      "bytes": 4186,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-09-10-francos-2-0-1.md",
+      "snapshot": "docs/audits/2026-09-10-francos-2-0-1.md",
+      "sha256": "fbebfcb26609ef0a7d390a41e4c7eaef798832a04ecff49ec0a4d686438b10e0",
+      "bytes": 3704,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-09-10-qa-upgrade-publico-main.md",
+      "snapshot": "docs/audits/2026-09-10-qa-upgrade-publico-main.md",
+      "sha256": "c9c33332ec1522acd4adeb0c7477aa211ef2953a828fbee82fbaa2b300b96a57",
+      "bytes": 30963,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-09-10-seguridad-final-recepcion-main.md",
+      "snapshot": "docs/audits/2026-09-10-seguridad-final-recepcion-main.md",
+      "sha256": "7e3f2b5fd15d9adb8da66d7b964b52e7f393d6ca121f14bad70b634dd9866411",
+      "bytes": 3018,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-09-10-upgrade-code4-drive.md",
+      "snapshot": "docs/audits/2026-09-10-upgrade-code4-drive.md",
+      "sha256": "eb26459fe426644989928c19bfa2ed6123cb335458e9d003f48dee9d1de6b007",
+      "bytes": 3243,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-09-12-higiene-previa-miguardia-3.md",
+      "snapshot": "docs/audits/2026-09-12-higiene-previa-miguardia-3.md",
+      "sha256": "651b2737b2d8db6655e9f72b2682ed6597098f2e24a0de85c9d0cb656d845a55",
+      "bytes": 6512,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-09-12-stage-1-detalle-edicion-dia.md",
+      "snapshot": "docs/audits/2026-09-12-stage-1-detalle-edicion-dia.md",
+      "sha256": "038beccbb4a76965b6be78655b52040fd152db5a05ec1c224143e9d16cacfb2e",
+      "bytes": 11710,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-09-14-stage-2-situaciones-estados-dia.md",
+      "snapshot": "docs/audits/2026-09-14-stage-2-situaciones-estados-dia.md",
+      "sha256": "e233f50671d5a868c0e901440dc93b57ec63268c6ebbeecae82fd7baefb39da0",
+      "bytes": 10557,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-09-15-stage-3-seleccion-calendario-plegable.md",
+      "snapshot": "docs/audits/2026-09-15-stage-3-seleccion-calendario-plegable.md",
+      "sha256": "51799cc89dd42382427f2c6029e40e1e71e2915f80ea7b26942dab0293fdc109",
+      "bytes": 37177,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-09-16-main-stage-3-entrega-qa.md",
+      "snapshot": "docs/audits/2026-09-16-main-stage-3-entrega-qa.md",
+      "sha256": "b8d84a68716f8fdc1483395fde673519420256fe628a94c53a285a3f6d465ddd",
+      "bytes": 2562,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-10-02-overall-fluidez-integridad.md",
+      "snapshot": "docs/audits/2026-10-02-overall-fluidez-integridad.md",
+      "sha256": "a32dd97afbda062b5f885353c0e22031f52f2688b7028d1dbdcbe747647c7246",
+      "bytes": 16248,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-10-02-stage-3-2-carga-borrador.md",
+      "snapshot": "docs/audits/2026-10-02-stage-3-2-carga-borrador.md",
+      "sha256": "c44d46654996fe983cc3f2329b430bcf240b7dbaea6b9f6861c05d9932c43269",
+      "bytes": 8588,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-10-02-stage4-fluidez-integridad-candidato.md",
+      "snapshot": "docs/audits/2026-10-02-stage4-fluidez-integridad-candidato.md",
+      "sha256": "50105f6f2b7e22dbeac1c4303432aea54ecb2ba766e50d8b16f2cb0c9dc5779d",
+      "bytes": 14179,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-10-02-stage4-matriz-recorridos.md",
+      "snapshot": "docs/audits/2026-10-02-stage4-matriz-recorridos.md",
+      "sha256": "7684a9fa4cf791751d9d375064366b78e803eb5d56e2ed6990cf370d1bf087e7",
+      "bytes": 35172,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-10-02-stage4-qa-main.md",
+      "snapshot": "docs/audits/2026-10-02-stage4-qa-main.md",
+      "sha256": "73f58a75b08a2a82672c0d8c5c624b7a89197bad0805ce7a4bdebeb39eb4c82b",
+      "bytes": 9188,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-10-02-stage4-rendimiento.md",
+      "snapshot": "docs/audits/2026-10-02-stage4-rendimiento.md",
+      "sha256": "8829d150a695a07934c3216395ac854cc1c1ddabc5859597cb3cb23ca71a5205",
+      "bytes": 6269,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-10-02-stage5-cierre-parcial.md",
+      "snapshot": "docs/audits/2026-10-02-stage5-cierre-parcial.md",
+      "sha256": "eb77480a90048d6132432be3a6919521c9715cf004468b708dcda25f297baa87",
+      "bytes": 11299,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-10-02-stage5-matriz-recorridos.md",
+      "snapshot": "docs/audits/2026-10-02-stage5-matriz-recorridos.md",
+      "sha256": "15a3d15478434ba243fbaeee315e08b421185a1385050230bde3f74af432425a",
+      "bytes": 20750,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-10-02-stage5-rendimiento.md",
+      "snapshot": "docs/audits/2026-10-02-stage5-rendimiento.md",
+      "sha256": "a19a4e3b7bd3713da25d1d5e69e75c29f35f05bd77eaabe67c3b46a5f63296bb",
+      "bytes": 6936,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-10-03-stage5-zoom-mensual-autorizado.md",
+      "snapshot": "docs/audits/2026-10-03-stage5-zoom-mensual-autorizado.md",
+      "sha256": "946341b12a72d2d09b39c8f049b505f2665c552616ea9bd84c6967f8145c1369",
+      "bytes": 15286,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-10-04-stage5-qa-final-y-rendimiento.md",
+      "snapshot": "docs/audits/2026-10-04-stage5-qa-final-y-rendimiento.md",
+      "sha256": "b0f44dd535768489f6156342cf1fb59c9ea554114373135a7f7a86bcaa7d9840",
+      "bytes": 16263,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-10-09-stage5-continuacion-qa.md",
+      "snapshot": "docs/audits/2026-10-09-stage5-continuacion-qa.md",
+      "sha256": "78dc0f882adcac93dbf2d5a8f62c7a1082f2eae5378cd8030300e3fdcae94450",
+      "bytes": 14169,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-10-09-stage5-imagen-ficticia-talkback.md",
+      "snapshot": "docs/audits/2026-10-09-stage5-imagen-ficticia-talkback.md",
+      "sha256": "8e22cc41dcfd35dcf1f5f781bf993ebf15ac75b521c271af8fce2ffd6b36bbbb",
+      "bytes": 8943,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-10-09-stage5-qa-oem-accesibilidad.md",
+      "snapshot": "docs/audits/2026-10-09-stage5-qa-oem-accesibilidad.md",
+      "sha256": "ce7b317d3691e149b5932761a3956124185c6ce359e98655d842fc32317f8ab3",
+      "bytes": 9899,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-10-10-integridad-y-orden-del-proyecto.md",
+      "snapshot": "docs/audits/2026-10-10-integridad-y-orden-del-proyecto.md",
+      "sha256": "df58432930edffdf1e2af0701fcc47c6beb35701ebb8d59ec155081db18a7ed5",
+      "bytes": 6519,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-10-10-stage5-avisos-y-restauracion.md",
+      "snapshot": "docs/audits/2026-10-10-stage5-avisos-y-restauracion.md",
+      "sha256": "b538145c7a3c80e6aff99953a69ee82c3dd3c59743287d609364a83850e05b14",
+      "bytes": 9665,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-10-10-stage5-imagen-oem.md",
+      "snapshot": "docs/audits/2026-10-10-stage5-imagen-oem.md",
+      "sha256": "a1eccc1e1b88d06ee6359f48e7c405d7e1329964a6b818a22c12001fd7d7efbd",
+      "bytes": 4753,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-10-10-stage6-relevamiento-visual-y-atlas.md",
+      "snapshot": "docs/audits/2026-10-10-stage6-relevamiento-visual-y-atlas.md",
+      "sha256": "252e41c91b81dc881bec71f7f72c9f90b674b98d94af5f9f7758fa6d5b8e11f8",
+      "bytes": 21503,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-10-11-stage6-relevamiento-visual-nuevo.md",
+      "snapshot": "docs/audits/2026-10-11-stage6-relevamiento-visual-nuevo.md",
+      "sha256": "c5f4cb922cfaaa5fc51c71094f2416b1072a4920a761c9c66e446b7fc31fd100",
+      "bytes": 15463,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-10-11-stage7-checkpoint-letra-android.md",
+      "snapshot": "docs/audits/2026-10-11-stage7-checkpoint-letra-android.md",
+      "sha256": "a00c7f40873be46634c19a270774644f16aeb9c8378ad3a08f9e4f13a1c172a9",
+      "bytes": 9130,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-10-11-stage7-matriz-conservacion.md",
+      "snapshot": "docs/audits/2026-10-11-stage7-matriz-conservacion.md",
+      "sha256": "1fd131c4e9e381a6349d316fb640a9b8b8b83b70ad9b492ceb878c56ba15fe93",
+      "bytes": 22363,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-10-11-stage7-qa-main.md",
+      "snapshot": "docs/audits/2026-10-11-stage7-qa-main.md",
+      "sha256": "ded3426b42092584e50e41adb6d9b3fe744cde20d951d06b3a768c5ffdf9c20a",
+      "bytes": 34783,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-10-11-stage7-vigilia-integral.md",
+      "snapshot": "docs/audits/2026-10-11-stage7-vigilia-integral.md",
+      "sha256": "71d4555ebb3583f4e1dd434439de560ca07a77a49512a12f8f622fd1a547c0f4",
+      "bytes": 14420,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-10-20-integridad-y-rutas-del-workspace.md",
+      "snapshot": "docs/audits/2026-10-20-integridad-y-rutas-del-workspace.md",
+      "sha256": "6dbf2d31fe8e1a838a22a2d2eef5644d2cec09b97501b6238d2370c7c77d0330",
+      "bytes": 6183,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-10-21-stage10-preparacion-actualizacion-qa.md",
+      "snapshot": "docs/audits/2026-10-21-stage10-preparacion-actualizacion-qa.md",
+      "sha256": "a4502a1525f5fd5791af3d10d30aebf61aa642425c5a3b173270ba0e0592a034",
+      "bytes": 5157,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-10-21-stage10-revision-main.md",
+      "snapshot": "docs/audits/2026-10-21-stage10-revision-main.md",
+      "sha256": "68fb69102146e5b71c83817566073f03316b9462fc04953940eee9754fdab42b",
+      "bytes": 3905,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-10-21-stage8-rendimiento-resumen-y-guardado.md",
+      "snapshot": "docs/audits/2026-10-21-stage8-rendimiento-resumen-y-guardado.md",
+      "sha256": "e05c852456762bf2a14fda966af476af13f14405690132ea377272097faf4fdf",
+      "bytes": 41408,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-10-21-stage8-revision-main.md",
+      "snapshot": "docs/audits/2026-10-21-stage8-revision-main.md",
+      "sha256": "e6dbb8045c5c3d3d0a495bcbed15ae3c96f425ea0928c333b882acf075e8d7b2",
+      "bytes": 13745,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-10-21-stage9-conservacion-v6-v8.md",
+      "snapshot": "docs/audits/2026-10-21-stage9-conservacion-v6-v8.md",
+      "sha256": "b2aa3262c4270044225c3d284bc4c5cd299cbe5537e997fe93b8805b515a2389",
+      "bytes": 14349,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-10-21-stage9-revision-main.md",
+      "snapshot": "docs/audits/2026-10-21-stage9-revision-main.md",
+      "sha256": "26815e59f1614401a1545f08f55990ef50bc5fd00aaa134a974e0d39a2980762",
+      "bytes": 3334,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-10-22-stage10-revision-main-cierre-local.md",
+      "snapshot": "docs/audits/2026-10-22-stage10-revision-main-cierre-local.md",
+      "sha256": "e12be3ad72ae8169cb8cab3d774a1f27c2692ebf57bb415beb808e909cff71fe",
+      "bytes": 4410,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-10-22-stage10-revision-main-ensayo-android.md",
+      "snapshot": "docs/audits/2026-10-22-stage10-revision-main-ensayo-android.md",
+      "sha256": "9bcf60bc5fde159034f71fe029895bab3d29c2c3af5b98baa96ba969e818247e",
+      "bytes": 7023,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-10-22-stage10-revision-main-ensayo-emulador.md",
+      "snapshot": "docs/audits/2026-10-22-stage10-revision-main-ensayo-emulador.md",
+      "sha256": "03102740ac517a68a377e4502bcc9b5965d99bd8be497242b77156bb28c4af81",
+      "bytes": 5445,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-10-22-stage10-revision-main-preparacion-emulador.md",
+      "snapshot": "docs/audits/2026-10-22-stage10-revision-main-preparacion-emulador.md",
+      "sha256": "168d8f6fc49fded3f59cf2a19567c1182d9e5ebf19a64c54f1a55b31547cb67a",
+      "bytes": 4414,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-10-22-stage8-comparacion-cierre.md",
+      "snapshot": "docs/audits/2026-10-22-stage8-comparacion-cierre.md",
+      "sha256": "9119f1decca520f0412e64e699f633a1964db27c498c237a15ee82fe7751c80f",
+      "bytes": 12483,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-10-22-stage8-revision-main-cierre.md",
+      "snapshot": "docs/audits/2026-10-22-stage8-revision-main-cierre.md",
+      "sha256": "3c57fe3e4a260c09f0981d4a2d3d23f2bf7f750a43ea05e8171a9ddd29603f81",
+      "bytes": 4601,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-10-23-cierre-final-samsung-qa.md",
+      "snapshot": "docs/audits/2026-10-23-cierre-final-samsung-qa.md",
+      "sha256": "76a85ec29d50fd1b15c375e5c8f44c24ad6d0827992b9201736c1e5b50e99a60",
+      "bytes": 9312,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-10-23-detalle-clima-jornada-unica.md",
+      "snapshot": "docs/audits/2026-10-23-detalle-clima-jornada-unica.md",
+      "sha256": "74f4fabd5112e5bfe1a48d638edfac93d07abcbae24810e8a38dc8402a44defe",
+      "bytes": 8970,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-10-23-stage10-revision-main-r2-emulador.md",
+      "snapshot": "docs/audits/2026-10-23-stage10-revision-main-r2-emulador.md",
+      "sha256": "30d17cba2176d49e19b8e0055eaa89c545e6631c93321dc0d42caecaaf96c2c6",
+      "bytes": 6259,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-10-23-stage10-revision-main-recuperacion-r2.md",
+      "snapshot": "docs/audits/2026-10-23-stage10-revision-main-recuperacion-r2.md",
+      "sha256": "528e3a3df5607f8ef3652cd2d0d3469d77f2a19d317640409059893c2ffbd8a6",
+      "bytes": 5838,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-10-23-stage11-restauracion-de-copias.md",
+      "snapshot": "docs/audits/2026-10-23-stage11-restauracion-de-copias.md",
+      "sha256": "252f3e1ed9913cc685bf465e085b7c41f0cf96c0ed6eb29db94af589184eac7f",
+      "bytes": 9019,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-10-23-stage11-revision-main.md",
+      "snapshot": "docs/audits/2026-10-23-stage11-revision-main.md",
+      "sha256": "c7d911eac693ca84ce6ba404bf65dd1be4c0c4701ec58d30cd48f5dcaddf549d",
+      "bytes": 9856,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-10-23-stage12-preparacion-y-revision-visual.md",
+      "snapshot": "docs/audits/2026-10-23-stage12-preparacion-y-revision-visual.md",
+      "sha256": "9360ce69e3f7ea9bbd972289edcecef944fe7a4b06c9ada5d4062a4505e161a3",
+      "bytes": 8417,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-10-23-stage12-revision-main-cierre-local.md",
+      "snapshot": "docs/audits/2026-10-23-stage12-revision-main-cierre-local.md",
+      "sha256": "3c3dd7b9929554ae76b3b8ea4e5e3403346532006b96da3e975e50e3b21fe7e0",
+      "bytes": 4890,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-10-23-stage12-revision-main-l1.md",
+      "snapshot": "docs/audits/2026-10-23-stage12-revision-main-l1.md",
+      "sha256": "4c65185e555ce3669e4e80132e74417a6c7299301d3fb3b5c9c5d56abe5a1b02",
+      "bytes": 3237,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-10-23-stage12-revision-main-l2.md",
+      "snapshot": "docs/audits/2026-10-23-stage12-revision-main-l2.md",
+      "sha256": "71eef7994bac723974f0ec5823d3ad82a61b1bab60372b06dbdd6addc0bdee14",
+      "bytes": 6095,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-10-24-inventario-procesos-y-skills.md",
+      "snapshot": "docs/audits/2026-10-24-inventario-procesos-y-skills.md",
+      "sha256": "d9fa688dd958d34d9997da729e75fca0eb070ca9c8d0ddbc8f33a6c823f450ac",
+      "bytes": 22110,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-10-24-stage12-revision-main-g3-r2.md",
+      "snapshot": "docs/audits/2026-10-24-stage12-revision-main-g3-r2.md",
+      "sha256": "7e3acdf1cfda6dbab57c3d3e9937d7195de8c4ac81fe7a24a61db1a1323ac87c",
+      "bytes": 113050,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-10-31-checkpoint-github.md",
+      "snapshot": "docs/audits/2026-10-31-checkpoint-github.md",
+      "sha256": "0e06504c9598469a4b2809b562ea174fc47680de35c54cacb8dbdf3ef46576cd",
+      "bytes": 4497,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-10-31-diagnostico-loops-y-plan-cierre.md",
+      "snapshot": "docs/audits/2026-10-31-diagnostico-loops-y-plan-cierre.md",
+      "sha256": "61ab6f4381dc85fb0292bc548dfd70027ae7d556bdd33bc0e705aea62176b7fa",
+      "bytes": 18212,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/audits/2026-11-03-c026-causas-resultados-y-continuidad.md",
+      "snapshot": "docs/audits/2026-11-03-c026-causas-resultados-y-continuidad.md",
+      "sha256": "f536778bbbe4c3d781fb0cf1e1d8e7ec504e41eeddbbfa4dce700f5e738b0689",
+      "bytes": 47595,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/diagrams/miguardia-3-ruta-pendiente-2026-10-02.png",
+      "snapshot": "docs/diagrams/miguardia-3-ruta-pendiente-2026-10-02.png",
+      "sha256": "9b7f1dd87da6a97e3d42d02a3a60b8ca412b688356ea9155cf94b7c194420f36",
+      "bytes": 1443370,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/diagrams/orquestacion-main.mmd",
+      "snapshot": "docs/diagrams/orquestacion-main.mmd",
+      "sha256": "16bfc66ee5e2de36b0665fa1080e0758a39694d1c1ef70d7d92874c87de2df96",
+      "bytes": 44175,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/diagrams/stage-3-flujo.png",
+      "snapshot": "docs/diagrams/stage-3-flujo.png",
+      "sha256": "5510df95e56a33ec67b5a9fac55a04c94c44a480e27ad338f78578cdba024388",
+      "bytes": 42628,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/diagrams/stage-3-flujo.svg",
+      "snapshot": "docs/diagrams/stage-3-flujo.svg",
+      "sha256": "30256293cf95610c58670a4bfa4e5af4a6ef2cbaf0647b232b8e5a5b45571d5e",
+      "bytes": 5477,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/ACCESO_A_LA_BETA_Y_OPINIONES_ANDROID_V2.md",
+      "snapshot": "docs/prompts/ACCESO_A_LA_BETA_Y_OPINIONES_ANDROID_V2.md",
+      "sha256": "15326e79cf0f8d5dd30008bb170cdc9483f89d164a69ce9979891a2001a46198",
+      "bytes": 393,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/ACTUALIZACION_MANUAL_SIN_PERDER_DATOS_V2.md",
+      "snapshot": "docs/prompts/ACTUALIZACION_MANUAL_SIN_PERDER_DATOS_V2.md",
+      "sha256": "5e4b6d746d8f812352b327621bc9bd78c92f0656551b3bb596db2981340fef6b",
+      "bytes": 388,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/APOYAR_MIGUARDIA_EN_EL_MENU_ANDROID_V2.md",
+      "snapshot": "docs/prompts/APOYAR_MIGUARDIA_EN_EL_MENU_ANDROID_V2.md",
+      "sha256": "00c459c7d6c31d5904fc88284515535e12564510f21643500e4ad0f91d7098ec",
+      "bytes": 391,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/AUDITORIA_FINAL_SEGURIDAD_RELEASE_V2.md",
+      "snapshot": "docs/prompts/AUDITORIA_FINAL_SEGURIDAD_RELEASE_V2.md",
+      "sha256": "fd682d65ab57e9a34be5b3db43150059010ca2e0d4a53e8130395fd753c26713",
+      "bytes": 11672,
+      "disposition": "replaced"
+    },
+    {
+      "source": "docs/prompts/AUDITORIA_INTEGRAL_DEL_NUCLEO_Y_COMPATIBILIDAD_ANDROID_V2.md",
+      "snapshot": "docs/prompts/AUDITORIA_INTEGRAL_DEL_NUCLEO_Y_COMPATIBILIDAD_ANDROID_V2.md",
+      "sha256": "d20082eca58a92a192e32e5610f4bc064d627c35ad10984b7dcebf24084adf9b",
+      "bytes": 406,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/AYUDA_Y_RECORRIDO_INICIAL_V2.md",
+      "snapshot": "docs/prompts/AYUDA_Y_RECORRIDO_INICIAL_V2.md",
+      "sha256": "9379a2c02061adca0460aec3e31fca887a35a5909403c456b1991bd2e4afb58c",
+      "bytes": 378,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/BLOQUEO_DE_ACCESO_LOCAL_V2.md",
+      "snapshot": "docs/prompts/BLOQUEO_DE_ACCESO_LOCAL_V2.md",
+      "sha256": "9db86fd4886dab913f2358931a794d3b68deaa2ca6f084f97d33d06703e92b05",
+      "bytes": 344,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/CALENDARIO_FINAL_Y_TARJETA_SUPERIOR_V2.md",
+      "snapshot": "docs/prompts/CALENDARIO_FINAL_Y_TARJETA_SUPERIOR_V2.md",
+      "sha256": "1138ef59710d9c317334248f7b5c40ee8cadb7348eb935aab48f55362e061e50",
+      "bytes": 368,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/CALENDARIO_MENSUAL.md",
+      "snapshot": "docs/prompts/CALENDARIO_MENSUAL.md",
+      "sha256": "c4c46ddb29e8eecf7fb6a121048dbcb33fc673ba53e3a17f0803e0622f0911bd",
+      "bytes": 343,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/CALENDARIO_MODO_CONSULTA_Y_EDICION.md",
+      "snapshot": "docs/prompts/CALENDARIO_MODO_CONSULTA_Y_EDICION.md",
+      "sha256": "f8c22f765d48fc29523ade5e4d46bea3d7c1925f8d1d220a4dabef0494a7feb1",
+      "bytes": 383,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/CALENDARIO_SELECCION_DIRECTA.md",
+      "snapshot": "docs/prompts/CALENDARIO_SELECCION_DIRECTA.md",
+      "sha256": "03f1c89d56dc593109a050ee62923ac7a604dcb755c73607c66e8349b5990f5b",
+      "bytes": 374,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/CARGA_MANUAL_DE_JORNADAS_V2.md",
+      "snapshot": "docs/prompts/CARGA_MANUAL_DE_JORNADAS_V2.md",
+      "sha256": "589269c2aa74ea2082c571e1b38ff7b76015ad0b7c06794bfbf961224cb93540",
+      "bytes": 346,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/CIERRE_ANDROID_PUBLICO_SEGURIDAD_Y_ENTREGA_V2.md",
+      "snapshot": "docs/prompts/CIERRE_ANDROID_PUBLICO_SEGURIDAD_Y_ENTREGA_V2.md",
+      "sha256": "07ed66e511b39b34303f0cf26aa29a8480a3b8e9cfd7788c03f2aacea8b2c3b0",
+      "bytes": 28233,
+      "disposition": "replaced"
+    },
+    {
+      "source": "docs/prompts/CIERRE_FINAL_SAMSUNG_QA_3_0.md",
+      "snapshot": "docs/prompts/CIERRE_FINAL_SAMSUNG_QA_3_0.md",
+      "sha256": "441802541da1ce0defd28c53fc091e50bc19146fc6438b2e97d0da655225cb70",
+      "bytes": 2485,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/CLIMA.md",
+      "snapshot": "docs/prompts/CLIMA.md",
+      "sha256": "ef09bc809165b155081b1dfd084de7ffc373d0bb3f69fb521c98f182f94deaf6",
+      "bytes": 315,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/CONFIGURACION_PERSISTENTE_Y_MIGRACION_ROOM_V6.md",
+      "snapshot": "docs/prompts/CONFIGURACION_PERSISTENTE_Y_MIGRACION_ROOM_V6.md",
+      "sha256": "ce0c32d5e594b2ee579b0670c3ba1883979437f23888a79e559221053b65cdd6",
+      "bytes": 411,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/COORDINACION_EXPERIENCIA_INICIAL_Y_PERFIL_MAIN.md",
+      "snapshot": "docs/prompts/COORDINACION_EXPERIENCIA_INICIAL_Y_PERFIL_MAIN.md",
+      "sha256": "ab2370d1b682962de1d201b4219019b260d47cddde517bbcfa75e0bb0a4d3cb8",
+      "bytes": 397,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/COPIAS_Y_RESTAURACION_LOCALES_SEGURAS_V2.md",
+      "snapshot": "docs/prompts/COPIAS_Y_RESTAURACION_LOCALES_SEGURAS_V2.md",
+      "sha256": "6c706c32c5420e3e1d524d9440ea21fba6389ee679c377305e85d342679256ae",
+      "bytes": 372,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/CORRECCION_DETALLE_CLIMA_Y_JORNADA_UNICA_3_0.md",
+      "snapshot": "docs/prompts/CORRECCION_DETALLE_CLIMA_Y_JORNADA_UNICA_3_0.md",
+      "sha256": "49479d590a0bc4537744f95e020a2defd4a558b4d5515091c921eeaafd6acc23",
+      "bytes": 2469,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/CORRECCION_FRANCOS_DESDE_CALENDARIO.md",
+      "snapshot": "docs/prompts/CORRECCION_FRANCOS_DESDE_CALENDARIO.md",
+      "sha256": "2ed3b1c9b8c56506baf0ca31de555bf6ad28437bace28d32febf9fb6e347d7ac",
+      "bytes": 1363,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/CORRECCION_ORIENTACION_FOTOS.md",
+      "snapshot": "docs/prompts/CORRECCION_ORIENTACION_FOTOS.md",
+      "sha256": "f65c2fd3b8c61c078e0f5f1399ad3af31a559e3caebfa4ef257bb26a83e4e134",
+      "bytes": 358,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/CUSTODIA_CLAVE_RELEASE_V2.md",
+      "snapshot": "docs/prompts/CUSTODIA_CLAVE_RELEASE_V2.md",
+      "sha256": "80822e0bfd046d3f8279133fded01b75b02fcb57b212fd2ae31fa60085c4a83a",
+      "bytes": 3544,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/DATA_LOCAL.md",
+      "snapshot": "docs/prompts/DATA_LOCAL.md",
+      "sha256": "bdb70761028bba126fe0579d7005d579d03ac8dc1b34a0007edf1d9250b0eca0",
+      "bytes": 322,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/DISTRIBUCION_PUBLICA_WEB_Y_CONTRATO_V2.md",
+      "snapshot": "docs/prompts/DISTRIBUCION_PUBLICA_WEB_Y_CONTRATO_V2.md",
+      "sha256": "0fbac1f3a6172fda619e4bcdfb15997c627567d033a5d6e1e1a37dae5c644182",
+      "bytes": 12359,
+      "disposition": "replaced"
+    },
+    {
+      "source": "docs/prompts/DISTRIBUCION_PUBLICA_Y_SEGURIDAD_V2.md",
+      "snapshot": "docs/prompts/DISTRIBUCION_PUBLICA_Y_SEGURIDAD_V2.md",
+      "sha256": "dd5a206dee9148b32841a862598aa4dc7632f2f5d78c7c5bac9383d531e1cb8c",
+      "bytes": 7909,
+      "disposition": "replaced"
+    },
+    {
+      "source": "docs/prompts/EDICION_Y_ELIMINACION_DE_JORNADAS_V2.md",
+      "snapshot": "docs/prompts/EDICION_Y_ELIMINACION_DE_JORNADAS_V2.md",
+      "sha256": "23ac6160ac8a113e3fdf58cbf577d4a250313ce4b60896e38317610121f0ffd0",
+      "bytes": 364,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/EXTRAS_INDEPENDIENTES_Y_AVANCE_DE_HORAS_V2.md",
+      "snapshot": "docs/prompts/EXTRAS_INDEPENDIENTES_Y_AVANCE_DE_HORAS_V2.md",
+      "sha256": "9b23db8e7c868a5036e19b9a484f587f069daa936f28f14878e5417e060b6ce8",
+      "bytes": 376,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/FOTOS_MENSUALES_DEL_CRONOGRAMA.md",
+      "snapshot": "docs/prompts/FOTOS_MENSUALES_DEL_CRONOGRAMA.md",
+      "sha256": "d6f1a8f7e5e8da35f2243aa8d0494a04698257c11863ebdc3da79171cd8abd47",
+      "bytes": 369,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/GUARDIAS_PASIVAS_Y_DISPONIBILIDAD_V2.md",
+      "snapshot": "docs/prompts/GUARDIAS_PASIVAS_Y_DISPONIBILIDAD_V2.md",
+      "sha256": "c9e1cf73c943a4fa646ad2fb7028c4b06689f063c744e3b5bc7808c399fe8ef5",
+      "bytes": 364,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/HIGIENE_PREVIA_MIGUARDIA_3.md",
+      "snapshot": "docs/prompts/HIGIENE_PREVIA_MIGUARDIA_3.md",
+      "sha256": "fbe5b3628bbb88eb77a99b3e701c929fc499b6f43751e0dd4499951fe37b3fd5",
+      "bytes": 2080,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/INFORMES_LOCALES_DE_JORNADAS_Y_HORAS_V2.md",
+      "snapshot": "docs/prompts/INFORMES_LOCALES_DE_JORNADAS_Y_HORAS_V2.md",
+      "sha256": "f75c28d4016cddd220c62ed65cd2613241aeb95bf77b28d83cdb0e4e17ac20bb",
+      "bytes": 370,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/INTEGRACION_Y_DEPURACION_DE_CAMBIOS_DE_ULTIMO_MOMENTO_V2.md",
+      "snapshot": "docs/prompts/INTEGRACION_Y_DEPURACION_DE_CAMBIOS_DE_ULTIMO_MOMENTO_V2.md",
+      "sha256": "7e7ad9d0a4b8475284e1f8b107677c3e5b00c1c67ddf96e9d3f1c665762276d1",
+      "bytes": 416,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/LUGARES_TIPOS_PLANTILLAS_Y_PRIMERA_CARGA_V2.md",
+      "snapshot": "docs/prompts/LUGARES_TIPOS_PLANTILLAS_Y_PRIMERA_CARGA_V2.md",
+      "sha256": "72e6ec7a6da8b5dddac1abd5ac4df618a14dc24db39d1654e3f8ce154d2946b8",
+      "bytes": 391,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/MOTOR_BASICO_DE_HORAS.md",
+      "snapshot": "docs/prompts/MOTOR_BASICO_DE_HORAS.md",
+      "sha256": "e65d73877bed332dbdf1d8433bc23b138da7119f5df686c92ee5e13904e65731",
+      "bytes": 349,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/MOTOR_DE_PROXIMO_EVENTO.md",
+      "snapshot": "docs/prompts/MOTOR_DE_PROXIMO_EVENTO.md",
+      "sha256": "1826c0cb06b755957051acdbd3fb67e56f1c924dc9dbecd4bbe660149b047ab0",
+      "bytes": 357,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/NAVEGACION_MENU_LATERAL.md",
+      "snapshot": "docs/prompts/NAVEGACION_MENU_LATERAL.md",
+      "sha256": "61e5895ce307e0570437807b4ea1837800e84ec86ca8b038d58a0612d8e1f9e6",
+      "bytes": 344,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/NOTIFICACIONES.md",
+      "snapshot": "docs/prompts/NOTIFICACIONES.md",
+      "sha256": "42fb5e31c43baa37957667bcafd549b56b6bcb899eaac6a6abdab070d2c32816",
+      "bytes": 337,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/NOTIFICACIONES_PULSO_VIGILIA.md",
+      "snapshot": "docs/prompts/NOTIFICACIONES_PULSO_VIGILIA.md",
+      "sha256": "78e9db82071bf6e4e98ac0d04b7421c2b8dcfa3e2ca572a0b00b81109461a199",
+      "bytes": 363,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/NOVEDADES_FERIADOS_Y_NOTAS.md",
+      "snapshot": "docs/prompts/NOVEDADES_FERIADOS_Y_NOTAS.md",
+      "sha256": "e6ac3fc15fa74ec3724af6266735738d70344d852c192fc5961f2757e4eb2610",
+      "bytes": 356,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/OBJETIVOS_Y_GUARDIAS.md",
+      "snapshot": "docs/prompts/OBJETIVOS_Y_GUARDIAS.md",
+      "sha256": "e797c398a66ca9f6f7ecabbd9652a3db646140abd8009480dfc710eaa5feca8e",
+      "bytes": 351,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/ONBOARDING_Y_PRIMERA_CARGA.md",
+      "snapshot": "docs/prompts/ONBOARDING_Y_PRIMERA_CARGA.md",
+      "sha256": "a9a0d275458e9264dbdc5273725df4c39126581389e36f3f7cb02b8754b796ef",
+      "bytes": 361,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/OPTIMIZACION_DEL_PROYECTO.md",
+      "snapshot": "docs/prompts/OPTIMIZACION_DEL_PROYECTO.md",
+      "sha256": "a8efaf130fd55d91b1b951e63ca72e1bb4a8b35d21eed81f6ff08e7155a037e1",
+      "bytes": 3255,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/ORQUESTACION_SECUENCIAL_MAIN_2_0.md",
+      "snapshot": "docs/prompts/ORQUESTACION_SECUENCIAL_MAIN_2_0.md",
+      "sha256": "bc9393ee023d72b860fb1eef79993104167a248af9675f4f58f8d2fda8c2d4fe",
+      "bytes": 253,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/PAGINA_DE_APORTES_VOLUNTARIOS_WEB_V2.md",
+      "snapshot": "docs/prompts/PAGINA_DE_APORTES_VOLUNTARIOS_WEB_V2.md",
+      "sha256": "4f591463408a2ee0f4795841734987f642d7dfba13bd199b8d43e994b1836787",
+      "bytes": 376,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/PAGINA_PUBLICA_DE_MIGUARDIA_Y_ACCESO_A_LA_BETA_WEB_V2.md",
+      "snapshot": "docs/prompts/PAGINA_PUBLICA_DE_MIGUARDIA_Y_ACCESO_A_LA_BETA_WEB_V2.md",
+      "sha256": "7aaddecf6b79d813d31843b5e173fc46a95750adf63ea4f9ffc46e1183f5c623",
+      "bytes": 410,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/PERFIL_LABORAL_Y_CONFIGURACION.md",
+      "snapshot": "docs/prompts/PERFIL_LABORAL_Y_CONFIGURACION.md",
+      "sha256": "2ab2d0de74b68c67b0645d0f5765182423bdf262e43415ec49aad1e38327cf84",
+      "bytes": 360,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/PORTAL_BETA_PRIVADA_Y_CLAVES_DE_ACCESO_WEB_V2.md",
+      "snapshot": "docs/prompts/PORTAL_BETA_PRIVADA_Y_CLAVES_DE_ACCESO_WEB_V2.md",
+      "sha256": "14aa25d3f2e2d04e417ff392d4e07b8bc2b60687a1df4bc052314a3813940f8f",
+      "bytes": 408,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/PREPARAR_APK_BETA_OFICIAL_PARA_WEB_V2.md",
+      "snapshot": "docs/prompts/PREPARAR_APK_BETA_OFICIAL_PARA_WEB_V2.md",
+      "sha256": "36acfb6835e2292adf37a4e1288db06955f266e5efae2f3b95227fbb5fc022f6",
+      "bytes": 15322,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/PRIMERA_APERTURA_Y_CONFIGURACION_LABORAL_VISIBLE_V2.md",
+      "snapshot": "docs/prompts/PRIMERA_APERTURA_Y_CONFIGURACION_LABORAL_VISIBLE_V2.md",
+      "sha256": "59a3956637b5673f65d9942b80faf3360a31d4fcd9e73a3932003ac8426206bd",
+      "bytes": 394,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/PROXIMO_EVENTO_Y_NOTIFICACIONES_V2.md",
+      "snapshot": "docs/prompts/PROXIMO_EVENTO_Y_NOTIFICACIONES_V2.md",
+      "sha256": "5d417b3b73912bfabda7393622512eaa844839c993dec97ae7eaab316b966574",
+      "bytes": 360,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/PRUEBAS_CRUZADAS_DEL_NUCLEO_V2.md",
+      "snapshot": "docs/prompts/PRUEBAS_CRUZADAS_DEL_NUCLEO_V2.md",
+      "sha256": "7441dc5351c46601482bebc7f4b9b03df14d4a5821e482b879e82bf7ad0997e8",
+      "bytes": 352,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/PULIDO_VISUAL_Y_UX.md",
+      "snapshot": "docs/prompts/PULIDO_VISUAL_Y_UX.md",
+      "sha256": "0ca75f95293f4576e5065a3146c4880d811b6aa00cabf75524b2bb09ffdd1b76",
+      "bytes": 344,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/README.md",
+      "snapshot": "docs/prompts/README.md",
+      "sha256": "b0815ef352849f35f7a02af591aab6c9079c6063827ffa35b5e578a2b6de21d7",
+      "bytes": 5212,
+      "disposition": "replaced"
+    },
+    {
+      "source": "docs/prompts/REANUDAR_STAGE_10_RECUPERACION_R2_Y_CONSERVACION_3_0.md",
+      "snapshot": "docs/prompts/REANUDAR_STAGE_10_RECUPERACION_R2_Y_CONSERVACION_3_0.md",
+      "sha256": "e8c41719d4eb5ca8c2d47e8b604b108f7918b168697221a8f15557bb88c2773e",
+      "bytes": 7445,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/REANUDAR_STAGE_8_DIAGNOSTICO_SAMSUNG_3_0.md",
+      "snapshot": "docs/prompts/REANUDAR_STAGE_8_DIAGNOSTICO_SAMSUNG_3_0.md",
+      "sha256": "c35766998cb42fcc4c95e855cad4d20447796dc22bfb2ab7def2a0e687be8d20",
+      "bytes": 8781,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/REGISTRAR_HORARIO_REAL_Y_CLASIFICAR_HORAS_EXTRA_V2.md",
+      "snapshot": "docs/prompts/REGISTRAR_HORARIO_REAL_Y_CLASIFICAR_HORAS_EXTRA_V2.md",
+      "sha256": "6d6aaa7789aaad711a2830a0c7a506795636ee17648f0f9059bf5f83a48ee50f",
+      "bytes": 392,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/REGLAS_CONFIGURACION_LABORAL_POR_MES.md",
+      "snapshot": "docs/prompts/REGLAS_CONFIGURACION_LABORAL_POR_MES.md",
+      "sha256": "e0bb08e2ce0ae4b503ea0dd8eaa8f1718470427d88241100a8430e89ab8b56e8",
+      "bytes": 380,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/REGLAS_DOMINIO_CONFIGURACION_Y_HORAS_V2.md",
+      "snapshot": "docs/prompts/REGLAS_DOMINIO_CONFIGURACION_Y_HORAS_V2.md",
+      "sha256": "533ef810af5d8aa751171f6658d47fd8e658407e8f62173405de0d520aacc22d",
+      "bytes": 370,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/REPETIR_JORNADAS_Y_CAMBIAR_DESDE_UNA_FECHA_V2.md",
+      "snapshot": "docs/prompts/REPETIR_JORNADAS_Y_CAMBIAR_DESDE_UNA_FECHA_V2.md",
+      "sha256": "78b9123936e0ca4d1f1c05b3cc684dc8741e171eaa67d22378f525ba48404c06",
+      "bytes": 382,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/RESUMEN_PERSONALIZABLE_V2.md",
+      "snapshot": "docs/prompts/RESUMEN_PERSONALIZABLE_V2.md",
+      "sha256": "839eadbde02ca46acc1fda4bc1202c1cf5e00baa05ca0b06d208745a22f020ad",
+      "bytes": 342,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/RETIRAR_MODO_V1_Y_FIJAR_BASE_EXCLUSIVA_V2.md",
+      "snapshot": "docs/prompts/RETIRAR_MODO_V1_Y_FIJAR_BASE_EXCLUSIVA_V2.md",
+      "sha256": "b7e2cdf163689ef3a4a63f163af4570747bb66ce6fb9b5130befdd0b9afb92c3",
+      "bytes": 374,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/SIMPLIFICACION_FLUJO_DE_CARGA.md",
+      "snapshot": "docs/prompts/SIMPLIFICACION_FLUJO_DE_CARGA.md",
+      "sha256": "ea61b2416f07b2eb3147e525d6e0f6487e7b58afc4e9649478cb24330e2883bd",
+      "bytes": 359,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/STAGE_10_ACTUALIZACION_QA_Y_CONSERVACION_ANDROID_3_0.md",
+      "snapshot": "docs/prompts/STAGE_10_ACTUALIZACION_QA_Y_CONSERVACION_ANDROID_3_0.md",
+      "sha256": "369a94a33bea86c49e5aca7e15008e8676d72691a16433ec1346f2a1159077da",
+      "bytes": 53019,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/STAGE_11_RESTAURACION_DE_COPIAS_EN_ANDROID_3_0.md",
+      "snapshot": "docs/prompts/STAGE_11_RESTAURACION_DE_COPIAS_EN_ANDROID_3_0.md",
+      "sha256": "ffa6620a08bdf19e5a7bc156f624fff5b385cc31ccd2bcaab96bde4e5f36c65a",
+      "bytes": 16404,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/STAGE_12_1_CIERRE_B1_3_0.md",
+      "snapshot": "docs/prompts/STAGE_12_1_CIERRE_B1_3_0.md",
+      "sha256": "5019c28f050de8cebeddb55b5f0fbf0c76b793112cfb3d51249f08d3d8411487",
+      "bytes": 12120,
+      "disposition": "replaced"
+    },
+    {
+      "source": "docs/prompts/STAGE_12_VERIFICACION_FUNCIONAL_VISUAL_E_INTEGRIDAD_3_0.md",
+      "snapshot": "docs/prompts/STAGE_12_VERIFICACION_FUNCIONAL_VISUAL_E_INTEGRIDAD_3_0.md",
+      "sha256": "f72fea420fe0c8a3fdeb62bd05c9c3496cc57f3396489c51e1351b5404775a2a",
+      "bytes": 120803,
+      "disposition": "replaced"
+    },
+    {
+      "source": "docs/prompts/STAGE_1_DETALLE_EDICION_Y_COMPOSICION_DEL_DIA_3_0.md",
+      "snapshot": "docs/prompts/STAGE_1_DETALLE_EDICION_Y_COMPOSICION_DEL_DIA_3_0.md",
+      "sha256": "a62aef9fbe691e9b230a6e5e56aa4e2c9408c1dff485280517d4ae40f11c1183",
+      "bytes": 35443,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/STAGE_2_SITUACIONES_LABORALES_Y_ESTADOS_DEL_DIA_3_0.md",
+      "snapshot": "docs/prompts/STAGE_2_SITUACIONES_LABORALES_Y_ESTADOS_DEL_DIA_3_0.md",
+      "sha256": "aaee797a4f33d298ef413ae00347a52b0caf9ba090a97f076719cb145f08c242",
+      "bytes": 18131,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/STAGE_3_1_CALENDARIO_MENSUAL_Y_ACCIONES_CONTEXTUALES_3_0.md",
+      "snapshot": "docs/prompts/STAGE_3_1_CALENDARIO_MENSUAL_Y_ACCIONES_CONTEXTUALES_3_0.md",
+      "sha256": "fe013c9ca71a5becd371479c1b5725d468e07f087d09c610d4ecda8b431c372a",
+      "bytes": 3625,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/STAGE_3_2_CARGA_ORDENADA_Y_BORRADOR_3_0.md",
+      "snapshot": "docs/prompts/STAGE_3_2_CARGA_ORDENADA_Y_BORRADOR_3_0.md",
+      "sha256": "272e957e699b6ede992fd6f5c8b0cd384f184b86cd0fe6181f33657ac33d8539",
+      "bytes": 6689,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/STAGE_3_AMPLIACION_DETALLE_JORNADAS_Y_CALENDARIO_ESTATICO_3_0.md",
+      "snapshot": "docs/prompts/STAGE_3_AMPLIACION_DETALLE_JORNADAS_Y_CALENDARIO_ESTATICO_3_0.md",
+      "sha256": "43e897f5b2ce62645bc8c43061dbe7c93983f3a453bf2a32dd2ced6e8790aea2",
+      "bytes": 12978,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/STAGE_3_CIERRE_PROXIMA_JORNADA_Y_CARGA_UNIFICADA_3_0.md",
+      "snapshot": "docs/prompts/STAGE_3_CIERRE_PROXIMA_JORNADA_Y_CARGA_UNIFICADA_3_0.md",
+      "sha256": "2b3043e198529177ff6f45993838341ee09b7b1ca025654839b885d80c4fd15a",
+      "bytes": 9433,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/STAGE_3_CIERRE_RECREACION_Y_EVIDENCIA_3_0.md",
+      "snapshot": "docs/prompts/STAGE_3_CIERRE_RECREACION_Y_EVIDENCIA_3_0.md",
+      "sha256": "e9d732eaca4839018b26a0d6caab478398897d1a4b817871ecf573179d551f62",
+      "bytes": 8564,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/STAGE_3_CORRECCION_PRIORIDAD_ATRAS_3_0.md",
+      "snapshot": "docs/prompts/STAGE_3_CORRECCION_PRIORIDAD_ATRAS_3_0.md",
+      "sha256": "dea4b446d017e7d39454f3678f0e9ae4c46664cb669ba0d65fa76a9080fa20cd",
+      "bytes": 7786,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/STAGE_3_SELECCION_MULTIPLE_Y_CALENDARIO_PLEGABLE_3_0.md",
+      "snapshot": "docs/prompts/STAGE_3_SELECCION_MULTIPLE_Y_CALENDARIO_PLEGABLE_3_0.md",
+      "sha256": "825a407c5c99136b81855128bfd5f7e0bf3e719904fed6129d3d94f557e97e74",
+      "bytes": 12072,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/STAGE_4_FLUIDEZ_E_INTEGRIDAD_3_0.md",
+      "snapshot": "docs/prompts/STAGE_4_FLUIDEZ_E_INTEGRIDAD_3_0.md",
+      "sha256": "dd421771cd59ec11d9848e9c8424b6ab754b3dad9c492c0095e565d05b4b945b",
+      "bytes": 12650,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/STAGE_5_CIERRE_VISUAL_FLUIDEZ_E_INTEGRIDAD_3_0.md",
+      "snapshot": "docs/prompts/STAGE_5_CIERRE_VISUAL_FLUIDEZ_E_INTEGRIDAD_3_0.md",
+      "sha256": "3c68d1a16872e1ad66bfe5648a1c3764559fe6ec1377c2b29565d668d11c624a",
+      "bytes": 10379,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/STAGE_6_RELEVAMIENTO_VISUAL_Y_ATLAS_DE_PANTALLAS_3_0.md",
+      "snapshot": "docs/prompts/STAGE_6_RELEVAMIENTO_VISUAL_Y_ATLAS_DE_PANTALLAS_3_0.md",
+      "sha256": "58d0573a17f8db8ec32d349106f9acfb3679e360eb964d4afe54d8810a75cfaa",
+      "bytes": 5010,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/STAGE_7_VIGILIA_INTEGRAL_SIN_REGRESIONES_3_0.md",
+      "snapshot": "docs/prompts/STAGE_7_VIGILIA_INTEGRAL_SIN_REGRESIONES_3_0.md",
+      "sha256": "45f0d7613e4c0ce941e4fe7baef664fb179b25462448602a3f5946350419ffeb",
+      "bytes": 18934,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/STAGE_8_CIERRE_COMPARACION_RENDIMIENTO_3_0.md",
+      "snapshot": "docs/prompts/STAGE_8_CIERRE_COMPARACION_RENDIMIENTO_3_0.md",
+      "sha256": "3133f80b0f0da05452d8512e8d1e43e43fce0ec235d11eb490252124a8e4bbaa",
+      "bytes": 12838,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/STAGE_8_RENDIMIENTO_RESUMEN_Y_GUARDADO_3_0.md",
+      "snapshot": "docs/prompts/STAGE_8_RENDIMIENTO_RESUMEN_Y_GUARDADO_3_0.md",
+      "sha256": "37c0933366ef7456a26dbffcdb9f1603db8fb0a32930db4763d3b9392e451c32",
+      "bytes": 13334,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/STAGE_9_CONSERVACION_ACTUALIZACION_V6_V8_3_0.md",
+      "snapshot": "docs/prompts/STAGE_9_CONSERVACION_ACTUALIZACION_V6_V8_3_0.md",
+      "sha256": "563c9a6f1759d8ab42b94b549d9300684ad33f9aa4ab37ece4ef7a3d88a6d1fe",
+      "bytes": 12423,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/UX_UI_CALENDARIO_ADAPTABLE_2_0.md",
+      "snapshot": "docs/prompts/UX_UI_CALENDARIO_ADAPTABLE_2_0.md",
+      "sha256": "24596367a2a936465246b4323fa137d08e7014761f192a2b85799ba6aab9bb2e",
+      "bytes": 352,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/VACACIONES.md",
+      "snapshot": "docs/prompts/VACACIONES.md",
+      "sha256": "186dc2233e48633a190dc89606a39f1171e4dfea83527250a21ac96ee7b4bc19",
+      "bytes": 325,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/VIGILIA_SISTEMA_VISUAL.md",
+      "snapshot": "docs/prompts/VIGILIA_SISTEMA_VISUAL.md",
+      "sha256": "378aaad62cbf7abd608766434ec43ab505085c2b0526356abddf4d9df40a3e62",
+      "bytes": 345,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/prompts/WIDGET_DE_PROXIMO_EVENTO_V2.md",
+      "snapshot": "docs/prompts/WIDGET_DE_PROXIMO_EVENTO_V2.md",
+      "sha256": "888f67765af45f10448026300ff8cdc74b4952ebc9025c54cdc7046ba63b88e4",
+      "bytes": 346,
+      "disposition": "retired"
+    },
+    {
+      "source": "docs/releases/MIGUARDIA_1.0.0.md",
+      "snapshot": "docs/releases/MIGUARDIA_1.0.0.md",
+      "sha256": "4f6a1636474c2880b8428012fc46b5e27d3bd0c93fafb009ac9f850f442e2f30",
+      "bytes": 8204,
+      "disposition": "retired"
+    },
+    {
+      "source": "tools/docs_check.py",
+      "snapshot": "tools/docs_check.py",
+      "sha256": "d792011d8243ba57a7eba5f4f84d5f5c2ac49c33b73006bf2d0ad28cebed666a",
+      "bytes": 10264,
+      "disposition": "replaced"
+    },
+    {
+      "source": "tools/tests/test_docs_check.py",
+      "snapshot": "tools/tests/test_docs_check.py",
+      "sha256": "f512b9b21cd156d0e2cd97094890561658f472cdeb1d89c56d4228bc72f6265f",
+      "bytes": 5039,
+      "disposition": "replaced"
+    }
+  ]
+}

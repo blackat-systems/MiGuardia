@@ -8,6 +8,9 @@ import com.blackatsystems.miguardia.core.database.mapping.toAvailabilityEntity
 import com.blackatsystems.miguardia.core.database.mapping.toDomainAvailability
 import com.blackatsystems.miguardia.core.database.mapping.toDomainOrNull
 import com.blackatsystems.miguardia.core.database.validation.requireValidV2LocalData
+import com.blackatsystems.miguardia.core.domain.model.AvailabilityActiveWorkInterval
+import com.blackatsystems.miguardia.core.domain.model.AvailabilityActiveWorkKind
+import com.blackatsystems.miguardia.core.domain.model.AvailabilityCalculationSnapshot
 import com.blackatsystems.miguardia.core.domain.model.AvailabilitySourceVersion
 import com.blackatsystems.miguardia.core.domain.model.AvailabilityWindowExpectation
 import com.blackatsystems.miguardia.core.domain.model.AvailabilityWindowMutation
@@ -191,20 +194,34 @@ internal class RoomAvailabilityWindowRepository(
         }
         val firstProtectedDate = protectedOwnerDates.minOrNull() ?: configuration.referenceDate
         val lastProtectedDate = protectedOwnerDates.maxOrNull() ?: configuration.referenceDate
+        val medical = sourceDao.getMedicalLeaves(firstProtectedDate.toString(), lastProtectedDate.toString())
+        val vacations = sourceDao.getVacations(firstProtectedDate.toString(), lastProtectedDate.toString())
+        val protectedRanges = medical.map { LocalDate.parse(it.startDate)..LocalDate.parse(it.endDateInclusive) } +
+            vacations.map { LocalDate.parse(it.startDate)..LocalDate.parse(it.endDateInclusive) }
         val protectionFingerprint = buildList {
-            sourceDao.getMedicalLeaves(firstProtectedDate.toString(), lastProtectedDate.toString()).forEach { row ->
+            medical.forEach { row ->
                 val range = LocalDate.parse(row.startDate)..LocalDate.parse(row.endDateInclusive)
                 if (protectedOwnerDates.any { it in range }) {
                     add("medical:${row.id}:${row.startDate}:${row.endDateInclusive}:${row.updatedAtEpochMillis}")
                 }
             }
-            sourceDao.getVacations(firstProtectedDate.toString(), lastProtectedDate.toString()).forEach { row ->
+            vacations.forEach { row ->
                 val range = LocalDate.parse(row.startDate)..LocalDate.parse(row.endDateInclusive)
                 if (protectedOwnerDates.any { it in range }) {
                     add("vacation:${row.id}:${row.startDate}:${row.endDateInclusive}:${row.updatedAtEpochMillis}")
                 }
             }
         }.sorted().joinToString("|")
+        val calculation = AvailabilityCalculationSnapshot.capture(
+            activeWork = shiftRows.filter { row ->
+                row.actualUpdatedAtEpochMillis != null || protectedRanges.none { LocalDate.parse(row.ownerLocalDate) in it }
+            }.map { row -> AvailabilityActiveWorkInterval(
+                key = "shift:${row.shiftId}",
+                kind = if (row.actualUpdatedAtEpochMillis != null) AvailabilityActiveWorkKind.SHIFT_ACTUAL else AvailabilityActiveWorkKind.SHIFT_PLANNED,
+                start = Instant.ofEpochMilli(row.startEpochMillis), end = Instant.ofEpochMilli(row.endEpochMillis)) } +
+                extras.map { source -> AvailabilityActiveWorkInterval(source.key, AvailabilityActiveWorkKind.INDEPENDENT_EXTRA, source.start, source.end) },
+            ownerProtected = protectedRanges.any { configuration.referenceDate in it },
+        )
         return AvailabilityWindowExpectation.capture(
             previous = previous,
             configuration = exact,
@@ -213,6 +230,7 @@ internal class RoomAvailabilityWindowRepository(
             observedWindows = windows,
             observedActiveSources = shifts + extras,
             protectionFingerprint = protectionFingerprint,
+            calculation = calculation,
         )
     }
 
@@ -265,7 +283,8 @@ internal class RoomAvailabilityWindowRepository(
             observedEnd == other.observedEnd &&
             observedWindows == other.observedWindows &&
             observedActiveSources == other.observedActiveSources &&
-            protectionFingerprint == other.protectionFingerprint
+            protectionFingerprint == other.protectionFingerprint &&
+            calculation == other.calculation
 
     private fun invalid(message: String): Nothing = throw InvalidLocalDataException(message)
 

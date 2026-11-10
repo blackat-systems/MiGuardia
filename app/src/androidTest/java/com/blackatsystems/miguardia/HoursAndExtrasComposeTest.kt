@@ -1,8 +1,16 @@
 package com.blackatsystems.miguardia
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -10,6 +18,17 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTextReplacement
+import com.blackatsystems.miguardia.ui.components.PICKER_CANCEL_TAG
+import com.blackatsystems.miguardia.ui.components.PICKER_CONFIRM_TAG
+import com.blackatsystems.miguardia.ui.hours.IndependentExtraDraftState
+import com.blackatsystems.miguardia.ui.hours.ReferenceStartChoice
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.blackatsystems.miguardia.core.domain.model.IndependentExtraWorkRecord
 import com.blackatsystems.miguardia.core.domain.model.IndependentExtraWorkSnapshot
 import com.blackatsystems.miguardia.core.domain.work.EffectiveDateTimeline
@@ -39,14 +58,16 @@ import com.blackatsystems.miguardia.ui.hours.HoursReferenceChoice
 import com.blackatsystems.miguardia.ui.hours.EditorStage
 import com.blackatsystems.miguardia.ui.hours.IndependentExtraDetailCard
 import com.blackatsystems.miguardia.ui.hours.PerPeriodValueDraft
-import com.blackatsystems.miguardia.ui.theme.AppZoom
-import com.blackatsystems.miguardia.ui.theme.MiGuardiaTheme
+import com.blackatsystems.miguardia.testsupport.TestFontScale
+import com.blackatsystems.miguardia.testsupport.AndroidFontScaleTheme
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
 import java.util.UUID
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -61,7 +82,7 @@ class HoursAndExtrasComposeTest {
             HoursAndExtrasUiState(surface = HoursAndExtrasSurface.PROGRESS),
         )
         compose.setContent {
-            MiGuardiaTheme {
+            AndroidFontScaleTheme {
                 HoursAndExtrasSurfaceHost(
                     state,
                     HoursAndExtrasActions(retry = { retries++ }),
@@ -97,7 +118,7 @@ class HoursAndExtrasComposeTest {
             ),
         )
         compose.setContent {
-            MiGuardiaTheme {
+            AndroidFontScaleTheme {
                 HoursAndExtrasSurfaceHost(
                     state,
                     HoursAndExtrasActions(
@@ -154,7 +175,7 @@ class HoursAndExtrasComposeTest {
             ),
         )
         compose.setContent {
-            MiGuardiaTheme {
+            AndroidFontScaleTheme {
                 HoursAndExtrasSurfaceHost(state, HoursAndExtrasActions())
             }
         }
@@ -170,7 +191,7 @@ class HoursAndExtrasComposeTest {
         var corrected = 0
         var deleted = 0
         compose.setContent {
-            MiGuardiaTheme {
+            AndroidFontScaleTheme {
                 IndependentExtraDetailCard(
                     record = EXTRA,
                     onCorrect = { corrected++ },
@@ -194,7 +215,7 @@ class HoursAndExtrasComposeTest {
     fun perPeriodMissingValueHasAnExplicitEditorAndCorrectionHasAConfirmation() {
         var state by mutableStateOf(contentState(PER_PERIOD_HISTORY))
         compose.setContent {
-            MiGuardiaTheme {
+            AndroidFontScaleTheme {
                 HoursAndExtrasSurfaceHost(
                     state,
                     HoursAndExtrasActions(
@@ -232,21 +253,21 @@ class HoursAndExtrasComposeTest {
     }
 
     @Test
-    fun progressPrimaryActionStaysReachableInBothThemesAndEveryInternalZoom() {
+    fun progressPrimaryActionStaysReachableInBothThemesAndEveryAndroidFontScale() {
         var dark by mutableStateOf(false)
-        var zoom by mutableStateOf(AppZoom.STANDARD)
+        var fontScale by mutableStateOf(TestFontScale.STANDARD)
         compose.setContent {
-            MiGuardiaTheme(darkTheme = dark, appZoom = zoom) {
+            AndroidFontScaleTheme(darkTheme = dark, fontScale = fontScale) {
                 HoursAndExtrasSurfaceHost(contentState(), HoursAndExtrasActions())
             }
         }
 
         compose.onNodeWithTag("advanced-options-toggle").performScrollTo().performClick()
         listOf(false, true).forEach { darkTheme ->
-            AppZoom.entries.forEach { appZoom ->
+            TestFontScale.entries.forEach { selectedScale ->
                 compose.runOnIdle {
                     dark = darkTheme
-                    zoom = appZoom
+                    fontScale = selectedScale
                 }
                 compose.onNodeWithTag("hours-reference-configure")
                     .performScrollTo()
@@ -254,6 +275,284 @@ class HoursAndExtrasComposeTest {
             }
         }
     }
+
+    @Test
+    fun pendingHoursKeepTheWholeAmountAndUnitSeparatedFromTheCompleteLabel() {
+        var dark by mutableStateOf(false)
+        var fontScale by mutableStateOf(TestFontScale.STANDARD)
+        var minutes by mutableStateOf(1_920L)
+        var viewport by mutableStateOf(320 to 480)
+        var density = 1f
+        val original = contentState()
+        val source = requireNotNull(original.source)
+        compose.setContent {
+            // The fixed base-width fixture also exercises the narrower logical width
+            // selected by app fontScale, without reading Android font/display settings.
+            AndroidFontScaleTheme(fontScale = TestFontScale.STANDARD) {
+                Box(Modifier.width(viewport.first.dp).height(viewport.second.dp)) {
+                    AndroidFontScaleTheme(darkTheme = dark, fontScale = fontScale) {
+                        density = LocalDensity.current.density
+                        HoursAndExtrasSurfaceHost(
+                            original.copy(source = source.copy(
+                                progress = source.progress.copy(pendingScheduledMinutes = minutes),
+                            )),
+                            HoursAndExtrasActions(),
+                        )
+                    }
+                }
+            }
+        }
+        compose.onNodeWithTag("advanced-options-toggle").performScrollTo().performClick()
+        for (window in listOf(320 to 480, 360 to 640)) for (theme in listOf(false, true)) for (scale in TestFontScale.entries) {
+            for ((amount, expected) in listOf(1_920L to "32 h", 1_965L to "32 h 45 min", 740_745L to "12345 h 45 min")) {
+                compose.runOnIdle { viewport = window; dark = theme; fontScale = scale; minutes = amount }
+                val context = "window=$window theme=$theme fontScale=$scale value=$expected"
+                compose.onNodeWithTag("hours-pending-scheduled").performScrollTo().assertIsDisplayed()
+                val label = compose.onNodeWithTag("hours-pending-scheduled-label", useUnmergedTree = true)
+                val value = compose.onNodeWithTag("hours-pending-scheduled-value", useUnmergedTree = true)
+                val layouts = mutableListOf<TextLayoutResult>()
+                label.assertIsDisplayed().performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(layouts) }
+                assertEquals(context, 1, layouts.size)
+                val labelLayout = layouts.single()
+                val labelText = "Horas de jornadas que todavía faltan trabajar"
+                assertEquals(context, labelText, labelLayout.layoutInput.text.text)
+                assertFalse(context, labelLayout.hasVisualOverflow)
+                assertEquals(context, labelText.length, labelLayout.getLineEnd(labelLayout.lineCount - 1))
+                for (line in 0 until labelLayout.lineCount - 1) {
+                    val end = labelLayout.getLineEnd(line, visibleEnd = true)
+                    assertTrue("$context label word split at $end",
+                        end > 0 && end < labelText.length && (labelText[end].isWhitespace() || labelText[end - 1].isWhitespace()))
+                }
+                layouts.clear()
+                value.assertIsDisplayed().performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(layouts) }
+                assertEquals(context, 1, layouts.size)
+                val valueLayout = layouts.single()
+                assertEquals(context, expected, valueLayout.layoutInput.text.text.replace('\u00a0', ' '))
+                assertEquals("$context amount font family", com.blackatsystems.miguardia.ui.theme.PlusJakartaSans, valueLayout.layoutInput.style.fontFamily)
+                assertEquals("$context tabular numbers", "tnum", valueLayout.layoutInput.style.fontFeatureSettings)
+                assertEquals("$context amount font size", 14.sp, valueLayout.layoutInput.style.fontSize)
+                assertEquals("$context amount weight", FontWeight.SemiBold, valueLayout.layoutInput.style.fontWeight)
+                if (valueLayout.multiParagraph.intrinsics.maxIntrinsicWidth <= valueLayout.size.width + 1) {
+                    assertEquals("$context amount must use one line when it fits", 1, valueLayout.lineCount)
+                }
+                for (quantity in Regex("[−-]?\\d+ (?:h|min)").findAll(expected)) {
+                    assertEquals("$context split quantity ${quantity.value}",
+                        valueLayout.getLineForOffset(quantity.range.first), valueLayout.getLineForOffset(quantity.range.last))
+                }
+                assertFalse("$context size=${valueLayout.size} constraints=${valueLayout.layoutInput.constraints} " +
+                    "widthOverflow=${valueLayout.didOverflowWidth} heightOverflow=${valueLayout.didOverflowHeight} " +
+                    "paragraph=${valueLayout.multiParagraph.width}x${valueLayout.multiParagraph.height} " +
+                    "intrinsicWidth=${valueLayout.multiParagraph.intrinsics.maxIntrinsicWidth} " +
+                    "line0=${valueLayout.getLineLeft(0)}..${valueLayout.getLineRight(0)} " +
+                    "bounds=${value.fetchSemanticsNode().boundsInRoot}", valueLayout.hasVisualOverflow)
+                for (line in 0 until valueLayout.lineCount) assertFalse(context, valueLayout.isLineEllipsized(line))
+                assertEquals(context, expected.length, valueLayout.getLineEnd(valueLayout.lineCount - 1))
+                val labelBounds = label.fetchSemanticsNode().boundsInRoot
+                val valueBounds = value.fetchSemanticsNode().boundsInRoot
+                val rowBounds = compose.onNodeWithTag("hours-pending-scheduled").fetchSemanticsNode().boundsInRoot
+                assertTrue("$context clipped label", labelBounds.width + 1 >= labelLayout.size.width &&
+                    labelBounds.height + 1 >= labelLayout.size.height)
+                assertTrue("$context clipped value", valueBounds.width + 1 >= valueLayout.size.width &&
+                    valueBounds.height + 1 >= valueLayout.size.height)
+                assertTrue(context, rowBounds.containsRendered(labelBounds) && rowBounds.containsRendered(valueBounds))
+                assertTrue("$context missing 12 dp separation",
+                    valueBounds.left - labelBounds.right >= 12 * density - 1 ||
+                        valueBounds.top - labelBounds.bottom >= 12 * density - 1)
+            }
+        }
+    }
+
+    @Test
+    fun extraPickersGiveTheSameTextAsTypingAndNeverReviewOrSave() {
+        var state by mutableStateOf(extraEditorState())
+        var reviews = 0
+        var saves = 0
+        compose.setContent {
+            AndroidFontScaleTheme {
+                HoursAndExtrasSurfaceHost(
+                    state,
+                    HoursAndExtrasActions(
+                        updateExtraDraft = { transform ->
+                            state = state.copy(extraDraft = state.extraDraft?.let(transform))
+                        },
+                        reviewExtra = { reviews++ },
+                        saveExtra = { saves++ },
+                    ),
+                )
+            }
+        }
+        fun draft() = requireNotNull(state.extraDraft)
+
+        // Upper limit typed, then confirmed in the clock: same text.
+        compose.onNodeWithTag("extra-start-time").performScrollTo().performTextInput("2359")
+        compose.runOnIdle { assertEquals("23:59", draft().startTime) }
+        compose.onNodeWithTag("extra-start-time-picker").performScrollTo().performClick()
+        compose.onNodeWithTag(PICKER_CONFIRM_TAG).performClick()
+        compose.runOnIdle { assertEquals("23:59", draft().startTime) }
+
+        // Lower limit typed; cancelling the clock keeps it, confirming writes the same text.
+        compose.onNodeWithTag("extra-end-time").performScrollTo().performTextInput("0000")
+        compose.runOnIdle { assertEquals("00:00", draft().endTime) }
+        compose.onNodeWithTag("extra-end-time-picker").performScrollTo().performClick()
+        compose.onNodeWithTag(PICKER_CANCEL_TAG).performClick()
+        compose.runOnIdle { assertEquals("00:00", draft().endTime) }
+        compose.onNodeWithTag("extra-end-time-picker").performClick()
+        compose.onNodeWithTag(PICKER_CONFIRM_TAG).performClick()
+        compose.runOnIdle { assertEquals("00:00", draft().endTime) }
+
+        // Crossing midnight: 23:59 → 00:00 of the next day. The calendar reads the typed
+        // date and writes the same ISO text; cancelling changes nothing.
+        val nextDay = DATE.plusDays(1).toString()
+        compose.onNodeWithTag("extra-end-date").performScrollTo().performTextReplacement(nextDay)
+        compose.runOnIdle { assertEquals(nextDay, draft().endDate) }
+        compose.onNodeWithText("+1 día").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("extra-end-date-picker").performScrollTo().performClick()
+        compose.onNodeWithTag(PICKER_CANCEL_TAG).performClick()
+        compose.runOnIdle { assertEquals(nextDay, draft().endDate) }
+        compose.onNodeWithTag("extra-end-date-picker").performClick()
+        compose.onNodeWithTag(PICKER_CONFIRM_TAG).performClick()
+        compose.runOnIdle {
+            assertEquals(nextDay, draft().endDate)
+            assertEquals("23:59", draft().startTime)
+            assertEquals("00:00", draft().endTime)
+            assertEquals(0, reviews)
+            assertEquals(0, saves)
+            assertEquals(HoursAndExtrasSurface.EXTRA_EDITOR, state.surface)
+            assertEquals(EditorStage.EDIT, draft().stage)
+        }
+    }
+
+    @Test
+    fun emptyExtraEndDatePickerStartsOnTheOwnerDateAndOnlyWritesAfterConfirming() {
+        var state by mutableStateOf(extraEditorState(endDate = ""))
+        compose.setContent {
+            AndroidFontScaleTheme(darkTheme = false) {
+                HoursAndExtrasSurfaceHost(
+                    state,
+                    HoursAndExtrasActions(
+                        updateExtraDraft = { transform ->
+                            state = state.copy(extraDraft = state.extraDraft?.let(transform))
+                        },
+                    ),
+                )
+            }
+        }
+        compose.onNodeWithTag("extra-end-date-picker").performScrollTo().performClick()
+        compose.onNodeWithTag(PICKER_CANCEL_TAG).performClick()
+        compose.runOnIdle { assertEquals("", state.extraDraft?.endDate) }
+        compose.onNodeWithTag("extra-end-date-picker").performClick()
+        compose.onNodeWithTag(PICKER_CONFIRM_TAG).performClick()
+        compose.runOnIdle { assertEquals(DATE.toString(), state.extraDraft?.endDate) }
+    }
+
+    @Test
+    fun referenceDatePickersWriteIsoTextLikeTypingAndNeverReviewOrSave() {
+        var state by mutableStateOf(referenceDatesState())
+        var reviews = 0
+        var saves = 0
+        compose.setContent {
+            AndroidFontScaleTheme {
+                HoursAndExtrasSurfaceHost(
+                    state,
+                    HoursAndExtrasActions(
+                        updateReferenceDraft = { transform ->
+                            state = state.copy(referenceDraft = state.referenceDraft?.let(transform))
+                        },
+                        reviewReference = { reviews++ },
+                        saveReference = { saves++ },
+                    ),
+                )
+            }
+        }
+        fun draft() = requireNotNull(state.referenceDraft)
+
+        // Empty anchor: cancel keeps it empty; confirm writes today's date as typed ISO text.
+        compose.onNodeWithTag("hours-cycle-anchor-picker").performScrollTo().performClick()
+        compose.onNodeWithTag(PICKER_CANCEL_TAG).performClick()
+        compose.runOnIdle { assertEquals("", draft().cycleAnchorDate) }
+        compose.onNodeWithTag("hours-cycle-anchor-picker").performClick()
+        compose.onNodeWithTag(PICKER_CONFIRM_TAG).performClick()
+        compose.runOnIdle { assertEquals(DATE.toString(), draft().cycleAnchorDate) }
+        // Typed date, then confirmed in the calendar: same text.
+        compose.onNodeWithTag("hours-cycle-anchor").performScrollTo().performTextReplacement("2026-12-31")
+        compose.onNodeWithTag("hours-cycle-anchor-picker").performClick()
+        compose.onNodeWithTag(PICKER_CONFIRM_TAG).performClick()
+        compose.runOnIdle { assertEquals("2026-12-31", draft().cycleAnchorDate) }
+
+        // Custom start, prefilled with today like the editor does.
+        compose.onNodeWithTag("hours-custom-start-picker").performScrollTo().performClick()
+        compose.onNodeWithTag(PICKER_CANCEL_TAG).performClick()
+        compose.runOnIdle { assertEquals(DATE.toString(), draft().customStartDate) }
+        compose.onNodeWithTag("hours-custom-start").performScrollTo().performTextReplacement("2026-09-20")
+        compose.onNodeWithTag("hours-custom-start-picker").performScrollTo().performClick()
+        compose.onNodeWithTag(PICKER_CONFIRM_TAG).performClick()
+        compose.runOnIdle {
+            assertEquals("2026-09-20", draft().customStartDate)
+            assertEquals("2026-12-31", draft().cycleAnchorDate)
+            assertEquals(0, reviews)
+            assertEquals(0, saves)
+            assertEquals(EditorStage.EDIT, draft().stage)
+            assertEquals(HoursAndExtrasSurface.REFERENCE_EDITOR, state.surface)
+        }
+    }
+
+    @Test
+    fun largeFontKeepsEveryHoursPickerButtonUsableInAPhoneSizedBox() {
+        var state by mutableStateOf(extraEditorState(endDate = DATE.plusDays(1).toString()))
+        compose.setContent {
+            AndroidFontScaleTheme(darkTheme = false, fontScale = TestFontScale.EXTRA_LARGE) {
+                Box(Modifier.requiredSize(width = 360.dp, height = 800.dp)) {
+                    HoursAndExtrasSurfaceHost(
+                        state,
+                        HoursAndExtrasActions(
+                            updateExtraDraft = { transform ->
+                                state = state.copy(extraDraft = state.extraDraft?.let(transform))
+                            },
+                            updateReferenceDraft = { transform ->
+                                state = state.copy(referenceDraft = state.referenceDraft?.let(transform))
+                            },
+                        ),
+                    )
+                }
+            }
+        }
+        compose.onNodeWithText("+1 día").performScrollTo().assertIsDisplayed()
+        fun opensAndCancels(tag: String) {
+            compose.onNodeWithTag(tag).performScrollTo().assertIsDisplayed().performClick()
+            compose.onNodeWithTag(PICKER_CANCEL_TAG).assertIsDisplayed().performClick()
+        }
+        listOf("extra-start-time-picker", "extra-end-time-picker", "extra-end-date-picker").forEach(::opensAndCancels)
+        compose.runOnIdle { state = referenceDatesState() }
+        listOf("hours-cycle-anchor-picker", "hours-custom-start-picker").forEach(::opensAndCancels)
+    }
+
+    private fun extraEditorState(endDate: String = DATE.toString()): HoursAndExtrasUiState =
+        contentState().copy(
+            surface = HoursAndExtrasSurface.EXTRA_EDITOR,
+            extraDraft = IndependentExtraDraftState(
+                ownerDate = DATE,
+                startTime = "",
+                endDate = endDate,
+                endTime = "",
+            ),
+        )
+
+    private fun referenceDatesState(): HoursAndExtrasUiState =
+        contentState().copy(
+            surface = HoursAndExtrasSurface.REFERENCE_EDITOR,
+            referenceDraft = HoursReferenceDraft(
+                choice = HoursReferenceChoice.FIXED,
+                periodChoice = HoursPeriodChoice.CYCLE,
+                cycleLengthDays = "",
+                cycleAnchorDate = "",
+                startChoice = ReferenceStartChoice.CUSTOM,
+                customStartDate = DATE.toString(),
+            ),
+        )
+
+    private fun Rect.containsRendered(other: Rect): Boolean =
+        other.left >= left - 1 && other.top >= top - 1 &&
+            other.right <= right + 1 && other.bottom <= bottom + 1
 
     private fun contentState(
         history: WorkConfigurationHistory = HISTORY,

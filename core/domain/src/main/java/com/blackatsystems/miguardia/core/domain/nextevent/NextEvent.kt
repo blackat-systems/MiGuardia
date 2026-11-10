@@ -193,9 +193,11 @@ val NextEventItemOrder: Comparator<NextEventItem> = compareBy<NextEventItem>(
 fun Shift.isEligibleForWeather(
     now: Instant,
     vacations: List<Vacation>,
+    medicalLeaves: List<com.blackatsystems.miguardia.core.domain.model.MedicalLeave> = emptyList(),
 ): Boolean = status == ShiftStatus.PLANNED &&
     endAt > now &&
-    vacations.none { vacation -> localStartDate in vacation.startDate..vacation.endDateInclusive }
+    vacations.none { vacation -> localStartDate in vacation.startDate..vacation.endDateInclusive } &&
+    medicalLeaves.none { leave -> localStartDate in leave.startDate..leave.endDateInclusive }
 
 /**
  * Builds the single V2 work-event truth used by the top card and local alerts.

@@ -23,8 +23,8 @@ import com.blackatsystems.miguardia.ui.MiGuardiaApp
 import com.blackatsystems.miguardia.ui.calendar.CalendarLoadState
 import com.blackatsystems.miguardia.ui.calendar.CalendarUiState
 import com.blackatsystems.miguardia.ui.help.HelpUiState
-import com.blackatsystems.miguardia.ui.theme.AppZoom
-import com.blackatsystems.miguardia.ui.theme.MiGuardiaTheme
+import com.blackatsystems.miguardia.testsupport.TestFontScale
+import com.blackatsystems.miguardia.testsupport.AndroidFontScaleTheme
 import com.blackatsystems.miguardia.ui.worksetup.WorkSetupSurface
 import com.blackatsystems.miguardia.ui.worksetup.previewV2WorkSetupUiState
 import java.time.Instant
@@ -72,7 +72,7 @@ class UpdatesMenuComposeTest {
         val action = SupportMenuAction()
         val observations = mutableListOf<Triple<DrawerValue, DrawerValue, Boolean>>()
         compose.setContent {
-            MiGuardiaTheme {
+            AndroidFontScaleTheme {
                 drawer = rememberDrawerState(DrawerValue.Open)
                 scope = rememberCoroutineScope()
                 ModalNavigationDrawer(drawerState = drawer, drawerContent = {
@@ -201,13 +201,13 @@ class UpdatesMenuComposeTest {
         compose.runOnIdle { assertEquals(1, opens); assertEquals(0, monthChanges) }
     }
 
-    @Test fun textAndActionRemainReachableInBothThemesOrientationsAndInternalZooms() {
+    @Test fun textAndActionRemainReachableInBothThemesOrientationsAndAndroidFontScales() {
         var dark by mutableStateOf(false)
         var landscape by mutableStateOf(false)
-        var zoom by mutableStateOf(AppZoom.STANDARD)
-        compose.setContent { App(dark, zoom, landscape) }
-        for (theme in listOf(false, true)) for (wide in listOf(false, true)) for (scale in AppZoom.entries) {
-            compose.runOnIdle { dark = theme; landscape = wide; zoom = scale }
+        var fontScale by mutableStateOf(TestFontScale.STANDARD)
+        compose.setContent { App(dark, fontScale, landscape) }
+        for (theme in listOf(false, true)) for (wide in listOf(false, true)) for (scale in TestFontScale.entries) {
+            compose.runOnIdle { dark = theme; landscape = wide; fontScale = scale }
             openMenu()
             compose.onNodeWithTag(SUPPORT).performScrollTo().assertIsDisplayed().assertHasClickAction()
             for (label in listOf("Actualizaciones", "Buscar y guardar una nueva versión")) {
@@ -250,8 +250,8 @@ class UpdatesMenuComposeTest {
 
     private fun openMenu() { compose.onNodeWithContentDescription("Abrir menú").performClick() }
 
-    @Composable private fun App(dark: Boolean = false, zoom: AppZoom = AppZoom.STANDARD, landscape: Boolean = false) {
-        MiGuardiaTheme(darkTheme = dark, appZoom = zoom) {
+    @Composable private fun App(dark: Boolean = false, fontScale: TestFontScale = TestFontScale.STANDARD, landscape: Boolean = false) {
+        AndroidFontScaleTheme(darkTheme = dark, fontScale = fontScale) {
             AccessLockContentGate(lock, DeviceAuthenticationCapability.AVAILABLE, {}, {}, {}, {}, {}) {
                 Box(Modifier.size(if (landscape) 600.dp else 320.dp, if (landscape) 320.dp else 600.dp)) {
                     val now = Instant.parse("2026-11-05T12:00:00Z")
@@ -261,8 +261,7 @@ class UpdatesMenuComposeTest {
                             loadState = CalendarLoadState.CONTENT),
                         onPreviousMonth = { monthChanges++ }, onNextMonth = { monthChanges++ }, onToday = { monthChanges++ },
                         onSelectDate = {}, onDismissDate = {}, onRetry = {},
-                        workSetupState = work, helpState = help, accessLockState = lock, appZoom = zoom,
-                        onUpdates = { opens++ },
+                        workSetupState = work, helpState = help, accessLockState = lock, onUpdates = { opens++ },
                     )
                 }
             }

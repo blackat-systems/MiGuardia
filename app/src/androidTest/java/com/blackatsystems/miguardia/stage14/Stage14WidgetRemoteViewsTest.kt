@@ -1,0 +1,455 @@
+package com.blackatsystems.miguardia.stage14
+
+import android.content.Context
+import android.content.res.Configuration
+import android.view.View
+import android.view.ViewGroup
+import android.widget.TextView
+import androidx.test.core.app.ApplicationProvider
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.blackatsystems.miguardia.R
+import com.blackatsystems.miguardia.V2AppTestFixture
+import com.blackatsystems.miguardia.core.database.LocalDataStore
+import com.blackatsystems.miguardia.core.domain.AppDefaults
+import com.blackatsystems.miguardia.core.domain.model.Shift
+import com.blackatsystems.miguardia.core.domain.model.ShiftStatus
+import com.blackatsystems.miguardia.core.domain.nextevent.NextEventIdentity
+import com.blackatsystems.miguardia.core.domain.nextevent.NextEventItem
+import com.blackatsystems.miguardia.core.domain.nextevent.projectNextEvent
+import com.blackatsystems.miguardia.core.domain.widget.WidgetContentState
+import com.blackatsystems.miguardia.core.domain.widget.WidgetCountdown
+import com.blackatsystems.miguardia.core.domain.widget.WidgetEventDetails
+import com.blackatsystems.miguardia.core.domain.widget.WidgetEventKind
+import com.blackatsystems.miguardia.core.domain.widget.WidgetEventPresentation
+import com.blackatsystems.miguardia.core.domain.widget.WidgetMode
+import com.blackatsystems.miguardia.core.domain.widget.WidgetNavigation
+import com.blackatsystems.miguardia.core.domain.widget.WidgetPrivacy
+import com.blackatsystems.miguardia.core.domain.widget.WidgetProjection
+import com.blackatsystems.miguardia.core.domain.widget.WidgetProjectionConfig
+import com.blackatsystems.miguardia.core.domain.widget.WidgetSize
+import com.blackatsystems.miguardia.core.domain.widget.projectWidget
+import com.blackatsystems.miguardia.testsupport.TestFontScale
+import com.blackatsystems.miguardia.ui.nextevent.V2WorkEventSourceObserver
+import com.blackatsystems.miguardia.ui.theme.AppThemeMode
+import com.blackatsystems.miguardia.widget.WidgetRemoteViewsRenderer
+import com.blackatsystems.miguardia.widget.buildWidgetRenderText
+import com.blackatsystems.miguardia.widget.resolveWidgetPalette
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.ZoneId
+import java.time.ZonedDateTime
+import java.util.UUID
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Test
+import org.junit.runner.RunWith
+
+/**
+ * Etapa 14 · Widget de inicio: las vistas reales (`RemoteViews`) aplicadas en un contenedor de prueba.
+ * No es un Widget puesto en la pantalla de inicio, no se publica nada y no se guardan imágenes.
+ * La letra de Android se simula con un contexto propio; no se cambia ningún ajuste del teléfono.
+ */
+@RunWith(AndroidJUnit4::class)
+class Stage14WidgetRemoteViewsTest {
+    private val context: Context = ApplicationProvider.getApplicationContext()
+    private val renderer = WidgetRemoteViewsRenderer(context)
+    private val palette = resolveWidgetPalette(AppThemeMode.LIGHT, false)
+
+    // W020: las vistas del Widget siguen la letra de Android (150 y 200 %).
+    @Test
+    fun simulatedAndroidFontScaleReallyEnlargesTheWidgetText() {
+        // The roomy view enlarges its own text only at the standard scale, so the plain ratio does not apply.
+        HostSize.entries.filterNot { it.compactLargeText }.forEach { host ->
+            val standard = inflate(host, TestFontScale.STANDARD).findViewById<TextView>(R.id.widget_title).textSize
+            val large = inflate(host, TestFontScale.LARGE).findViewById<TextView>(R.id.widget_title).textSize
+            val extraLarge = inflate(host, TestFontScale.EXTRA_LARGE).findViewById<TextView>(R.id.widget_title).textSize
+
+            assertTrue("${host.label}: 150 % no agrandó el título ($standard → $large)", large >= standard * 1.4f)
+            assertTrue("${host.label}: 200 % no agrandó el título ($standard → $extraLarge)", extraLarge >= standard * 1.8f)
+        }
+    }
+
+    // W015 / V015 (base de comparación): con letra estándar, el título y el horario se ven enteros en los tres
+    // tamaños. El nombre de la jornada también, salvo en la vista de una fila: ahí ocupa un solo renglón y un
+    // nombre largo termina en «…» (decisión del 10/11/2026 para que el Widget quede ajustado en una fila).
+    @Test
+    fun standardFontShowsTitlePrimaryAndScheduleCompleteAtTheDeclaredMinimumSizes() {
+        val cut = cutTexts(TestFontScale.STANDARD)
+        val oneRowLongName = "${HostSize.COMPACT.label} · letra 100 % · texto principal: " +
+            "«Guardia · Hospital Norte (HN)» termina en puntos suspensivos"
+
+        assertEquals("Textos cortados con letra estándar", listOf(oneRowLongName), cut)
+        // Lo que no se ve entero en una fila sigue completo para TalkBack.
+        val spoken = inflate(HostSize.COMPACT, TestFontScale.STANDARD)
+            .findViewById<View>(R.id.widget_root).contentDescription.toString()
+        assertTrue(spoken, spoken.contains("Guardia · Hospital Norte (HN)"))
+    }
+
+    // W020 / V015. Criterio decidido el 10/11/2026: con la letra de Android al 150 y 200 % el Widget tiene
+    // que seguir siendo usable, no entrar entero. El nombre puede terminar en «…», pero el nombre y el
+    // horario se empiezan a leer (su primer renglón entra entero) en las cuatro vistas y TalkBack recibe
+    // el contenido completo. Para lograrlo, con letra grande las tres vistas compactas no muestran el
+    // renglón de título («PRÓXIMA JORNADA»): sigue en lo que lee TalkBack. La ampliada sí lo muestra.
+    @Test
+    fun largeAndExtraLargeFontKeepEveryTextStartedAndCompleteForTalkBack() {
+        val problems = buildList {
+            listOf(TestFontScale.LARGE, TestFontScale.EXTRA_LARGE).forEach { scale ->
+                HostSize.entries.forEach { host ->
+                    val view = inflate(host, scale)
+                    val context = "${host.label} · letra ${scale.percent} %"
+                    val spoken = view.findViewById<View>(R.id.widget_root).contentDescription?.toString().orEmpty()
+                    MAIN_TEXTS.forEach { (label, viewId) ->
+                        val text = view.findViewById<TextView>(viewId)
+                        val layout = text.layout
+                        val titleGivesWay = viewId == R.id.widget_title && host.size == WidgetSize.COMPACT
+                        if (titleGivesWay) {
+                            if (text.visibility != View.GONE) add("$context · $label: debía ceder su lugar al horario")
+                        } else if (text.visibility != View.VISIBLE || layout == null || layout.lineCount == 0) {
+                            add("$context · $label: no se ve")
+                        } else if (text.height < layout.getLineBottom(0) + text.compoundPaddingTop) {
+                            add("$context · $label: no entra ni su primer renglón")
+                        } else if (text.bottom > (text.parent as View).height) {
+                            add("$context · $label: queda fuera del Widget")
+                        }
+                        if (!spoken.contains(text.text.toString(), ignoreCase = true)) {
+                            add("$context · $label: «${text.text}» no está en lo que lee TalkBack («$spoken»)")
+                        }
+                    }
+                }
+            }
+        }
+
+        // Sin límites conocidos: cualquier texto que vuelva a quedar fuera aparece acá.
+        assertEquals("Con letra grande", emptyList<String>(), problems.sorted())
+    }
+
+    // W020: con la letra de Android estándar nada cede su lugar: el título se ve en las cuatro vistas.
+    @Test
+    fun standardFontKeepsTheTitleRowVisibleInEveryView() {
+        HostSize.entries.forEach { host ->
+            val title = inflate(host, TestFontScale.STANDARD).findViewById<TextView>(R.id.widget_title)
+
+            assertEquals(host.label, View.VISIBLE, title.visibility)
+            assertEquals(host.label, "PRÓXIMA JORNADA", title.text.toString())
+        }
+    }
+
+    // W020: sin horario que proteger (acá, «sin eventos»), la letra grande no quita el título.
+    @Test
+    fun largeFontKeepsTheTitleWhenThereIsNoScheduleToProtect() {
+        val scaled = fontContext(TestFontScale.EXTRA_LARGE)
+        val empty = WidgetProjection(
+            referenceInstant = NOW,
+            mode = WidgetMode.AUTOMATIC,
+            privacy = WidgetPrivacy.COMPLETE,
+            size = WidgetSize.COMPACT,
+            state = WidgetContentState.EMPTY,
+            events = emptyList(),
+            totalSimultaneousEvents = 0,
+            dayOff = null,
+            countdown = null,
+            navigation = WidgetNavigation.Calendar,
+        )
+        val view = WidgetRemoteViewsRenderer(scaled)
+            .createViews(empty, appWidgetId = APP_WIDGET_ID, weatherText = null, palette = palette)
+            .apply(scaled, null)
+
+        assertEquals(View.VISIBLE, view.findViewById<View>(R.id.widget_title).visibility)
+        assertEquals("PRÓXIMO EVENTO", view.findViewById<TextView>(R.id.widget_title).text.toString())
+        assertEquals("No hay próximos eventos.", view.findViewById<TextView>(R.id.widget_primary).text.toString())
+    }
+
+    // W017: con la cuenta regresiva vencida se oculta el contador y el horario absoluto sigue visible.
+    @Test
+    fun expiredCountdownIsHiddenAndTheAbsoluteScheduleStaysVisible() {
+        WidgetSize.entries.forEach { size ->
+            listOf(
+                WidgetCountdown(NOW.minusSeconds(1), countsToEnd = false),
+                WidgetCountdown(NOW, countsToEnd = true),
+            ).forEach { expired ->
+                val view = renderer.createViews(
+                    projection(size, countdown = expired),
+                    appWidgetId = APP_WIDGET_ID,
+                    weatherText = null,
+                    palette = palette,
+                    elapsedRealtime = 50_000L,
+                ).apply(context, null)
+                val schedule = view.findViewById<TextView>(R.id.widget_schedule)
+
+                assertEquals("$size/$expired", View.GONE, view.findViewById<View>(R.id.widget_countdown).visibility)
+                assertEquals("$size/$expired", View.VISIBLE, schedule.visibility)
+                assertEquals("29/08/2026 · 19:00–07:00 (+1 día)", schedule.text.toString())
+                assertTrue(
+                    view.findViewById<View>(R.id.widget_root).contentDescription.toString()
+                        .contains("29/08/2026 · 19:00–07:00 (+1 día)"),
+                )
+            }
+        }
+    }
+
+    // W021: vista de «recuperación de datos», también con letra al 200 %. Lleva al Calendario protegido.
+    // Nota: `recoveryViews` lee (sin escribir) la preferencia de tema para elegir colores
+    // (WidgetRemoteViewsRenderer.kt:374-380); lo afirmado acá no depende de ese valor.
+    @Test
+    fun recoveryViewShowsItsTextsWithoutLaborDataAndOpensTheApp() {
+        listOf(TestFontScale.STANDARD, TestFontScale.EXTRA_LARGE).forEach { scale ->
+            val view = renderer.recoveryViews(APP_WIDGET_ID).apply(fontContext(scale), null)
+            val strings = visibleStrings(view)
+
+            assertEquals("MIGUARDIA", view.findViewById<TextView>(R.id.widget_title).text.toString())
+            assertEquals(
+                "Abrí MiGuardia para terminar la recuperación de tus datos.",
+                view.findViewById<TextView>(R.id.widget_primary).text.toString(),
+            )
+            assertEquals(
+                "MIGUARDIA. Abrí MiGuardia para terminar la recuperación de tus datos.",
+                view.findViewById<View>(R.id.widget_root).contentDescription.toString(),
+            )
+            assertEquals(View.GONE, view.findViewById<View>(R.id.widget_schedule).visibility)
+            assertEquals(View.GONE, view.findViewById<View>(R.id.widget_countdown).visibility)
+            assertEquals(View.GONE, view.findViewById<View>(R.id.widget_simultaneous).visibility)
+            assertTrue(view.findViewById<View>(R.id.widget_root).hasOnClickListeners())
+            assertFalse(strings.any { it.contains("19:00") || it.contains("2026") || it.contains("Hospital") })
+        }
+    }
+
+    // W008: con privacidad Completa se ven tipo, lugar y puesto, pero la dirección guardada del objetivo
+    // no aparece en ningún texto ni descripción accesible, ni viaja en la proyección del Widget.
+    @Test
+    fun completePrivacyNeverShowsOrCarriesTheStoredObjectiveAddress() = runBlocking<Unit> {
+        val databaseName = "stage14-widget-views-${UUID.randomUUID()}.db"
+        val store = LocalDataStore.create(context, databaseName)
+        try {
+            val shift = shiftWithAddress()
+            store.v2Shifts.insert(V2AppTestFixture.writeFor(store, shift, LocalDate.of(2026, 8, 1)))
+            val source = withTimeout(5_000) {
+                V2WorkEventSourceObserver(
+                    shifts = store.v2Shifts,
+                    availabilityWindows = store.availabilityWindows,
+                    shiftActuals = store.shiftActuals,
+                    independentExtras = store.independentExtraWork,
+                    explicitDayStatuses = store.explicitDayStatuses,
+                    vacations = store.vacations,
+                    medicalLeaves = store.medicalLeaves,
+                    workConfiguration = store.workConfiguration,
+                ).observe(ADDRESS_TODAY).first()
+            }
+            assertEquals(STORED_ADDRESS, source.shifts.single().shift.objectiveAddressSnapshot)
+            val result = projectNextEvent(ADDRESS_NOW, ZONE, source.toInput())
+            assertTrue((result.primaryEvents.single() as NextEventItem.Shift).hasHistoricalAddress)
+
+            WidgetSize.entries.forEach { size ->
+                val projection = projectWidget(
+                    result,
+                    WidgetProjectionConfig(
+                        mode = WidgetMode.AUTOMATIC,
+                        privacy = WidgetPrivacy.COMPLETE,
+                        size = size,
+                        configured = true,
+                    ),
+                )
+                val view = renderer.createViews(
+                    projection,
+                    appWidgetId = APP_WIDGET_ID,
+                    weatherText = "Clima: despejado · 12–18 °C".takeIf { size == WidgetSize.EXPANDED },
+                    palette = palette,
+                ).apply(context, null)
+                val strings = visibleStrings(view)
+
+                // Prueba de que los datos permitidos sí llegaron a la vista.
+                assertTrue("$size: $strings", strings.any { it.contains("Objetivo ficticio") })
+                assertTrue("$size: $strings", strings.any { it.contains("Puesto: Acceso") })
+                ADDRESS_FRAGMENTS.forEach { fragment ->
+                    assertFalse("$size muestra «$fragment»: $strings", strings.any { it.contains(fragment, ignoreCase = true) })
+                    assertFalse("$size transporta «$fragment»", projection.toString().contains(fragment, ignoreCase = true))
+                    assertFalse(buildWidgetRenderText(projection).toString().contains(fragment, ignoreCase = true))
+                }
+            }
+        } finally {
+            store.close()
+            context.deleteDatabase(databaseName)
+            // Room deja un bloqueo vacío junto a la base; deleteDatabase no lo borra.
+            java.io.File(context.cacheDir, "$databaseName.lck").delete()
+        }
+    }
+
+    private fun cutTexts(scale: TestFontScale): List<String> = buildList {
+        HostSize.entries.forEach { host ->
+            val view = inflate(host, scale)
+            MAIN_TEXTS.forEach { (label, viewId) ->
+                cutReason(view.findViewById(viewId))?.let { reason ->
+                    add("${host.label} · letra ${scale.percent} % · $label: $reason")
+                }
+            }
+        }
+    }
+
+    private fun inflate(host: HostSize, scale: TestFontScale): View {
+        val scaled = fontContext(scale)
+        // The renderer reads Android's font scale from its own context, as it does in the app.
+        val view = WidgetRemoteViewsRenderer(scaled).createViews(
+            projection(host.size, countdown = WidgetCountdown(START, countsToEnd = false)),
+            appWidgetId = APP_WIDGET_ID,
+            weatherText = null,
+            palette = palette,
+            elapsedRealtime = 50_000L,
+            compactTextLines = host.compactTextLines,
+            compactLargeText = host.compactLargeText,
+        ).apply(scaled, null)
+        val density = scaled.resources.displayMetrics.density
+        view.measure(
+            View.MeasureSpec.makeMeasureSpec((host.widthDp * density).toInt(), View.MeasureSpec.EXACTLY),
+            View.MeasureSpec.makeMeasureSpec((host.heightDp * density).toInt(), View.MeasureSpec.EXACTLY),
+        )
+        view.layout(0, 0, view.measuredWidth, view.measuredHeight)
+        return view
+    }
+
+    /** Contexto nuevo con otra escala de letra; el teléfono y la app no cambian. */
+    private fun fontContext(scale: TestFontScale): Context {
+        val configuration = Configuration(context.resources.configuration).apply { fontScale = scale.scale }
+        return context.createConfigurationContext(configuration)
+    }
+
+    /** `null` si el texto se ve entero; si no, por qué queda cortado. */
+    private fun cutReason(text: TextView): String? {
+        val shown = "«${text.text}»"
+        if (text.visibility != View.VISIBLE) return "$shown no está visible"
+        val textLayout = text.layout ?: return "$shown no se pudo medir"
+        if (textLayout.lineCount == 0) return "$shown quedó sin renglones"
+        val allowedLines = text.maxLines.takeIf { it > 0 } ?: Int.MAX_VALUE
+        if (textLayout.lineCount > allowedLines) {
+            return "$shown ocupa ${textLayout.lineCount} renglones y sólo se ven $allowedLines"
+        }
+        if ((0 until textLayout.lineCount).any { line -> textLayout.getEllipsisCount(line) > 0 }) {
+            return "$shown termina en puntos suspensivos"
+        }
+        val neededHeight = textLayout.getLineBottom(textLayout.lineCount - 1) +
+            text.compoundPaddingTop + text.compoundPaddingBottom
+        if (text.height < neededHeight) {
+            return "$shown necesita $neededHeight px de alto y recibió ${text.height}"
+        }
+        return null
+    }
+
+    private fun visibleStrings(root: View): List<String> {
+        val found = mutableListOf<String>()
+        fun visit(view: View) {
+            view.contentDescription?.let { found += it.toString() }
+            if (view is TextView) found += view.text.toString()
+            if (view is ViewGroup) {
+                for (index in 0 until view.childCount) visit(view.getChildAt(index))
+            }
+        }
+        visit(root)
+        return found
+    }
+
+    private fun projection(size: WidgetSize, countdown: WidgetCountdown?) = WidgetProjection(
+        referenceInstant = NOW,
+        mode = WidgetMode.AUTOMATIC,
+        privacy = WidgetPrivacy.COMPLETE,
+        size = size,
+        state = WidgetContentState.EVENTS,
+        events = listOf(event()),
+        totalSimultaneousEvents = 1,
+        dayOff = null,
+        countdown = countdown,
+        navigation = WidgetNavigation.Shift(SHIFT_ID, DATE),
+    )
+
+    private fun event() = WidgetEventPresentation(
+        identity = NextEventIdentity.Shift(SHIFT_ID),
+        ownerLocalDate = DATE,
+        zoneId = ZONE,
+        start = START,
+        end = END,
+        isActive = false,
+        details = WidgetEventDetails(
+            kind = WidgetEventKind.SHIFT,
+            workTypeName = "Guardia",
+            placeName = "Hospital Norte",
+            placeAbbreviation = "HN",
+            position = null,
+            availabilityLabel = null,
+            isResumption = false,
+            colorArgb = 0xFF315DA8.toInt(),
+        ),
+        navigation = WidgetNavigation.Shift(SHIFT_ID, DATE),
+    )
+
+    private fun shiftWithAddress(): Shift {
+        val date = LocalDate.of(2026, 8, 16)
+        return Shift(
+            id = UUID.fromString("e1400000-0000-0000-0000-000000000002"),
+            startAt = ZonedDateTime.of(date, LocalTime.of(19, 0), ZONE).toInstant(),
+            endAt = ZonedDateTime.of(date.plusDays(1), LocalTime.of(7, 0), ZONE).toInstant(),
+            zoneId = ZONE,
+            localStartDate = date,
+            objectiveNameSnapshot = "Objetivo ficticio",
+            objectiveAbbreviationSnapshot = "FIC",
+            objectiveAddressSnapshot = STORED_ADDRESS,
+            startTimeSnapshot = LocalTime.of(19, 0),
+            endTimeSnapshot = LocalTime.of(7, 0),
+            colorArgbSnapshot = 0xFF315DA8.toInt(),
+            position = "Acceso",
+            status = ShiftStatus.PLANNED,
+            sourceObjectiveId = V2AppTestFixture.PLACEHOLDER_OBJECTIVE_ID,
+            createdAt = ADDRESS_NOW,
+            updatedAt = ADDRESS_NOW,
+        )
+    }
+
+    /**
+     * Menor espacio en el que se usa cada vista: el mínimo declarado del Widget (180×96 dp,
+     * `res/xml/widget_next_event_info.xml`) y el umbral de la vista ampliada (250×360 dp,
+     * `WidgetRemoteViewsRenderer.kt:30-33`). Un launcher real suele dar más ancho.
+     */
+    private enum class HostSize(
+        val label: String,
+        val size: WidgetSize,
+        val widthDp: Int,
+        val heightDp: Int,
+        val compactTextLines: Int = 1,
+        val compactLargeText: Boolean = false,
+    ) {
+        /** Una fila de alto y tres celdas de ancho en una grilla como la del Samsung: el tamaño inicial. */
+        COMPACT("Compacta 240×95 dp", WidgetSize.COMPACT, 240, 95),
+
+        /** El menor ancho declarado, con el alto desde el que los textos pueden usar dos renglones. */
+        COMPACT_TALL("Compacta alta 180×150 dp", WidgetSize.COMPACT, 180, 150, compactTextLines = 2),
+
+        /** Ancha y de dos filas, con letra más grande: como la coloca el inicio del Samsung. */
+        COMPACT_ROOMY(
+            "Compacta amplia 300×150 dp", WidgetSize.COMPACT, 300, 150,
+            compactTextLines = 2, compactLargeText = true,
+        ),
+        EXPANDED("Ampliada 250×360 dp", WidgetSize.EXPANDED, 250, 360),
+    }
+
+    private companion object {
+        val ZONE: ZoneId = AppDefaults.zoneId()
+        val NOW: Instant = Instant.parse("2026-08-29T15:00:00Z")
+        val DATE: LocalDate = LocalDate.of(2026, 8, 29)
+        val START: Instant = DATE.atTime(19, 0).atZone(ZONE).toInstant()
+        val END: Instant = DATE.plusDays(1).atTime(7, 0).atZone(ZONE).toInstant()
+        val SHIFT_ID: UUID = UUID.fromString("e1400000-0000-0000-0000-000000000003")
+        val ADDRESS_TODAY: LocalDate = LocalDate.of(2026, 8, 15)
+        val ADDRESS_NOW: Instant = ZonedDateTime.of(ADDRESS_TODAY, LocalTime.NOON, ZONE).toInstant()
+        const val STORED_ADDRESS = "Calle Ficticia 9876, Barrio Inventado"
+        val ADDRESS_FRAGMENTS = listOf("Calle Ficticia", "9876", "Barrio Inventado")
+        val MAIN_TEXTS = listOf(
+            "título" to R.id.widget_title,
+            "texto principal" to R.id.widget_primary,
+            "horario" to R.id.widget_schedule,
+        )
+
+        // ID que ningún launcher asignó; sólo arma la identidad de los toques, no se publica nada.
+        const val APP_WIDGET_ID = 914_000_003
+    }
+}

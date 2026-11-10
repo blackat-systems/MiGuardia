@@ -16,8 +16,8 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import com.blackatsystems.miguardia.core.domain.widget.WidgetMode
 import com.blackatsystems.miguardia.core.domain.widget.WidgetPrivacy
-import com.blackatsystems.miguardia.ui.theme.AppZoom
-import com.blackatsystems.miguardia.ui.theme.MiGuardiaTheme
+import com.blackatsystems.miguardia.testsupport.TestFontScale
+import com.blackatsystems.miguardia.testsupport.AndroidFontScaleTheme
 import com.blackatsystems.miguardia.ui.widget.InstalledWidgetUi
 import com.blackatsystems.miguardia.ui.widget.WidgetActions
 import com.blackatsystems.miguardia.ui.widget.WidgetSurface
@@ -49,7 +49,7 @@ class WidgetComposeTest {
         var saved: WidgetConfigurationDraft? = null
         var cancelled = 0
         compose.setContent {
-            MiGuardiaTheme {
+            AndroidFontScaleTheme {
                 WidgetConfigurationScreen(
                     draft = draft,
                     isReconfiguration = true,
@@ -81,10 +81,10 @@ class WidgetComposeTest {
     }
 
     @Test
-    fun configurationRemainsUsableAtEveryInternalZoom() {
-        var zoom by mutableStateOf(AppZoom.STANDARD)
+    fun configurationRemainsUsableAtEveryAndroidFontScale() {
+        var fontScale by mutableStateOf(TestFontScale.STANDARD)
         compose.setContent {
-            MiGuardiaTheme(appZoom = zoom) {
+            AndroidFontScaleTheme(fontScale = fontScale) {
                 WidgetConfigurationScreen(
                     draft = WidgetConfigurationDraft(
                         WidgetMode.NEXT_DAY_OFF,
@@ -100,8 +100,8 @@ class WidgetComposeTest {
             }
         }
 
-        AppZoom.entries.forEach { option ->
-            compose.runOnIdle { zoom = option }
+        TestFontScale.entries.forEach { option ->
+            compose.runOnIdle { fontScale = option }
             compose.onNodeWithTag("widget-configuration-screen").assertIsDisplayed()
             compose.onNodeWithTag("widget-save").performScrollTo().assertIsDisplayed()
             compose.onNodeWithTag("widget-cancel").performScrollTo().assertIsDisplayed()
@@ -120,7 +120,7 @@ class WidgetComposeTest {
                 privacy = WidgetPrivacy.valueOf(privacyName),
                 includeWeather = includeWeather,
             )
-            MiGuardiaTheme {
+            AndroidFontScaleTheme {
                 WidgetConfigurationScreen(
                     draft = draft,
                     isReconfiguration = false,
@@ -152,7 +152,7 @@ class WidgetComposeTest {
         lateinit var savingState: MutableState<Boolean>
         restoration.setContent {
             savingState = rememberWidgetConfigurationSavingState()
-            MiGuardiaTheme {
+            AndroidFontScaleTheme {
                 WidgetConfigurationScreen(
                     draft = WidgetConfigurationDraft(
                         WidgetMode.AUTOMATIC,
@@ -181,7 +181,7 @@ class WidgetComposeTest {
     fun internalManagementNamesInstancesWithoutShowingTechnicalIds() {
         var selected: Int? = null
         compose.setContent {
-            MiGuardiaTheme {
+            AndroidFontScaleTheme {
                 WidgetSurfaceHost(
                     state = WidgetUiState(
                         surface = WidgetSurface.GLOBAL,
@@ -210,6 +210,45 @@ class WidgetComposeTest {
     }
 
     @Test
+    fun managementCloseStaysVisibleAfterScrollingInBothThemesAndEveryFontScale() {
+        var dark by mutableStateOf(false)
+        var fontScale by mutableStateOf(TestFontScale.STANDARD)
+        var closes = 0
+        val selected = mutableListOf<Int>()
+        val instances = (1..6).map { index ->
+            InstalledWidgetUi(
+                appWidgetId = 4800 + index,
+                position = index,
+                preferences = WidgetInstancePreferences(
+                    WidgetMode.AUTOMATIC, WidgetPrivacy.REDUCED, includeWeather = false, configured = true,
+                ),
+            )
+        }
+        compose.setContent {
+            AndroidFontScaleTheme(darkTheme = dark, fontScale = fontScale) {
+                WidgetSurfaceHost(
+                    WidgetUiState(surface = WidgetSurface.GLOBAL, instances = instances),
+                    WidgetActions(close = { closes++ }, reconfigure = { selected += it }),
+                )
+            }
+        }
+        for (theme in listOf(false, true)) for (option in TestFontScale.entries) {
+            compose.runOnIdle { dark = theme; fontScale = option }
+            val closeBefore = compose.onNodeWithTag("widget-management-close").assertIsDisplayed()
+                .fetchSemanticsNode().boundsInRoot
+            compose.onNodeWithTag("widget-reconfigure-6").performScrollTo().assertIsDisplayed().performClick()
+            val closeAfter = compose.onNodeWithTag("widget-management-close").assertIsDisplayed()
+                .fetchSemanticsNode().boundsInRoot
+            assertEquals(closeBefore.top, closeAfter.top, 1f)
+            compose.onNodeWithTag("widget-management-close").performClick()
+        }
+        compose.runOnIdle {
+            assertEquals(6, closes)
+            assertEquals(List(6) { 4806 }, selected)
+        }
+    }
+
+    @Test
     fun internalManagementExposesLoadingErrorRetryAndEmptyStates() {
         var state by mutableStateOf(
             WidgetUiState(
@@ -219,7 +258,7 @@ class WidgetComposeTest {
         )
         var retries = 0
         compose.setContent {
-            MiGuardiaTheme {
+            AndroidFontScaleTheme {
                 WidgetSurfaceHost(
                     state = state,
                     actions = WidgetActions(refresh = { retries++ }),

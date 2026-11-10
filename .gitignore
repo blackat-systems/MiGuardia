@@ -8,6 +8,8 @@
 *.iml
 build/
 **/build/
+*.apk
+*.aab
 local.properties
 captures/
 .externalNativeBuild/

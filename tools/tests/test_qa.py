@@ -58,6 +58,17 @@ class CatalogAndPlanTests(unittest.TestCase):
         with self.assertRaises(qa.QaError):
             qa.validate_catalog(catalog, ROOT)
 
+    def test_final_review_requires_existing_synthetic_session_and_read_only_opt_in(self):
+        for field in ("qa-mutations", "existing-session", "finalQaReadOnly"):
+            catalog = copy.deepcopy(self.catalog)
+            group = catalog["groups"]["final-qa-read-only"]
+            if field == "finalQaReadOnly":
+                group["instrument_args"].pop(field)
+            else:
+                group["requires"].remove(field)
+            with self.subTest(field=field), self.assertRaisesRegex(qa.QaError, "Final QA review"):
+                qa.validate_catalog(catalog, ROOT)
+
     def test_default_plan_and_catalog_modes_never_invoke_adb(self):
         with mock.patch.object(qa, "Adb", side_effect=AssertionError("No adb in plan")), mock.patch.object(qa.subprocess, "run", side_effect=AssertionError("No subprocess")):
             for argv in (["--group", "public-root"], ["--check-catalog"], ["--list"]):

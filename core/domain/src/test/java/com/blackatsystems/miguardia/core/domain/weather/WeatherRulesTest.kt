@@ -100,6 +100,18 @@ class WeatherRulesTest {
         assertEquals(20, roundedTemperature(20.4, WeatherUnitSystem.CELSIUS))
     }
 
+    @Test
+    fun `a range whose ends round to the same value is written once`() {
+        assertEquals("10–17", roundedTemperatureRange(10.2, 16.8, WeatherUnitSystem.CELSIUS))
+        assertEquals("50–62", roundedTemperatureRange(10.2, 16.8, WeatherUnitSystem.FAHRENHEIT))
+        // Seen on the phone for a one-hour shift: «17–17 °C».
+        assertEquals("17", roundedTemperatureRange(17.0, 17.0, WeatherUnitSystem.CELSIUS))
+        assertEquals("17", roundedTemperatureRange(16.6, 17.4, WeatherUnitSystem.CELSIUS))
+        assertEquals("63", roundedTemperatureRange(17.0, 17.0, WeatherUnitSystem.FAHRENHEIT))
+        assertEquals("-3–0", roundedTemperatureRange(-3.2, 0.4, WeatherUnitSystem.CELSIUS))
+        assertEquals("-3", roundedTemperatureRange(-3.2, -2.9, WeatherUnitSystem.CELSIUS))
+    }
+
     private fun forecast(hours: List<WeatherHour>) = WeatherForecast(
         providerId = "open-meteo",
         location = location,

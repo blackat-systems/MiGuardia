@@ -63,7 +63,12 @@ class StartupRecoveryGate(
 class MiGuardiaApplication : Application() {
     internal val updateOperations: com.blackatsystems.miguardia.updates.UpdateOperations by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         com.blackatsystems.miguardia.updates.UpdateService(
-            com.blackatsystems.miguardia.updates.UpdateHttpTransport(),
+            com.blackatsystems.miguardia.updates.UpdateHttpTransport(
+                open = { url ->
+                    QaInstrumentationScope.requireExternalAction(this, "updates.network")
+                    url.openConnection() as javax.net.ssl.HttpsURLConnection
+                },
+            ),
             com.blackatsystems.miguardia.updates.AndroidUpdateApkInspector(this),
             updateFiles,
             nanoTime = android.os.SystemClock::elapsedRealtimeNanos,
@@ -95,6 +100,7 @@ class MiGuardiaApplication : Application() {
         )
     }
     internal fun localActivityStarted() {
+        if (QaInstrumentationScope.suppress(this, "application.runtime-start")) return
         if (startupRecoveryGate.isReady) applicationScope.launch(Dispatchers.IO) {
             localRuntimeActivation.ensureStarted()
         }
@@ -181,6 +187,7 @@ class MiGuardiaApplication : Application() {
             localDataStore = localDataStore,
             preferences = portablePreferences,
             pauseRuntimes = {
+                QaInstrumentationScope.requireExternalAction(this, "backup.native-runtime-pause")
                 localRuntimeActivation.pause {
                     weatherRuntime.cancelRefresh()
                     notificationRuntime.pauseForRestore()
@@ -188,9 +195,11 @@ class MiGuardiaApplication : Application() {
                 }
             },
             clearDerivedCaches = {
+                QaInstrumentationScope.requireExternalAction(this, "backup.native-runtime-clear")
                 weatherRuntime.clearCache()
             },
             resumeRuntimes = {
+                QaInstrumentationScope.requireExternalAction(this, "backup.native-runtime-resume")
                 portablePreferences.ensureAccessibleSoundOrFallback()
                 replayDeferredDismissals()
                 notificationRuntime.resumeAfterRestore()
@@ -220,7 +229,23 @@ class MiGuardiaApplication : Application() {
     }
 
     override fun onCreate() {
+        QaInstrumentationScope.requireProcessAdmission(this)
         super.onCreate()
+        if (QaInstrumentationScope.suppress(this, "application.received-startup-omitted")) {
+            if (!QaInstrumentationScope.isNeutral(this)) {
+                // Only the admitted runner's own stores are initialized. This is
+                // an isolated UI gate, not a backup-recovery or service receipt.
+                applicationScope.launch(Dispatchers.IO) {
+                    try {
+                        accessLockCoordinator.initializeAfterRecovery()
+                        startupRecoveryGate.ready()
+                    } catch (_: Exception) {
+                        startupRecoveryGate.failed(STARTUP_RECOVERY_ERROR)
+                    }
+                }
+            }
+            return
+        }
         applicationScope.launch(Dispatchers.IO) { runCatching { updateFiles.cleanupAfterProcessStart() } }
         deviceLockMonitor.start()
         startupRecoveryGate.recovering()

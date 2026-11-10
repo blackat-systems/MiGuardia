@@ -11,19 +11,16 @@ import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -31,23 +28,26 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import com.blackatsystems.miguardia.core.domain.model.Vacation
 import com.blackatsystems.miguardia.ui.components.TransientConfirmation
 import com.blackatsystems.miguardia.ui.components.DestructiveAction
 import com.blackatsystems.miguardia.ui.components.EmptyState
+import com.blackatsystems.miguardia.ui.components.MiGuardiaButtonShape
+import com.blackatsystems.miguardia.ui.components.MiGuardiaDatePickerDialog
+import com.blackatsystems.miguardia.ui.components.MiGuardiaSpacing
 import com.blackatsystems.miguardia.ui.components.MonthNavigator
 import com.blackatsystems.miguardia.ui.components.PersistentMessage
 import com.blackatsystems.miguardia.ui.components.PrimaryAction
-import com.blackatsystems.miguardia.ui.components.ScreenHeading
 import com.blackatsystems.miguardia.ui.components.SurfaceHeader
-import java.time.Instant
+import com.blackatsystems.miguardia.ui.components.cardBorder
+import com.blackatsystems.miguardia.ui.components.destructiveButtonColors
+import com.blackatsystems.miguardia.ui.components.vigiliaCardSurface
+import com.blackatsystems.miguardia.ui.components.vigiliaScreenBackground
 import java.time.LocalDate
 import java.time.YearMonth
-import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
@@ -98,12 +98,12 @@ fun VacationSurfaceHost(
     actions: VacationActions,
 ) {
     BackHandler(onBack = actions.requestBack)
-    TransientConfirmation(state.infoMessage, actions.clearMessage) {
+    TransientConfirmation(state.infoMessage, actions.clearMessage, reserveSpace = true) {
         Surface(
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background,
         ) {
-            Column(Modifier.fillMaxSize().safeDrawingPadding()) {
+            Column(Modifier.fillMaxSize().vigiliaScreenBackground().safeDrawingPadding()) {
             SurfaceHeader(
                 title = if (state.surface == VacationSurface.EDITOR) {
                     if (state.draft.editingId == null) "Agregar vacaciones" else "Editar vacaciones"
@@ -117,7 +117,10 @@ fun VacationSurfaceHost(
             state.errorMessage?.let {
                 PersistentMessage(
                     message = it,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                    modifier = Modifier.padding(
+                        horizontal = MiGuardiaSpacing.large,
+                        vertical = MiGuardiaSpacing.extraSmall,
+                    ),
                     onDismiss = actions.clearMessage,
                     onRetry = actions.retry.takeIf { state.surface == VacationSurface.LIST },
                 )
@@ -137,7 +140,11 @@ fun VacationSurfaceHost(
             title = { Text("Descartar cambios") },
             text = { Text("Los cambios todavía no fueron guardados. ¿Querés descartarlos?") },
             confirmButton = {
-                TextButton(onClick = actions.confirmDiscard) { Text("Descartar") }
+                FilledTonalButton(
+                    onClick = actions.confirmDiscard,
+                    shape = MiGuardiaButtonShape,
+                    colors = destructiveButtonColors(),
+                ) { Text("Descartar") }
             },
             dismissButton = {
                 TextButton(onClick = actions.dismissDiscard) { Text("Seguir editando") }
@@ -151,7 +158,11 @@ fun VacationSurfaceHost(
             title = { Text("Eliminar vacaciones") },
             text = { Text("Se eliminará este período completo. Las guardias y demás datos no serán modificados.") },
             confirmButton = {
-                TextButton(onClick = actions.confirmDelete) { Text("Eliminar") }
+                FilledTonalButton(
+                    onClick = actions.confirmDelete,
+                    shape = MiGuardiaButtonShape,
+                    colors = destructiveButtonColors(),
+                ) { Text("Eliminar") }
             },
             dismissButton = {
                 TextButton(onClick = actions.dismissDelete) { Text("Cancelar") }
@@ -163,8 +174,8 @@ fun VacationSurfaceHost(
 @Composable
 private fun VacationList(state: VacationUiState, actions: VacationActions) {
     Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(MiGuardiaSpacing.large),
+        verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.large),
     ) {
         MonthNavigator(
             monthLabel = state.visibleMonth.displayName(),
@@ -173,23 +184,26 @@ private fun VacationList(state: VacationUiState, actions: VacationActions) {
             onPrevious = actions.previousMonth,
             onNext = actions.nextMonth,
         )
-        Text("Los días se cuentan de forma corrida e inclusiva.")
-        Text(
-            "Una guardia normal dentro del período se conserva, pero no computa horas. " +
-                "Ausencias y cancelaciones explícitas mantienen su clasificación.",
-        )
+        Column(verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small)) {
+            Text("Los días se cuentan de forma corrida e inclusiva.")
+            Text(
+                "Una guardia normal dentro del período se conserva, pero no computa horas. " +
+                    "Ausencias y cancelaciones explícitas mantienen su clasificación.",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
         PrimaryAction(
             label = "Agregar vacaciones",
             onClick = { actions.openCreate(state.visibleMonth, null) },
         )
         when {
             state.isLoading -> Row(
-                modifier = Modifier.fillMaxWidth().padding(24.dp),
+                modifier = Modifier.fillMaxWidth().padding(MiGuardiaSpacing.extraLarge),
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 CircularProgressIndicator()
-                Text("Cargando vacaciones…", Modifier.padding(start = 12.dp))
+                Text("Cargando vacaciones…", Modifier.padding(start = MiGuardiaSpacing.medium))
             }
 
             state.errorMessage != null -> Unit
@@ -204,6 +218,7 @@ private fun VacationList(state: VacationUiState, actions: VacationActions) {
         Text(
             "MiGuardia registra los días de vacaciones sin calcular montos.",
             style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
@@ -214,17 +229,17 @@ private fun VacationCard(vacation: Vacation, actions: VacationActions) {
         vacation.startDate,
         vacation.endDateInclusive,
     ) + 1
-    Card(modifier = Modifier.fillMaxWidth()) {
+    VacationPlainCard {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(MiGuardiaSpacing.large),
+            verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small),
         ) {
             Text(
                 "${vacation.startDate.displayName()} – ${vacation.endDateInclusive.displayName()}",
-                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleMedium,
             )
-            Text(dayCountLabel(days))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(dayCountLabel(days), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Row(horizontalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small)) {
                 TextButton(
                     onClick = { actions.edit(vacation) },
                     modifier = Modifier.semantics {
@@ -246,40 +261,48 @@ private fun VacationCard(vacation: Vacation, actions: VacationActions) {
 @Composable
 private fun VacationEditor(state: VacationUiState, actions: VacationActions) {
     Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(MiGuardiaSpacing.large),
+        verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.large),
     ) {
-        ScreenHeading(
-            title = "Período inclusivo",
-            supportingText = "Elegí el primer y el último día. Ambos se incluyen en el período.",
+        // Style v2: one title per screen. The header already names the editor, so the period
+        // explanation stays as supporting text instead of a second heading.
+        Text(
+            "Elegí el primer y el último día. Ambos se incluyen en el período.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         VacationDateField(
             label = "Fecha inicial",
             date = state.draft.startDate,
             onSelected = actions.updateStartDate,
+            enabled = !state.isSaving,
         )
         VacationDateField(
             label = "Fecha final inclusiva",
             date = state.draft.endDateInclusive,
             onSelected = actions.updateEndDate,
+            enabled = !state.isSaving,
         )
         val preview = state.draft.inclusiveDayCount
-        Card(modifier = Modifier.fillMaxWidth()) {
+        VacationPlainCard {
             Text(
                 text = preview?.let { "Vista previa: ${dayCountLabel(it)}" }
                     ?: "Elegí un rango válido para ver la cantidad de días.",
-                modifier = Modifier.padding(16.dp).semantics {
+                modifier = Modifier.padding(MiGuardiaSpacing.large).semantics {
                     contentDescription = preview?.let { "${dayCountLabel(it)}, fechas inclusivas" }
                         ?: "Rango de vacaciones inválido"
                 },
-                fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.titleMedium,
             )
         }
-        Text("Una guardia normal dentro de estas fechas no computará horas.")
-        Text(
-            "Las vacaciones no pueden superponerse con otro período ni con una carpeta médica.",
-            style = MaterialTheme.typography.bodySmall,
-        )
+        Column(verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.small)) {
+            Text("Una guardia normal dentro de estas fechas no computará horas.")
+            Text(
+                "Las vacaciones no pueden superponerse con otro período ni con una carpeta médica.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
         PrimaryAction(
             label = "Guardar vacaciones",
             onClick = actions.save,
@@ -289,58 +312,52 @@ private fun VacationEditor(state: VacationUiState, actions: VacationActions) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * Style v2: the same button and text as before, now opening the shared calendar picker
+ * (Argentine Spanish, weeks from Monday like the Calendar, exact UTC date). Picking only
+ * updates the draft through [onSelected]; it never saves. Cancel changes nothing.
+ */
 @Composable
 private fun VacationDateField(
     label: String,
     date: LocalDate?,
     onSelected: (LocalDate) -> Unit,
+    enabled: Boolean,
 ) {
     var showPicker by remember { mutableStateOf(false) }
-    OutlinedButton(onClick = { showPicker = true }, modifier = Modifier.fillMaxWidth()) {
+    OutlinedButton(
+        onClick = { showPicker = true },
+        enabled = enabled,
+        modifier = Modifier.fillMaxWidth(),
+        shape = MiGuardiaButtonShape,
+    ) {
         Text("$label: ${date?.displayName() ?: "Elegir"}")
     }
     if (showPicker) {
-        val pickerState = rememberDatePickerState(
-            initialSelectedDateMillis = date?.atStartOfDay(ZoneOffset.UTC)?.toInstant()?.toEpochMilli(),
+        MiGuardiaDatePickerDialog(
+            initial = date ?: LocalDate.now(),
+            // As before stage 13.5: an empty date opens on this month with no day chosen.
+            preselect = date != null,
+            onConfirm = { picked ->
+                showPicker = false
+                onSelected(picked)
+            },
+            onDismiss = { showPicker = false },
         )
-        DatePickerDialog(
-            onDismissRequest = { showPicker = false },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        pickerState.selectedDateMillis?.let { millis ->
-                            onSelected(Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate())
-                        }
-                        showPicker = false
-                    },
-                    enabled = pickerState.selectedDateMillis != null,
-                ) { Text("Aceptar") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showPicker = false }) { Text("Cancelar") }
-            },
-        ) {
-            DatePicker(state = pickerState)
-        }
     }
 }
 
+/** Common card surface (style v2) for the vacation rows and the preview. */
 @Composable
-private fun MessageCard(text: String, isError: Boolean, dismiss: () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth().padding(8.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text,
-                modifier = Modifier.weight(1f),
-                color = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
-            )
-            TextButton(onClick = dismiss) { Text("Cerrar") }
-        }
+private fun VacationPlainCard(content: @Composable () -> Unit) {
+    val shape = MaterialTheme.shapes.large
+    Card(
+        modifier = Modifier.fillMaxWidth().vigiliaCardSurface(shape, MaterialTheme.colorScheme.surfaceContainer),
+        shape = shape,
+        border = cardBorder(),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+    ) {
+        content()
     }
 }
 

@@ -4,6 +4,10 @@ import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextContains
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
@@ -149,7 +153,10 @@ class V2ShiftEditActivityTest {
         compose.onNodeWithTag("v2-shift-edit-position").assertTextContains(EDITED_POSITION)
         rotateAndVerifyDraft(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE, Configuration.ORIENTATION_LANDSCAPE)
         rotateAndVerifyDraft(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT, Configuration.ORIENTATION_PORTRAIT)
-        compose.onNodeWithTag("v2-shift-edit-back").performClick()
+        // Stage 13.5: the common header puts "Volver" on the right; it is found inside the header.
+        compose.onNode(
+            hasText("Volver") and hasClickAction() and hasAnyAncestor(hasTestTag("v2-shift-edit-header")),
+        ).performClick()
         compose.onNodeWithTag("v2-shift-discard-dialog").assertIsDisplayed()
         compose.onNodeWithText("Seguir editando").performClick()
         saveCurrentDraftWithExpectedWarning()
@@ -209,6 +216,8 @@ class V2ShiftEditActivityTest {
 
     private fun openDayActions() {
         compose.onNodeWithTag(waitForCalendarDay()).performScrollTo().performClick()
+        waitForTag("day-other-options")
+        compose.onNodeWithTag("day-other-options").performScrollTo().assertIsDisplayed().performClick()
         waitForTag("v2-edit-day-action")
         compose.onNodeWithTag("v2-edit-day-action").performScrollTo().assertIsDisplayed().performClick()
         waitForTag("v2-shift-edit-surface")

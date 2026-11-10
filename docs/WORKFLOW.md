@@ -1,86 +1,59 @@
 # Método de trabajo e integración
 
-Este método es permanente. El alcance y el estado actuales viven sólo en `docs/STATUS.md`; el método no habilita otro bloque.
+> Desde el 7/11/2026 rige [Proceso simple](PROCESO_SIMPLE.md), aprobado por Joaquín. Este documento queda como referencia técnica y cede ante él donde se contradigan. Los códigos están traducidos en el [glosario](GLOSARIO.md).
+
+Este método no habilita otro bloque. `docs/STATUS.md` conserva alcance, permisos y cursor; enlaza el registro de cierre y la evidencia pertinente.
 
 ## Un ciclo
 
-1. Recuperar AGENTS, STATUS y la ruta de lectura pertinente. Puerta 0: carpeta, rama/HEAD, cambios y recursos compartidos. Registrar la entrada si será costosa de reconstruir.
-2. MAIN toma la siguiente etapa de STATUS y respeta `docs/ORQUESTACION_MAIN.md`. Estabilizar objetivo, contratos, límites y evidencia de aceptación; reutilizar candidato/contrato existente. Una instrucción directa y concreta de Joaquin puede ser el contrato; para una dependencia relevante usar `docs/prompts/TEMPLATE.md`.
-3. Implementar el mínimo suficiente. Delegar sólo responsabilidades independientes, con archivos propios y condiciones de integración claras. Un escritor por archivo; una sola ejecución Gradle/dispositivo a la vez.
-4. Comprobar por impacto con `docs/VALIDACION.md`. Una revisión independiente de cambios ejecutables busca fallos, no rehace la implementación. Si cambia el objeto auditado, repetir la comprobación afectada.
-5. Actualizar STATUS, su cursor del mapa y evidencia fechada sólo tras aceptar la salida. Continuar dentro del paquete ya autorizado según la ruta; no iniciar un alcance nuevo automáticamente ni reabrir etapas cerradas por leerlas en el flowchart.
+1. Recuperar AGENTS, STATUS y lecturas pertinentes. Puerta 0: ruta, rama/HEAD, cambios y recursos. Preservar la entrada; una divergencia material inexplicada detiene sólo lo afectado.
+2. MAIN fija contrato, próximo resultado observable, ejecución autorizada y condición de salida. Reutilizar candidato y contratos; `docs/prompts/TEMPLATE.md` sirve para delegar. El plan maestro fija el orden actual de cierre.
+3. STAGE resuelve la capacidad completa: causa, implementación, consumidores, errores, persistencia/restauración y comprobaciones. Las decisiones rutinarias pertenecen al especialista. Un escritor por archivo, reparto explícito y un único operador de Gradle/dispositivo.
+4. Verificar por impacto con `docs/VALIDACION.md`; revisar independientemente el comportamiento crítico. Los bloqueos de auditoría identifican requisito o riesgo, ubicación/evidencia y condición de salida. Separar mejoras opcionales y terminar al cubrir lo necesario.
+5. MAIN recibe, audita e integra el resultado estable. Antes de encadenar, concilia requisitos/variantes cubiertos, versión y evidencia vigente/reutilizable, pendientes y próxima acción o dueño. Una entrega parcial no cierra el bloque completo.
 
-## Autorizaciones sin repreguntas
+## Vigencia y trabajo en curso
 
-- La autorización de un bloque cubre inspección, cambios locales necesarios, pruebas seguras, correcciones y documentación relacionadas. No pedir otra autorización para cada acción reversible ya incluida.
-- MAIN puede crear el checkpoint local de un bloque revisado y comprobado; no mezclar cambios preexistentes ajenos o pendientes. Aprobación para checkpoint y commit creado son estados distintos.
-- Una nueva tarea de Codex necesita indicación de Joaquin. Subagentes internos acotados pueden colaborar dentro del alcance autorizado; no sustituyen a MAIN.
-- Push, tag, firma/publicación, producción, recursos remotos y ensayos físicos conservan su autorización específica. Las autorizaciones **de push anteriores** están consumidas; esto no consume los permisos operativos del bloque actual.
-- Si una decisión cambia producto, seguridad, costos, datos o compromisos externos sin autorización, presentar la decisión concreta. No convertir una duda resoluble en una nueva puerta de permiso.
+Una actualización de procedimiento no cambia por sí sola un contrato activo, sus insumos congelados, admisiones, límites de intentos o HOLD. No modificar payloads sellados ni emitir permisos nuevos por esta guía. MAIN incorpora el delta en una transición segura; hasta entonces rigen las condiciones específicas vigentes y continúa lo independiente autorizado.
 
-## Estado, contratos e historia
+Con escritores activos, reservar archivos y comparar preimágenes sin sobrescribir cambios. STATUS, checkpoint, contratos y recibos conservan su dueño. Editar documentos no autoriza interrumpir ensayos, consultar recursos ni reconstruir artefactos.
 
-| Fuente | Responsabilidad |
-|---|---|
-| AGENTS | Invariantes y límites estables |
-| STATUS | Único estado actual, autorización, Git real y pendientes |
-| ORQUESTACION_MAIN | Orden obligatorio, dependencias y aceptación de las 24 etapas; gráfico derivado de STATUS |
-| PLANIFICACION | Reglas del producto y capacidades futuras claramente separadas |
-| MAPA | Resumen para orientarse, sin otro historial operativo |
-| ADR e índice | Contratos técnicos vigentes y sus sucesores |
-| Prompts | Alcance/aceptación de tareas; estado autorizado sólo en STATUS |
-| Auditorías | Evidencia fechada y limitada a base/artefacto/superficie |
-| Archive | Fuentes reemplazadas, nunca órdenes actuales |
+## Autoridad y fuentes
 
-Al reanudar, comparar el estado y los archivos desde la última base conocida; leer sólo el cambio pertinente, salvo contexto faltante. No reconstruir el historial de Git, permisos consumidos o pruebas antiguas si ya está registrado y no cambió. Un candidato presente se audita; no se crea otro implementador para empezar de cero.
+- Registrar una vez permisos previsibles con acción, recurso/datos, consecuencia y fuente humana; distinguir CONCEDIDO, PENDIENTE y HOLD. Reutilizar permisos vigentes sin repregunta rutinaria. Un HOLD detiene sólo lo dependiente; no habilita consultar ADB para inferir disponibilidad.
+- MAIN y STAGE resuelven decisiones técnicas reversibles dentro del alcance. Escalar sólo decisiones materiales de producto, datos, seguridad, costos, publicación o permisos; no aceptar controles por Joaquin.
+- Crear un chat requiere indicación humana aplicable, incluido encadenamiento explícito de tareas reales. Los revisores internos no sustituyen al especialista durable. La autonomía no concede mensajería, supervisión ni recursos.
+- MAIN puede crear checkpoints locales de alcance propio revisado y comprobado, sin absorber cambios ajenos. Push, tag, firma/publicación, producción, servicios remotos y ensayos físicos conservan autorización específica. Las autorizaciones anteriores de push están consumidas; esto no consume permisos operativos del bloque.
 
-## Delegación y entrega proporcionales
+AGENTS conserva invariantes; STATUS, estado y autoridad; los contratos/ADR, requisitos; código, pruebas y auditorías, implementación y evidencia. PLANIFICACION/MAPA describen producto; El archivo conserva antecedentes y permisos consumidos, sin órdenes de arranque.
 
-### Bloques completos y profundidad de trabajo
+El checkpoint conserva identidad de entregas, transporte, admisiones y recuperación; no concede autoridad distinta de STATUS y su fuente humana. Al retomar, leer el delta pertinente y reutilizar la revisión vigente. Un inventario anterior a las aceptaciones o un conteo de métodos no determina pendientes ni cierre.
 
-Instrucción expresa de Joaquin, 2026-09-07: aumentar sustancialmente la capacidad
-de resolución de cada dependencia. En este ciclo usa Astra con razonamiento
-ultra y espera tareas más completas y complejas, con autonomía para resolver
-el conjunto. El modelo elegido no amplía permisos ni autoriza cambios ajenos.
+## Tamaño del bloque y control de preparación
 
-- La unidad de delegación es una capacidad utilizable de punta a punta. Una
-  misma dependencia reúne diagnóstico, diseño técnico dentro del contrato,
-  implementación, integración de sus superficies, estados y errores,
-  persistencia/restauración que necesite, regresiones, QA autorizada y handoff.
-- Dimensionar el bloque por cohesión, dependencias y riesgos reales, no por la
-  cantidad de archivos ni por dividir cada operación en un prompt. Botones,
-  regreso, borradores y pruebas de un mismo recorrido son hitos internos del
-  mismo encargo, no cuatro chats sucesivos.
-- Mantener la fragmentación de carga mediante chats especializados separados:
-  MAIN define entradas, salidas y dependencias como contratos entre funciones;
-  cada especialista resuelve su frente completo y devuelve evidencia. MAIN
-  conserva la visión global, revisa e integra; no ejecuta por defecto cada
-  microdecisión que el especialista puede resolver dentro de su alcance.
-- Antes de abrir otro chat, justificar su responsabilidad independiente y el
-  contrato estable que consume o produce. Los revisores internos pueden
-  contrastar riesgos en paralelo sin competir por archivos, Gradle o teléfono.
-  Una bifurcación de conversación no autoriza por sí sola otra rama Git,
-  worktree, escritor o dispositivo.
-- Pedir profundidad en casos límite, coherencia transversal y verificación del
-  recorrido completo. La complejidad técnica se justifica por esos problemas;
-  no por agregar infraestructura, abstracciones, documentación o pruebas sin
-  relación con el resultado solicitado.
-- El especialista corrige los defectos reproducibles de su bloque y repite
-  únicamente las comprobaciones afectadas antes de entregar. No devolver
-  anticipadamente piezas desconectadas ni detenerse en cada decisión reversible.
-  Mantener las puertas materiales de datos, seguridad, costos y publicación.
-- Comunicar hitos verificables y bloqueos concretos. «Local verde», «QA física»,
-  «integrado» y «publicado» siguen siendo resultados diferentes. Un límite de
-  autorización se informa; no se oculta ni se convierte en aprobación.
+Delegar capacidades completas con profundidad acorde al modelo elegido por Joaquin, sin ampliar permisos. Botones, borradores y correcciones del recorrido son hitos internos. Un experimento nuevo o cambio de producto requiere alcance propio.
 
-Antes de delegar: tarea, entradas, archivos propios, contratos compartidos, prohibiciones, validación y criterio de terminado. Una aclaración breve puede bastar para una revisión de sólo lectura; no crear un documento extenso por ritual.
+Antes de ampliar auxiliares, infraestructura o revisión, identificar qué requisito/riesgo impide la próxima ejecución. Si crece la preparación sin ejecutar el recorrido previsto, MAIN y STAGE deben reevaluar la táctica, aunque cada vuelta aporte novedades:
 
-Handoff: qué cambió y por qué; rutas relevantes; base/HEAD y cambios locales; validación con alcance/resultados; riesgos y próximo paso. Si hay evidencia larga, enlazarla. Evitar repetir reglas y contratos que ya tienen dueño.
+- separar producto, prueba, entorno y restricción contractual, conservando incertidumbres;
+- elegir la observación representativa mínima permitida y su condición de salida;
+- reutilizar componentes válidos y retirar mejoras opcionales del camino crítico;
+- continuar sin impulso humano rutinario dentro de la autoridad vigente.
 
-## Cierre comprobable
+Una prueba representativa acredita sólo su superficie, sin sustituir obligaciones de cierre. Si la impide el contrato, identificar la regla y resolver el ajuste dentro de la autoridad vigente o presentar la decisión material necesaria. Dos rondas del mismo defecto sin evidencia nueva también exigen diagnóstico. No reiniciar el ciclo con otro chat, sello o número de stage.
 
-Separar implementación, revisión, commit real, pruebas locales, matriz física y distribución. Un cierre de cliente con pendientes aceptados no equivale a aplicación publicable. Registrar esos pendientes con superficie y evidencia, sin reabrir automáticamente todo lo anterior.
+## Entrega, revisión y continuidad
 
-Nunca heredar un verde de otra base o superficie. La revisión de extracción mecánica no sustituye una prueba física; puede acreditar ausencia de cambio lógico mediante comparación de cuerpos y compilación, manteniendo el límite explícito.
+Las correcciones rutinarias con el mismo escritor, alcance y permisos se implementan y verifican internamente. Sus avisos no necesitan sello, acuse ni auditoría formal propios. Entregar formalmente un resultado estable útil y verificable, completo o parcial con límites explícitos, al transferir responsabilidad/recursos o requerir una decisión/admisión contractual. Cada archivo mantiene un solo escritor; los revisores usan entradas estables y no compiten por recursos.
 
-Dos rondas sobre el mismo defecto sin evidencia nueva exigen diagnosticar la causa y detener la repetición improductiva. No abrir más chats para ocultar un bloqueo.
+Entregar delta/base y preimágenes, pruebas ejecutadas/reutilizadas/no ejecutadas, resultados, cobertura, pendientes y próximo dueño. Confirmar cese y recursos restantes. Con retorno autorizado, sellar y enviar a MAIN chat/turno, rutas, hashes y clave/revisión; el final propio no sustituye el envío.
+
+`TERMINADO/PENDIENTE_ENVIO → ENVIADO → RECIBIDO → AUDITADO`
+
+MAIN acusa RECIBIDO con clave/hash antes de auditar; transporte aceptado no prueba recepción. Mantener recibos fuera del payload inmutable. Ante duplicado o incertidumbre, consultar registro/historia: misma clave/hash reutiliza recepción; otro hash con igual clave es conflicto. Sin garantía exactly-once ni evasión de denegaciones.
+
+Devolver defectos al mismo STAGE con evidencia y criterio verificable; agrupar correcciones compatibles antes de la siguiente entrega estable. Preservar la anterior con identidad/sello nuevos para la corregida. Revisar delta, riesgos pendientes y controles invalidados; no reiniciar todas las baterías. Una extracción mecánica verificada no acredita QA física nueva ni se heredan verdes de otra base/superficie.
+
+Tras aceptar e integrar, conciliar el cierre existente y despachar sólo el siguiente trabajo real autorizado, reutilizando destino y registrando su clave/chat. No copy/paste ni confirmaciones humanas rutinarias. Separar implementación, revisión, commit, pruebas locales, matriz física, aceptación humana y distribución.
+
+Sólo con seguimiento diferido pedido y mecanismo real, un supervisor temporal único recupera envío/acuse, revisión o avance pendientes. Reutilizar ID/destinos; no otro watch/daemon. Sin cambio útil, silencio. Al terminar o quedar sin transición, registrar causa y cerrar sólo el supervisor propio, sin archivar chats ni borrar evidencia. Esperar en el turno activo no acredita seguimiento posterior.

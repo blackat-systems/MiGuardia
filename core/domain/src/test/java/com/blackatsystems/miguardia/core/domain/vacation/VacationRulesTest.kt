@@ -13,6 +13,14 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class VacationRulesTest {
+    @Test fun literalOctoberNovemberRangeIncludesExactlyFourCivilDates() {
+        val vacation = vacation(LocalDate.of(2026, 10, 30), LocalDate.of(2026, 11, 2))
+        val october = vacationDatesInMonth(YearMonth.of(2026, 10), listOf(vacation))
+        val november = vacationDatesInMonth(YearMonth.of(2026, 11), listOf(vacation))
+        assertEquals(setOf(LocalDate.of(2026, 10, 30), LocalDate.of(2026, 10, 31)), october)
+        assertEquals(setOf(LocalDate.of(2026, 11, 1), LocalDate.of(2026, 11, 2)), november)
+        assertEquals(4, (october + november).size)
+    }
     @Test fun singleDayRangeIsInclusive() {
         val date = LocalDate.of(2026, 8, 13)
         assertEquals(setOf(date), vacationDatesInMonth(YearMonth.from(date), listOf(vacation(date, date))))
