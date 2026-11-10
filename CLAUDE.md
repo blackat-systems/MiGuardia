@@ -37,7 +37,7 @@ Autoridad: instrucción actual de Joaquin; decisiones de producto vigentes en `d
 
 ## Trabajo, Git y recursos compartidos
 
-- Hablar en español argentino claro: resultado, evidencia y siguiente paso. Diferenciar verificado, inferido y pendiente.
+- Hablarle a Joaquín como pide la sección 1 de sus reglas globales (acordada el 10/11/2026): qué pasó y qué significa, en conversación y sin formato de informe. Lo verificado, lo inferido y lo pendiente se distinguen en palabras llanas.
 - Puerta 0: ruta exacta, rama/HEAD, cambios rastreados/nuevos/staged, worktrees y remotos. Ante una divergencia material inexplicada, preservar lo recibido y detener sólo la parte afectada; continuar lo independiente autorizado. Un checkout intencionalmente modificado se preserva como entrada.
 - MAIN integra un bloque autorizado por vez y delega subtareas independientes con contrato y revisión final. Este checkout admite reparto explícito por archivo, excepción a un escritor por checkout del contenedor; conserva un único operador de Gradle/dispositivo. Crear un chat requiere indicación de Joaquin; los revisores internos son distintos.
 - Delegar capacidades completas de punta a punta, con profundidad acorde al modelo elegido por Joaquin (Astra/ultra en este ciclo). Mantener chats especializados separados por responsabilidades reales; aplicar la granularidad de `docs/WORKFLOW.md`, sin convertir botones, correcciones o pruebas del mismo recorrido en dependencias sucesivas.
@@ -58,4 +58,4 @@ Autoridad: instrucción actual de Joaquin; decisiones de producto vigentes en `d
 - Preservar tema, TalkBack sin controles extra y tamaño de letra nativo de Android (ADR 0043). No hay zoom interno. Conservar su preferencia heredada sólo en Copias; no modificar ajustes globales durante QA.
 - Revisar diff completo del alcance, no rastreados, permisos, dependencias y ausencia de datos privados antes del cierre.
 - Separar implementación, revisión, commit, validación local, matriz física y distribución. Antes de encadenar, MAIN concilia cobertura, evidencia vigente y pendientes en el registro existente; STATUS resume y enlaza. El contrato fija requisitos; la auditoría conserva evidencia fechada.
-- Cierre breve: qué cambió y por qué, archivos relevantes, comprobaciones reales, límites y próximo paso. No declarar publicación, instalación o prueba que no ocurrió.
+- Cierre: en el chat, breve y conversado (qué cambió, qué significa, límites y próximo paso). Los archivos, las comprobaciones reales y la evidencia se anotan en `docs/STATUS.md` y en el commit, no se listan en el mensaje. No declarar publicación, instalación o prueba que no ocurrió.
