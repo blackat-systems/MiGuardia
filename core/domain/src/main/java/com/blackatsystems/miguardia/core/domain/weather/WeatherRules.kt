@@ -103,6 +103,16 @@ fun convertTemperature(valueCelsius: Double, unit: WeatherUnitSystem): Double = 
 fun roundedTemperature(valueCelsius: Double, unit: WeatherUnitSystem): Int =
     convertTemperature(valueCelsius, unit).roundToInt()
 
+/**
+ * The numbers of a temperature range as shown to the person, without the unit: "10–17", or just "17"
+ * when both ends round to the same value (a one-hour shift), instead of "17–17".
+ */
+fun roundedTemperatureRange(minimumCelsius: Double, maximumCelsius: Double, unit: WeatherUnitSystem): String {
+    val minimum = roundedTemperature(minimumCelsius, unit)
+    val maximum = roundedTemperature(maximumCelsius, unit)
+    return if (minimum == maximum) "$maximum" else "$minimum–$maximum"
+}
+
 fun WeatherCondition.spanishLabel(): String = when (this) {
     WeatherCondition.CLEAR -> "Despejado"
     WeatherCondition.CLOUDY -> "Nublado"

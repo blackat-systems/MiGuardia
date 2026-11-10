@@ -87,6 +87,7 @@ import com.blackatsystems.miguardia.core.domain.weather.WeatherCoverage
 import com.blackatsystems.miguardia.core.domain.weather.WeatherFreshness
 import com.blackatsystems.miguardia.core.domain.weather.WeatherUnitSystem
 import com.blackatsystems.miguardia.core.domain.weather.roundedTemperature
+import com.blackatsystems.miguardia.core.domain.weather.roundedTemperatureRange
 import com.blackatsystems.miguardia.core.domain.weather.spanishLabel
 import com.blackatsystems.miguardia.ui.availability.AvailabilityActions
 import com.blackatsystems.miguardia.ui.availability.AvailabilityDaySection
@@ -1045,8 +1046,7 @@ internal fun ShiftWeatherBriefCard(
                     val maximumTemperature = summary.maximumTemperatureCelsius
                     val temperatures = if (minimumTemperature != null && maximumTemperature != null) {
                         val suffix = if (unit == WeatherUnitSystem.CELSIUS) "°C" else "°F"
-                        "${roundedTemperature(minimumTemperature, unit)}–" +
-                            "${roundedTemperature(maximumTemperature, unit)} $suffix"
+                        "${roundedTemperatureRange(minimumTemperature, maximumTemperature, unit)} $suffix"
                     } else {
                         null
                     }

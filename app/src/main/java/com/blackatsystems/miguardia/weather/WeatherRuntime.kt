@@ -11,6 +11,7 @@ import com.blackatsystems.miguardia.core.domain.weather.WeatherLocation
 import com.blackatsystems.miguardia.core.domain.weather.WeatherRefreshResult
 import com.blackatsystems.miguardia.core.domain.weather.WeatherUnitSystem
 import com.blackatsystems.miguardia.core.domain.weather.roundedTemperature
+import com.blackatsystems.miguardia.core.domain.weather.roundedTemperatureRange
 import com.blackatsystems.miguardia.core.domain.weather.spanishLabel
 import com.blackatsystems.miguardia.core.domain.weather.summarizeShiftWeather
 import com.blackatsystems.miguardia.core.domain.weather.weatherFreshness
@@ -156,7 +157,7 @@ internal fun formatWeatherForNotification(
     val maximum = summary.maximumTemperatureCelsius
     if (minimum != null && maximum != null) {
         val suffix = if (unit == WeatherUnitSystem.CELSIUS) "°C" else "°F"
-        pieces += "${roundedTemperature(minimum, unit)}–${roundedTemperature(maximum, unit)} $suffix"
+        pieces += "${roundedTemperatureRange(minimum, maximum, unit)} $suffix"
     }
     summary.maximumPrecipitationProbabilityPercent?.let { pieces += "lluvia $it %" }
     return pieces.takeIf { it.isNotEmpty() }?.joinToString(prefix = "Clima: ", separator = " · ")

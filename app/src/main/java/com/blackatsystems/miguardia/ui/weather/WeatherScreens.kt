@@ -54,6 +54,7 @@ import com.blackatsystems.miguardia.core.domain.weather.WeatherFreshness
 import com.blackatsystems.miguardia.core.domain.weather.WeatherHour
 import com.blackatsystems.miguardia.core.domain.weather.WeatherUnitSystem
 import com.blackatsystems.miguardia.core.domain.weather.roundedTemperature
+import com.blackatsystems.miguardia.core.domain.weather.roundedTemperatureRange
 import com.blackatsystems.miguardia.core.domain.weather.spanishLabel
 import com.blackatsystems.miguardia.ui.components.MiGuardiaSpacing
 import com.blackatsystems.miguardia.ui.components.PersistentMessage
@@ -473,7 +474,8 @@ private fun rangeText(label: String, minimum: Double?, maximum: Double?, unit: W
     if (minimum == null && maximum == null) return null
     if (minimum == null) return "$label: hasta ${temperatureText(maximum!!, unit)}"
     if (maximum == null) return "$label: desde ${temperatureText(minimum, unit)}"
-    return "$label: ${roundedTemperature(minimum, unit)}–${temperatureText(maximum, unit)}"
+    val suffix = if (unit == WeatherUnitSystem.CELSIUS) "°C" else "°F"
+    return "$label: ${roundedTemperatureRange(minimum, maximum, unit)} $suffix"
 }
 
 private fun temperatureText(value: Double, unit: WeatherUnitSystem): String =
