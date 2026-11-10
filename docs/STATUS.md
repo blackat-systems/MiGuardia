@@ -33,8 +33,9 @@
 - Etapa anterior: **13.5 · Estética y facilidad de uso — CERRADA por Joaquín (9/11)**. Están la lista
   ✅/⏳ y el detalle abajo, y las decisiones en [inventario y decisiones](design/ETAPA_13_5_INVENTARIO.md).
 - Etapas anteriores: 13 · Datos y archivos y 12.2 · Cálculos y consulta, CERRADAS por Joaquín (8/11).
-- Base en GitHub: `7fef1c5` (cierre de 13.5), subido a `origin/codex/miguardia-3.0` el 9/11 a
-  pedido de Joaquín.
+- En GitHub: rama `origin/codex/miguardia-3.0` subida el 10/11 a pedido de Joaquín, con pull request
+  abierto contra `main` (https://github.com/blackat-systems/MiGuardia/pull/1). No está para mergear:
+  la etapa 14 sigue en curso.
 - Pareja instalada en el Samsung (10/11): QA `6580449e…` + ejecutor `e9597ece…`
   (`.local-evidence/claude-20261110-14/build11/hashes.txt`). La última corrida completa de las 134 fue
   con `build5`; después sólo se repitieron las clases del Widget. Datos QA: 23 bases, foto
@@ -151,7 +152,9 @@ QA tiene las notificaciones bloqueadas en el teléfono. Se cubre en la sesión c
   dio 17 de 17 en el Samsung con QA `1bd0be8d…` (`build12`). ✅ Joaquín lo repitió en modo avión (captura
   del 10/11, 02:41): se ve «No pudimos conectar. Se conserva el último pronóstico disponible.» con
   «Reintentar» y «Cerrar», y el pronóstico sigue debajo. Observación menor de esa captura: con mínima y
-  máxima iguales el resumen dice «17–17 °C» y «16–16 °C»; sin tocar.
+  máxima iguales el resumen decía «17–17 °C» y «16–16 °C». ✅ Arreglado el 10/11 a pedido de Joaquín: una
+  sola regla (`roundedTemperatureRange`) para el detalle de Clima, la tarjeta del día y el texto de los
+  avisos; ahora dice «17 °C». PC y compilación completa aprobadas; ⏳ sin instalar en el Samsung.
 - ⏳ **«Actualizar» con red:** Joaquín dijo «queda igual». La hora de «Última actualización» sí cambió
   (02:35 en su captura), así que la descarga ocurrió; no se confirmó si vio el aviso «Pronóstico
   actualizado.».
