@@ -35,8 +35,9 @@
 - Etapas anteriores: 13 · Datos y archivos y 12.2 · Cálculos y consulta, CERRADAS por Joaquín (8/11).
 - Base en GitHub: `7fef1c5` (cierre de 13.5), subido a `origin/codex/miguardia-3.0` el 9/11 a
   pedido de Joaquín.
-- Pareja instalada en el Samsung (10/11, verificada sacando el hash del teléfono): QA `547426d9…` +
-  ejecutor `dda5048d…` (`.local-evidence/claude-20261110-14/build5/hashes.txt`). Datos QA: 23 bases, foto
+- Pareja instalada en el Samsung (10/11): QA `6580449e…` + ejecutor `e9597ece…`
+  (`.local-evidence/claude-20261110-14/build11/hashes.txt`). La última corrida completa de las 134 fue
+  con `build5`; después sólo se repitieron las clases del Widget. Datos QA: 23 bases, foto
   `claude-20261110-14/after-corrida5/` (10/11), que incluye una jornada del 10/11 cargada a mano por
   Joaquín mientras probaba. **Esa foto es la referencia nueva.** Correr con
   `QA=… RUNNER=… bash .local-evidence/claude-20261110-14/run_classes.sh <salida> [Clase…]`.
@@ -123,7 +124,16 @@ QA tiene las notificaciones bloqueadas en el teléfono. Se cubre en la sesión c
   - Resignado: en una fila, un nombre largo termina en «…» (completo para TalkBack). Límite conocido sin
     decidir: con letra al 150 y 200% el horario no entra en una fila, ni en la compacta alta al 200%.
   - Pruebas del Widget en el Samsung con QA `ecda8cb7…` + ejecutor de `build7`: 34 de 34. PC aprobada.
-  - ⏳ Falta que Joaquín quite el Widget y lo vuelva a agregar para ver el tamaño nuevo.
+  - **Segunda vuelta, con capturas de Joaquín:** el Samsung coloca el Widget a todo el ancho por dos filas
+    (405×208 dp) sin importar el mínimo declarado, y ahí quedaban dos renglones chicos en una tarjeta
+    grande. Se agregó una **cuarta vista** para ancho ≥ 300 dp y alto ≥ 150 dp, con letra más grande
+    (no se agranda si la letra de Android ya es ≥ 130%).
+  - **Tercera vuelta:** no dejaba achicarlo a una fila porque una fila del Samsung da 95 dp y el mínimo
+    era 96. Mínimo y umbral de la vista de una fila bajados a 80 dp, relleno vertical a 8 dp.
+  - ✅ **Joaquín lo vio en Completa, a todo el ancho por dos filas: «quedó bien, por el momento lo
+    dejemos así».** Pareja instalada: QA `6580449e…` + ejecutor `e9597ece…` (`build11`); vistas del Widget
+    6 de 6 en el Samsung.
+  - ⏳ No se vio todavía achicado a una fila ni recién agregado de cero.
 - **Preferencias de la app QA cambiadas en la sesión, a devolver al final:** permiso de notificaciones,
   «Usar notificaciones», «Mostrar siempre la próxima jornada» (encendido), «Mostrar en la pantalla
   bloqueada» (apagado) y un Widget en la pantalla de inicio con privacidad Completa.
