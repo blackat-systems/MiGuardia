@@ -1,7 +1,8 @@
 # Etapa 14.1 · Mapa de cobertura de las superficies del sistema
 
 Fecha: 2026-11-09 · Base: `1dd3899` · Estado: **foto de antes de la tanda 1**. Lo que la tanda 1 agregó
-y lo que encontró está en `docs/STATUS.md`, sección «Etapa 14.1 · tanda 1».
+y lo que encontró está en `docs/STATUS.md`, sección «Etapa 14.1 · tanda 1». **El estado de hoy, caso
+por caso, está en `docs/design/ETAPA_14_LISTA_CASOS.md`.**
 
 Qué es: para cada caso de la lista de la etapa 14.1, qué prueba existe hoy, a qué nivel y qué falta.
 Lo armaron cinco ayudantes de sólo lectura (uno por superficie) leyendo el cuerpo de cada prueba; MAIN

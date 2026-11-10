@@ -1,14 +1,17 @@
 # Estado actual de MiGuardia 3.0
 
-- Etapa: **14 · Sistema — CERRADA por Joaquín el 10/11/2026**, con pendientes que pasan a la 15. El
-  detalle de lo hecho está en las secciones «Etapa 14.1» de abajo.
-- **Próxima: 15 · Cierre funcional, aceptación y entrega**
-  ([prompt de arranque](prompts/ETAPA_15_CIERRE_Y_ENTREGA.md)), NO iniciada. Después: 16 · Experiencia
-  de uso (decisiones de diseño: menú lateral, detalle en las tarjetas, simplificar pantallas con mucho
-  texto), que va recién cuando el funcionamiento interno esté resuelto.
-- **Último código:** `c99806b` (paleta nueva y letra grande del Widget, tercer control del aviso). PC:
-  `verify.py --profile local --fresh-tests` 1413 pruebas, 0 fallas, y `--profile build` aprobado sobre
-  ese commit. **Sin instalar ni correr en el Samsung.**
+- Etapa: **15 · Cierre funcional, aceptación y entrega — EN CURSO** desde el 10/11/2026
+  ([prompt de arranque](prompts/ETAPA_15_CIERRE_Y_ENTREGA.md)). **Parte A (en la PC) hecha. Sigue la
+  parte B (Samsung), que espera la autorización de Joaquín en el momento.** Detalle en «Etapa 15 ·
+  parte A» abajo.
+- Etapa anterior: **14 · Sistema — CERRADA por Joaquín el 10/11/2026**, con pendientes que pasaron a la
+  15 (secciones «Etapa 14.1» de abajo). Después de la 15: 16 · Experiencia de uso (decisiones de diseño:
+  menú lateral, detalle en las tarjetas, simplificar pantallas con mucho texto), que va recién cuando el
+  funcionamiento interno esté resuelto.
+- **Último código:** `580b2c3` (las tres opciones del aviso permanente viajan en las Copias). PC:
+  `verify.py --profile local --fresh-tests` 1420 pruebas, 0 fallas, y `--profile build` aprobado sobre
+  ese código. **Sin instalar ni correr en el Samsung:** tampoco el código anterior, `c99806b` (paleta
+  nueva y letra grande del Widget, tercer control del aviso).
 - **Hecho en la 14:** mapa de cobertura de los 113 casos; 138 pruebas instrumentadas nuevas
   (`Stage14Selectors`) y pruebas de PC; aviso permanente con tres controles
   ([diseño](design/ETAPA_14_AVISO_PERMANENTE.md)); Widget con cuatro vistas por tamaño y la paleta de la
@@ -16,14 +19,17 @@
   anticipos, error de Clima fuera de vista, «Siguiente» partida al 200%, textos cortados del Widget,
   singular de Actualizaciones, «17–17 °C»); sesión con el dedo de Joaquín (aviso permanente, Widget,
   bloqueo, Clima con y sin red, Actualizaciones y apoyo).
-- **Pasa a la 15, en este orden:**
-  1. PC: las tres opciones del aviso permanente en las Copias (pedido de Joaquín, no empezado; diseño y
-     lugares a tocar en el prompt de la 15).
-  2. PC: pasar los 113 casos de 14.1 a ✅/⏳/❌ caso por caso (hoy están contados por superficie).
-  3. Samsung, con autorización: instalar el último código y correr las 138 con foto de datos. La última
-     pasada completa fue de 134 con `build5` (132 ✅); después sólo se repitieron las clases tocadas.
-  4. Con el dedo de Joaquín: Widget con la paleta nueva, quitarlo y agregarlo (tamaño inicial y si baja a
-     una fila), «17 °C», tercer interruptor, TalkBack de oído.
+- **La 15, en este orden:**
+  1. ✅ PC: las tres opciones del aviso permanente viajan en las Copias (pedido de Joaquín).
+  2. ✅ PC: los 113 casos de 14.1, uno por uno: [lista](design/ETAPA_14_LISTA_CASOS.md),
+     **79 ✅ · 33 ⏳ · 1 ❌**.
+  3. ⏳ Samsung, con autorización: foto de datos, instalar el último código y correr las 143 de
+     `Stage14Selectors` (las 138 de la 14 más 5 de Copias) y, porque se tocaron las Copias, las de la
+     etapa 13 (`Stage13DataSelectors`). La última pasada completa fue de 134 con `build5` (132 ✅);
+     después sólo se repitieron las clases tocadas.
+  4. ⏳ Con el dedo de Joaquín: Widget con la paleta nueva, quitarlo y agregarlo (tamaño inicial y si baja
+     a una fila), «17 °C», tercer interruptor, TalkBack de oído, y crear una copia, restaurarla y ver que
+     vuelven las tres opciones del aviso.
   5. Permiso para borrar los 16 `cache/stage14-widget-*.db.lck` vacíos del teléfono.
   6. Aceptación final de los 441 casos sobre la candidata congelada (falta definir versión y código; hoy
      `2.0.2` / 6). Era la segunda parte de la 14 y no se hizo.
@@ -36,13 +42,67 @@
 - Etapas anteriores: 13 · Datos y archivos y 12.2 · Cálculos y consulta, CERRADAS por Joaquín (8/11).
 - En GitHub: rama `origin/codex/miguardia-3.0` subida el 10/11 a pedido de Joaquín, con pull request
   abierto contra `main` (https://github.com/blackat-systems/MiGuardia/pull/1). No está para mergear:
-  la etapa 14 sigue en curso.
+  la etapa 15 sigue en curso. Los commits de la parte A de la 15 son locales, sin subir.
 - Pareja instalada en el Samsung (10/11): QA `1bd0be8d…` + ejecutor `2de14034…`
   (`.local-evidence/claude-20261110-14/build12/hashes.txt`). **Es anterior al último código:** no
   tiene el «17 °C», la paleta nueva del Widget, su letra grande ni el tercer control. Datos QA: 23 bases, foto de referencia
   `claude-20261110-14/after-dedo/` (10/11, después de la sesión con el dedo de Joaquín). Correr con
   `QA=… RUNNER=… bash .local-evidence/claude-20261110-14/run_classes.sh <salida> [Clase…]`.
 - Actualización: 2026-11-10
+
+## Etapa 15 · parte A: en la PC (10/11/2026)
+
+**Hecho, sin teléfono.** Puerta de entrada: rama `codex/miguardia-3.0` en `060b9b7`, igual a
+`origin`, sin cambios sueltos ni otros worktrees; coincidía con lo escrito acá.
+
+- ✅ **Las tres opciones del aviso permanente viajan en las Copias** («Mostrar siempre la próxima
+  jornada», «Mostrar en la pantalla bloqueada» y «Contar hasta el final durante la jornada»).
+  - Una copia nueva lleva 20 preferencias: las 17 de siempre más las tres.
+  - Una copia anterior, de 17, se sigue restaurando; las tres opciones quedan de fábrica (apagado,
+    encendido, encendido). Una clave desconocida, repetida o faltante se rechaza igual que antes.
+  - Dónde: `PortablePreferencesGateway.kt`, `NotificationPreferencesStore.replacePortable`, tres rótulos
+    de conflicto en `BackupComparator.kt`. Diseño en
+    [aviso permanente](design/ETAPA_14_AVISO_PERMANENTE.md) y nota del 10/11 en el ADR 0035.
+- ✅ **Defecto evitado, encontrado al revisar el diseño:** una restauración interrumpida con la versión
+  anterior deja un registro de recuperación con 17 preferencias. Con el cambio a 20, la app nueva lo
+  aplicaba pero después no lo daba por verificado, y la recuperación no terminaba nunca. Ahora la
+  verificación completa la lista antes de comparar (`LocalBackupCoordinator.verifyState`). Pesa en la
+  entrega: es el caso de quien actualiza desde la 2.0.2 con una restauración a medio hacer.
+- ✅ **Contrato del ensayo de actualización desde la versión pública:** la copia de origen sigue teniendo
+  17 y esas comprobaciones no cambiaron. Lo que cambió es lo que se espera **después** de actualizar: las
+  17 intactas más las tres nuevas, sólo si están en su valor de fábrica (`Stage10UpgradeContract.kt`,
+  `Stage10EmulatorContract.kt`, `PublicUpgradeBackupFixtureTest.kt`).
+- ✅ **Pruebas nuevas de PC:** `PortablePreferenceCompletionTest` (4: copia nueva, copia de 17, cada
+  combinación de las tres y rechazos), una de conflictos en `BackupContractTest` y dos del contrato del
+  ensayo.
+- ⏳ **Pruebas nuevas para el Samsung:** `Stage14PermanentNotificationCopiesTest` (5), con carpeta, base,
+  preferencias y registro de recuperación propios: copia nueva ida y vuelta por el coordinador, copia
+  anterior de 17, clave desconocida y las dos recuperaciones de una restauración interrumpida.
+  **Compilan; no corrieron.** `Stage14Selectors` quedó regenerado con 143. Las pruebas viejas de Copias
+  que cuentan preferencias pasaron de 17 a 20 (`PortablePreferencesGatewayInstrumentedTest`).
+- ✅ **Lista de la etapa 14.1 caso por caso:** [los 113 casos](design/ETAPA_14_LISTA_CASOS.md) con su
+  estado, nivel de evidencia y qué falta. **79 ✅ · 33 ⏳ · 1 ❌** (el ❌ es el Widget que el Samsung no deja
+  bajar a una fila, sin causa confirmada). De los 33 ⏳: 18 con el dedo de Joaquín, 3 con la corrida sobre
+  el último código, 3 con la versión firmada y 9 sin camino automático hoy.
+- ✅ **PC, sobre el código final (`580b2c3`):** `verify.py --profile local --fresh-tests`, **1420 pruebas,
+  0 fallas** (eran 1413; 7 nuevas), y `verify.py --profile build` aprobado (lint, Debug/QA/Release y los
+  dos APK de pruebas). Evidencia en `.local-evidence/optimization/20261110T073000…` y `…T072638…`.
+- ✅ **Revisión independiente del cambio** (ayudante de sólo lectura): ningún defecto grave ni pérdida de
+  datos; recorrió crear, comparar, restaurar y recuperar y no quedó ningún camino comparando 17 contra
+  20. Se aplicó su única corrección: si la base de la prueba nueva no llegara a crearse, la prueba borra
+  igual su carpeta temporal. Anotado sin cambiar: el contrato del ensayo acepta una captura de 17 aun
+  después de actualizar, aunque la app nueva siempre exporta 20.
+
+**Sin decidir (menor):** con «Combinar» y una copia anterior, cada opción del aviso que en el teléfono
+esté distinta de fábrica aparece como un conflicto más; «Conservar lo actual» la deja como está. La
+alternativa es que «Combinar» no pregunte por lo que la copia no trae. Hoy quedó lo primero, que es lo
+que decía el diseño.
+
+**Para decidir en la parte C:** los 9 casos sin camino automático de la lista (4 de avisos reales, 1 de
+«no hay navegador» y 4 del Widget): probarlos a mano, armarles prueba o aceptarlos como están.
+
+**Observación del entorno:** `tools/docs_check.py` ya daba errores antes de esta etapa (pide campos del
+formato viejo de este archivo); no es parte de `verify.py` y no se tocó.
 
 ## Etapa 14.1 · tanda 2: primera corrida en el Samsung (10/11/2026, con autorización de Joaquín)
 
