@@ -460,8 +460,8 @@ class Stage14NotificationScreensTest {
             .performScrollTo()
             .assertExists()
 
-        // Usar notificaciones, los dos del aviso permanente y la puntualidad exacta.
-        compose.onAllNodes(isToggleable()).assertCountEquals(4)
+        // Usar notificaciones, los tres del aviso permanente y la puntualidad exacta.
+        compose.onAllNodes(isToggleable()).assertCountEquals(5)
         preciseTimingSwitch().assertIsOff().performScrollTo().performClick()
         compose.runOnIdle { assertEquals(listOf(true), received) }
         preciseTimingSwitch().assertIsOn().performScrollTo().performClick()

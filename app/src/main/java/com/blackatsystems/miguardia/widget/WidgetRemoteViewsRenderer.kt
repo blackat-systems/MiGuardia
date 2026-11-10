@@ -17,6 +17,7 @@ import android.widget.RemoteViews
 import com.blackatsystems.miguardia.MainActivity
 import com.blackatsystems.miguardia.R
 import com.blackatsystems.miguardia.core.domain.nextevent.NextEventResult
+import com.blackatsystems.miguardia.core.domain.widget.WidgetContentState
 import com.blackatsystems.miguardia.core.domain.widget.WidgetEventKind
 import com.blackatsystems.miguardia.core.domain.widget.WidgetNavigation
 import com.blackatsystems.miguardia.core.domain.widget.WidgetPrivacy
@@ -196,12 +197,26 @@ class WidgetRemoteViewsRenderer(
             setTextViewText(R.id.widget_title, text.title)
             setTextViewText(R.id.widget_primary, text.primary)
             if (!expanded) {
+                val largeFont = context.resources.configuration.fontScale >= LARGE_FONT_SCALE
+                // Large Android text in a compact view: the date and time come first. The heading row is
+                // dropped (the countdown already says "Comienza en…/Finaliza en…" and TalkBack still reads
+                // it from the root description) and the name keeps to one line, so the schedule fits.
+                // Other states (empty, day off, hidden privacy) have no schedule to protect and keep theirs.
+                val scheduleFirst = largeFont &&
+                    projection.state == WidgetContentState.EVENTS &&
+                    text.schedule != null
+                setViewVisibility(R.id.widget_title, if (scheduleFirst) View.GONE else View.VISIBLE)
                 // One row high: one line each. With more height the name and the schedule may wrap.
-                setInt(R.id.widget_primary, "setMaxLines", compactTextLines)
+                setInt(R.id.widget_primary, "setMaxLines", if (scheduleFirst) 1 else compactTextLines)
                 setInt(R.id.widget_schedule, "setMaxLines", compactTextLines)
+                if (scheduleFirst && compactTextLines == 1) {
+                    // One launcher row at up to 200 %: name and schedule only fit together if the name
+                    // grows from 14 sp instead of 16 sp (still larger on screen than at the standard scale).
+                    setTextViewTextSize(R.id.widget_primary, TypedValue.COMPLEX_UNIT_SP, 14f)
+                }
                 // With Android's text already enlarged the regular sizes fill the space; making them
                 // bigger still would push the schedule out.
-                if (compactLargeText && context.resources.configuration.fontScale < LARGE_FONT_SCALE) {
+                if (compactLargeText && !largeFont) {
                     // Sizes in sp: Android's own font scale still applies on top.
                     setTextViewTextSize(R.id.widget_title, TypedValue.COMPLEX_UNIT_SP, 14f)
                     setTextViewTextSize(R.id.widget_primary, TypedValue.COMPLEX_UNIT_SP, 22f)
@@ -436,7 +451,7 @@ class WidgetRemoteViewsRenderer(
     private fun IntArray.filterValidIds() = filter { it > 0 }
 
     private companion object {
-        const val DARK_BACKGROUND = 0xFF15151E.toInt()
+        const val DARK_BACKGROUND = 0xFF1E2030.toInt()
         val RowIds = intArrayOf(R.id.widget_row_1, R.id.widget_row_2, R.id.widget_row_3)
     }
 }

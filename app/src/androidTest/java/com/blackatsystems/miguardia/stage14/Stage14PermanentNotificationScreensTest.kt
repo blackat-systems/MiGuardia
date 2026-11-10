@@ -115,6 +115,39 @@ class Stage14PermanentNotificationScreensTest {
     }
 
     @Test
+    fun activeCountdownSwitchStartsOnAndExplainsTheScheduleOnlyChoice() {
+        var state by mutableStateOf(globalState())
+        val received = mutableListOf<Boolean>()
+        compose.setContent {
+            MaterialTheme {
+                NotificationSurfaceHost(
+                    state,
+                    NotificationActions(
+                        setCountdownWhileActive = { value ->
+                            received += value
+                            state = state.copy(preferences = state.preferences.copy(countdownWhileActive = value))
+                        },
+                    ),
+                )
+            }
+        }
+        val note = "Mientras la jornada está en curso el aviso muestra sólo el horario, sin cuenta regresiva."
+
+        compose.onNodeWithText("Contar hasta el final durante la jornada").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag(ACTIVE).performScrollTo().assertIsOn()
+        compose.onNodeWithText(note).assertDoesNotExist()
+        compose.onNodeWithTag(ACTIVE).performClick()
+
+        compose.runOnIdle { assertEquals(listOf(false), received) }
+        compose.onNodeWithTag(ACTIVE).assertIsOff()
+        compose.onNodeWithText(note).performScrollTo().assertIsDisplayed()
+
+        compose.onNodeWithTag(ACTIVE).performScrollTo().performClick()
+        compose.runOnIdle { assertEquals(listOf(false, true), received) }
+        compose.onNodeWithText(note).assertDoesNotExist()
+    }
+
+    @Test
     fun permanentControlsAreHiddenWhileNotificationsAreOff() {
         compose.setContent {
             MaterialTheme {
@@ -128,6 +161,7 @@ class Stage14PermanentNotificationScreensTest {
         compose.onNodeWithText("Aviso permanente").assertDoesNotExist()
         compose.onNodeWithTag(ALWAYS).assertDoesNotExist()
         compose.onNodeWithTag(LOCK).assertDoesNotExist()
+        compose.onNodeWithTag(ACTIVE).assertDoesNotExist()
     }
 
     @Test
@@ -166,13 +200,16 @@ class Stage14PermanentNotificationScreensTest {
             assertFalse(store.current().alwaysShowNext)
             assertTrue(store.current().showOnLockScreen)
 
+            assertTrue(store.current().countdownWhileActive)
             store.setAlwaysShowNext(true)
             store.setShowOnLockScreen(false)
+            store.setCountdownWhileActive(false)
             // A rhythm rewrites reminders, permanence, privacy and attention; it must not touch these two.
             store.applyRhythm(NotificationRhythm.DISCREET)
 
             assertTrue(store.current().alwaysShowNext)
             assertFalse(store.current().showOnLockScreen)
+            assertFalse(store.current().countdownWhileActive)
             assertEquals(NotificationRhythm.DISCREET, store.current().rhythm())
         } finally {
             firstScope.cancel()
@@ -183,6 +220,7 @@ class Stage14PermanentNotificationScreensTest {
             val reopened = NotificationPreferencesStore(file, secondScope).current()
             assertTrue(reopened.alwaysShowNext)
             assertFalse(reopened.showOnLockScreen)
+            assertFalse(reopened.countdownWhileActive)
         } finally {
             secondScope.cancel()
         }
@@ -200,5 +238,6 @@ class Stage14PermanentNotificationScreensTest {
     private companion object {
         const val ALWAYS = "notification-always-show-next"
         const val LOCK = "notification-lock-screen"
+        const val ACTIVE = "notification-active-countdown"
     }
 }

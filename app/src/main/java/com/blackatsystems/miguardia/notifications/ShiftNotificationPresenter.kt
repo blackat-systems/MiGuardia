@@ -75,6 +75,7 @@ internal class ShiftNotificationPresenter(private val context: Context) {
             alwaysShowNext = preferences.alwaysShowNext,
             ongoing = ongoing,
             untilStart = Duration.between(now, event.start),
+            countdownWhileActive = preferences.countdownWhileActive,
         )
         val timeRange = formatEventTimeRange(
             event.start, event.end, event.zoneId, EventTimeRangeStyle.COMPACT_DATED,
@@ -520,15 +521,20 @@ internal data class NotificationGroupSummaryContent(
 )
 
 /**
- * A running event always counts down to its end. Before the start, the permanent notification shows a
- * live countdown only inside its window: further away, the dated schedule says it better than a long
- * count of hours. Without the permanent notification nothing changes.
+ * A running event counts down to its end unless the person chose to see only the schedule. Before the
+ * start, the permanent notification shows a live countdown only inside its window: further away, the
+ * dated schedule says it better than a long count of hours. With the defaults nothing changes.
  */
 internal fun notificationCountdownVisible(
     alwaysShowNext: Boolean,
     ongoing: Boolean,
     untilStart: Duration,
-): Boolean = ongoing || !alwaysShowNext || untilStart <= PermanentNotificationCountdownWindow
+    countdownWhileActive: Boolean = true,
+): Boolean = if (ongoing) {
+    countdownWhileActive
+} else {
+    !alwaysShowNext || untilStart <= PermanentNotificationCountdownWindow
+}
 
 internal fun notificationGroupSummaryContent(
     count: Int,

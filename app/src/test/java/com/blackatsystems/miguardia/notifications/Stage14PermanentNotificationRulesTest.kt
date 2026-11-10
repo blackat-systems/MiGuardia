@@ -26,6 +26,7 @@ class Stage14PermanentNotificationRulesTest {
 
         assertFalse(defaults.alwaysShowNext)
         assertTrue(defaults.showOnLockScreen)
+        assertTrue(defaults.countdownWhileActive)
     }
 
     @Test
@@ -35,6 +36,7 @@ class Stage14PermanentNotificationRulesTest {
 
         assertEquals(NotificationRhythm.ESSENTIAL, essential.copy(alwaysShowNext = true).rhythm())
         assertEquals(NotificationRhythm.ESSENTIAL, essential.copy(showOnLockScreen = false).rhythm())
+        assertEquals(NotificationRhythm.ESSENTIAL, essential.copy(countdownWhileActive = false).rhythm())
     }
 
     @Test
@@ -138,6 +140,30 @@ class Stage14PermanentNotificationRulesTest {
         assertTrue(countdown(permanent = false, untilStart = Duration.ofDays(5)))
         assertTrue(countdown(permanent = false, untilStart = Duration.ofMinutes(5)))
         assertTrue(countdown(permanent = false, ongoing = true, untilStart = Duration.ofHours(-3)))
+    }
+
+    @Test
+    fun aRunningEventShowsOnlyItsScheduleWhenThePersonTurnsTheCountdownOff() {
+        fun running(permanent: Boolean, countdown: Boolean) = notificationCountdownVisible(
+            alwaysShowNext = permanent,
+            ongoing = true,
+            untilStart = Duration.ofHours(-3),
+            countdownWhileActive = countdown,
+        )
+        fun upcoming(permanent: Boolean, countdown: Boolean) = notificationCountdownVisible(
+            alwaysShowNext = permanent,
+            ongoing = false,
+            untilStart = Duration.ofHours(2),
+            countdownWhileActive = countdown,
+        )
+
+        assertTrue(running(permanent = true, countdown = true))
+        assertTrue(running(permanent = false, countdown = true))
+        assertFalse(running(permanent = true, countdown = false))
+        assertFalse(running(permanent = false, countdown = false))
+        // The choice is only about a running event: before the start nothing changes.
+        assertTrue(upcoming(permanent = true, countdown = false))
+        assertTrue(upcoming(permanent = false, countdown = false))
     }
 
     @Test

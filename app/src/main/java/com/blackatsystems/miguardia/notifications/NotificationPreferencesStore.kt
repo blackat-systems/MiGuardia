@@ -55,6 +55,8 @@ data class NotificationPreferences(
     val alwaysShowNext: Boolean = false,
     /** Si es falso, ningún aviso de jornada aparece en la pantalla bloqueada. */
     val showOnLockScreen: Boolean = true,
+    /** Durante el evento: cuenta regresiva hasta el final (verdadero) o sólo el horario. */
+    val countdownWhileActive: Boolean = true,
 ) {
     companion object {
         const val DEFAULT_REMINDER_MINUTES = 12L * 60L
@@ -134,6 +136,7 @@ class NotificationPreferencesStore internal constructor(
     suspend fun setPrivacy(value: NotificationPrivacy) = update { it[Privacy] = value.name }
     suspend fun setAlwaysShowNext(value: Boolean) = update { it[AlwaysShowNext] = value }
     suspend fun setShowOnLockScreen(value: Boolean) = update { it[ShowOnLockScreen] = value }
+    suspend fun setCountdownWhileActive(value: Boolean) = update { it[CountdownWhileActive] = value }
     suspend fun setAttentionMode(value: NotificationAttentionMode) = update {
         it[AttentionMode] = value.name
     }
@@ -265,6 +268,7 @@ class NotificationPreferencesStore internal constructor(
             soundUri = values[SoundUri]?.let(Uri::parse),
             alwaysShowNext = values[AlwaysShowNext] ?: false,
             showOnLockScreen = values[ShowOnLockScreen] ?: true,
+            countdownWhileActive = values[CountdownWhileActive] ?: true,
         )
     }
 
@@ -279,6 +283,7 @@ class NotificationPreferencesStore internal constructor(
         val SoundUri = stringPreferencesKey("sound_uri")
         val AlwaysShowNext = booleanPreferencesKey("always_show_next")
         val ShowOnLockScreen = booleanPreferencesKey("show_on_lock_screen")
+        val CountdownWhileActive = booleanPreferencesKey("countdown_while_active")
         val InstalledBoundaryKeys = stringSetPreferencesKey("installed_boundary_keys")
         val InstalledExactMode = booleanPreferencesKey("installed_exact_mode")
         val DisplayedShiftIds = stringSetPreferencesKey("displayed_shift_ids")

@@ -70,6 +70,7 @@ data class NotificationActions(
     val setPrivacy: (NotificationPrivacy) -> Unit = {},
     val setAlwaysShowNext: (Boolean) -> Unit = {},
     val setShowOnLockScreen: (Boolean) -> Unit = {},
+    val setCountdownWhileActive: (Boolean) -> Unit = {},
     val setAttentionMode: (NotificationAttentionMode) -> Unit = {},
     val applyRhythm: (NotificationRhythm) -> Unit = {},
     val setSound: (Uri?) -> Unit = {},
@@ -95,6 +96,7 @@ data class NotificationActions(
             setPrivacy = viewModel::setPrivacy,
             setAlwaysShowNext = viewModel::setAlwaysShowNext,
             setShowOnLockScreen = viewModel::setShowOnLockScreen,
+            setCountdownWhileActive = viewModel::setCountdownWhileActive,
             setAttentionMode = viewModel::setAttentionMode,
             applyRhythm = viewModel::applyRhythm,
             setSound = viewModel::setSound,
@@ -332,6 +334,12 @@ private fun GlobalSettings(
             onChange = actions.setShowOnLockScreen,
             testTag = "notification-lock-screen",
         )
+        ToggleRow(
+            label = "Contar hasta el final durante la jornada",
+            checked = state.preferences.countdownWhileActive,
+            onChange = actions.setCountdownWhileActive,
+            testTag = "notification-active-countdown",
+        )
         Text(
             if (state.preferences.alwaysShowNext) {
                 "Queda fijo entre tus notificaciones y los anticipos sólo deciden cuándo suena. " +
@@ -343,6 +351,9 @@ private fun GlobalSettings(
         )
         if (!state.preferences.showOnLockScreen) {
             Text("Con el teléfono bloqueado no se muestra ningún aviso de jornada.")
+        }
+        if (!state.preferences.countdownWhileActive) {
+            Text("Mientras la jornada está en curso el aviso muestra sólo el horario, sin cuenta regresiva.")
         }
     }
     SectionCard(

@@ -92,23 +92,29 @@ internal fun buildWidgetRenderText(projection: WidgetProjection): WidgetRenderTe
     }
 }
 
+/**
+ * Same Tokyo Night values as the app (ui/theme/Theme.kt): the widget is a card, so its background is
+ * `surface`, text is `onSurface` / `onSurfaceVariant`, accent and actions are `primary`. The border
+ * (`outlineVariant`) lives in res/drawable/widget_background_*.xml. RemoteViews cannot read Compose
+ * colours, so the literals are repeated here; keep them equal to the theme.
+ */
 internal fun resolveWidgetPalette(mode: AppThemeMode, systemDark: Boolean): WidgetPalette {
     val dark = mode.resolve(systemDark)
     return if (dark) {
         WidgetPalette(
-            background = 0xFF15151E.toInt(),
-            primaryText = 0xFFF2EFF8.toInt(),
-            secondaryText = 0xFFB5AFC3.toInt(),
-            defaultAccent = 0xFFB8A2F8.toInt(),
-            action = 0xFFB8A2F8.toInt(),
+            background = 0xFF1E2030.toInt(),
+            primaryText = 0xFFE6EAFF.toInt(),
+            secondaryText = 0xFFA9B1D6.toInt(),
+            defaultAccent = 0xFF7AA2F7.toInt(),
+            action = 0xFF7AA2F7.toInt(),
         )
     } else {
         WidgetPalette(
-            background = 0xFFF5F4F8.toInt(),
-            primaryText = 0xFF292738.toInt(),
-            secondaryText = 0xFF665F74.toInt(),
-            defaultAccent = 0xFF6951B4.toInt(),
-            action = 0xFF6951B4.toInt(),
+            background = 0xFFFFFFFF.toInt(),
+            primaryText = 0xFF1F2440.toInt(),
+            secondaryText = 0xFF5B6180.toInt(),
+            defaultAccent = 0xFF2F5DC6.toInt(),
+            action = 0xFF2F5DC6.toInt(),
         )
     }
 }

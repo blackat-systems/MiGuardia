@@ -91,8 +91,10 @@ class Stage14WidgetRemoteViewsTest {
     }
 
     // W020 / V015. Criterio decidido el 10/11/2026: con la letra de Android al 150 y 200 % el Widget tiene
-    // que seguir siendo usable, no entrar entero. En su tamaño mínimo el texto puede terminar en «…», pero
-    // cada texto se empieza a leer (su primer renglón entra) y TalkBack recibe el contenido completo.
+    // que seguir siendo usable, no entrar entero. El nombre puede terminar en «…», pero el nombre y el
+    // horario se empiezan a leer (su primer renglón entra entero) en las cuatro vistas y TalkBack recibe
+    // el contenido completo. Para lograrlo, con letra grande las tres vistas compactas no muestran el
+    // renglón de título («PRÓXIMA JORNADA»): sigue en lo que lee TalkBack. La ampliada sí lo muestra.
     @Test
     fun largeAndExtraLargeFontKeepEveryTextStartedAndCompleteForTalkBack() {
         val problems = buildList {
@@ -104,10 +106,15 @@ class Stage14WidgetRemoteViewsTest {
                     MAIN_TEXTS.forEach { (label, viewId) ->
                         val text = view.findViewById<TextView>(viewId)
                         val layout = text.layout
-                        if (text.visibility != View.VISIBLE || layout == null || layout.lineCount == 0) {
+                        val titleGivesWay = viewId == R.id.widget_title && host.size == WidgetSize.COMPACT
+                        if (titleGivesWay) {
+                            if (text.visibility != View.GONE) add("$context · $label: debía ceder su lugar al horario")
+                        } else if (text.visibility != View.VISIBLE || layout == null || layout.lineCount == 0) {
                             add("$context · $label: no se ve")
                         } else if (text.height < layout.getLineBottom(0) + text.compoundPaddingTop) {
                             add("$context · $label: no entra ni su primer renglón")
+                        } else if (text.bottom > (text.parent as View).height) {
+                            add("$context · $label: queda fuera del Widget")
                         }
                         if (!spoken.contains(text.text.toString(), ignoreCase = true)) {
                             add("$context · $label: «${text.text}» no está en lo que lee TalkBack («$spoken»)")
@@ -117,15 +124,44 @@ class Stage14WidgetRemoteViewsTest {
             }
         }
 
-        // Límite conocido, sin decidir (10/11/2026): con letra grande el horario no entra en la vista de una
-        // fila, ni en la compacta alta al 200 %. Se afirma la lista exacta para notar cualquier cambio.
-        val knownLimits = listOf(
-            "${HostSize.COMPACT.label} · letra 150 % · horario: no entra ni su primer renglón",
-            "${HostSize.COMPACT.label} · letra 200 % · horario: no entra ni su primer renglón",
-            "${HostSize.COMPACT_TALL.label} · letra 200 % · horario: no entra ni su primer renglón",
-            "${HostSize.COMPACT_ROOMY.label} · letra 200 % · horario: no entra ni su primer renglón",
+        // Sin límites conocidos: cualquier texto que vuelva a quedar fuera aparece acá.
+        assertEquals("Con letra grande", emptyList<String>(), problems.sorted())
+    }
+
+    // W020: con la letra de Android estándar nada cede su lugar: el título se ve en las cuatro vistas.
+    @Test
+    fun standardFontKeepsTheTitleRowVisibleInEveryView() {
+        HostSize.entries.forEach { host ->
+            val title = inflate(host, TestFontScale.STANDARD).findViewById<TextView>(R.id.widget_title)
+
+            assertEquals(host.label, View.VISIBLE, title.visibility)
+            assertEquals(host.label, "PRÓXIMA JORNADA", title.text.toString())
+        }
+    }
+
+    // W020: sin horario que proteger (acá, «sin eventos»), la letra grande no quita el título.
+    @Test
+    fun largeFontKeepsTheTitleWhenThereIsNoScheduleToProtect() {
+        val scaled = fontContext(TestFontScale.EXTRA_LARGE)
+        val empty = WidgetProjection(
+            referenceInstant = NOW,
+            mode = WidgetMode.AUTOMATIC,
+            privacy = WidgetPrivacy.COMPLETE,
+            size = WidgetSize.COMPACT,
+            state = WidgetContentState.EMPTY,
+            events = emptyList(),
+            totalSimultaneousEvents = 0,
+            dayOff = null,
+            countdown = null,
+            navigation = WidgetNavigation.Calendar,
         )
-        assertEquals("Con letra grande", knownLimits.sorted(), problems.sorted())
+        val view = WidgetRemoteViewsRenderer(scaled)
+            .createViews(empty, appWidgetId = APP_WIDGET_ID, weatherText = null, palette = palette)
+            .apply(scaled, null)
+
+        assertEquals(View.VISIBLE, view.findViewById<View>(R.id.widget_title).visibility)
+        assertEquals("PRÓXIMO EVENTO", view.findViewById<TextView>(R.id.widget_title).text.toString())
+        assertEquals("No hay próximos eventos.", view.findViewById<TextView>(R.id.widget_primary).text.toString())
     }
 
     // W017: con la cuenta regresiva vencida se oculta el contador y el horario absoluto sigue visible.

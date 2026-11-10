@@ -16,9 +16,9 @@ internal object Stage12W010Oracle {
     const val ROOT_DESCRIPTION = "MIGUARDIA. Tenés información en MiGuardia."
     val visibleText = setOf(TITLE, PRIMARY, "Configurar", ROOT_DESCRIPTION, "Reconfigurar este Widget de inicio")
     data class Palette(val background: Int, val primary: Int, val secondary: Int, val accent: Int, val action: Int)
-    fun palette(dark: Boolean) = if (dark) Palette(0xFF15151E.toInt(), 0xFFF2EFF8.toInt(),
-        0xFFB5AFC3.toInt(), 0xFFB8A2F8.toInt(), 0xFFB8A2F8.toInt())
-    else Palette(0xFFF5F4F8.toInt(), 0xFF292738.toInt(), 0xFF665F74.toInt(), 0xFF6951B4.toInt(), 0xFF6951B4.toInt())
+    fun palette(dark: Boolean) = if (dark) Palette(0xFF1E2030.toInt(), 0xFFE6EAFF.toInt(),
+        0xFFA9B1D6.toInt(), 0xFF7AA2F7.toInt(), 0xFF7AA2F7.toInt())
+    else Palette(0xFFFFFFFF.toInt(), 0xFF1F2440.toInt(), 0xFF5B6180.toInt(), 0xFF2F5DC6.toInt(), 0xFF2F5DC6.toInt())
 
     fun requireProjection(actual: WidgetProjection, fixture: Stage12W010Fixture, boundary: Stage12W010Fixture.Boundary) {
         check(actual.privacy == WidgetPrivacy.HIDDEN && actual.events.isEmpty() && actual.totalSimultaneousEvents == 0 &&
