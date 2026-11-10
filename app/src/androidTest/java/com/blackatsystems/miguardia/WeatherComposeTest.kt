@@ -519,7 +519,7 @@ class WeatherComposeTest {
                         surface = WeatherSurface.SHIFT,
                         preferences = WeatherPreferences(enabled = true, providerExplanationAccepted = true),
                         selectedShift = shift(),
-                        ineligibleReason = "Este objetivo todavía no tiene ubicación. Activala cuando estés allí desde Mi forma de trabajar > Opciones avanzadas.",
+                        ineligibleReason = "Este objetivo todavía no tiene ubicación para el clima. Agregá una dirección o usá tu ciudad actual desde Mi forma de trabajar > Opciones avanzadas.",
                         isLoading = false,
                     ),
                     WeatherActions(),
@@ -528,7 +528,7 @@ class WeatherComposeTest {
         }
 
         compose.onNodeWithText("Pronóstico para: ubicación sin configurar").assertExists()
-        compose.onNodeWithText("Este objetivo todavía no tiene ubicación. Activala cuando estés allí desde Mi forma de trabajar > Opciones avanzadas.").assertExists()
+        compose.onNodeWithText("Este objetivo todavía no tiene ubicación para el clima. Agregá una dirección o usá tu ciudad actual desde Mi forma de trabajar > Opciones avanzadas.").assertExists()
         compose.onNodeWithText("Todavía no hay un pronóstico disponible para esta jornada.").assertDoesNotExist()
         compose.onNodeWithText("Actualizar").assertDoesNotExist()
     }

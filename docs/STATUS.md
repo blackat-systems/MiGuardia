@@ -1,16 +1,77 @@
 # Estado actual de MiGuardia 3.0
 
-- Etapa: **13.5 · Estética y facilidad de uso — CERRADA por Joaquín (9/11)**. Están la lista
+- Etapa: **14 · Sistema y aceptación final — INICIADA el 9/11**, parte 14.1 · Superficies del sistema
+  (docs/prompts/ETAPA_14_SISTEMA_Y_ACEPTACION.md). Base `1dd3899`, sin diferencias al arrancar.
+  - Hecho: [mapa de cobertura](design/ETAPA_14_MAPA_COBERTURA.md) de los 113 casos y **tanda 1** (pruebas
+    de PC y de pantalla, sin teléfono): ver la sección de abajo.
+  - **Aislamiento decidido por Joaquín (9/11): mixto.** Automático sobre base y preferencias propias de
+    cada corrida; con su dedo, sobre la app QA, sólo cambian preferencias y se devuelven.
+  - **Siguiente: tanda 2 en el Samsung**, con autorización de Joaquín en el momento.
+  - Espera decisión de Joaquín, sin bloquear: si el Widget adopta la paleta nueva; si cuentan las
+    pruebas de interoperabilidad web.
+  - Pendientes heredados de 13.5: ver «⏳» en la lista de 13.5. Después: 15 · Entrega.
+- Etapa anterior: **13.5 · Estética y facilidad de uso — CERRADA por Joaquín (9/11)**. Están la lista
   ✅/⏳ y el detalle abajo, y las decisiones en [inventario y decisiones](design/ETAPA_13_5_INVENTARIO.md).
-- Próxima etapa: **14 · Sistema y aceptación final** (docs/prompts/ETAPA_14_SISTEMA_Y_ACEPTACION.md),
-  NO iniciada. Pendientes heredados de 13.5: ver «⏳» en la lista de 13.5. Después: 15 · Entrega.
 - Etapas anteriores: 13 · Datos y archivos y 12.2 · Cálculos y consulta, CERRADAS por Joaquín (8/11).
 - Base en GitHub: `7fef1c5` (cierre de 13.5), subido a `origin/codex/miguardia-3.0` el 9/11 a
   pedido de Joaquín.
 - Pareja instalada en el Samsung: QA `ef83068d…` + ejecutor `14b1e066…`
   (`.local-evidence/claude-20261108-13-5/regresion/build/hashes.txt`). Datos QA: 23 bases, foto
   `humana/after/` (9/11).
-- Actualización: 2026-11-09
+- Actualización: 2026-11-10
+
+## Etapa 14.1 · tanda 1: pruebas de PC y de pantalla (9–10/11/2026)
+
+**Hecho, sin teléfono.** Seis ayudantes, uno por superficie, con archivos propios y el contrato
+`docs/design/ETAPA_14_CONTRATO_AYUDANTES.md`. Ninguno corrió Gradle ni usó el teléfono; MAIN compiló,
+revisó y corrió.
+
+- ✅ **PC:** `verify.py --profile local --fresh-tests`, **1392 pruebas, 0 fallas** (eran 1349; 43 nuevas).
+- ✅ **Compilación completa:** `verify.py --profile build` aprobado (lint, Debug/QA/Release y los dos APK
+  de pruebas).
+- ⏳ **129 pruebas instrumentadas nuevas** en `app/src/androidTest/.../stage14/`: compilan; **no corrieron**
+  (necesitan el Samsung). Son de pantalla con estado ficticio o aisladas con base y preferencias propias.
+
+**Cambios en la app (aprobados por Joaquín el 9/11):**
+
+- Avisos por jornada: si la configuración general no tiene anticipos, «Personalizar esta jornada» arranca
+  con las 12 horas recomendadas y abre el editor. Antes dejaba la jornada desactivada y no abría el
+  editor (`NotificationScreens.kt`, `ownShiftStartingReminders`).
+- Actualizaciones: «Podés reintentar en 1 segundo.» en singular.
+- Sin cambio de conducta, para poder probar: `WeatherRuntime` acepta un cliente de red de prueba y
+  `WidgetRuntime` recibe su dibujante por la interfaz `WidgetSurface`.
+
+**Arreglos de pruebas:** `BetaCoordinatorTest` (tres métodos leían el último pedido antes de que saliera
+el envío esperado; era la prueba intermitente anotada en 13.5) y un texto viejo en `WeatherComposeTest`.
+
+**Posibles defectos, leídos en el código y todavía sin ejecutar** (cada uno tiene su prueba, que afirma lo
+correcto y debería fallar en el Samsung si la lectura es cierta):
+
+- ⏳ **Sin conexión, el Widget pediría Clima en bucle.** Cada intento anota su hora en las preferencias de
+  Clima (`DefaultWeatherRepository.kt:52`), el motor del Widget las observa y vuelve a pedir
+  (`WidgetRuntime.kt:267`). Sólo con Widget ampliado + Clima + privacidad Completa.
+  Prueba: `Stage14WidgetEngineTest#failingWeatherIsNotRequestedOverAndOverWithoutANewReason`.
+- ⏳ **Una descarga de Clima lenta frena los redibujados siguientes del Widget.**
+  Prueba: `Stage14WidgetEngineTest#aChangeMadeWhileWeatherIsDownloadingIsStillDrawnWithoutWaitingForTheDownload`.
+- ⏳ **Letra al 200%:** «Siguiente» partida dentro de la palabra en las filas de dos botones de Ayuda y del
+  recorrido, y títulos largos de la lista de Ayuda (`Stage14HelpScreensTest`).
+- ⏳ **Widget en su tamaño mínimo:** título, texto principal y horario cortados con «…»
+  (`Stage14WidgetRemoteViewsTest`). Falta decidir si el criterio se mide en ese tamaño.
+
+**Observaciones menores, sin decidir:**
+
+- El aviso de prueba dice «Prueba enviada…» aunque no se publique por estar la app en recuperación.
+- TalkBack no distingue cuál de los botones 6/8/12/24 h está elegido, salvo por el resumen.
+- «Temporalmente no disponible» del Bloqueo sólo aparece si falla abrir los ajustes de seguridad.
+- Reintentar la lectura del Bloqueo con una reparación abierta: si después se autentica la reparación,
+  escribe «desactivado» sobre una configuración sana (exige autenticarse).
+
+**No se pudo cerrar sin teléfono:** el aviso visible de «no hay navegador» al abrir el apoyo; jornada
+eliminada tocada desde el Widget; restauración de Widgets; todo lo marcado **Dedo** en el mapa.
+
+**Entorno de esta PC:** `local.properties` tenía la ruta del SDK sin escapar y el lint la rechazaba; quedó
+`sdk.dir=C\:/Users/User/Android/Sdk`. La caché de Gradle siguió devolviendo el error viejo hasta correr
+`verify.py --profile build --rebuild` una vez.
 
 ## Etapa 13.5 · Estética y facilidad de uso — CERRADA por Joaquín (9/11/2026)
 

@@ -32,16 +32,34 @@ private const val COMPACT_HEIGHT_DP = 96f
 private const val EXPANDED_WIDTH_DP = 250f
 private const val EXPANDED_HEIGHT_DP = 360f
 
+/**
+ * Lo que el motor del Widget necesita de quien dibuja: saber qué instancias hay y publicarles una vista.
+ * Producción usa [WidgetRemoteViewsRenderer]; las pruebas pueden observar el motor sin un Widget instalado.
+ */
+interface WidgetSurface {
+    fun installedIds(): IntArray
+    fun isExpandedLayout(appWidgetId: Int): Boolean
+    fun renderRecovery(appWidgetIds: IntArray? = null)
+    fun renderLoading(appWidgetIds: IntArray)
+    fun renderRecoverableError(appWidgetIds: IntArray)
+    fun render(
+        appWidgetId: Int,
+        result: NextEventResult,
+        preferences: WidgetInstancePreferences,
+        weatherText: String?,
+    )
+}
+
 class WidgetRemoteViewsRenderer(
     private val context: Context,
     private val manager: AppWidgetManager = AppWidgetManager.getInstance(context),
-) {
-    fun installedIds(): IntArray {
+) : WidgetSurface {
+    override fun installedIds(): IntArray {
         com.blackatsystems.miguardia.QaInstrumentationScope.requireExternalAction(context, "widget.installed-query")
         return manager.getAppWidgetIds(providerComponent())
     }
 
-    fun renderRecovery(appWidgetIds: IntArray? = null) {
+    override fun renderRecovery(appWidgetIds: IntArray?) {
         if (com.blackatsystems.miguardia.QaInstrumentationScope.suppress(context, "widget.recovery")) return
         (appWidgetIds ?: installedIds()).filterValidIds().forEach { id ->
             manager.updateAppWidget(id, recoveryViews(id))
@@ -51,14 +69,14 @@ class WidgetRemoteViewsRenderer(
     internal fun recoveryViews(id: Int): RemoteViews =
         statusViews(id, "MIGUARDIA", "Abrí MiGuardia para terminar la recuperación de tus datos.")
 
-    fun renderLoading(appWidgetIds: IntArray) {
+    override fun renderLoading(appWidgetIds: IntArray) {
         if (com.blackatsystems.miguardia.QaInstrumentationScope.suppress(context, "widget.render-loading")) return
         appWidgetIds.filterValidIds().forEach { id ->
             manager.updateAppWidget(id, statusViews(id, "CARGANDO", "Actualizando el próximo evento…"))
         }
     }
 
-    fun renderRecoverableError(appWidgetIds: IntArray) {
+    override fun renderRecoverableError(appWidgetIds: IntArray) {
         if (com.blackatsystems.miguardia.QaInstrumentationScope.suppress(context, "widget.render-error")) return
         appWidgetIds.filterValidIds().forEach { id ->
             manager.updateAppWidget(
@@ -68,7 +86,7 @@ class WidgetRemoteViewsRenderer(
         }
     }
 
-    fun render(
+    override fun render(
         appWidgetId: Int,
         result: NextEventResult,
         preferences: WidgetInstancePreferences,
@@ -347,7 +365,7 @@ class WidgetRemoteViewsRenderer(
         .appendQueryParameter("target", discriminator)
         .build()
 
-    internal fun isExpandedLayout(appWidgetId: Int): Boolean {
+    override fun isExpandedLayout(appWidgetId: Int): Boolean {
         val options = manager.getAppWidgetOptions(appWidgetId)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             val supportedSizes = options.widgetSizes(AppWidgetManager.OPTION_APPWIDGET_SIZES)

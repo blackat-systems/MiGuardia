@@ -56,7 +56,7 @@ class WidgetRuntime(
     val preferences: WidgetPreferencesStore,
     private val weatherRuntime: WeatherRuntime,
     private val clock: Clock = Clock.systemUTC(),
-    private val renderer: WidgetRemoteViewsRenderer = WidgetRemoteViewsRenderer(context.applicationContext),
+    private val renderer: WidgetSurface = WidgetRemoteViewsRenderer(context.applicationContext),
     private val scheduler: WidgetBoundaryScheduler = AndroidWidgetBoundaryScheduler(context.applicationContext),
 ) {
     internal val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)

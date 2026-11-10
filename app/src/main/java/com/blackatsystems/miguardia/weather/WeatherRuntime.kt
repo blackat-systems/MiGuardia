@@ -24,14 +24,21 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 
-class WeatherRuntime(
+class WeatherRuntime internal constructor(
     private val context: Context,
     val preferences: WeatherPreferencesStore,
     private val objectives: ObjectiveRepository,
-    clock: Clock = Clock.systemUTC(),
+    clock: Clock,
+    private val client: WeatherForecastClient,
 ) {
+    constructor(
+        context: Context,
+        preferences: WeatherPreferencesStore,
+        objectives: ObjectiveRepository,
+        clock: Clock = Clock.systemUTC(),
+    ) : this(context, preferences, objectives, clock, OpenMeteoForecastClient(clock))
+
     private val filesDir = context.applicationContext.filesDir
-    private val client = OpenMeteoForecastClient(clock)
     private val repositories = ConcurrentHashMap<String, DefaultWeatherRepository>()
     private val cacheLifecycleMutex = Mutex()
     private val mutableCacheInvalidations = MutableSharedFlow<UUID?>(extraBufferCapacity = 1)

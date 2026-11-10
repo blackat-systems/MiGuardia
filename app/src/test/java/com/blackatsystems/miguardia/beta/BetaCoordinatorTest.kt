@@ -220,14 +220,14 @@ class BetaCoordinatorTest {
         store.fail = true; c.confirm(opinion); awaitState(c) { !it.busy && it.message != null }
         assertFalse(c.state.value.allowsContent); assertNull(store.saved.pending)
         store.fail = false; c.confirm(opinion); c.confirm(BetaOpinion.create(BetaCategory.BUG, BetaArea.OTHER, "Otro", true))
-        awaitState(c) { it.confirmationSaved && !it.busy }
+        awaitState(c) { it.confirmationSaved && !it.busy && store.saved.retryAt != null }
         assertTrue(c.state.value.allowsContent); assertFalse(c.state.value.received)
         assertEquals(opinion, store.saved.pending!!.opinion)
         assertEquals(1, requests.count { it.first == "/feedback" })
     }
     @Test fun lostResponseRestartAndIdempotentRetryKeepExactBodyThenEraseMessage() = runBlocking {
         val c = coordinator { path, _ -> if (path == "/activations") ok(issuer.sign(issuer.payload())) else throw IOException() }
-        activated(c); due(); c.confirm(opinion); awaitState(c) { it.confirmationSaved && !it.busy }
+        activated(c); due(); c.confirm(opinion); awaitState(c) { it.confirmationSaved && !it.busy && store.saved.retryAt != null }
         val queue = store.saved.pending!!; val sentBody = requests.last().second
         val body = BetaJson.parse(sentBody)
         body.exact("activation_receipt", "request_id", "category", "area", "message", "consent", "installation_signature")
@@ -263,7 +263,7 @@ class BetaCoordinatorTest {
         for (status in listOf(429, 503)) {
             store.saved = BetaRecord(); clock.instant = issuer.start; ticks = 0
             val c = coordinator { path, _ -> if (path == "/activations") ok(issuer.sign(issuer.payload())) else failure(status, "RATE_LIMITED", "120") }
-            activated(c); due(); c.confirm(opinion); awaitState(c) { it.confirmationSaved && !it.busy }
+            activated(c); due(); c.confirm(opinion); awaitState(c) { it.confirmationSaved && !it.busy && store.saved.retryAt != null }
             val count = requests.size
             val reopened = coordinator { _, _ -> failure(status, "RATE_LIMITED", "120") }
             reopened.initialize(); reopened.onForeground(); reopened.retryFeedback(true); reopened.connectionRecovered(); delay(50)

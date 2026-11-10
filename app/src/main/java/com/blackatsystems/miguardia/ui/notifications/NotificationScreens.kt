@@ -525,6 +525,15 @@ private fun RestorableNotifications(state: NotificationUiState, actions: Notific
     }
 }
 
+/**
+ * Una jornada personalizada necesita al menos un anticipo: la lista vacía significa "desactivada".
+ * Si la configuración general no tiene anticipos, arranca con las 12 horas recomendadas.
+ */
+internal fun ownShiftStartingReminders(general: List<Long>): List<Long> =
+    general.ifEmpty { listOf(RECOMMENDED_REMINDER_LEAD_MINUTES) }
+
+private const val RECOMMENDED_REMINDER_LEAD_MINUTES = 12L * 60L
+
 @Composable
 private fun ShiftSettings(state: NotificationUiState, actions: NotificationActions) {
     var showEditor by rememberSaveable { mutableStateOf(false) }
@@ -542,7 +551,7 @@ private fun ShiftSettings(state: NotificationUiState, actions: NotificationActio
             override == null -> {
                 Button(
                     onClick = {
-                        actions.setShiftReminders(state.preferences.globalReminderLeadMinutes)
+                        actions.setShiftReminders(ownShiftStartingReminders(state.preferences.globalReminderLeadMinutes))
                         showEditor = true
                     },
                     modifier = Modifier.fillMaxWidth(),
@@ -557,7 +566,7 @@ private fun ShiftSettings(state: NotificationUiState, actions: NotificationActio
                 }
                 OutlinedButton(
                     onClick = {
-                        actions.setShiftReminders(state.preferences.globalReminderLeadMinutes)
+                        actions.setShiftReminders(ownShiftStartingReminders(state.preferences.globalReminderLeadMinutes))
                         showEditor = true
                     },
                     modifier = Modifier.fillMaxWidth(),

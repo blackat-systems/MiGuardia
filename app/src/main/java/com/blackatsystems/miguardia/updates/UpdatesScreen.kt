@@ -85,7 +85,8 @@ internal fun UpdatesScreen(
                 state.release?.let { Text("Versión: ${it.versionName}\nTamaño: ${size(it.byteSize)}") }
                 state.message?.let { Text(it) }
                 if (state.retryRemainingMillis > 0) {
-                    Text("Podés reintentar en ${(state.retryRemainingMillis + 999) / 1000} segundos.")
+                    val seconds = (state.retryRemainingMillis + 999) / 1000
+                    Text("Podés reintentar en $seconds ${if (seconds == 1L) "segundo" else "segundos"}.")
                 }
                 if (state.busy && state.stage != UpdateStage.PICKER) {
                     LinearProgressIndicator(Modifier.fillMaxWidth())
