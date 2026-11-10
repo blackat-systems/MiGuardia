@@ -383,7 +383,7 @@ class Stage14WidgetRemoteViewsTest {
         val compactLargeText: Boolean = false,
     ) {
         /** Una fila de alto y tres celdas de ancho en una grilla como la del Samsung: el tamaño inicial. */
-        COMPACT("Compacta 240×96 dp", WidgetSize.COMPACT, 240, 96),
+        COMPACT("Compacta 240×95 dp", WidgetSize.COMPACT, 240, 95),
 
         /** El menor ancho declarado, con el alto desde el que los textos pueden usar dos renglones. */
         COMPACT_TALL("Compacta alta 180×150 dp", WidgetSize.COMPACT, 180, 150, compactTextLines = 2),

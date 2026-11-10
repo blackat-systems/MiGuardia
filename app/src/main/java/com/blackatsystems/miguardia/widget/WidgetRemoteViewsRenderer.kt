@@ -29,7 +29,8 @@ import com.blackatsystems.miguardia.ui.theme.AppThemeMode
 import com.blackatsystems.miguardia.weather.WeatherCredits
 
 private const val COMPACT_WIDTH_DP = 180f
-private const val COMPACT_HEIGHT_DP = 96f
+// One launcher row can be shorter than 96 dp (Samsung: 95 dp), and a layout is only chosen if it fits.
+private const val COMPACT_HEIGHT_DP = 80f
 /** Desde este alto la vista compacta tiene lugar para que el nombre y el horario usen dos renglones. */
 private const val COMPACT_TALL_HEIGHT_DP = 150f
 /**

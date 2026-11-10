@@ -3,13 +3,13 @@
     android:id="@+id/widget_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:minHeight="96dp"
+    android:minHeight="80dp"
     android:background="@drawable/widget_background_light"
     android:contentDescription="@string/widget_content_description"
     android:gravity="center_vertical"
     android:orientation="horizontal"
     android:paddingHorizontal="14dp"
-    android:paddingVertical="10dp">
+    android:paddingVertical="8dp">
 
     <TextView
         android:id="@+id/widget_accent"
