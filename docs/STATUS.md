@@ -54,7 +54,7 @@
 - Etapas anteriores: 13 · Datos y archivos y 12.2 · Cálculos y consulta, CERRADAS por Joaquín (8/11).
 - En GitHub: rama `origin/codex/miguardia-3.0` subida el 10/11 a pedido de Joaquín, con pull request
   abierto contra `main` (https://github.com/blackat-systems/MiGuardia/pull/1). No está para mergear:
-  faltan las etapas 16 y 17. Los commits de la 15 son locales, sin subir.
+  faltan las etapas 16 y 17. Los commits de la 15 se subieron el 10/11 a pedido de Joaquín.
 - Pareja instalada en el Samsung (10/11, etapa 15): QA `30ab836b…` + ejecutor `412da65d…`
   (`.local-evidence/claude-20261110-15/build1/hashes.txt`), compilada del último código y verificada por
   hash sacando los APK del teléfono. Datos QA: 23 bases y 199 archivos, foto de referencia
