@@ -1,13 +1,19 @@
 # Estado actual de MiGuardia 3.0
 
-- Etapa: **15 · Cierre funcional, aceptación y entrega — EN CURSO** desde el 10/11/2026
-  ([prompt de arranque](prompts/ETAPA_15_CIERRE_Y_ENTREGA.md)). **Partes A (PC) y B (Samsung y dedo de
-  Joaquín) hechas. Sigue la parte C (aceptación final), que necesita que Joaquín diga qué versión y
-  código lleva la candidata.** Detalle en «Etapa 15 · parte B» y «parte A» abajo.
-- Etapa anterior: **14 · Sistema — CERRADA por Joaquín el 10/11/2026**, con pendientes que pasaron a la
-  15 (secciones «Etapa 14.1» de abajo). Después de la 15: 16 · Experiencia de uso (decisiones de diseño:
-  menú lateral, detalle en las tarjetas, simplificar pantallas con mucho texto), que va recién cuando el
-  funcionamiento interno esté resuelto.
+- Etapa: **15 · Cierre funcional — HECHA el 10/11/2026** (partes A, en la PC, y B, Samsung y dedo de
+  Joaquín). Falta que Joaquín la dé por cerrada. Detalle en «Etapa 15 · parte B» y «parte A» abajo.
+- **Orden nuevo, decidido por Joaquín el 10/11:** la aceptación final y la entrega salieron de la 15 y
+  van **después** de la 16, para que lo de la 16 salga en la 3.0 y la pasada completa no haya que
+  repetirla.
+  - **Próxima: 16 · Experiencia de uso** (decisiones de diseño: menú lateral, detalle en las tarjetas,
+    simplificar pantallas con mucho texto, pantalla de conflictos de Copias). NO iniciada.
+  - **Después: 17 · Aceptación final y entrega** (candidata congelada, pasada de los 441 casos, firma,
+    ensayo de actualización desde la 2.0.2 y publicación).
+  - **Versión de la candidata, decidida por Joaquín: 3.0.0, código 7.** No está aplicada: el código
+    sigue en `2.0.2` / 6 y se cambia al congelar, en la 17 (`app/build.gradle.kts` y
+    `tools/release/policy.json`).
+- Etapa anterior: **14 · Sistema — CERRADA por Joaquín el 10/11/2026**, con pendientes que se terminaron
+  en la 15 (secciones «Etapa 14.1» de abajo).
 - **Último código:** `580b2c3` (las tres opciones del aviso permanente viajan en las Copias). PC:
   `verify.py --profile local --fresh-tests` 1420 pruebas, 0 fallas, y `--profile build` aprobado sobre
   ese código. **Instalado y corrido en el Samsung el 10/11** (parte B).
@@ -29,9 +35,15 @@
      «17 °C», tercer interruptor y TalkBack de oído. ⏳ De Copias quedó sin ver a la vista que «Usar copia»
      cambia los tres interruptores (detalle en la parte B).
   5. ✅ Borrados, con permiso de Joaquín, los 16 `cache/stage14-widget-*.db.lck` vacíos.
-  6. Aceptación final de los 441 casos sobre la candidata congelada (falta definir versión y código; hoy
-     `2.0.2` / 6). Era la segunda parte de la 14 y no se hizo.
-  7. Firma, prueba de actualización desde la 2.0.2 y publicación, cada una con autorización específica.
+  6. Pasó a la 17: aceptación final de los 441 casos sobre la candidata congelada.
+  7. Pasó a la 17: firma, prueba de actualización desde la 2.0.2 y publicación, cada una con autorización
+     específica.
+- **Lo que la 15 deja abierto para más adelante:**
+  - Para la 16: los tres pedidos de Joaquín sobre la pantalla de conflictos de Copias (abajo, parte B)
+    y la decisión de si «Combinar» pregunta por lo que una copia anterior no trae.
+  - Para la 17: los 9 casos de la lista sin camino automático (probarlos a mano, armarles prueba o
+    aceptarlos); ver con el dedo que «Usar copia» cambia los tres interruptores; confirmar en la próxima
+    foto que se fueron los dos temporales de la restauración que quedó abierta.
 - **Límites conocidos:** el Samsung no admite el Widget en una fila, ni recién agregado: lo pone en 5
   columnas por 2 filas y Joaquín lo dio por correcto (10/11). Por eso la vista de una fila no se alcanza
   en este teléfono, y sus límites (contador cortado con letra al 150% o más, nombre largo en «…») quedan
@@ -41,7 +53,7 @@
 - Etapas anteriores: 13 · Datos y archivos y 12.2 · Cálculos y consulta, CERRADAS por Joaquín (8/11).
 - En GitHub: rama `origin/codex/miguardia-3.0` subida el 10/11 a pedido de Joaquín, con pull request
   abierto contra `main` (https://github.com/blackat-systems/MiGuardia/pull/1). No está para mergear:
-  la etapa 15 sigue en curso. Los commits de las partes A y B de la 15 son locales, sin subir.
+  faltan las etapas 16 y 17. Los commits de la 15 son locales, sin subir.
 - Pareja instalada en el Samsung (10/11, etapa 15): QA `30ab836b…` + ejecutor `412da65d…`
   (`.local-evidence/claude-20261110-15/build1/hashes.txt`), compilada del último código y verificada por
   hash sacando los APK del teléfono. Datos QA: 23 bases y 199 archivos, foto de referencia

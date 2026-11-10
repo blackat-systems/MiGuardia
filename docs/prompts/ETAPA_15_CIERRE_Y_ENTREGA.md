@@ -1,5 +1,9 @@
 # Etapa 15 · Cierre funcional, aceptación y entrega — prompt de arranque
 
+> **Nota del 10/11/2026:** este prompt ya se usó. Las partes A (PC) y B (Samsung y dedo de Joaquín) están hechas.
+> Las partes C (aceptación final) y D (entrega) pasaron a la **etapa 17**, que va después de la 16, por decisión
+> de Joaquín. No arrancar C ni D desde acá. Estado vigente en `docs/STATUS.md`.
+
 Pegar en una sesión nueva de Claude, desde `MiGuardia-3.0/`:
 
 ---
