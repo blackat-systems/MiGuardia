@@ -6,13 +6,16 @@
     de PC y de pantalla, sin teléfono): ver la sección de abajo.
   - **Aislamiento decidido por Joaquín (9/11): mixto.** Automático sobre base y preferencias propias de
     cada corrida; con su dedo, sobre la app QA, sólo cambian preferencias y se devuelven.
-  - **Aviso permanente: hecho en la PC (10/11), falta el Samsung.** Joaquín pidió avanzar con todo lo de
-    PC y dejar el teléfono para el final. Diseño y límites en
-    [ETAPA_14_AVISO_PERMANENTE.md](design/ETAPA_14_AVISO_PERMANENTE.md). PC: 1411 pruebas, 0 fallas;
-    compilación completa aprobada.
-  - **Siguiente, con autorización de Joaquín en el momento:** instalar la pareja nueva, correr las 134
-    pruebas de `Stage14Selectors` (129 anteriores más 5 del aviso permanente) con foto de datos antes y
-    después, y después la sesión con su dedo.
+  - **Aviso permanente: hecho y con sus pruebas de pantalla aprobadas en el Samsung (10/11).** Diseño y
+    límites en [ETAPA_14_AVISO_PERMANENTE.md](design/ETAPA_14_AVISO_PERMANENTE.md). PC: 1411 pruebas, 0
+    fallas; compilación completa aprobada.
+  - **Corrida 5 en el Samsung (10/11, autorizada por Joaquín):** QA `547426d9…` + ejecutor `dda5048d…`,
+    las 134 de `Stage14Selectors`: **132 ✅ · 1 ❌ · 1 omitida.** La falla es la conocida (horario del
+    Widget compacto mínimo al 200%); la omitida, el aviso de prueba con las notificaciones bloqueadas.
+    Foto antes y después: 23 bases idénticas, 370 archivos; sólo cambiaron las dos marcas de Android
+    (`files/profileInstalled` y `shared_prefs/android.app.ActivityThread.IDS.xml`).
+  - **Siguiente: sesión con el dedo de Joaquín**, paso a paso. Va a cambiar preferencias de la app QA
+    (avisos, aviso permanente, bloqueo, tema, Widget); se anotan y se devuelven al terminar.
   - Pendiente de su permiso: borrar los 16 `.lck` vacíos del teléfono. Sin decidir: horario del Widget
     compacto al 200%; tercer control del aviso permanente; llevar sus dos opciones a las Copias.
   - **Tanda 2 en el Samsung (10/11):** tras arreglar cuatro defectos, **127 de 129 pasan, 1 falla, 1
@@ -32,9 +35,9 @@
 - Etapas anteriores: 13 · Datos y archivos y 12.2 · Cálculos y consulta, CERRADAS por Joaquín (8/11).
 - Base en GitHub: `7fef1c5` (cierre de 13.5), subido a `origin/codex/miguardia-3.0` el 9/11 a
   pedido de Joaquín.
-- Pareja instalada en el Samsung (10/11, verificada sacando el hash del teléfono): QA `6fef3744…` +
-  ejecutor `77114d3e…` (`.local-evidence/claude-20261110-14/build4/hashes.txt`). Datos QA: 23 bases, foto
-  `claude-20261110-14/after-corrida4/` (10/11), que incluye una jornada del 10/11 cargada a mano por
+- Pareja instalada en el Samsung (10/11, verificada sacando el hash del teléfono): QA `547426d9…` +
+  ejecutor `dda5048d…` (`.local-evidence/claude-20261110-14/build5/hashes.txt`). Datos QA: 23 bases, foto
+  `claude-20261110-14/after-corrida5/` (10/11), que incluye una jornada del 10/11 cargada a mano por
   Joaquín mientras probaba. **Esa foto es la referencia nueva.** Correr con
   `QA=… RUNNER=… bash .local-evidence/claude-20261110-14/run_classes.sh <salida> [Clase…]`.
 - Actualización: 2026-11-10
