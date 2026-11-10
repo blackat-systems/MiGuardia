@@ -6,9 +6,14 @@
     de PC y de pantalla, sin teléfono): ver la sección de abajo.
   - **Aislamiento decidido por Joaquín (9/11): mixto.** Automático sobre base y preferencias propias de
     cada corrida; con su dedo, sobre la app QA, sólo cambian preferencias y se devuelven.
-  - **Decisión de Joaquín (10/11): se agrega la etapa 16 · Experiencia de uso**, un bloque propio para
-    corregir la experiencia de la persona usuaria; el plan ya no termina en la 15. Ver la fila 16 del
-    [plan maestro](PLAN_MAESTRO_CIERRE_3_0.md). **Sin decidir:** si la 16 va antes o después de publicar.
+  - **Decisión de Joaquín (10/11): se agrega la etapa 16 · Experiencia de uso**, para decidir el diseño
+    de la experiencia (menú lateral, detalle en las tarjetas, simplificar pantallas con mucho texto).
+    Va después de resolver el funcionamiento interno. Ver la fila 16 del
+    [plan maestro](PLAN_MAESTRO_CIERRE_3_0.md).
+  - **Pedido de Joaquín (10/11): terminar primero el funcionamiento interno.** En curso, en la PC: el
+    Widget adopta la paleta nueva y se resuelve su letra grande; tercer control del aviso permanente;
+    las opciones del aviso viajan en las Copias. Después, las pruebas en el teléfono que quedaron
+    pendientes, con su autorización en el momento.
   - **Decisión de Joaquín (10/11): lo pendiente con el teléfono pasa a la etapa 15.** Pasan: instalar la última versión, la pasada completa de pantalla con foto de datos, ver el
     «17 °C», probar el Widget quitándolo y agregándolo, y TalkBack. **Sin decidir todavía:** si la
     aceptación final de los 441 casos (14.2) también se hace dentro de la 15 o antes; MAIN recomendó
@@ -822,7 +827,7 @@ TalkBack podría alcanzar el calendario que queda debajo de pantallas completas.
 | 13.5 · Estética y facilidad de uso | Pulir Vigilia R4 en toda la app; elegir horarios y fechas con selector nativo (sin quitar la escritura) |
 | 14 · Sistema y aceptación final | Avisos, Widget, bloqueo, Clima, temas, accesibilidad, pasada completa final |
 | 15 · Preparar la entrega | Firma, prueba de actualización desde 2.0.2 y publicación |
-| 16 · Experiencia de uso | Corregir y pulir la experiencia de uso; orden respecto de la 15 sin decidir |
+| 16 · Experiencia de uso | Decisiones de diseño de la experiencia (menú lateral, tarjetas, simplificar texto), después del funcionamiento interno |
 
 Detalle en el [plan maestro](PLAN_MAESTRO_CIERRE_3_0.md).
 
