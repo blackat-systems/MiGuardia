@@ -143,8 +143,20 @@ QA tiene las notificaciones bloqueadas en el teléfono. Se cubre en la sesión c
 - ✅ **Apoyo:** abrió el navegador en la página para donar y volvió bien.
 - **Temas:** Joaquín dijo «todo salió bien»; la preferencia de tema cambió en el teléfono, así que los
   tocó. ⏳ No dijo expresamente si volvió a verse la tarjeta oscura en modo claro.
-- ⏳ **Sin hacer:** «Actualizar» de Clima y modo avión (no lo mencionó); TalkBack de oído; oír un anticipo;
-  Widget achicado a una fila y recién agregado.
+- ❌→✅ **Clima sin red (defecto encontrado por Joaquín y arreglado):** en modo avión, «Actualizar»
+  parecía no hacer nada. Causa: el error se dibuja arriba y el botón está al final de un pronóstico
+  largo, así que quedaba fuera de la vista. Ahora la pantalla sube sola hasta el mensaje cuando aparece
+  un error (`WeatherScreens.kt`). Prueba nueva
+  `Stage14WeatherScreensTest#failedRefreshBringsTheErrorIntoViewFromTheBottomOfALongForecast`; la clase
+  dio 17 de 17 en el Samsung con QA `1bd0be8d…` (`build12`). ⏳ Falta que Joaquín lo repita en modo avión.
+- ⏳ **«Actualizar» con red:** Joaquín dijo «queda igual». La hora de «Última actualización» sí cambió
+  (02:35 en su captura), así que la descarga ocurrió; no se confirmó si vio el aviso «Pronóstico
+  actualizado.».
+- ✅ **Anticipo:** llegó, vibró y sonó.
+- ❌ **Widget a una fila:** con el mínimo en 80 dp el Samsung sigue sin dejar bajarlo de dos filas. Leído
+  en el teléfono: el proveedor ya declara 180×80 dp. INFERIDO que el inicio guarda los límites al
+  agregarlo; falta quitarlo y volver a agregarlo para saberlo.
+- ⏳ **TalkBack de oído:** Joaquín no sabe activarlo; queda para otra sesión, con guía.
 - **Foto después de la sesión** (`claude-20261110-14/after-dedo/`, referencia nueva): 23 bases, 373
   archivos. Contra la foto anterior cambiaron sólo cosas explicadas: el lugar y el objetivo que Joaquín
   editó (`objectives` y `work_places`, mismas filas, otro contenido); preferencias de avisos, Clima,

@@ -29,6 +29,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -145,6 +146,13 @@ fun WeatherSurfaceHost(state: WeatherUiState, actions: WeatherActions) {
                     )
                     TextButton(onClick = actions.close, modifier = Modifier.testTag("weather-close")) { Text("Cerrar") }
                 }
+                val scrollState = rememberScrollState()
+                // The error is drawn at the top and «Actualizar» sits at the bottom of a long forecast:
+                // without this, a failed update looked like the button did nothing (seen on the phone
+                // in flight mode). Bring the message into view whenever a new one appears.
+                LaunchedEffect(state.errorMessage) {
+                    if (state.errorMessage != null) scrollState.animateScrollTo(0)
+                }
                 TransientConfirmation(
                     state.infoMessage,
                     actions.clearMessage,
@@ -153,7 +161,7 @@ fun WeatherSurfaceHost(state: WeatherUiState, actions: WeatherActions) {
                 ) {
                     Column(
                         modifier = Modifier.testTag("weather-scroll-content")
-                            .verticalScroll(rememberScrollState()),
+                            .verticalScroll(scrollState),
                         verticalArrangement = Arrangement.spacedBy(MiGuardiaSpacing.medium),
                     ) {
                         Text(

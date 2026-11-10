@@ -88,6 +88,7 @@ object Stage14Selectors {
         "com.blackatsystems.miguardia.stage14.Stage14WeatherScreensTest#dayCardSaysAnEndedShiftIsOutsideTheForecastWindowFromItsExactEnd",
         "com.blackatsystems.miguardia.stage14.Stage14WeatherScreensTest#dayCardLabelsOldExpiredAndPartialForecastsAndOmitsMissingValues",
         "com.blackatsystems.miguardia.stage14.Stage14WeatherScreensTest#refreshErrorKeepsTheLastForecastAndOffersRetryAndCloseAtEveryFontSize",
+        "com.blackatsystems.miguardia.stage14.Stage14WeatherScreensTest#failedRefreshBringsTheErrorIntoViewFromTheBottomOfALongForecast",
         "com.blackatsystems.miguardia.stage14.Stage14WeatherScreensTest#globalErrorCanBeDismissedHasNoRetryAndKeepsTheSettingsReachable",
         "com.blackatsystems.miguardia.stage14.Stage14WeatherScreensTest#shiftDetailShowsFeelsLikeRainWindAndGustsInTheSummaryAndInTheHourCard",
         "com.blackatsystems.miguardia.stage14.Stage14WeatherScreensTest#shiftDetailNeverDrawsAValueTheProviderDidNotGive",

@@ -338,6 +338,28 @@ class Stage14WeatherScreensTest {
         compose.runOnIdle { assertEquals(1, closes) }
     }
 
+    // A245 (visto en el Samsung el 10/11/2026): «Actualizar» está al final de un pronóstico largo y el error
+    // se dibuja arriba; sin red parecía que el botón no hacía nada. El error tiene que quedar a la vista.
+    @Test
+    fun failedRefreshBringsTheErrorIntoViewFromTheBottomOfALongForecast() {
+        var state by mutableStateOf(detailState(forecast(), WeatherFreshness.STALE))
+        compose.setContent {
+            AndroidFontScaleTheme(darkTheme = false, fontScale = TestFontScale.EXTRA_LARGE) {
+                WeatherSurfaceHost(
+                    state,
+                    WeatherActions(refresh = { state = state.copy(errorMessage = OFFLINE_ERROR) }),
+                )
+            }
+        }
+
+        // With the largest font the forecast is much taller than the dialog: the button is far below.
+        compose.onNodeWithText("Actualizar").performScrollTo().assertIsDisplayed().performClick()
+
+        compose.waitForIdle()
+        compose.onNodeWithText(OFFLINE_ERROR).assertIsDisplayed()
+        compose.onNodeWithText("Reintentar").assertIsDisplayed()
+    }
+
     // A245
     @Test
     fun globalErrorCanBeDismissedHasNoRetryAndKeepsTheSettingsReachable() {
